@@ -407,25 +407,34 @@ async function runStreakReminder(admin: any, baseUrl: string, serviceKey: string
 }
 
 // ---------- Job 6: hearts fully regenerated ----------
-// Sends AT MOST one notification per depletion→refill cycle, and NEVER on
-// initial state (a fresh account that has never lost a heart must not be
-// pinged with "قلوبك اكتملت" just because we saw them for the first time).
+// Authoritative rule (Heart Recovery v2):
+//   A "قلوبك اكتملت" notification is sent ONLY when hearts became full by
+//   TIME REGENERATION, and at most ONCE per depletion cycle.
 //
-// Cycle bookkeeping is stored in `details.hearts` on the latest run row:
-//   • First time we see the user with hearts=5 and no prior row →
-//     record a silent watermark {hearts:5}. No notification (initial state).
-//   • hearts=5 now AND last recorded value was <5 → cycle closed, SEND.
-//   • hearts<5 now AND last recorded value was 5 → depletion begun,
-//     record a silent watermark {hearts:<current>} so the next refill is
-//     eligible to fire exactly once.
-//   • Otherwise → nothing to do.
+// Truth lives on `profiles`:
+//   • `hearts`                    — last committed heart value
+//   • `hearts_at`                 — anchor of the regeneration timer, re-set
+//                                   by a DB trigger on every heart change
+//   • `hearts_full_notified_at`   — dedup marker. The same trigger stamps it
+//                                   whenever hearts are written as full
+//                                   (purchase, activity heal, client sync),
+//                                   so a manual refill can never notify.
+//
+// Eligibility: hearts < 5 AND now >= hearts_at + (5 - hearts) * 15min AND
+//              (hearts_full_notified_at IS NULL OR < hearts_at).
+// After sending we stamp `hearts_full_notified_at = now()`, which is strictly
+// greater than `hearts_at`, so no further run can ever re-fire for this cycle.
+const HEART_MAX = 5;
+const HEART_RECOVERY_MS = 15 * 60 * 1000;
+
 async function runHeartsFullReminder(admin: any, baseUrl: string, serviceKey: string, dryRun: boolean) {
   const jobKey = "hearts_full";
   const runDate = todayISODate();
 
   const { data: profiles, error } = await admin
     .from("profiles")
-    .select("id, hearts")
+    .select("id, hearts, hearts_at, hearts_full_notified_at")
+    .lt("hearts", HEART_MAX)
     .limit(5000);
   if (error) return { job: jobKey, error: error.message };
 
@@ -439,49 +448,31 @@ async function runHeartsFullReminder(admin: any, baseUrl: string, serviceKey: st
     .in("user_id", candidateIds);
   const tokenSet = new Set((tokens ?? []).map((t: any) => t.user_id));
 
-  let sent = 0, skipped = 0, failed = 0, watermarks = 0;
+  const now = Date.now();
+  let sent = 0, skipped = 0, failed = 0;
   const results: any[] = [];
 
   for (const p of profiles ?? []) {
     if (!tokenSet.has(p.id)) { skipped++; continue; }
-    const perKey = `${jobKey}:${p.id}`;
-    const { data: prior } = await admin
-      .from("automatic_notification_runs")
-      .select("id, details")
-      .eq("job_key", perKey)
-      .order("created_at", { ascending: false })
-      .limit(1);
-    const lastHearts = prior?.[0]?.details?.hearts ?? null;
-    const currentHearts = p.hearts ?? 5;
-    const fullNow = currentHearts >= 5;
 
-    if (!fullNow) {
-      // Transitioning from full → not-full: lay down a watermark so the next
-      // refill is eligible to fire exactly once. Also handles the case where
-      // the last watermark was already <5: just refresh the value silently.
-      if (!dryRun) {
-        await recordRun(admin, perKey, runDate, "watermark", null, { hearts: currentHearts });
-        watermarks++;
-      } else {
-        skipped++;
-      }
-      continue;
-    }
+    const anchorMs = p.hearts_at ? Date.parse(p.hearts_at) : NaN;
+    if (!Number.isFinite(anchorMs)) { skipped++; continue; }
 
-    // hearts now full — only notify when we've observed a real depletion cycle.
-    // Initial state (no prior row) or already-announced full state must NOT fire.
-    if (lastHearts === null) {
-      // Initial observation for this user: silent watermark, never notify.
-      if (!dryRun) {
-        await recordRun(admin, perKey, runDate, "watermark", null, { hearts: 5 });
-        watermarks++;
-      } else {
-        skipped++;
-      }
-      continue;
-    }
-    if (lastHearts >= 5) { skipped++; continue; } // already announced this cycle
+    const hearts = Math.max(0, Math.min(HEART_MAX, p.hearts ?? HEART_MAX));
+    const fullAtMs = anchorMs + (HEART_MAX - hearts) * HEART_RECOVERY_MS;
+    if (now < fullAtMs) { skipped++; continue; }           // still regenerating
+
+    const notifiedMs = p.hearts_full_notified_at ? Date.parse(p.hearts_full_notified_at) : NaN;
+    // Already announced for THIS depletion cycle (or refilled manually).
+    if (Number.isFinite(notifiedMs) && notifiedMs >= anchorMs) { skipped++; continue; }
+
     if (dryRun) { results.push({ user_id: p.id, would_send: true }); continue; }
+
+    // Stamp BEFORE sending: a failed send must not leave the door open for a
+    // retry storm. The next real depletion re-anchors `hearts_at` and makes
+    // the user eligible again.
+    const { error: markErr } = await admin.rpc("mark_hearts_full_notified", { _user_id: p.id });
+    if (markErr) { failed++; continue; }
 
     const send = await invokeSendNotification(baseUrl, serviceKey, {
       title: "قلوبك اكتملت",
@@ -493,18 +484,19 @@ async function runHeartsFullReminder(admin: any, baseUrl: string, serviceKey: st
     });
 
     await recordRun(
-      admin, perKey, runDate,
+      admin, `${jobKey}:${p.id}`, runDate,
       send.ok ? "success" : "failed",
       send.body?.notification_id ?? null,
-      { hearts: 5, send },
+      { hearts: HEART_MAX, anchor: p.hearts_at, send },
     );
 
     if (send.ok) sent++; else failed++;
     results.push({ user_id: p.id, ok: send.ok });
   }
 
-  return { job: jobKey, sent, failed, skipped, watermarks, total_candidates: profiles?.length ?? 0, results: dryRun ? results : undefined };
+  return { job: jobKey, sent, failed, skipped, total_candidates: profiles?.length ?? 0, results: dryRun ? results : undefined };
 }
+
 
 // ---------- Job 7: daily challenge reminder ----------
 // Sent at most once per day per user, only when:
