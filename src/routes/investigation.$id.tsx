@@ -163,11 +163,15 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
           return next;
         });
         setAnswerState("correct");
+        // SFX parity with campaigns — reuse the existing library, no new assets.
+        audioManager.playSfx("success", { dedupeKey: `inv:correct:${idx}`, dedupeMs: 600 });
       } else {
         setAnswerState("incorrect");
+        audioManager.playError();
       }
     }
   };
+
 
   const onRetry = () => {
     setPicked(null);
