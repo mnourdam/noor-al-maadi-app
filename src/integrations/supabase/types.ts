@@ -4176,6 +4176,10 @@ export type Database = {
       list_my_notifications:
         | { Args: { p_cursor?: string; p_limit?: number }; Returns: Json }
         | { Args: { p_before?: string; p_limit?: number }; Returns: Json }
+      list_my_reflections_v1: {
+        Args: { p_limit?: number; p_offset?: number }
+        Returns: Json
+      }
       list_public_contributions_v2: {
         Args: {
           p_anchor_id: string
@@ -4242,6 +4246,7 @@ export type Database = {
         Args: { _ids: string[]; _origin?: string }
         Returns: string[]
       }
+      mark_all_my_notifications_read: { Args: never; Returns: Json }
       mark_all_notifications_read: { Args: never; Returns: Json }
       mark_contribution_v2: {
         Args: {
@@ -4258,6 +4263,10 @@ export type Database = {
       mark_hearts_full_notified: {
         Args: { _user_id: string }
         Returns: undefined
+      }
+      mark_my_notification_read: {
+        Args: { p_notification_id: string }
+        Returns: Json
       }
       mark_notification_read: { Args: { p_id: string }; Returns: Json }
       moderate_comment_v2: {
@@ -4400,6 +4409,7 @@ export type Database = {
         Args: { p_comment_id: string; p_reason?: string }
         Returns: Json
       }
+      unread_delivery_count: { Args: never; Returns: number }
       unread_notification_count: { Args: never; Returns: number }
       validate_unlock_spec_v2: { Args: { p_input: Json }; Returns: Json }
     }
