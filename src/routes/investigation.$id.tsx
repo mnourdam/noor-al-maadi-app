@@ -17,8 +17,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { displayName } from "@/lib/display-names";
 import { resolveRelatedRefs } from "@/lib/encyclopedia-refs";
 import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
-import { CaseProgress } from "@/components/investigations/CaseProgress";
+import { CaseHero } from "@/components/investigations/CaseHero";
+import { CaseTimeline, phaseForStep } from "@/components/investigations/CaseTimeline";
+import { CaseClosedCard } from "@/components/investigations/CaseClosedCard";
+import { EntityRefChip } from "@/components/investigations/EntityRefChip";
 import { EvidenceBoard } from "@/components/investigations/EvidenceBoard";
+import { useCaseNumber, registerInvestigationsForNumbering } from "@/lib/investigations/case-number";
 import { recordInvestigationCompletion, useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
 import { markInvestigationOpened, clearInvestigationOpened } from "@/lib/investigations/recommend";
 import { useStashCurrentAsOrigin } from "@/lib/navigation";
@@ -82,6 +86,11 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
     () => resolveRelatedRefs(relatedRaw).filter((r) => r.resolved),
     [relatedRaw],
   );
+
+  // Keep the case-number registry aware of this row even when the player
+  // deep-linked straight into the file without visiting the catalog.
+  registerInvestigationsForNumbering([row]);
+  const caseNumber = useCaseNumber(row.slug);
 
   const canonicalProgress = useCanonicalInvestigationProgress();
   const alreadyDone =
@@ -301,7 +310,7 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
     .filter(({ s }) => s.type === "evidence")
     .map(({ s, i }) => ({
       key: `ev:${i}`,
-      label: (s as { title?: string }).title || `قرينة ${(i + 1).toLocaleString("ar-EG")}`,
+      label: (s as { title?: string }).title || `دليل ${i + 1}`,
       text: (s as { text: string }).text,
     }));
 
@@ -309,74 +318,54 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
     <AppShell>
       <ReadingScale className="px-5 pt-6">
 
-        <Link to="/investigations" className="inline-flex items-center gap-1 text-sm text-muted-foreground">
-          <ChevronRight className="size-4" /> كل التحقيقات
-        </Link>
-
-        {/* Case file header */}
-        <div className="mt-4 overflow-hidden rounded-3xl border border-gold/25 shadow-elegant">
-          <div className="case-tab flex items-center gap-2 px-4 py-1.5">
-            <Search className="size-3 text-gold" />
-            <span className="font-display text-[10px] font-bold tracking-[0.2em] text-gold">
-              ملف قضية
-            </span>
-            <span className="ms-auto text-[10px] text-gold/75">
-              {displayDifficulty(row.difficulty)}
-            </span>
-          </div>
-          <div className="case-sheet p-5">
-            <h1 className="font-display text-lg font-bold leading-snug">{row.title}</h1>
-            {row.subtitle && <p className="mt-1 text-[12px] text-gold/90">{row.subtitle}</p>}
-            {row.description && <p className="mt-2 text-[12px] leading-7 text-foreground/90">{row.description}</p>}
-          </div>
-        </div>
+        <CaseHero
+          slug={row.slug}
+          title={row.title}
+          subtitle={row.subtitle}
+          description={row.description}
+          difficultyLabel={displayDifficulty(row.difficulty)}
+        />
 
 
         {relatedRefs.length > 0 && (
           <section className="mt-5">
             <h2 className="font-display mb-2 text-sm font-bold">مراجع موسوعية</h2>
             <div className="flex flex-wrap gap-2">
-              {relatedRefs.map((ref) => {
-                const linkId = ref.linkId;
-                const label = ref.label || displayName(ref.raw) || "مرجع تاريخي";
-                return (
-                  <Link
-                    key={ref.raw}
-                    to="/encyclopedia/entity/$id"
-                    params={{ id: linkId }}
-                    onClick={() => stashOrigin(`/encyclopedia/entity/${linkId}`)}
-                    className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] hover:bg-gold/10 ${
-                      ref.resolved
-                        ? "border-gold/30 bg-gold/5 text-gold"
-                        : "border-white/10 bg-surface text-muted-foreground"
-                    }`}
-                  >
-                    <BookOpen className="size-3" /> {label}
-                  </Link>
-                );
-              })}
+              {relatedRefs.map((ref) => (
+                <EntityRefChip
+                  key={ref.raw}
+                  entityType={ref.entityType}
+                  label={ref.label || displayName(ref.raw) || "مرجع تاريخي"}
+                  linkId={ref.linkId}
+                  resolved={ref.resolved}
+                  onNavigate={() => stashOrigin(`/encyclopedia/entity/${ref.linkId}`)}
+                />
+              ))}
             </div>
           </section>
         )}
 
         {!finished && step && (
           <section className="mt-6">
-            <CaseProgress
-              total={steps.length}
-              current={idx}
-              answeredCount={resolvedIndices.size}
+            <CaseTimeline
+              phase={phaseForStep(step)}
+              stepIndex={idx}
+              totalSteps={steps.length}
+              answered={resolvedIndices.size}
               totalQuestions={totalQuestionLike}
-              markers={questionMarkers}
             />
 
             {stepNeedsAnswer && (
               <p className="mb-2 mt-3 text-[11px] text-muted-foreground">
-                استنتاج {questionLikeIndex.toLocaleString("ar-EG")}/{totalQuestionLike.toLocaleString("ar-EG")}
+                {step.type === "decision" ? "قرار" : "استنتاج"}{" "}
+                <span dir="ltr">{questionLikeIndex} / {totalQuestionLike}</span>
               </p>
             )}
             {!stepNeedsAnswer && <div className="mt-3" />}
 
-
+            {/* Each step turns like a sheet inside the file — the key
+                remounts the card so the leaf animation replays. */}
+            <div key={idx} className="animate-page-turn">
             <StepCard
               step={step}
               picked={picked}
@@ -391,6 +380,7 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
               revealed={answerState !== "unanswered"}
               heartsOut={false}
             />
+            </div>
 
             {stepNeedsAnswer && answerState === "incorrect" && (
               <p className="mt-3 rounded-xl border border-red-500/30 bg-red-500/5 p-3 text-[12px] leading-6 text-red-200">
@@ -431,52 +421,17 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
         {!finished && <EvidenceBoard items={evidenceItems} />}
 
         {finished && (
-          <section className="mt-6 overflow-hidden rounded-3xl border border-gold/30 shadow-elegant">
-            <div className="case-tab flex items-center gap-2 px-4 py-1.5">
-              <span className="font-display text-[10px] font-bold tracking-[0.2em] text-gold">
-                ملف قضية
-              </span>
-              <span className="case-stamp ms-auto rounded px-2 py-0.5 text-[10px] font-bold">
-                أُغلق الملف
-              </span>
-            </div>
-
-            <div className="case-sheet p-5 text-center">
-              <Trophy className="mx-auto size-7 text-gold" />
-              <p className="font-display mt-2 text-lg font-bold text-gold">قضية محلولة!</p>
-              <p className="mt-1 text-[12px] text-muted-foreground">
-                {resolvedIndices.size}/{totalQuestionLike} إجابات صحيحة
-                {grant?.status === "granted" && (
-                  <>
-                    {grant.xp ? <> · <Star className="inline size-3" /> +{grant.xp}</> : null}
-                    {grant.dinars ? <> · <Coins className="inline size-3" /> +{grant.dinars}</> : null}
-                    {(grant.hearts || heartGain) ? (
-                      <> · <Heart className="inline size-3 text-rose-300" /> +{Math.max(grant.hearts, heartGain)}</>
-                    ) : null}
-                  </>
-                )}
-              </p>
-              {grant?.status === "already" && (
-                <p className="mt-1 text-[11px] text-muted-foreground">
-                  سُجِّل هذا التحقيق سابقًا — لا مكافآت مكرّرة.
-                </p>
-              )}
-              {grant?.status === "queued" && (
-                <p className="mt-1 text-[11px] text-muted-foreground">
-                  تم حفظ الإنجاز — ستُضاف المكافأة عند عودة الاتصال.
-                </p>
-              )}
-
-              <div className="mt-4 flex flex-col items-center gap-2">
-                <Link to="/investigations" className="text-sm text-gold">قضية أخرى</Link>
-                <Link to="/campaigns" className="text-xs text-muted-foreground">العودة للحملات</Link>
-              </div>
-            </div>
+          <section className="mt-6">
+            <CaseClosedCard
+              caseNumber={caseNumber}
+              correct={resolvedIndices.size}
+              total={totalQuestionLike}
+              grant={grant}
+              heartGain={heartGain}
+            />
 
             {/* The full record stays available after the file is closed. */}
-            <div className="px-4 pb-4">
-              <EvidenceBoard items={evidenceItems} />
-            </div>
+            <EvidenceBoard items={evidenceItems} />
           </section>
         )}
 
@@ -501,7 +456,7 @@ function StepCard({
     return (
       <div className="rounded-2xl border border-gold/25 bg-surface p-4">
         <div className="inline-flex items-center gap-2 text-[10px] text-gold">
-          <Lightbulb className="size-3.5" /> بداية القضية
+          <Lightbulb className="size-3.5" /> بداية الملف
         </div>
         {step.title && <p className="font-display mt-1 text-[14px] font-bold">{step.title}</p>}
         <p className="mt-2 whitespace-pre-line text-[13px] leading-7 text-foreground/90">{step.text}</p>
@@ -512,7 +467,7 @@ function StepCard({
     return (
       <div className="rounded-2xl border border-amber-400/30 bg-amber-500/5 p-4">
         <div className="inline-flex items-center gap-2 text-[10px] text-amber-300">
-          <Search className="size-3.5" /> قرينة تاريخية
+          <Search className="size-3.5" /> دليل تاريخي
         </div>
         {step.title && <p className="font-display mt-1 text-[14px] font-bold">{step.title}</p>}
         <p className="mt-2 whitespace-pre-line text-[13px] leading-7 text-foreground/90">{step.text}</p>
@@ -523,7 +478,7 @@ function StepCard({
     return (
       <div className="rounded-2xl border border-emerald-400/30 bg-emerald-500/5 p-4">
         <div className="inline-flex items-center gap-2 text-[10px] text-emerald-300">
-          <Trophy className="size-3.5" /> الخلاصة
+          <Trophy className="size-3.5" /> الاستنتاج النهائي
         </div>
         {step.title && <p className="font-display mt-1 text-[14px] font-bold">{step.title}</p>}
         <p className="mt-2 whitespace-pre-line text-[13px] leading-7 text-foreground/90">{step.text}</p>
@@ -537,7 +492,7 @@ function StepCard({
     <div className="rounded-2xl border border-gold/25 bg-surface p-4">
       <div className="inline-flex items-center gap-2 text-[10px] text-gold">
         {isQuestion ? <Lightbulb className="size-3.5" /> : <Lock className="size-3.5" />}
-        {isQuestion ? "سؤال" : "قرار"}
+        {isQuestion ? "استنتاج" : "قرار"}
       </div>
       <p className="font-display mt-2 text-[14px] font-bold leading-snug">{step.prompt}</p>
       <div className="mt-3 space-y-2">
@@ -642,22 +597,7 @@ function LegacyInvestigationGame({ inv }: { inv: NonNullable<ReturnType<typeof g
     <AppShell>
       <ReadingScale className="px-5 pt-6">
 
-        <Link to="/investigations" className="inline-flex items-center gap-1 text-sm text-muted-foreground">
-          <ChevronRight className="size-4" /> كل التحقيقات
-        </Link>
-
-        <div className="mt-4 overflow-hidden rounded-3xl border border-gold/25 shadow-elegant">
-          <div className="case-tab flex items-center gap-2 px-4 py-1.5">
-            <Search className="size-3 text-gold" />
-            <span className="font-display text-[10px] font-bold tracking-[0.2em] text-gold">
-              ملف قضية
-            </span>
-          </div>
-          <div className="case-sheet p-5">
-            <h1 className="font-display text-lg font-bold leading-snug">{inv.title}</h1>
-            <p className="mt-2 text-[12px] leading-7 text-foreground/90">{inv.intro}</p>
-          </div>
-        </div>
+        <CaseHero slug={inv.id} title={inv.title} description={inv.intro} />
 
         {inv.encyclopediaRefs?.length ? (
           <section className="mt-5">
@@ -727,7 +667,7 @@ function LegacyInvestigationGame({ inv }: { inv: NonNullable<ReturnType<typeof g
             <h2 className="font-display mb-2 text-sm font-bold">
               السؤال {(qIndex + 1).toLocaleString("en-US")}/{inv.questions.length.toLocaleString("en-US")}
             </h2>
-            <div className="rounded-2xl border border-gold/25 bg-surface p-4">
+            <div key={qIndex} className="animate-page-turn rounded-2xl border border-gold/25 bg-surface p-4">
               <p className="font-display text-[14px] font-bold leading-snug">{q.question}</p>
               <div className="mt-3 space-y-2">
                 {q.choices.map((c, i) => {
