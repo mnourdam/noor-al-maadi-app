@@ -62,8 +62,9 @@ export function CaseHero({
         <ChevronRight className="size-3.5" /> كل التحقيقات
       </Link>
 
-      {/* Case identity */}
-      <div className="absolute inset-x-0 bottom-0 px-5 pb-4">
+      {/* Case identity — pulled up over the dissolve, but kept in normal
+          flow so the description can never collide with the title. */}
+      <div className="relative -mt-16 px-5 pb-1">
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-gold/35 bg-gold/10 px-2.5 py-1 text-[10px] font-bold tracking-[0.18em] text-gold">
             <FolderOpen className="size-3" />
@@ -78,11 +79,11 @@ export function CaseHero({
           {title}
         </h1>
         {subtitle && <p className="mt-1 text-[12px] text-gold/90">{subtitle}</p>}
+        {description && (
+          <p className="mt-2.5 text-[12.5px] leading-7 text-foreground/85">{description}</p>
+        )}
       </div>
 
-      {description && (
-        <p className="mt-3 px-5 text-[12.5px] leading-7 text-foreground/85">{description}</p>
-      )}
     </header>
   );
 }
