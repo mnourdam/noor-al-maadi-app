@@ -591,7 +591,23 @@
       transparent 6px 12px
     );
   }
+
+  /* Turning one sheet inside the case file — a short, restrained lift.
+     Reduced motion / perf-lite collapse it to a plain fade below. */
+  @keyframes case-page-turn {
+    0%   { opacity: 0; transform: translateY(10px) rotateX(6deg); }
+    100% { opacity: 1; transform: translateY(0) rotateX(0); }
+  }
+  .animate-page-turn {
+    transform-origin: top center;
+    animation: case-page-turn 0.34s cubic-bezier(0.22, 0.8, 0.28, 1) both;
+  }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-page-turn { animation: fade-in 0.2s ease-out both; }
+}
+
 
 
 /* ============================================================
@@ -688,6 +704,11 @@ html.perf-lite .case-thread,
 html.perf-lite .map-parchment {
   background-image: none !important;
   box-shadow: none !important;
+}
+
+/* Page-turn is a lift + fade; on lite mode keep the fade only. */
+html.perf-lite .animate-page-turn {
+  animation: fade-in 0.2s ease-out both !important;
 }
 
 /* Trim hero ken-burns into a static frame */

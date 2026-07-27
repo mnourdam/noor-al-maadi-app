@@ -42,6 +42,9 @@ export type ResolvedEncyclopediaRef = {
   canonicalSlug: string | null;
   /** Best-effort Arabic type label ("شخصية", "معركة", …) or empty. */
   typeLabel: string;
+  /** Canonical entity type slug ("figure", "battle", …) or empty. Drives icons. */
+  entityType: string;
+
   /** Full display label ("شخصية · محمد ﷺ" or the entity title). */
   label: string;
   /** Whether the reference was successfully resolved to a real entity. */
@@ -75,6 +78,8 @@ export function resolveRelatedRef(rawInput: string): ResolvedEncyclopediaRef {
     canonicalId: null,
     canonicalSlug: null,
     typeLabel: "",
+    entityType: "",
+
     label: "",
     resolved: false,
     linkId: raw,
@@ -114,6 +119,8 @@ export function resolveRelatedRef(rawInput: string): ResolvedEncyclopediaRef {
     return {
       ...base,
       typeLabel: t,
+      entityType: typeHint ?? "",
+
       label: t ? `${t} · ${tail}` : tail || "مرجع تاريخي",
     };
   }
@@ -134,6 +141,8 @@ export function resolveRelatedRef(rawInput: string): ResolvedEncyclopediaRef {
     canonicalId: (canon.id as string | undefined) ?? null,
     canonicalSlug: (canon.slug as string | undefined) ?? null,
     typeLabel,
+    entityType: type,
+
     label,
     resolved: true,
     linkId: (canon.slug as string | undefined) || (canon.id as string | undefined) || raw,

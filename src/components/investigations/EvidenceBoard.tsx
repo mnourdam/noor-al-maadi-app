@@ -21,7 +21,7 @@ export function EvidenceBoard({ items }: { items: EvidenceItem[] }) {
         <Search className="size-3.5 text-gold" />
         <h2 className="font-display text-sm font-bold text-gold">لوحة الأدلة</h2>
         <span className="text-[10px] text-muted-foreground">
-          {items.length.toLocaleString("ar-EG")} دليل
+          <span dir="ltr">{items.length}</span> دليل
         </span>
       </div>
 
@@ -36,7 +36,7 @@ export function EvidenceBoard({ items }: { items: EvidenceItem[] }) {
               />
             )}
             <span className="mt-1 grid size-6 shrink-0 place-items-center rounded-full border border-gold/40 bg-gold/10 text-[10px] font-bold text-gold">
-              {(i + 1).toLocaleString("ar-EG")}
+              {i + 1}
             </span>
             <div className="case-sheet min-w-0 flex-1 rounded-xl p-3">
               <p className="font-display text-[12px] font-bold text-amber-200">{item.label}</p>

@@ -14,16 +14,16 @@ function isCampaignRoute(pathname: string): boolean {
 }
 
 /**
- * Routes that switch the ambience to the investigation layer — the case
- * catalog, an open case file, and the in-play investigation screen.
+ * Routes that switch the ambience to the investigation layer — ONLY an
+ * open case file or the in-play investigation screen. Browsing the case
+ * catalog (`/investigations`) deliberately stays on the global ambience:
+ * the case atmosphere begins the moment the player opens a file.
  * Leaving any of them crossfades straight back to the global ambience,
  * which is also the transparent fallback while the investigation asset
  * has not been produced yet.
  */
 function isInvestigationRoute(pathname: string): boolean {
   return (
-    pathname === "/investigations" ||
-    pathname.startsWith("/investigations/") ||
     pathname.startsWith("/investigation/") ||
     pathname.startsWith("/play/investigate")
   );

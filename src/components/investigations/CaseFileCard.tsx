@@ -1,10 +1,10 @@
 import { Link } from "@tanstack/react-router";
-import { Check, ChevronLeft, Coins, Heart, Star } from "lucide-react";
+import { Check, ChevronLeft, Coins, FolderOpen, Heart, Star } from "lucide-react";
 
 export interface CaseFileCardProps {
   /** Route param for /investigation/$id — slug for Supabase rows, id for legacy. */
   routeId: string;
-  /** Stable case number shown on the folder tab (e.g. "٠٧"). */
+  /** Stable, permanent case number shown on the folder tab (e.g. "021"). */
   caseNumber: string;
   title: string;
   subtitle?: string | null;
@@ -43,6 +43,8 @@ export function CaseFileCard({
   if (difficultyLabel) meta.push(difficultyLabel);
   if (stepCount) meta.push(`${stepCount} خطوة`);
   if (questionCount) meta.push(`${questionCount} سؤال`);
+  // Counters inside investigations are Western digits by contract — the
+  // template literals above never localize, which is exactly what we want.
 
   return (
     <Link
@@ -57,10 +59,10 @@ export function CaseFileCard({
     >
       {/* Folder tab */}
       <div className="case-tab flex items-center gap-2 px-3 py-1.5">
-        <span className="font-display text-[10px] font-bold tracking-[0.2em] text-gold">
-          ملف قضية
+        <FolderOpen className="size-3 text-gold" />
+        <span className="font-display text-[10px] font-bold tracking-[0.18em] text-gold" dir="ltr">
+          ملف #{caseNumber}
         </span>
-        <span className="text-[10px] text-gold/70">#{caseNumber}</span>
         {done && (
           <span className="case-stamp ms-auto rounded px-1.5 py-0.5 text-[9px] font-bold">
             تم الحل
@@ -117,7 +119,3 @@ export function CaseFileCard({
   );
 }
 
-/** Arabic-Indic case number, stable per position in the filed list. */
-export function caseNumberFor(index: number): string {
-  return String(index + 1).padStart(2, "0").replace(/\d/g, (d) => "٠١٢٣٤٥٦٧٨٩"[Number(d)]);
-}
