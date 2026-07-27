@@ -56,6 +56,40 @@ d("stories P1 — server contract", () => {
     expect(res).not.toContain("true");
   });
 
+  it("player story feeds and bundles never expose drafts", () => {
+    const draftId = "draft_gate_probe_" + randomUUID().slice(0, 8);
+    const pubId = "pub_gate_probe_" + randomUUID().slice(0, 8);
+    sql(`INSERT INTO public.stories
+           (id, slug, title_ar, status, content_version, xp_reward, dinar_reward, unlock_spec, production_status)
+         VALUES
+           ('${draftId}', '${draftId}', 'مسودة محجوبة', 'draft', 1, 0, 0,
+              '{"version":2,"expr":{"type":"always"}}'::jsonb, 'testing'),
+           ('${pubId}', '${pubId}', 'قصة منشورة', 'published', 1, 0, 0,
+              '{"version":2,"expr":{"type":"always"}}'::jsonb, 'completed')`);
+
+    const res = sql(
+      `BEGIN;
+       SELECT set_config('request.jwt.claims', json_build_object('role','anon')::text, true);
+       SELECT jsonb_build_object(
+         'list_v2_has_pub', public.list_stories_v2(NULL)::text LIKE '%${pubId}%',
+         'list_v2_has_draft', public.list_stories_v2(NULL)::text LIKE '%${draftId}%',
+         'list_v3_has_draft', public.list_stories_v3(NULL, NULL)::text LIKE '%${draftId}%',
+         'guest_has_draft', public.list_stories_guest_v3(NULL, NULL, '{}'::jsonb)::text LIKE '%${draftId}%',
+         'bundle_draft_reason', public.get_story_bundle_v2('${draftId}')->>'reason',
+         'guest_bundle_draft_reason', public.get_story_bundle_guest_v2('${draftId}', '{}'::jsonb)->>'reason',
+         'snapshot_has_draft', public.stories_snapshot_manifest_v2(false)::text LIKE '%${draftId}%'
+       )::text;
+       COMMIT;`,
+    );
+    expect(res).toContain('"list_v2_has_pub": true');
+    expect(res).toContain('"list_v2_has_draft": false');
+    expect(res).toContain('"list_v3_has_draft": false');
+    expect(res).toContain('"guest_has_draft": false');
+    expect(res).toContain('"bundle_draft_reason": "not_found"');
+    expect(res).toContain('"guest_bundle_draft_reason": "not_found"');
+    expect(res).toContain('"snapshot_has_draft": false');
+  });
+
   it("get_story_access returns a bundle for a published story", () => {
     const pubId = "pub_probe_" + randomUUID().slice(0, 8);
     sql(`INSERT INTO public.stories
