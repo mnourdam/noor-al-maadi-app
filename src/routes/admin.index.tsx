@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { AlertTriangle, Bell, BookOpen, Upload, Sword, Landmark, ShieldCheck, Database, Search, HardDrive, MapPin, Compass, Network, Hammer, Users, Gamepad2, MessagesSquare, Layers, Mail, Flag } from "lucide-react";
+import { AlertTriangle, Bell, BookOpen, Upload, Sword, Landmark, ShieldCheck, Database, Search, HardDrive, MapPin, Compass, Network, Hammer, Users, Gamepad2, MessagesSquare, Layers, Mail, Flag, Gem } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
 
@@ -20,20 +20,30 @@ interface Stats {
   notifications: number | null;
   devices: number | null;
   newsletter: number | null;
+  artifacts: number | null;
+  artifactsUpdatedAt: string | null;
 }
 
 function AdminHub() {
-  const [stats, setStats] = useState<Stats>({ facts: null, events: null, notifications: null, devices: null, newsletter: null });
+  const [stats, setStats] = useState<Stats>({ facts: null, events: null, notifications: null, devices: null, newsletter: null, artifacts: null, artifactsUpdatedAt: null });
 
   useEffect(() => {
     (async () => {
       const opts = { count: "exact" as const, head: true };
-      const [f, e, n, d, ns] = await Promise.all([
+      const [f, e, n, d, ns, art, artLast] = await Promise.all([
         supabase.from("daily_facts" as any).select("*", opts),
         supabase.from("today_in_history_events" as any).select("*", opts),
         supabase.from("notifications" as any).select("*", opts),
         supabase.from("device_tokens" as any).select("*", opts).eq("enabled", true),
         supabase.from("newsletter_subscribers" as any).select("*", opts).eq("subscribed", true),
+        supabase.from("encyclopedia_entities" as any).select("*", opts).eq("entity_type", "artifact").eq("enabled", true),
+        supabase.from("encyclopedia_entities" as any)
+          .select("updated_at")
+          .eq("entity_type", "artifact")
+          .eq("enabled", true)
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
       ]);
       setStats({
         facts: f.count ?? 0,
@@ -41,9 +51,12 @@ function AdminHub() {
         notifications: n.count ?? 0,
         devices: d.count ?? 0,
         newsletter: ns.count ?? 0,
+        artifacts: art.count ?? 0,
+        artifactsUpdatedAt: (artLast?.data as { updated_at?: string } | null)?.updated_at ?? null,
       });
     })();
   }, []);
+
 
   return (
     <div dir="rtl" className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 px-4 py-10 text-slate-100">
@@ -100,6 +113,12 @@ function AdminHub() {
             desc="إطار JSON للتحديات التاريخية: كلمات متقاطعة، ترتيب الأحداث، من أنا؟، الروابط، الذاكرة." />
           <AdminCard to="/admin/encyclopedia" icon={<Landmark className="h-5 w-5" />} title="إدارة الموسوعة"
             desc="إدارة مدخلات الموسوعة (شخصيات، مدن، معارك...)." />
+          <AdminCard to="/admin/artifacts" icon={<Gem className="h-5 w-5" />} title="إدارة الآثار 🏺"
+            desc={`مراجعة وتصحيح تصنيفات الآثار (الاسم، المعرف، النوع، الندرة) مع تصدير واستيراد.${
+              stats.artifactsUpdatedAt ? ` آخر تحديث: ${new Date(stats.artifactsUpdatedAt).toLocaleDateString("ar")}` : ""
+            }`}
+            badge={stats.artifacts} />
+
           <AdminCard to="/admin/encyclopedia-report" icon={<Database className="h-5 w-5" />} title="تقرير بيانات الموسوعة"
             desc="التصنيف القياسي، آلية الروابط، بوابة الجودة، الكيانات اليتيمة، ودليل تأليف الميتاداتا." />
           <AdminCard to="/admin/taxonomy" icon={<Layers className="h-5 w-5" />} title="إدارة التصنيفات (Taxonomy)"
