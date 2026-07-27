@@ -289,6 +289,19 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
 
   const questionLikeIndex = steps.slice(0, idx + 1).filter((s) => s.type === "question" || s.type === "decision").length;
   const totalQuestionLike = steps.filter((s) => s.type === "question" || s.type === "decision").length;
+  const questionMarkers = steps.map((s) => s.type === "question" || s.type === "decision");
+
+  // Evidence already walked past in this case (strictly before the current
+  // step) — the board is a record, never a spoiler of what is still ahead.
+  const evidenceItems = steps
+    .slice(0, idx)
+    .map((s, i) => ({ s, i }))
+    .filter(({ s }) => s.type === "evidence")
+    .map(({ s, i }) => ({
+      key: `ev:${i}`,
+      label: (s as { title?: string }).title || `قرينة ${(i + 1).toLocaleString("ar-EG")}`,
+      text: (s as { text: string }).text,
+    }));
 
   return (
     <AppShell>
@@ -298,14 +311,24 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
           <ChevronRight className="size-4" /> كل التحقيقات
         </Link>
 
-        <div className="mt-4 rounded-3xl border border-gold/25 bg-surface p-5 shadow-elegant">
-          <div className="flex items-center gap-2 text-[10px] tracking-widest text-gold">
-            <Search className="size-3.5" /> تحقيق تاريخي · {displayDifficulty(row.difficulty)}
+        {/* Case file header */}
+        <div className="mt-4 overflow-hidden rounded-3xl border border-gold/25 shadow-elegant">
+          <div className="case-tab flex items-center gap-2 px-4 py-1.5">
+            <Search className="size-3 text-gold" />
+            <span className="font-display text-[10px] font-bold tracking-[0.2em] text-gold">
+              ملف قضية
+            </span>
+            <span className="ms-auto text-[10px] text-gold/75">
+              {displayDifficulty(row.difficulty)}
+            </span>
           </div>
-          <h1 className="font-display mt-2 text-lg font-bold leading-snug">{row.title}</h1>
-          {row.subtitle && <p className="mt-1 text-[12px] text-gold/90">{row.subtitle}</p>}
-          {row.description && <p className="mt-2 text-[12px] leading-7 text-foreground/90">{row.description}</p>}
+          <div className="case-sheet p-5">
+            <h1 className="font-display text-lg font-bold leading-snug">{row.title}</h1>
+            {row.subtitle && <p className="mt-1 text-[12px] text-gold/90">{row.subtitle}</p>}
+            {row.description && <p className="mt-2 text-[12px] leading-7 text-foreground/90">{row.description}</p>}
+          </div>
         </div>
+
 
         {relatedRefs.length > 0 && (
           <section className="mt-5">
