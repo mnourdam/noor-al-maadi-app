@@ -503,3 +503,30 @@ function Chip({
     </button>
   );
 }
+
+/** One tiny statistic on the case-desk strip. */
+function StatCell({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-surface/70 px-2 py-1.5 text-center">
+      <div className="flex items-center justify-center gap-1">{icon}</div>
+      <p className="font-display mt-0.5 text-[13px] font-bold leading-none" dir="ltr">{value}</p>
+      <p className="mt-0.5 truncate text-[9px] text-muted-foreground">{label}</p>
+    </div>
+  );
+}
+
+/**
+ * First 3 encyclopedia entities of a case, as lightweight chips. Resolution
+ * is snapshot-local (no network) and unresolved refs are dropped so a card
+ * never shows a raw uuid.
+ */
+function refChipsFor(related: readonly string[] | null | undefined): CaseRefChip[] {
+  try {
+    return resolveRelatedRefs(related)
+      .filter((r) => r.resolved && r.label)
+      .slice(0, 3)
+      .map((r) => ({ entityType: r.entityType, label: r.label }));
+  } catch {
+    return [];
+  }
+}
