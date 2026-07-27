@@ -372,14 +372,17 @@ function InvestigationsIndex() {
                   title={inv.title}
                   subtitle={inv.subtitle}
                   difficultyLabel={displayDifficulty(inv.difficulty)}
+                  difficultyKey={canonicalDifficulty(inv.difficulty)}
                   stepCount={steps.length}
                   questionCount={countQuestions(steps)}
                   xp={reward.xp}
                   dinars={reward.coins}
                   hearts={reward.hearts}
+                  refs={refChipsFor(inv.related_entities)}
                   done={done}
                   onNavigate={() => stashOrigin(`/investigation/${inv.slug}`)}
                 />
+
               );
             }
             const inv = item.row;
