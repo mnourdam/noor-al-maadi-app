@@ -105,6 +105,7 @@ interface AmbienceTrack {
 const tracks: Record<AmbienceLayer, AmbienceTrack> = {
   global:   { url: AMBIENCE_URL,         el: null, failed: false, gain: 1, lastPlayError: null },
   campaign: { url: CAMPAIGN_AMBIENCE_SRC, el: null, failed: false, gain: 0, lastPlayError: null },
+  investigation: { url: INVESTIGATION_AMBIENCE_SRC, el: null, failed: false, gain: 0, lastPlayError: null },
 };
 let activeLayer: AmbienceLayer = "global";
 let fadeTimer: number | null = null;
