@@ -68,7 +68,7 @@ export function AudioInitializer() {
   }, []);
 
   useEffect(() => {
-    audioManager.setAmbienceLayer(isCampaignRoute(pathname) ? "campaign" : "global");
+    audioManager.setAmbienceLayer(layerForRoute(pathname));
   }, [pathname]);
 
   useEffect(() => {
