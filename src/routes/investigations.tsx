@@ -4,12 +4,16 @@ import { useQuery } from "@tanstack/react-query";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
 import {
-  Search, Loader2, Globe2, X as XIcon,
+  Search, Loader2, Globe2, X as XIcon, SlidersHorizontal, ChevronDown,
+  FolderOpen, CheckCircle2, Lock, Trophy,
 } from "lucide-react";
-import { AppShell, Screen } from "@/components/AppShell";
+import { AppShell } from "@/components/AppShell";
 import { ReadingScale } from "@/components/ReadingScale";
 import { WorldFilterChip } from "@/components/WorldFilterChip";
-import { CaseFileCard } from "@/components/investigations/CaseFileCard";
+import { CaseFileCard, type CaseRefChip } from "@/components/investigations/CaseFileCard";
+import { InvestigationsHero } from "@/components/investigations/InvestigationsHero";
+import { resolveRelatedRefs } from "@/lib/encyclopedia-refs";
+
 import {
   caseNumberLabel,
   ensureCaseNumbers,
