@@ -20,6 +20,8 @@ import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
 import { recordInvestigationCompletion, useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
 import { markInvestigationOpened, clearInvestigationOpened } from "@/lib/investigations/recommend";
 import { useStashCurrentAsOrigin } from "@/lib/navigation";
+import { audioManager } from "@/lib/audioManager";
+
 
 
 export const Route = createFileRoute("/investigation/$id")({
