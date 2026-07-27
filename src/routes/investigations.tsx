@@ -334,17 +334,29 @@ function InvestigationsIndex() {
           </div>
         )}
 
-        <div className="space-y-3">
-          {filtered.map((item) => {
+        <div className="case-board space-y-3 rounded-3xl border border-white/10 p-3">
+          {filtered.map((item, index) => {
+            const caseNumber = caseNumberFor(index);
             if (item.kind === "supabase") {
               const inv = item.row;
               const done =
                 canonicalProgress.matches(inv.id) ||
                 canonicalProgress.matches(inv.slug);
+              const reward = (inv.reward ?? {}) as InvestigationReward;
+              const steps = Array.isArray(inv.steps) ? inv.steps : [];
               return (
-                <SupabaseRow
+                <CaseFileCard
                   key={`s:${inv.id}`}
-                  inv={inv}
+                  routeId={inv.slug}
+                  caseNumber={caseNumber}
+                  title={inv.title}
+                  subtitle={inv.subtitle}
+                  difficultyLabel={displayDifficulty(inv.difficulty)}
+                  stepCount={steps.length}
+                  questionCount={countQuestions(steps)}
+                  xp={reward.xp}
+                  dinars={reward.coins}
+                  hearts={reward.hearts}
                   done={done}
                   onNavigate={() => stashOrigin(`/investigation/${inv.slug}`)}
                 />
@@ -353,27 +365,20 @@ function InvestigationsIndex() {
             const inv = item.row;
             const done = canonicalProgress.matches(inv.id);
             return (
-              <Link
+              <CaseFileCard
                 key={`l:${inv.id}`}
-                to="/investigation/$id"
-                params={{ id: inv.id }}
-                onClick={() => stashOrigin(`/investigation/${inv.id}`)}
-                className={`flex items-center gap-3 rounded-2xl border p-4 ${done ? "border-gold/40 bg-gold/5" : "border-white/10 bg-surface"}`}
-              >
-                <div className="grid size-10 place-items-center rounded-xl bg-gold/15 text-gold">
-                  <Search className="size-5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-display truncate text-sm font-bold">{inv.title}</p>
-                  <p className="mt-0.5 inline-flex items-center gap-3 text-[10px] text-muted-foreground">
-                    <span className="inline-flex items-center gap-1 text-gold"><Star className="size-3" /> +{inv.reward.xp}</span>
-                    <span className="inline-flex items-center gap-1 text-gold"><Coins className="size-3" /> +{inv.reward.dinars}</span>
-                  </p>
-                </div>
-                {done ? <Check className="size-4 text-gold" /> : <ChevronLeft className="size-4 text-muted-foreground" />}
-              </Link>
+                routeId={inv.id}
+                caseNumber={caseNumber}
+                title={inv.title}
+                difficultyLabel={itemDifficulty(item) ? displayDifficulty(itemDifficulty(item)!) : null}
+                xp={inv.reward.xp}
+                dinars={inv.reward.dinars}
+                done={done}
+                onNavigate={() => stashOrigin(`/investigation/${inv.id}`)}
+              />
             );
           })}
+
 
           {rows !== null && filtered.length === 0 && (
             <div className="rounded-2xl border border-dashed border-gold/30 bg-surface/40 p-8 text-center">
