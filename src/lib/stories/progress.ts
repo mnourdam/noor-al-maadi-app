@@ -73,8 +73,8 @@ export async function fetchStoryAccess(storyId: string): Promise<StoryAccessBund
         } catch { /* ignore */ }
         return payload;
       }
-      // AUTHORITATIVE DENIAL. The server evaluated `unlock_spec` v2 and
-      // said no (locked / not_found / not_published). NEVER fall through
+      // AUTHORITATIVE DENIAL. The server evaluated publication + `unlock_spec`
+      // v2 and said no (locked / not_found). NEVER fall through
       // to the permissive offline snapshot path — that is exactly how a
       // locked story became readable via a direct URL.
       try {
