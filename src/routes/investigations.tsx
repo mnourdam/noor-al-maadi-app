@@ -415,7 +415,7 @@ function InvestigationsIndex() {
             </div>
           )}
         </div>
-      </Screen>
+      </div>
       </ReadingScale>
     </AppShell>
   );
