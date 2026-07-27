@@ -87,7 +87,12 @@ export function AudioInitializer() {
       <div>campaign readyState: {debug.campaignReadyState}</div>
       <div>campaign paused: {String(debug.campaignPaused)}</div>
       <div>campaign volume: {debug.campaignVolume}</div>
+      <div className="truncate">investigation src: {debug.investigationSrc}</div>
+      <div>investigation paused: {String(debug.investigationPaused)}</div>
+      <div>investigation volume: {debug.investigationVolume}</div>
+      <div>investigation asset missing: {String(debug.investigationMissing)}</div>
       <div className="truncate">last play error: {debug.lastPlayError ?? "none"}</div>
+
     </div>
   );
 }
