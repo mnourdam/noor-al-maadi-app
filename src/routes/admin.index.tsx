@@ -113,6 +113,12 @@ function AdminHub() {
             desc="إطار JSON للتحديات التاريخية: كلمات متقاطعة، ترتيب الأحداث، من أنا؟، الروابط، الذاكرة." />
           <AdminCard to="/admin/encyclopedia" icon={<Landmark className="h-5 w-5" />} title="إدارة الموسوعة"
             desc="إدارة مدخلات الموسوعة (شخصيات، مدن، معارك...)." />
+          <AdminCard to="/admin/artifacts" icon={<Gem className="h-5 w-5" />} title="إدارة الآثار 🏺"
+            desc={`مراجعة وتصحيح تصنيفات الآثار (الاسم، المعرف، النوع، الندرة) مع تصدير واستيراد.${
+              stats.artifactsUpdatedAt ? ` آخر تحديث: ${new Date(stats.artifactsUpdatedAt).toLocaleDateString("ar")}` : ""
+            }`}
+            badge={stats.artifacts} />
+
           <AdminCard to="/admin/encyclopedia-report" icon={<Database className="h-5 w-5" />} title="تقرير بيانات الموسوعة"
             desc="التصنيف القياسي، آلية الروابط، بوابة الجودة، الكيانات اليتيمة، ودليل تأليف الميتاداتا." />
           <AdminCard to="/admin/taxonomy" icon={<Layers className="h-5 w-5" />} title="إدارة التصنيفات (Taxonomy)"
