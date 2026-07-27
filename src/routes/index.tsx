@@ -3,7 +3,7 @@ import { markBootHealthy } from "@/lib/diagnostics/safe-boot";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Search, Map as MapIcon, ChevronLeft, Crown, Lock, Compass, Play,
-  Hourglass, Calendar, Heart, Coins, Trophy, Package, BookOpen,
+  Hourglass, Calendar, Heart, Trophy, Package, BookOpen,
   Sparkles, Bell, Gem, Target, Flame, Sunrise, Zap, Award,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
