@@ -66,10 +66,11 @@ export function CaseHero({
           flow so the description can never collide with the title. */}
       <div className="relative -mt-16 px-5 pb-1">
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-gold/35 bg-gold/10 px-2.5 py-1 text-[10px] font-bold tracking-[0.18em] text-gold">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-gold/35 bg-gold/10 px-2.5 py-1 text-[10px] font-bold tracking-[0.06em] text-gold">
             <FolderOpen className="size-3" />
-            <span dir="ltr">ملف القضية #{caseNo}</span>
+            <span>ملف القضية رقم <span dir="ltr">{caseNo}</span></span>
           </span>
+
           {difficultyLabel && (
             <span className="text-[10px] text-muted-foreground">{difficultyLabel}</span>
           )}

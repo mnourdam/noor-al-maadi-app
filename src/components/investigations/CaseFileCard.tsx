@@ -112,9 +112,10 @@ export function CaseFileCard({
       {/* Folder tab */}
       <div className="case-tab flex items-center gap-2 px-3 py-1.5">
         {done ? <FolderOpen className="size-3 text-gold" /> : <Folder className="size-3 text-gold" />}
-        <span className="font-display text-[9px] font-bold tracking-[0.2em] text-gold/90" dir="ltr">
-          CASE FILE #{caseNumber}
+        <span className="font-display text-[9px] font-bold tracking-[0.06em] text-gold/90">
+          ملف القضية رقم <span dir="ltr">{caseNumber}</span>
         </span>
+
         {done && (
           <span className="case-stamp ms-auto rounded px-1.5 py-0.5 text-[9px] font-bold">
             تم الحل
