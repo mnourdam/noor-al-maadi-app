@@ -100,6 +100,13 @@ export function CommentItem({ row, onChange, onDelete, currentUserId = null, con
         </div>
       )}
 
+      {/* Attribution only — plain text, never a link to a profile. */}
+      <p className="mb-1 text-[12px] font-medium text-foreground/80">
+        {row.author_name?.trim() || "قارئ في إرث"}
+      </p>
+
+
+
       {editing ? (
         <div className="space-y-2">
           <textarea
