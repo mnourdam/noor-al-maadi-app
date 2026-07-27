@@ -64,7 +64,7 @@ export function anchorHref(row: ReflectionArchiveRow): string | null {
   switch (row.anchor_type) {
     case "entity": return `/encyclopedia/entity/${row.anchor_id}`;
     case "story": return `/story/${row.anchor_id}`;
-    case "campaign": return `/campaign/${row.anchor_id}`;
+    case "campaign": return `/campaigns/imported/${row.anchor_id}`;
     default: return null;
   }
 }
