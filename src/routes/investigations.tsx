@@ -428,35 +428,3 @@ function Chip({
     </button>
   );
 }
-
-function SupabaseRow({ inv, done, onNavigate }: { inv: InvestigationRow; done: boolean; onNavigate?: () => void }) {
-  const reward = (inv.reward ?? {}) as InvestigationReward;
-  const steps = Array.isArray(inv.steps) ? inv.steps : [];
-  return (
-    <Link
-      to="/investigation/$id"
-      params={{ id: inv.slug }}
-      onClick={() => onNavigate?.()}
-      className={`flex items-center gap-3 rounded-2xl border p-4 ${done ? "border-gold/40 bg-gold/5" : "border-white/10 bg-surface"}`}
-    >
-      <div className="grid size-10 place-items-center rounded-xl bg-gold/15 text-gold">
-        <Search className="size-5" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="font-display truncate text-sm font-bold">{inv.title}</p>
-        {inv.subtitle && (
-          <p className="truncate text-[11px] text-muted-foreground">{inv.subtitle}</p>
-        )}
-        <p className="mt-0.5 inline-flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] text-muted-foreground">
-          <span className="text-amber-300">
-            {displayDifficulty(inv.difficulty)} · {steps.length} خطوة · {countQuestions(steps)} سؤال
-          </span>
-          {reward.hearts ? <span className="inline-flex items-center gap-1 text-rose-300"><Heart className="size-3" /> +{reward.hearts}</span> : null}
-          {reward.xp ? <span className="inline-flex items-center gap-1 text-gold"><Star className="size-3" /> +{reward.xp}</span> : null}
-          {reward.coins ? <span className="inline-flex items-center gap-1 text-gold"><Coins className="size-3" /> +{reward.coins}</span> : null}
-        </p>
-      </div>
-      {done ? <Check className="size-4 text-gold" /> : <ChevronLeft className="size-4 text-muted-foreground" />}
-    </Link>
-  );
-}
