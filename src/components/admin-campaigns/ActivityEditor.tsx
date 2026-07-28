@@ -5,6 +5,7 @@
 
 import { Trash2, ChevronUp, ChevronDown, Copy } from "lucide-react";
 import type { CampaignActivity, CampaignQuestionType } from "@/types/campaign";
+import { coerceRichText } from "@/lib/campaigns/richText";
 
 const TYPE_LABELS: Record<CampaignQuestionType, string> = {
   reading_then_question: "قراءة ثم سؤال",
@@ -99,7 +100,7 @@ export function ActivityEditor({ activity, index, total, onChange, onDelete, onD
         {(a.type === "reading_then_question" || a.contextText) && (
           <div>
             <label className={labelCls}>نص السياق / القراءة</label>
-            <textarea value={a.contextText ?? ""} onChange={e => onChange({ contextText: e.target.value })}
+            <textarea value={coerceRichText(a.contextText)} onChange={e => onChange({ contextText: e.target.value })}
               className={`${inputCls} min-h-[80px]`} />
           </div>
         )}
