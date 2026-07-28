@@ -7,6 +7,8 @@ import {
   Sparkles, Bell, Gem, Target, Flame, Sunrise, Zap, Award,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { Avatar } from "@/components/Avatar";
+import { DEFAULT_AVATAR_ID } from "@/lib/avatars";
 
 
 import { CachedImage } from "@/components/CachedImage";
