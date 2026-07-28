@@ -64,6 +64,38 @@ async function alreadyRan(admin: any, jobKey: string, runDate: string): Promise<
   return !!data;
 }
 
+/**
+ * ATOMIC claim of a (job_key, run_date) slot.
+ *
+ * The old flow was check-then-act: `alreadyRan()` → send → `recordRun()`.
+ * Two concurrent cron triggers (or a retry while the first invocation was
+ * still sending) both saw "not ran yet" and both sent — that is the root
+ * cause of the duplicated recurring notifications.
+ *
+ * `claimRun` inserts the run row FIRST. A unique index on
+ * (job_key, run_date) means exactly one caller can win; the loser gets a
+ * 23505 unique violation and returns false, so it never sends.
+ */
+async function claimRun(admin: any, jobKey: string, runDate: string): Promise<boolean> {
+  const { error } = await admin
+    .from("automatic_notification_runs")
+    .insert({ job_key: jobKey, run_date: runDate, status: "running", details: {} });
+  if (!error) return true;
+  if (error.code === "23505") return false;      // another invocation won
+  console.error("[auto-notify] claim failed", jobKey, error);
+  return false;                                   // fail closed — never double-send
+}
+
+/** Release a claim taken by `claimRun` when the job turned out to be a no-op. */
+async function releaseRun(admin: any, jobKey: string, runDate: string) {
+  await admin
+    .from("automatic_notification_runs")
+    .delete()
+    .eq("job_key", jobKey)
+    .eq("run_date", runDate)
+    .eq("status", "running");
+}
+
 async function recordRun(
   admin: any,
   jobKey: string,
@@ -72,13 +104,14 @@ async function recordRun(
   notificationId: string | null,
   details: any,
 ) {
-  await admin.from("automatic_notification_runs").insert({
+  // Upsert: the row may already exist because `claimRun` inserted it.
+  await admin.from("automatic_notification_runs").upsert({
     job_key: jobKey,
     run_date: runDate,
     status,
     notification_id: notificationId,
     details,
-  });
+  }, { onConflict: "job_key,run_date" });
 }
 
 // ---------- Job 1: today in history ----------
