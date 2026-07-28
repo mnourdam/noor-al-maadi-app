@@ -284,41 +284,29 @@ export interface SchedulerContext {
 
 
 /**
- * Call on every app open. Emits at most one notification per category per
- * day, based on stored "fired" markers. Pure-side-effect — safe in effects.
+ * Call on every app open.
+ *
+ * ⚠️ Ownership boundary (duplicate-notification fix):
+ *   "في مثل هذا اليوم" (`today_in_history`) and the 24h re-engagement
+ *   reminder (`comeback_24h`) are owned END-TO-END by the server
+ *   pipeline: the scheduled job creates ONE row with a stable
+ *   `dedupe_key`, realtime + FCM deliver it, and the Notification
+ *   Center reads the same row.
+ *
+ *   This local scheduler used to emit its own copy of both on every
+ *   app open, so the player received the server push AND a locally
+ *   generated twin. That was the real source of the duplicates — it is
+ *   removed here rather than hidden in the UI.
+ *
+ *   What remains local: last-open tracking (used by the server job's
+ *   inactivity window) and the ad-hoc `deliverNotification` helpers,
+ *   which now require stable ids.
  */
 export function runDailyNotifications(ctx: SchedulerContext): InAppNotification[] {
-  const out: InAppNotification[] = [];
-  if (!ctx.prefs.master) return out;
-
-  // 1) Daily history
-  if (ctx.prefs.daily && ctx.today && shouldFireDailyish("daily")) {
-    out.push(deliver({
-      category: "daily",
-      title: "حدث في مثل هذا اليوم",
-      body: `${ctx.today.title}${ctx.today.teaser ? " — " + ctx.today.teaser : ""}`,
-      href: ctx.today.href,
-    }));
-    markFired("daily");
-  }
-
-  // 2) Re-engagement (24h gap)
-  if (ctx.prefs.reengagement) {
-    const last = lastOpenedAt();
-    const gap = Date.now() - last;
-    if (gap >= 24 * 3600_000 && shouldFireDailyish("reengage")) {
-      const hook = REENGAGE_HOOKS[Math.floor(Math.random() * REENGAGE_HOOKS.length)];
-      out.push(deliver({ category: "reengagement", ...hook }));
-      markFired("reengage");
-    }
-  }
-
-  // 3) Season notifications removed in Phase 3B (Seasons demo deleted).
-
-
-  // Update last-opened *after* scheduling so the gap calc above is correct
+  if (!ctx.prefs.master) return [];
+  // Update last-opened so the server-side inactivity window stays accurate.
   touchLastOpened();
-  return out;
+  return [];
 }
 
 /** Fire a campaign-unlocked notification (call when a new/hidden campaign becomes available). */
