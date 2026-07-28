@@ -801,9 +801,9 @@ function RecentUnlocks() {
         key: a.key,
         type: t,
         slug: ent?.slug ?? a.slug,
-        kind: kindLabel[t] ?? t,
+        kind: kindLabel(t),
         title: a.title,
-        subtitle: subtitleParts.join(" · ") || (kindLabel[t] ?? "—"),
+        subtitle: subtitleParts.join(" · ") || kindLabel(t),
         rarity,
       });
       if (list.length >= 3) break;
