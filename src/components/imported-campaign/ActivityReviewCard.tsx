@@ -9,13 +9,15 @@
 import { Check, HelpCircle, BookOpen } from "lucide-react";
 import type { CampaignActivity } from "@/types/campaign";
 import { RichReadingText } from "./RichReadingText";
+import { coerceRichText } from "@/lib/campaigns/richText";
 
 export function ActivityReviewCard({ activity }: { activity: CampaignActivity }) {
+  const contextBody = coerceRichText(activity.contextText).trim();
   return (
     <div className="motion-page rounded-2xl border border-white/10 bg-black/30 p-4">
-      {activity.contextText && (
+      {contextBody && (
         <div className="parchment-dark mb-4 rounded-2xl border border-gold/25 p-4">
-          <RichReadingText text={activity.contextText} size="sm" />
+          <RichReadingText text={contextBody} size="sm" />
         </div>
       )}
 
