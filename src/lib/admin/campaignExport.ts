@@ -16,6 +16,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import { coerceRichText, hasRichText, isNonCanonicalRichText } from "@/lib/campaigns/richText";
 
 export const CAMPAIGN_EXPORT_ENVELOPE_VERSION = 1;
 export const CAMPAIGN_EXPORT_GENERATOR = "irth-campaigns-export";
@@ -344,7 +345,7 @@ export function buildAuditCsv(entries: CampaignExportEntry[]): string {
           csvCell(a.type),
           csvCell(a.order ?? ai + 1),
           csvCell(a.prompt ?? a.question ?? null),
-          csvCell(a.contextText ?? a.body ?? a.historicalReadingText ?? null),
+          csvCell(coerceRichText(a.contextText ?? a.body ?? a.historicalReadingText) || null),
           jsonCell(a.options ?? null),
           jsonCell(a.correctAnswer ?? a.correctOrder ?? a.correct ?? null),
           csvCell(a.explanation ?? a.feedbackCorrect ?? null),
@@ -440,7 +441,7 @@ function auditCampaign(c: CampaignExportEntry, knownEntityIds: Set<string> | nul
       continue;
     }
 
-    const hasContent = acts.some((a) => str(a.contextText) || str(a.prompt) || str(a.body));
+    const hasContent = acts.some((a) => hasRichText(a.contextText) || str(a.prompt) || hasRichText(a.body));
     if (!hasContent) add("error", "chapter_without_content", "فصل بلا محتوى نصي.", { chapter_id: chId });
 
     const actIds = new Set<string>();
@@ -510,8 +511,14 @@ function auditCampaign(c: CampaignExportEntry, knownEntityIds: Set<string> | nul
         }
       }
 
-      if (NARRATIVE_TYPES.has(type) && type === "reading_then_question" && !str(a.contextText)) {
+      if (NARRATIVE_TYPES.has(type) && type === "reading_then_question" && !hasRichText(a.contextText)) {
         add("error", "incomplete_activity_payload", "نشاط قراءة بلا نص (contextText).", at);
+      }
+
+      // Canonical schema for contextText is a STRING. Paragraph arrays are
+      // renderable (coerced at runtime and joined on re-import) but drifted.
+      if (isNonCanonicalRichText(a.contextText)) {
+        add("warning", "context_text_not_string", "نص القراءة (contextText) مصفوفة بدل نص؛ سيُدمج إلى نص عند إعادة الاستيراد.", at);
       }
     });
   }
