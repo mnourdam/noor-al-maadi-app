@@ -537,7 +537,7 @@ export function buildAuditReport(
   const campaigns = entries.map((c) => auditCampaign(c, knownEntityIds));
   return {
     generated_at: new Date().toISOString(),
-    expected_chapters_per_campaign: EXPECTED_CHAPTERS,
+    
     totals: {
       campaigns: campaigns.length,
       chapters: campaigns.reduce((n, c) => n + c.chapter_count, 0),
