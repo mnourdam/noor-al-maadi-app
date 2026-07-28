@@ -14,6 +14,7 @@ import { isAndroidNativeApp } from "@/lib/androidFreezeDiagnostics";
 import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
 import type { CampaignActivity } from "@/types/campaign";
 import { RichReadingText } from "./RichReadingText";
+import { coerceRichText } from "@/lib/campaigns/richText";
 import { sfx as gameSfx } from "@/components/games/sfx";
 import {
   DndContext,
@@ -75,11 +76,12 @@ function FeedbackBanner({ kind, text }: { kind: "ok" | "err"; text?: string }) {
   );
 }
 
-function ContextBlock({ text }: { text?: string }) {
-  if (!text) return null;
+function ContextBlock({ text }: { text?: unknown }) {
+  const body = coerceRichText(text).trim();
+  if (!body) return null;
   return (
     <div className="parchment-dark mb-4 rounded-2xl border border-gold/25 p-4">
-      <RichReadingText text={text} size="sm" />
+      <RichReadingText text={body} size="sm" />
     </div>
   );
 }
@@ -667,7 +669,7 @@ function FillBlankRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
 // They are now presented as what they are: a reading step.
 function ReadingRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
   const [resolved, setResolved] = useState(alreadyDone ?? false);
-  const body = (activity.contextText ?? "").trim();
+  const body = coerceRichText(activity.contextText).trim();
   return (
     <div className="motion-page">
       <div className="mb-3 flex items-center gap-1 text-[10px] tracking-widest text-gold/80">

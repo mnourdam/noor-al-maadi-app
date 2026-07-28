@@ -9,6 +9,7 @@
 // working unchanged.
 // ============================================================
 
+import { coerceRichText } from "@/lib/campaigns/richText";
 import type {
   Campaign,
   CampaignActivity,
@@ -189,7 +190,8 @@ export function validateCampaign(raw: unknown, knownRegistryIds?: Set<string>): 
             type: (aType ?? a?.type) as CampaignQuestionType,
 
             prompt: String(a?.prompt ?? ""),
-            contextText: a?.contextText,
+            // Canonical shape is a string; paragraph arrays are joined on import.
+            contextText: a?.contextText == null ? undefined : coerceRichText(a.contextText) || undefined,
             options: Array.isArray(a?.options) ? a.options.map(String) : undefined,
             correctAnswer: a?.correctAnswer,
             correctOrder: Array.isArray(a?.correctOrder) ? a.correctOrder.map(String) : undefined,
