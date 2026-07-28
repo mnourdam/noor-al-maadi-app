@@ -214,7 +214,11 @@ async function runTodayInHistory(
 async function runDailyFact(admin: any, baseUrl: string, serviceKey: string, dryRun: boolean) {
   const jobKey = "daily_fact";
   const runDate = todayISODate();
-  if (await alreadyRan(admin, jobKey, runDate)) {
+  // Atomic claim BEFORE any send (see claimRun).
+  if (!dryRun && !(await claimRun(admin, jobKey, runDate))) {
+    return { job: jobKey, skipped: "already_ran" };
+  }
+  if (dryRun && await alreadyRan(admin, jobKey, runDate)) {
     return { job: jobKey, skipped: "already_ran" };
   }
 
@@ -226,9 +230,15 @@ async function runDailyFact(admin: any, baseUrl: string, serviceKey: string, dry
     .order("last_sent_at", { ascending: true, nullsFirst: true })
     .limit(1);
 
-  if (error) return { job: jobKey, error: error.message };
+  if (error) {
+    if (!dryRun) await releaseRun(admin, jobKey, runDate);
+    return { job: jobKey, error: error.message };
+  }
   const fact = facts?.[0];
-  if (!fact) return { job: jobKey, skipped: "no_facts_available" };
+  if (!fact) {
+    if (!dryRun) await releaseRun(admin, jobKey, runDate);
+    return { job: jobKey, skipped: "no_facts_available" };
+  }
 
   if (dryRun) return { job: jobKey, would_send: fact };
 
