@@ -193,6 +193,79 @@ function CampaignsHubFull() {
   );
 }
 
+/** Tiny debounce — keeps typing responsive while avoiding re-filtering per keystroke. */
+function useDebounced<T>(value: T, delay = 120): T {
+  const [v, setV] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setV(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return v;
+}
+
+/**
+ * One normalized haystack per campaign: title, subtitle, description, tags,
+ * era/period/category/region, plus the figures, cities and battles referenced
+ * by its activities. Arabic-normalized once (diacritics + hamza tolerant).
+ */
+function buildCampaignHaystack(c: ImportedCampaign): string {
+  const parts: (string | undefined)[] = [
+    c.title,
+    c.subtitle,
+    c.description,
+    c.historicalPeriod,
+    c.era,
+    c.category,
+    c.mapRegion,
+    c.worldSlug,
+    c.slug,
+    ...(c.tags ?? []),
+  ];
+  for (const ch of c.chapters ?? []) {
+    parts.push(ch.title, ch.subtitle);
+    for (const a of ch.activities ?? []) {
+      parts.push(a.relatedFigure, a.relatedCity, a.relatedBattle, a.relatedArtifact);
+    }
+  }
+  return normalizeArabicSearch(parts.filter(Boolean).join(" "));
+}
+
+function CampaignSearchBar({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="relative">
+      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-gold/70">
+        <Search className="size-4" />
+      </div>
+      <input
+        type="search"
+        inputMode="search"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="ابحث عن حملة..."
+        aria-label="ابحث عن حملة"
+        className="h-12 w-full rounded-2xl border border-gold/35 bg-gradient-to-l from-amber-950/25 via-surface/70 to-stone-950/40 pr-11 pl-10 text-sm text-foreground placeholder:text-muted-foreground/70 shadow-[0_10px_30px_-22px_rgba(0,0,0,0.9)] outline-none transition focus:border-gold/70 focus:ring-1 focus:ring-gold/40 [&::-webkit-search-cancel-button]:appearance-none"
+      />
+      {value && (
+        <button
+          type="button"
+          onClick={() => onChange("")}
+          aria-label="مسح البحث"
+          className="motion-tap absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground hover:text-gold"
+        >
+          <X className="size-4" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+
 function EraDivider({ d, count }: { d: CampaignDivider; count: number }) {
   return (
     <header
