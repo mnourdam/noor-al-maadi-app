@@ -491,20 +491,26 @@ function CollectionPage() {
         const ts = open ? unlockedAtFor(current.type, e.slug, e.metadata) : 0;
         return { e, open, ts };
       })
-      .filter(({ open }) => open);
+      .filter(({ open }) => open)
+      .filter(({ e }) =>
+        !rarityFilter
+          ? true
+          : rarityFromMetadata(e.metadata, defaultRarity(current.type)) === rarityFilter,
+      );
     items.sort((a, b) => {
       if (a.ts !== b.ts) return b.ts - a.ts;
       return (a.e.title ?? "").localeCompare(b.e.title ?? "", "ar");
     });
     return items;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rawCurrentEntities, userCollection, userUnlockedAt, importedUnlockSet, profile, current.type, campaignArtifactRefs]);
+  }, [rawCurrentEntities, userCollection, userUnlockedAt, importedUnlockSet, profile, current.type, campaignArtifactRefs, rarityFilter]);
 
   const currentImported = useMemo(() => {
     return rawCurrentImported
       .filter(i => !!i.name && hasArabic(i.name) && i.unlocked)
+      .filter(i => !rarityFilter || normalizeRarity(registryItemRarity(i) as Rarity, "common") === rarityFilter)
       .sort((a, b) => (a.name ?? "").localeCompare(b.name ?? "", "ar"));
-  }, [rawCurrentImported]);
+  }, [rawCurrentImported, rarityFilter]);
 
   const openEntityReveal = (e: any, isOpen: boolean) => {
     const rarity = rarityFromMetadata(e.metadata, defaultRarity(current.type));
