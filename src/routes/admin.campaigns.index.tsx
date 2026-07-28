@@ -10,6 +10,7 @@ import { AdminGate } from "@/lib/admin-guard";
 import { parseHistoricalPeriodYear } from "@/lib/campaignChronology";
 import { selectCampaignRows } from "@/lib/campaigns/entities";
 import { CampaignExportPanel } from "@/components/admin/CampaignExportPanel";
+import { CampaignImportDialog } from "@/components/admin/CampaignImportDialog";
 
 
 export const Route = createFileRoute("/admin/campaigns/")({
