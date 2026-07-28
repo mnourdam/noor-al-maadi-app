@@ -746,10 +746,23 @@ function CollectionPage() {
           </div>
         ) : currentEntities.length === 0 && currentImported.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-gold/25 bg-surface/40 p-6 text-center">
-            <p className="font-display text-sm font-bold text-gold">لم تكتشف عناصر في هذه الفئة بعد</p>
+            <p className="font-display text-sm font-bold text-gold">
+              {rarityFilter
+                ? `لا توجد مقتنيات من درجة «${RARITY_META[rarityFilter].label}» في هذه القاعة`
+                : "لم تكتشف عناصر في هذه الفئة بعد"}
+            </p>
             <p className="mt-2 text-[11px] leading-6 text-muted-foreground">
               تُفتح عناصر المتحف عند إكمال الحملات والتحقيقات والمكافآت. تصفّح الموسوعة الآن للاطلاع على المحتوى المتاح.
             </p>
+            {rarityFilter && (
+              <button
+                type="button"
+                onClick={() => setRarityFilter(null)}
+                className="mt-3 rounded-full border border-gold/40 px-3 py-1 text-[11px] font-bold text-gold hover:bg-gold/10"
+              >
+                عرض جميع المقتنيات
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3">
