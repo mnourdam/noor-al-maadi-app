@@ -773,10 +773,8 @@ function RecentUnlocks() {
   const acquisitions = useLatestMuseumAcquisitions(30);
 
   const recents: Recent[] = useMemo(() => {
-    const kindLabel: Record<string, string> = {
-      figure: "شخصية", scholar: "شخصية", artifact: "أثر",
-      battle: "معركة", city: "مدينة", landmark: "معلم", state: "دولة",
-    };
+    // Canonical Arabic type dictionary — never show an English slug.
+    const kindLabel = (t: string) => entityTypeLabelAr(t);
     type EntShape = { slug?: string; title?: string; metadata?: { rarity?: Rarity; collectible?: boolean } };
     const lookupEntity = (t: string, slug: string): EntShape | null => {
       const probe = (m: { bySlug: Map<string, unknown> }): EntShape | null => {
