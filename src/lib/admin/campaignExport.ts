@@ -34,8 +34,18 @@ export const KNOWN_ACTIVITY_TYPES = [
 
 /** Types whose payload must contain a resolvable answer. */
 const ANSWER_TYPES = new Set(["multiple_choice", "true_false", "decision_choice"]);
+/**
+ * Types whose answer must be one of `options`.
+ * `true_false` is deliberately EXCLUDED: its canonical answer is a boolean
+ * (`true`/`false`), while `options` (e.g. ["صحيح","خطأ"]) are display labels
+ * only. Treating it like multiple_choice produced 629 false positives.
+ */
+const OPTION_ANSWER_TYPES = new Set(["multiple_choice", "decision_choice"]);
 /** Types whose payload must contain options. */
-const OPTION_TYPES = new Set(["multiple_choice", "true_false", "decision_choice", "arrange_events"]);
+const OPTION_TYPES = new Set(["multiple_choice", "decision_choice", "arrange_events"]);
+/** Accepted textual spellings of a boolean answer. */
+const TRUE_WORDS = new Set(["true", "1", "صحيح", "صح", "نعم"]);
+const FALSE_WORDS = new Set(["false", "0", "خطأ", "خطا", "لا"]);
 /** Types that are narrative-only (no answer expected). */
 const NARRATIVE_TYPES = new Set(["reading_then_question", "reflection_prompt"]);
 
@@ -474,7 +484,12 @@ function auditCampaign(c: CampaignExportEntry, knownEntityIds: Set<string> | nul
         const answer = a.correctAnswer ?? a.correct ?? null;
         if (answer === null || answer === undefined) {
           add("error", "question_without_correct_answer", "سؤال بلا إجابة صحيحة.", at);
-        } else if (options) {
+        } else if (type === "true_false") {
+          // Canonical schema: boolean. Textual/index spellings are tolerated.
+          const norm = String(answer).trim().toLowerCase();
+          const ok = typeof answer === "boolean" || TRUE_WORDS.has(norm) || FALSE_WORDS.has(norm);
+          if (!ok) add("error", "true_false_answer_not_boolean", "إجابة سؤال صح/خطأ يجب أن تكون قيمة منطقية (true/false).", at);
+        } else if (options && OPTION_ANSWER_TYPES.has(type)) {
           const ok =
             typeof answer === "number"
               ? answer >= 0 && answer < options.length
