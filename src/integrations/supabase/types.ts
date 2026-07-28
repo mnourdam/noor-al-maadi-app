@@ -3465,6 +3465,10 @@ export type Database = {
         Returns: Json
       }
       admin_get_story_full: { Args: { p_story_id: string }; Returns: Json }
+      admin_import_campaigns_v2: {
+        Args: { p_options?: Json; p_payload: Json }
+        Returns: Json
+      }
       admin_import_content_table: { Args: { p_ctype: string }; Returns: string }
       admin_import_investigations_v2: {
         Args: { p_options?: Json; p_payload: Json }
