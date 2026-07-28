@@ -8,7 +8,7 @@
 // ============================================================
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, X, HelpCircle, Lightbulb, GripVertical } from "lucide-react";
+import { Check, X, HelpCircle, Lightbulb, GripVertical, BookOpen } from "lucide-react";
 import { AndroidSafeInput, AndroidSafeTextarea } from "@/components/AndroidSafeTextInput";
 import { isAndroidNativeApp } from "@/lib/androidFreezeDiagnostics";
 import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
@@ -659,8 +659,45 @@ function FillBlankRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
   );
 }
 
+// ---------- Reading passage (reading_then_question with no options) ----------
+// The authored corpus ships `reading_then_question` activities that carry a
+// reading passage (`contextText`) + a framing prompt but no `options`. Before
+// this renderer existed they fell through to FallbackRenderer and were shown
+// to the player as «نشاطٌ تأمّلي — لا توجد إجابة آلية» with tiny body text.
+// They are now presented as what they are: a reading step.
+function ReadingRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
+  const [resolved, setResolved] = useState(alreadyDone ?? false);
+  const body = (activity.contextText ?? "").trim();
+  return (
+    <div className="motion-page">
+      <div className="mb-3 flex items-center gap-1 text-[10px] tracking-widest text-gold/80">
+        <BookOpen className="size-3" /> قراءة تاريخية
+      </div>
+      {body && (
+        <div className="parchment-dark mb-4 rounded-2xl border border-gold/25 p-4">
+          <RichReadingText text={body} size="lg" />
+        </div>
+      )}
+      <PromptBlock activity={activity} />
+      <HintRow hint={activity.hint} />
+      {!resolved && (
+        <button
+          onClick={() => { setResolved(true); onResolve(true); }}
+          className="motion-tap mt-4 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold"
+        >
+          أتممتُ القراءة — متابعة
+        </button>
+      )}
+      {resolved && (
+        <FeedbackBanner kind="ok" text={activity.feedbackCorrect ?? "أحسنت، تابع رحلتك."} />
+      )}
+    </div>
+  );
+}
+
 // ---------- Fallback ----------
 // Renders anything we don't know how to score. Author marks completion.
+
 function FallbackRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
   const [resolved, setResolved] = useState(alreadyDone ?? false);
   return (
@@ -934,7 +971,12 @@ function ReflectiveMomentRenderer({ activity, onResolve, alreadyDone, campaignId
 export function ActivityRenderer(props: RendererProps) {
   const { activity } = props;
   switch (activity.type) {
+    // A `reading_then_question` without options is a pure reading step —
+    // it gets the reading renderer, never the generic fallback.
     case "reading_then_question":
+      return (activity.options?.length ?? 0) > 0
+        ? <MultipleChoiceRenderer {...props} />
+        : <ReadingRenderer {...props} />;
     case "multiple_choice":       return <MultipleChoiceRenderer {...props} />;
     case "true_false":            return <TrueFalseRenderer {...props} />;
     case "arrange_events":        return <ArrangeEventsRenderer {...props} />;
