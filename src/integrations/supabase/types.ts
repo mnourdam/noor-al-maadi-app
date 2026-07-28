@@ -3809,6 +3809,7 @@ export type Database = {
       admin_upsert_story: { Args: { p_payload: Json }; Returns: Json }
       admin_upsert_story_scene: { Args: { p_payload: Json }; Returns: Json }
       admin_user_detail: { Args: { p_user_id: string }; Returns: Json }
+      admin_validate_activity_shape: { Args: { v_act: Json }; Returns: Json }
       admin_validate_campaign_payload: { Args: { v_data: Json }; Returns: Json }
       admin_validate_investigation_payload: {
         Args: { v_allow_removals: boolean; v_before: Json; v_data: Json }
