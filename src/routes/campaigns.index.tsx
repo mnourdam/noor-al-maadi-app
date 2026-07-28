@@ -162,7 +162,19 @@ function CampaignsHubFull() {
 
         {!isLoading && totalCampaigns === 0 && (
           <div className="rounded-2xl border border-dashed border-gold/30 bg-surface/40 p-8 text-center">
-            {worldSlug ? (
+            {isSearching ? (
+              <>
+                <SearchX className="mx-auto mb-3 size-8 text-gold/70" />
+                <p className="font-display text-base font-bold text-gold">لم نعثر على حملة مطابقة.</p>
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  className="motion-tap mt-4 rounded-full border border-gold/40 bg-gold/10 px-4 py-1.5 text-xs font-bold text-gold"
+                >
+                  مسح البحث
+                </button>
+              </>
+            ) : worldSlug ? (
               <>
                 <Globe2 className="mx-auto mb-3 size-8 text-gold/70" />
                 <p className="font-display text-base font-bold text-gold">لا توجد حملات متاحة في هذا العالم حاليًا</p>
@@ -175,6 +187,7 @@ function CampaignsHubFull() {
             )}
           </div>
         )}
+
       </Screen>
     </AppShell>
   );
