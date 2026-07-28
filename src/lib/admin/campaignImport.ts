@@ -54,6 +54,29 @@ export interface ParsedCampaignImportFile {
   warnings: string[];
 }
 
+function logCampaignImportRpcCall(
+  rpcName: string,
+  params: Record<string, unknown>,
+  campaignCount: number,
+) {
+  // Temporary import-pipeline diagnostic. Intentionally logs only shapes, never payload contents.
+  console.info("[CampaignImport:RPC]", {
+    rpcName,
+    paramNames: Object.keys(params),
+    campaignCount,
+    params: Object.fromEntries(
+      Object.entries(params).map(([key, value]) => [
+        key,
+        {
+          typeof: typeof value,
+          isArray: Array.isArray(value),
+          objectKeys: value && typeof value === "object" && !Array.isArray(value) ? Object.keys(value as Record<string, unknown>) : [],
+        },
+      ]),
+    ),
+  });
+}
+
 /**
  * Accepts the export envelope, a bare array, or a single campaign entry.
  * Anything else is rejected here — before any RPC call — so a content/entity
@@ -121,10 +144,13 @@ async function run(
   mode: "dry_run" | "commit",
   opts: { allowRemovals: boolean; writeMode: CampaignImportWriteMode },
 ): Promise<CampaignImportRunResult> {
-  const { data, error } = await supabase.rpc("admin_import_campaigns_v2" as never, {
-    p_payload: { campaigns } as never,
-    p_options: { mode, allow_removals: opts.allowRemovals, write_mode: opts.writeMode } as never,
-  } as never);
+  const rpcName = "admin_import_campaigns_v2";
+  const params = {
+    p_payload: { campaigns },
+    p_options: { mode, allow_removals: opts.allowRemovals, write_mode: opts.writeMode },
+  };
+  logCampaignImportRpcCall(rpcName, params, campaigns.length);
+  const { data, error } = await supabase.rpc(rpcName as never, params as never);
   if (error) throw new Error(error.message);
   return data as unknown as CampaignImportRunResult;
 }
