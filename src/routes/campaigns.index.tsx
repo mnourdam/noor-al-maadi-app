@@ -65,7 +65,18 @@ function CampaignsHubFull() {
 
   const { campaignIds, ready: membershipReady } = useWorldMembership(worldSlug);
 
-  const sections = useMemo(() => {
+  const [query, setQuery] = useState("");
+  const debouncedQuery = useDebounced(query, 120);
+
+  // Prebuilt, normalized haystack per campaign — built once per feed, never
+  // per keystroke. No network is touched by search.
+  const haystacks = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of data?.campaigns ?? []) map.set(c.id, buildCampaignHaystack(c));
+    return map;
+  }, [data]);
+
+  const worldFiltered = useMemo(() => {
     const base = data?.sections ?? [];
     if (!worldSlug) return base;
     if (!membershipReady) return base;
@@ -73,11 +84,24 @@ function CampaignsHubFull() {
       .map((s) => ({ ...s, campaigns: s.campaigns.filter((c) => campaignIds.has(c.id)) }))
       .filter((s) => s.campaigns.length > 0);
   }, [data, worldSlug, membershipReady, campaignIds]);
-  const totalCampaigns = useMemo(() => {
-    if (!worldSlug) return data?.campaigns.length ?? 0;
-    if (!data || !membershipReady) return 0;
-    return data.campaigns.filter((c) => campaignIds.has(c.id)).length;
-  }, [data, worldSlug, membershipReady, campaignIds]);
+
+  const nq = useMemo(() => normalizeArabicSearch(debouncedQuery.trim()), [debouncedQuery]);
+
+  const sections = useMemo(() => {
+    if (!nq) return worldFiltered;
+    return worldFiltered
+      .map((s) => ({
+        ...s,
+        campaigns: s.campaigns.filter((c) => (haystacks.get(c.id) ?? "").includes(nq)),
+      }))
+      .filter((s) => s.campaigns.length > 0);
+  }, [worldFiltered, nq, haystacks]);
+
+  const totalCampaigns = useMemo(
+    () => sections.reduce((n, s) => n + s.campaigns.length, 0),
+    [sections],
+  );
+  const isSearching = nq.length > 0;
 
 
   return (
@@ -92,6 +116,10 @@ function CampaignsHubFull() {
         />
       </div>
       <Screen title="الحملات" subtitle="رحلةٌ زمنيّة عبر العصور">
+        <div className="mb-4">
+          <CampaignSearchBar value={query} onChange={setQuery} />
+        </div>
+
         {worldSlug && (
           <div className="mb-4">
             <WorldFilterChip
@@ -100,6 +128,7 @@ function CampaignsHubFull() {
             />
           </div>
         )}
+
 
         {isLoading && (
           <div className="px-2 py-10 text-center text-sm text-muted-foreground">جاري التحميل…</div>
