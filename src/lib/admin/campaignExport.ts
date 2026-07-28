@@ -484,7 +484,12 @@ function auditCampaign(c: CampaignExportEntry, knownEntityIds: Set<string> | nul
         const answer = a.correctAnswer ?? a.correct ?? null;
         if (answer === null || answer === undefined) {
           add("error", "question_without_correct_answer", "سؤال بلا إجابة صحيحة.", at);
-        } else if (options) {
+        } else if (type === "true_false") {
+          // Canonical schema: boolean. Textual/index spellings are tolerated.
+          const norm = String(answer).trim().toLowerCase();
+          const ok = typeof answer === "boolean" || TRUE_WORDS.has(norm) || FALSE_WORDS.has(norm);
+          if (!ok) add("error", "true_false_answer_not_boolean", "إجابة سؤال صح/خطأ يجب أن تكون قيمة منطقية (true/false).", at);
+        } else if (options && OPTION_ANSWER_TYPES.has(type)) {
           const ok =
             typeof answer === "number"
               ? answer >= 0 && answer < options.length
