@@ -41,15 +41,15 @@ export function ActivityReviewCard({ activity }: { activity: CampaignActivity })
 }
 
 function AnswerKey({ activity }: { activity: CampaignActivity }) {
+  // Reading-only step (no options) — no answer key to show.
+  if (activity.type === "reading_then_question" && (activity.options?.length ?? 0) === 0) {
+    return <p className="text-[11px] text-muted-foreground">خطوة قراءة — لا توجد إجابة.</p>;
+  }
   switch (activity.type) {
     case "reading_then_question":
-      // Reading-only step (no options) — no answer key to show.
-      if ((activity.options?.length ?? 0) === 0) {
-        return <p className="text-[11px] text-muted-foreground">خطوة قراءة — لا توجد إجابة.</p>;
-      }
-    // falls through to the multiple-choice answer key when options exist
     case "multiple_choice": {
       const options = activity.options ?? [];
+
 
       const correctIndex =
         typeof activity.correctAnswer === "number"
