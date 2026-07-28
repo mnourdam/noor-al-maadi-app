@@ -142,7 +142,11 @@ async function runTodayInHistory(
 
   const jobKey = `today_in_history:slot=${slot}`;
   const runDate = todayISODate();
-  if (await alreadyRan(admin, jobKey, runDate)) {
+  // Atomic claim BEFORE any send — a retried/concurrent trigger loses here.
+  if (!dryRun && !(await claimRun(admin, jobKey, runDate))) {
+    return { job: jobKey, skipped: "already_ran" };
+  }
+  if (dryRun && await alreadyRan(admin, jobKey, runDate)) {
     return { job: jobKey, skipped: "already_ran" };
   }
 
@@ -160,12 +164,19 @@ async function runTodayInHistory(
     .order("created_at", { ascending: true })
     .order("id", { ascending: true });
 
-  if (error) return { job: jobKey, error: error.message };
-  if (!events || events.length === 0) return { job: jobKey, skipped: "no_event_for_today" };
+  if (error) {
+    if (!dryRun) await releaseRun(admin, jobKey, runDate);
+    return { job: jobKey, error: error.message };
+  }
+  if (!events || events.length === 0) {
+    if (!dryRun) await releaseRun(admin, jobKey, runDate);
+    return { job: jobKey, skipped: "no_event_for_today" };
+  }
 
   // Cap notifications per day at TIH_MAX_SLOTS. Extra events still appear
   // in the Home carousel — they just don't get their own notification.
   if (slot >= Math.min(events.length, TIH_MAX_SLOTS)) {
+    if (!dryRun) await releaseRun(admin, jobKey, runDate);
     return { job: jobKey, skipped: "no_event_for_slot", slot, total_events: events.length };
   }
 
