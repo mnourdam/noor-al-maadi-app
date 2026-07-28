@@ -385,14 +385,9 @@ export interface CampaignAuditEntry {
 
 export interface CampaignAuditReport {
   generated_at: string;
-  expected_chapters_per_campaign: number;
   totals: { campaigns: number; chapters: number; activities: number; errors: number; warnings: number };
   campaigns: CampaignAuditEntry[];
 }
-
-/** Most campaigns in the library ship 5 chapters; deviations are flagged
- *  as warnings only (never blocking). */
-export const EXPECTED_CHAPTERS = 5;
 
 function auditCampaign(c: CampaignExportEntry, knownEntityIds: Set<string> | null): CampaignAuditEntry {
   const issues: AuditIssue[] = [];
@@ -402,10 +397,10 @@ function auditCampaign(c: CampaignExportEntry, knownEntityIds: Set<string> | nul
   const chapters = chaptersOf(c);
   const knownIds = new Set<string>(KNOWN_ACTIVITY_TYPES);
 
+  // Chapter counts vary by design across the library (7–10), so only a
+  // completely empty campaign is an error.
   if (chapters.length === 0) add("error", "campaign_without_chapters", "الحملة لا تحتوي على أي فصل.");
-  if (chapters.length > 0 && chapters.length !== EXPECTED_CHAPTERS) {
-    add("warning", "unexpected_chapter_count", `عدد الفصول ${chapters.length} بدل ${EXPECTED_CHAPTERS}.`);
-  }
+
 
   // chapter ordering
   const chapterOrders = chapters.map((ch, i) => num(ch.order) ?? i + 1);
