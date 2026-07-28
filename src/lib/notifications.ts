@@ -180,8 +180,20 @@ export async function ensurePermission(): Promise<NotificationPermission> {
 }
 
 function deliverWithStatus(n: Omit<InAppNotification, "at" | "id"> & { id?: string }): { notification: InAppNotification; pushed: boolean } {
+  // Stable ID contract: callers SHOULD pass a deterministic id. When they
+  // don't we derive one from (category + title + today) instead of
+  // `Date.now()` — a timestamped id made every retry, resync or restart
+  // look like a brand-new notification, which is how duplicates got into
+  // the inbox in the first place.
+  const id = n.id ?? `${n.category}:${todayKey()}:${hashText(`${n.title}|${n.body}|${n.href ?? ""}`)}`;
+
+  // Already delivered (this device, ever within the retained window) →
+  // do not resurface it and do not re-fire the OS notification.
+  const existing = getInbox().find((x) => x.id === id);
+  if (existing) return { notification: existing, pushed: false };
+
   const final: InAppNotification = {
-    id: n.id ?? `${n.category}:${Date.now()}`,
+    id,
     category: n.category,
     title: n.title,
     body: n.body,
@@ -191,10 +203,17 @@ function deliverWithStatus(n: Omit<InAppNotification, "at" | "id"> & { id?: stri
     readAt: null,
   };
   const pushed = pushInbox(final);
-  if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
-    try { new Notification(final.title, { body: final.body, tag: final.category, icon: "/favicon.ico" }); } catch { /* ignore */ }
+  if (pushed && typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+    try { new Notification(final.title, { body: final.body, tag: final.id, icon: "/favicon.ico" }); } catch { /* ignore */ }
   }
   return { notification: final, pushed };
+}
+
+/** Small stable non-crypto hash — deterministic across restarts. */
+function hashText(input: string): string {
+  let h = 5381;
+  for (let i = 0; i < input.length; i++) h = ((h << 5) + h + input.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
 }
 
 function deliver(n: Omit<InAppNotification, "at" | "id"> & { id?: string }): InAppNotification {
