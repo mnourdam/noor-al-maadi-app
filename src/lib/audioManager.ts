@@ -45,13 +45,11 @@ const STORAGE_KEY = "irth_audio_settings";
 const AMBIENCE_URL = "/audio/irth-ambience.mp3";
 export const CAMPAIGN_AMBIENCE_SRC = "/audio/campaign-ambient.mp3";
 /**
- * Investigation ambience. The asset is INTENTIONALLY not shipped yet — the
- * system is prepared first. Until the file exists, `ensureTrack()` marks the
- * layer as failed on the first load error and the engine transparently keeps
- * the global ambience playing (see the non-global fallback in `ensureTrack`
- * and `tryPlay`). Dropping the file at this path is the only step needed to
- * activate it: no code change, and it is bundled like every other public
- * asset so it works offline inside the APK.
+ * Investigation ambience. Bundled locally under `public/audio/` (mono 64kbps,
+ * ~30s loop, ~235KB) so it works offline and inside the APK exactly like every
+ * other audio layer. If the file ever fails to load, `ensureTrack()` marks the
+ * layer as failed once and the engine transparently keeps the global ambience
+ * playing (see the non-global fallback in `ensureTrack` and `tryPlay`).
  */
 export const INVESTIGATION_AMBIENCE_SRC = "/audio/investigation_sfx.mp3";
 /** Alternate filename for the same layer (legacy naming). */
