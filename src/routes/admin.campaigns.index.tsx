@@ -186,12 +186,61 @@ function AdminCampaignsPage() {
           </div>
         )}
 
-        {rows && rows.length > 0 && <InventoryPanel rows={rows} />}
+        {rows && rows.length > 0 && (
+          <CampaignExportPanel
+            totalCount={rows.length}
+            filteredCount={filtered.length}
+            selectedIds={selectedIds}
+            onSelectAllFiltered={() => setSelectedIds(filtered.map(r => r.id))}
+            onClearSelection={() => setSelectedIds([])}
+            onError={(m) => notify("err", m)}
+            onSuccess={(m) => notify("ok", m)}
+          />
+        )}
+
+        {rows && rows.length > 0 && (
+          <section className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/40 p-3 text-[11px]">
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="بحث بالعنوان أو المعرّف…"
+              className="min-w-[200px] flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-slate-100 outline-none placeholder:text-slate-600 focus:border-amber-400"
+            />
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)}
+              className="rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5 text-slate-200 focus:border-amber-400">
+              <option value="all">كل الحالات</option>
+              <option value="published">منشورة</option>
+              <option value="draft">مسودة</option>
+              <option value="archived">مؤرشفة</option>
+            </select>
+            <select value={worldFilter} onChange={(e) => setWorldFilter(e.target.value)}
+              className="rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5 text-slate-200 focus:border-amber-400">
+              <option value="all">كل العوالم</option>
+              {worlds.map(w => <option key={w} value={w}>{w}</option>)}
+            </select>
+            <label className="flex items-center gap-1.5 text-slate-300">
+              <input
+                type="checkbox"
+                className="h-3.5 w-3.5 accent-amber-500"
+                checked={filtered.length > 0 && filtered.every(r => selectedIds.includes(r.id))}
+                onChange={(e) =>
+                  setSelectedIds(e.target.checked
+                    ? [...new Set([...selectedIds, ...filtered.map(r => r.id)])]
+                    : selectedIds.filter(id => !filtered.some(r => r.id === id)))}
+              />
+              تحديد الكل ({filtered.length})
+            </label>
+          </section>
+        )}
+
+        {rows && rows.length > 0 && <InventoryPanel rows={filtered} />}
 
         {rows && rows.length > 0 && (
           <section className="grid gap-3 md:grid-cols-2">
-            {rows.map(c => (
+            {filtered.map(c => (
               <CampaignCard key={c.id} c={c}
+                checked={selectedIds.includes(c.id)}
+                onToggle={() => toggleId(c.id)}
                 onView={() => setSelected(c)}
                 onPublish={() => setStatus(c, c.status === "published" ? "draft" : "published")}
                 onArchive={() => setStatus(c, c.status === "archived" ? "draft" : "archived")}
@@ -199,8 +248,14 @@ function AdminCampaignsPage() {
                 onDelete={() => remove(c)}
               />
             ))}
+            {filtered.length === 0 && (
+              <p className="rounded-lg border border-slate-800 bg-slate-900/40 p-6 text-center text-sm text-slate-400 md:col-span-2">
+                لا توجد حملات مطابقة للفلترة الحالية.
+              </p>
+            )}
           </section>
         )}
+
       </div>
 
       {selected && <DetailsModal c={selected} onClose={() => setSelected(null)} />}
