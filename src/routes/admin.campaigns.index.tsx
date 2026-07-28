@@ -278,8 +278,10 @@ function AdminCampaignsPage() {
   );
 }
 
-function CampaignCard({ c, onView, onPublish, onArchive, onDuplicate, onDelete }: {
+function CampaignCard({ c, checked, onToggle, onView, onPublish, onArchive, onDuplicate, onDelete }: {
   c: AdminCampaign;
+  checked: boolean;
+  onToggle: () => void;
   onView: () => void;
   onPublish: () => void;
   onArchive: () => void;
@@ -289,12 +291,19 @@ function CampaignCard({ c, onView, onPublish, onArchive, onDuplicate, onDelete }
   const chapters = chapterCount(c.data);
   const subtitle = (c.data?.subtitle ?? c.data?.description ?? "") as string;
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 transition hover:border-amber-500/40">
+    <div className={`rounded-xl border bg-slate-900/60 p-4 transition ${
+      checked ? "border-amber-400/60 ring-1 ring-amber-400/30" : "border-slate-800 hover:border-amber-500/40"
+    }`}>
+      <label className="mb-2 flex cursor-pointer items-center gap-2 text-[11px] text-slate-400">
+        <input type="checkbox" checked={checked} onChange={onToggle} className="h-4 w-4 accent-amber-500" />
+        تحديد للتصدير
+      </label>
       <Link
         to="/admin/campaigns/$id/edit"
         params={{ id: c.id } as any}
         className="block"
       >
+
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2 text-[10px] tracking-widest text-amber-300/80">
