@@ -1460,6 +1460,7 @@ export type Database = {
           category: string | null
           created_at: string
           created_by: string | null
+          dedupe_key: string | null
           deep_link: string | null
           icon: string | null
           id: string
@@ -1486,6 +1487,7 @@ export type Database = {
           category?: string | null
           created_at?: string
           created_by?: string | null
+          dedupe_key?: string | null
           deep_link?: string | null
           icon?: string | null
           id?: string
@@ -1512,6 +1514,7 @@ export type Database = {
           category?: string | null
           created_at?: string
           created_by?: string | null
+          dedupe_key?: string | null
           deep_link?: string | null
           icon?: string | null
           id?: string
