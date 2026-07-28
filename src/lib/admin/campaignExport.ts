@@ -34,8 +34,18 @@ export const KNOWN_ACTIVITY_TYPES = [
 
 /** Types whose payload must contain a resolvable answer. */
 const ANSWER_TYPES = new Set(["multiple_choice", "true_false", "decision_choice"]);
+/**
+ * Types whose answer must be one of `options`.
+ * `true_false` is deliberately EXCLUDED: its canonical answer is a boolean
+ * (`true`/`false`), while `options` (e.g. ["صحيح","خطأ"]) are display labels
+ * only. Treating it like multiple_choice produced 629 false positives.
+ */
+const OPTION_ANSWER_TYPES = new Set(["multiple_choice", "decision_choice"]);
 /** Types whose payload must contain options. */
-const OPTION_TYPES = new Set(["multiple_choice", "true_false", "decision_choice", "arrange_events"]);
+const OPTION_TYPES = new Set(["multiple_choice", "decision_choice", "arrange_events"]);
+/** Accepted textual spellings of a boolean answer. */
+const TRUE_WORDS = new Set(["true", "1", "صحيح", "صح", "نعم"]);
+const FALSE_WORDS = new Set(["false", "0", "خطأ", "خطا", "لا"]);
 /** Types that are narrative-only (no answer expected). */
 const NARRATIVE_TYPES = new Set(["reading_then_question", "reflection_prompt"]);
 
