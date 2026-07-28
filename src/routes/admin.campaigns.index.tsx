@@ -9,6 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
 import { parseHistoricalPeriodYear } from "@/lib/campaignChronology";
 import { selectCampaignRows } from "@/lib/campaigns/entities";
+import { CampaignExportPanel } from "@/components/admin/CampaignExportPanel";
+
 
 export const Route = createFileRoute("/admin/campaigns/")({
   head: () => ({
@@ -40,6 +42,12 @@ function AdminCampaignsPage() {
   const [toast, setToast] = useState<Toast | null>(null);
   const [selected, setSelected] = useState<AdminCampaign | null>(null);
 
+  // ---- export selection & filters (read-only concerns) ----
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | Status>("all");
+  const [worldFilter, setWorldFilter] = useState<string>("all");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
   const notify = (kind: Toast["kind"], msg: string) => {
     setToast({ kind, msg });
     setTimeout(() => setToast(null), 3000);
@@ -56,6 +64,43 @@ function AdminCampaignsPage() {
   };
 
   useEffect(() => { refresh(); }, []);
+
+  const worlds = useMemo(() => {
+    const set = new Set<string>();
+    for (const r of rows ?? []) {
+      const w = (r.data?.worldSlug ?? r.data?.era ?? "") as string;
+      if (w) set.add(w);
+    }
+    return [...set].sort();
+  }, [rows]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return (rows ?? []).filter(r => {
+      if (statusFilter !== "all" && r.status !== statusFilter) return false;
+      if (worldFilter !== "all") {
+        const w = (r.data?.worldSlug ?? r.data?.era ?? "") as string;
+        if (w !== worldFilter) return false;
+      }
+      if (!q) return true;
+      return [r.title, r.slug ?? "", r.id, (r.data?.subtitle ?? "") as string]
+        .some(v => String(v).toLowerCase().includes(q));
+    });
+  }, [rows, query, statusFilter, worldFilter]);
+
+  // keep the selection consistent with what is loaded
+  useEffect(() => {
+    if (!rows) return;
+    const live = new Set(rows.map(r => r.id));
+    setSelectedIds(prev => {
+      const next = prev.filter(id => live.has(id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [rows]);
+
+  const toggleId = (id: string) =>
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+
 
   const setStatus = async (c: AdminCampaign, status: Status) => {
     const { error } = await supabase.from("admin_campaigns" as any)
@@ -143,12 +188,61 @@ function AdminCampaignsPage() {
           </div>
         )}
 
-        {rows && rows.length > 0 && <InventoryPanel rows={rows} />}
+        {rows && rows.length > 0 && (
+          <CampaignExportPanel
+            totalCount={rows.length}
+            filteredCount={filtered.length}
+            selectedIds={selectedIds}
+            onSelectAllFiltered={() => setSelectedIds(filtered.map(r => r.id))}
+            onClearSelection={() => setSelectedIds([])}
+            onError={(m) => notify("err", m)}
+            onSuccess={(m) => notify("ok", m)}
+          />
+        )}
+
+        {rows && rows.length > 0 && (
+          <section className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/40 p-3 text-[11px]">
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="بحث بالعنوان أو المعرّف…"
+              className="min-w-[200px] flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-slate-100 outline-none placeholder:text-slate-600 focus:border-amber-400"
+            />
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)}
+              className="rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5 text-slate-200 focus:border-amber-400">
+              <option value="all">كل الحالات</option>
+              <option value="published">منشورة</option>
+              <option value="draft">مسودة</option>
+              <option value="archived">مؤرشفة</option>
+            </select>
+            <select value={worldFilter} onChange={(e) => setWorldFilter(e.target.value)}
+              className="rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5 text-slate-200 focus:border-amber-400">
+              <option value="all">كل العوالم</option>
+              {worlds.map(w => <option key={w} value={w}>{w}</option>)}
+            </select>
+            <label className="flex items-center gap-1.5 text-slate-300">
+              <input
+                type="checkbox"
+                className="h-3.5 w-3.5 accent-amber-500"
+                checked={filtered.length > 0 && filtered.every(r => selectedIds.includes(r.id))}
+                onChange={(e) =>
+                  setSelectedIds(e.target.checked
+                    ? [...new Set([...selectedIds, ...filtered.map(r => r.id)])]
+                    : selectedIds.filter(id => !filtered.some(r => r.id === id)))}
+              />
+              تحديد الكل ({filtered.length})
+            </label>
+          </section>
+        )}
+
+        {rows && rows.length > 0 && <InventoryPanel rows={filtered} />}
 
         {rows && rows.length > 0 && (
           <section className="grid gap-3 md:grid-cols-2">
-            {rows.map(c => (
+            {filtered.map(c => (
               <CampaignCard key={c.id} c={c}
+                checked={selectedIds.includes(c.id)}
+                onToggle={() => toggleId(c.id)}
                 onView={() => setSelected(c)}
                 onPublish={() => setStatus(c, c.status === "published" ? "draft" : "published")}
                 onArchive={() => setStatus(c, c.status === "archived" ? "draft" : "archived")}
@@ -156,8 +250,14 @@ function AdminCampaignsPage() {
                 onDelete={() => remove(c)}
               />
             ))}
+            {filtered.length === 0 && (
+              <p className="rounded-lg border border-slate-800 bg-slate-900/40 p-6 text-center text-sm text-slate-400 md:col-span-2">
+                لا توجد حملات مطابقة للفلترة الحالية.
+              </p>
+            )}
           </section>
         )}
+
       </div>
 
       {selected && <DetailsModal c={selected} onClose={() => setSelected(null)} />}
@@ -178,8 +278,10 @@ function AdminCampaignsPage() {
   );
 }
 
-function CampaignCard({ c, onView, onPublish, onArchive, onDuplicate, onDelete }: {
+function CampaignCard({ c, checked, onToggle, onView, onPublish, onArchive, onDuplicate, onDelete }: {
   c: AdminCampaign;
+  checked: boolean;
+  onToggle: () => void;
   onView: () => void;
   onPublish: () => void;
   onArchive: () => void;
@@ -189,12 +291,19 @@ function CampaignCard({ c, onView, onPublish, onArchive, onDuplicate, onDelete }
   const chapters = chapterCount(c.data);
   const subtitle = (c.data?.subtitle ?? c.data?.description ?? "") as string;
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 transition hover:border-amber-500/40">
+    <div className={`rounded-xl border bg-slate-900/60 p-4 transition ${
+      checked ? "border-amber-400/60 ring-1 ring-amber-400/30" : "border-slate-800 hover:border-amber-500/40"
+    }`}>
+      <label className="mb-2 flex cursor-pointer items-center gap-2 text-[11px] text-slate-400">
+        <input type="checkbox" checked={checked} onChange={onToggle} className="h-4 w-4 accent-amber-500" />
+        تحديد للتصدير
+      </label>
       <Link
         to="/admin/campaigns/$id/edit"
         params={{ id: c.id } as any}
         className="block"
       >
+
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2 text-[10px] tracking-widest text-amber-300/80">
