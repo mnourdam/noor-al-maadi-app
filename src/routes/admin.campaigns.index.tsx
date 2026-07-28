@@ -181,11 +181,11 @@ function AdminCampaignsPage() {
           <div className="rounded-xl border border-dashed border-amber-500/30 bg-slate-900/40 p-10 text-center">
             <Sword className="mx-auto mb-3 h-8 w-8 text-amber-400/70" />
             <p className="text-base font-semibold text-amber-100">لا توجد حملات مستوردة بعد</p>
-            <p className="mt-1 text-sm text-slate-400">استخدم مركز الاستيراد لإضافة حملة JSON جديدة.</p>
-            <Link to="/admin/import" search={{ type: "campaigns" } as any}
+            <p className="mt-1 text-sm text-slate-400">استخدم استيراد الحملات لإضافة ملف تصدير JSON.</p>
+            <button onClick={() => setImportOpen(true)}
               className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-amber-400">
               <Upload className="h-4 w-4" /> استيراد حملة JSON
-            </Link>
+            </button>
           </div>
         )}
 
