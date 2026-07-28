@@ -7,6 +7,8 @@ import {
   Sparkles, Bell, Gem, Target, Flame, Sunrise, Zap, Award,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { Avatar } from "@/components/Avatar";
+import { DEFAULT_AVATAR_ID } from "@/lib/avatars";
 
 
 import { CachedImage } from "@/components/CachedImage";
@@ -643,12 +645,29 @@ function HomeFull() {
           ))}
 
 
-          {/* Top greeting strip */}
+          {/* Top identity strip — mini player card */}
           <div className="relative z-10 flex items-start justify-between px-5 pt-8">
-            <div className="animate-curtain rounded-2xl bg-gradient-to-l from-black/55 via-black/35 to-transparent px-3 py-2 ring-1 ring-white/10 backdrop-blur-sm">
-              <p className="text-[11px] tracking-[0.2em] text-gold drop-shadow-[0_1px_4px_oklch(0_0_0/0.6)]">مرحبًا بك، {displayName}</p>
-              <p className="font-display mt-1 text-[11px] text-white/80">المستوى {lvl.level} · {lvl.title}</p>
-            </div>
+            <Link
+              to="/profile"
+              aria-label="بطاقة هويتك — الذهاب إلى حسابي"
+              className="animate-curtain flex max-w-[15rem] items-center gap-3 rounded-2xl bg-gradient-to-l from-black/60 via-black/40 to-transparent px-3 py-2 ring-1 ring-white/10 backdrop-blur-sm transition-colors hover:ring-gold/40"
+            >
+              <Avatar avatarId={profile.avatarId ?? DEFAULT_AVATAR_ID} size="md" />
+              <div className="min-w-0 flex-1">
+                <p className="font-display truncate text-[13px] font-bold leading-tight text-white drop-shadow-[0_1px_4px_oklch(0_0_0/0.6)]">
+                  {displayName}
+                </p>
+                <p className="mt-0.5 truncate text-[11px] text-gold/90">
+                  {lvl.title} · المستوى {lvl.level}
+                </p>
+                <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/15">
+                  <div
+                    className="h-full bg-gradient-gold transition-[width] duration-700 ease-out"
+                    style={{ width: `${Math.round(lvl.progress * 100)}%` }}
+                  />
+                </div>
+              </div>
+            </Link>
             {/* Streak pill removed — Hamasa is shown in the top HUD already */}
           </div>
 
