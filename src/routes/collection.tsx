@@ -537,17 +537,19 @@ function CollectionPage() {
     });
   };
 
-  // ── Hero stats: rarity tally + latest unlock across all sections ──
+  // ── Hero stats: rarity tally (owned + total) + latest unlock ──
   const heroStats = useMemo(() => {
     const tally: Record<Rarity, number> = { common: 0, rare: 0, epic: 0, legendary: 0 };
+    const totals: Record<Rarity, number> = { common: 0, rare: 0, epic: 0, legendary: 0 };
     let latest: { title: string; section: SectionDef; ts: number } | null = null;
     for (const s of SECTIONS) {
       const list = supByType[s.type].data ?? [];
       for (const e of list) {
         const meta = (e.metadata as any) ?? {};
         if (s.type === "artifact" && !isArtifactVisible(e.slug, meta, meta.legacy_id)) continue;
-        if (!isEntityUnlocked(s.type, e.slug, e.metadata)) continue;
         const r = rarityFromMetadata(e.metadata, defaultRarity(s.type));
+        totals[r] += 1;
+        if (!isEntityUnlocked(s.type, e.slug, e.metadata)) continue;
         tally[r] += 1;
         const ts = unlockedAtFor(s.type, e.slug, e.metadata);
         if (ts && (!latest || ts > latest.ts) && e.title && /[\u0600-\u06FF]/.test(e.title)) {
@@ -555,7 +557,17 @@ function CollectionPage() {
         }
       }
     }
-    return { tally, latest };
+    // Imported-registry items participate in the same rarity economy.
+    for (const list of Object.values(importedByType)) {
+      for (const item of list) {
+        const r = normalizeRarity(registryItemRarity(item) as Rarity, "common");
+        totals[r] += 1;
+        if (item.unlocked) tally[r] += 1;
+      }
+    }
+    return { tally, totals, latest };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supFigures.data, supArtifacts.data, supLandmarks.data, supCities.data, supBattles.data, supEvents.data, importedByType, userCollection, userUnlockedAt, importedUnlockSet, profile, campaignArtifactRefs]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supFigures.data, supArtifacts.data, supLandmarks.data, supCities.data, supBattles.data, supEvents.data, userCollection, userUnlockedAt, importedUnlockSet, profile, campaignArtifactRefs]);
 
