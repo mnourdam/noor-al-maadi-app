@@ -454,12 +454,16 @@ function auditCampaign(c: CampaignExportEntry, knownEntityIds: Set<string> | nul
 
       const prompt = str(a.prompt) ?? str(a.question);
       if (!prompt) add("error", "activity_without_prompt", "نشاط بلا نص سؤال أو توجيه.", at);
-      else {
-        const key = prompt.trim();
+      else if (ANSWER_TYPES.has(type)) {
+        // Narrative activities intentionally reuse boilerplate prompts
+        // («اقرأ المشهد.»), so duplicate detection covers answerable
+        // questions only, keyed by prompt + options.
+        const key = `${prompt.trim()}::${JSON.stringify(a.options ?? null)}`;
         const prev = promptSeen.get(key);
-        if (prev && prev !== aId) add("warning", "duplicate_prompt_in_campaign", `نص مكرر داخل الحملة: «${key.slice(0, 40)}…».`, at);
+        if (prev && prev !== aId) add("warning", "duplicate_question_in_campaign", `سؤال مكرر داخل الحملة: «${prompt.trim().slice(0, 40)}…».`, at);
         else promptSeen.set(key, aId);
       }
+
 
       const options = Array.isArray(a.options) ? (a.options as Json[]) : null;
       if (OPTION_TYPES.has(type)) {
