@@ -190,7 +190,9 @@ function deliverWithStatus(n: Omit<InAppNotification, "at" | "id"> & { id?: stri
   // Already delivered (this device, ever within the retained window) →
   // do not resurface it and do not re-fire the OS notification.
   const existing = getInbox().find((x) => x.id === id);
-  if (existing) return { notification: existing, pushed: false };
+  // `pushed` means "present in the inbox", so an already-delivered
+  // notification reports success — callers must not retry it forever.
+  if (existing) return { notification: existing, pushed: true };
 
   const final: InAppNotification = {
     id,
