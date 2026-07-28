@@ -8,7 +8,7 @@
 // ============================================================
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, X, HelpCircle, Lightbulb, GripVertical } from "lucide-react";
+import { Check, X, HelpCircle, Lightbulb, GripVertical, BookOpen } from "lucide-react";
 import { AndroidSafeInput, AndroidSafeTextarea } from "@/components/AndroidSafeTextInput";
 import { isAndroidNativeApp } from "@/lib/androidFreezeDiagnostics";
 import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
