@@ -642,18 +642,47 @@ function CollectionPage() {
               </div>
             </div>
 
-            {/* Rarity tally */}
+            {/* Rarity tally — tappable filters (stay inside the museum) */}
             <div className="mt-3 flex flex-wrap items-center gap-1.5">
-              {(["legendary", "epic", "rare", "common"] as Rarity[]).map(r => (
-                <span key={r} className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${RARITY_META[r].chip}`}>
-                  {r === "legendary" ? <Star className="size-3" /> :
-                   r === "epic"      ? <Award className="size-3" /> :
-                   r === "rare"      ? <Sparkles className="size-3" /> :
-                                       <Compass className="size-3" />}
-                  {RARITY_META[r].label} · {heroStats.tally[r]}
-                </span>
-              ))}
+              {(["legendary", "epic", "rare", "common"] as Rarity[]).map(r => {
+                const active = rarityFilter === r;
+                return (
+                  <button
+                    key={r}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setRarityFilter(active ? null : r)}
+                    className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold transition ${RARITY_META[r].chip} ${
+                      active ? "ring-2 ring-gold ring-offset-1 ring-offset-background" : "opacity-90 hover:opacity-100"
+                    }`}
+                  >
+                    {r === "legendary" ? <Star className="size-3" /> :
+                     r === "epic"      ? <Award className="size-3" /> :
+                     r === "rare"      ? <Sparkles className="size-3" /> :
+                                         <Compass className="size-3" />}
+                    {RARITY_META[r].label} · {heroStats.tally[r]}
+                  </button>
+                );
+              })}
             </div>
+
+            {/* Active rarity filter summary + clear */}
+            {rarityFilter && (
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gold/25 bg-black/30 px-3 py-2">
+                <p className="text-[11px] text-muted-foreground">
+                  <span className="font-bold text-gold">{RARITY_META[rarityFilter].label}</span>
+                  {" · "}اكتُشف {heroStats.tally[rarityFilter]}
+                  {" · "}متبقٍ {Math.max(0, heroStats.totals[rarityFilter] - heroStats.tally[rarityFilter])}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setRarityFilter(null)}
+                  className="rounded-full border border-gold/40 px-2.5 py-1 text-[10px] font-bold text-gold hover:bg-gold/10"
+                >
+                  إزالة التصفية
+                </button>
+              </div>
+            )}
 
             {/* Latest unlock */}
             {heroStats.latest && (
