@@ -568,8 +568,6 @@ function CollectionPage() {
     return { tally, totals, latest };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supFigures.data, supArtifacts.data, supLandmarks.data, supCities.data, supBattles.data, supEvents.data, importedByType, userCollection, userUnlockedAt, importedUnlockSet, profile, campaignArtifactRefs]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [supFigures.data, supArtifacts.data, supLandmarks.data, supCities.data, supBattles.data, supEvents.data, userCollection, userUnlockedAt, importedUnlockSet, profile, campaignArtifactRefs]);
 
   return (
     <AppShell>
