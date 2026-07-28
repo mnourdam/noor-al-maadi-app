@@ -971,7 +971,12 @@ function ReflectiveMomentRenderer({ activity, onResolve, alreadyDone, campaignId
 export function ActivityRenderer(props: RendererProps) {
   const { activity } = props;
   switch (activity.type) {
+    // A `reading_then_question` without options is a pure reading step —
+    // it gets the reading renderer, never the generic fallback.
     case "reading_then_question":
+      return (activity.options?.length ?? 0) > 0
+        ? <MultipleChoiceRenderer {...props} />
+        : <ReadingRenderer {...props} />;
     case "multiple_choice":       return <MultipleChoiceRenderer {...props} />;
     case "true_false":            return <TrueFalseRenderer {...props} />;
     case "arrange_events":        return <ArrangeEventsRenderer {...props} />;
