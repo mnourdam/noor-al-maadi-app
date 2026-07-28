@@ -68,6 +68,7 @@ import { listCampaigns } from "@/lib/campaignStorage";
 import { CollectibleRevealDialog, type CollectibleRevealItem } from "@/components/CollectibleRevealDialog";
 import { classifyArtifact, fetchCampaignArtifactRefSet } from "@/lib/museumVisibility";
 import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
+import { entityTypeLabelAr } from "@/lib/entityTypeLabels";
 import {
   RARITY_STYLE as RARITY_META,
   RARITY_ORDER,
