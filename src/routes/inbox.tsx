@@ -11,7 +11,7 @@
 
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
-import { CheckCheck, MailOpen, NotebookPen, Heart, MessageCircle } from "lucide-react";
+import { CheckCheck, MailOpen, NotebookPen, Heart, MessageCircle, Sprout, Plus, MessageSquare, Inbox as InboxIcon } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { useAccount } from "@/lib/account";
 import { useOnline } from "@/hooks/useOnline";
@@ -28,9 +28,17 @@ import {
   anchorHref,
   type ReflectionArchiveRow,
 } from "@/lib/reflections/archive";
+import { listMyIssues } from "@/lib/feedback/api";
+import { CATEGORY_MAP, STATUS_LABELS, type FeedbackIssue } from "@/lib/feedback/types";
 import { cn } from "@/lib/utils";
 
+type TabParam = "notifications" | "reflections" | "contributions";
+
 export const Route = createFileRoute("/inbox")({
+  validateSearch: (search: Record<string, unknown>): { tab?: TabParam } => {
+    const t = search.tab;
+    return t === "reflections" || t === "contributions" || t === "notifications" ? { tab: t } : {};
+  },
   head: () => ({
     meta: [
       { title: "الصندوق الشخصي — إرث" },
@@ -44,11 +52,15 @@ export const Route = createFileRoute("/inbox")({
   component: InboxScreen,
 });
 
-type Tab = "notifications" | "reflections";
+type Tab = TabParam;
 
 function InboxScreen() {
   const { user } = useAccount();
-  const [tab, setTab] = useState<Tab>("notifications");
+  const { tab: tabParam } = Route.useSearch();
+  const [tab, setTab] = useState<Tab>(tabParam ?? "notifications");
+  useEffect(() => {
+    if (tabParam) setTab(tabParam);
+  }, [tabParam]);
 
   if (!user) {
     return (
@@ -83,9 +95,19 @@ function InboxScreen() {
               <NotebookPen className="size-3.5" aria-hidden="true" />
               تأمّلاتي
             </TabButton>
+            <TabButton active={tab === "contributions"} onClick={() => setTab("contributions")}>
+              <Sprout className="size-3.5" aria-hidden="true" />
+              مساهماتي
+            </TabButton>
           </div>
 
-          {tab === "notifications" ? <NotificationsTab /> : <ReflectionsTab />}
+          {tab === "notifications" ? (
+            <NotificationsTab />
+          ) : tab === "reflections" ? (
+            <ReflectionsTab />
+          ) : (
+            <ContributionsTab />
+          )}
         </div>
       </Screen>
     </AppShell>
@@ -412,6 +434,106 @@ function ReflectionsTab() {
             {loadingMore ? "…" : "عرض المزيد"}
           </button>
         </div>
+      )}
+    </div>
+  );
+}
+
+// ------------------------------------------------------------
+// مساهماتي — full archive of the player's conversations with the
+// Irth team (bugs, corrections, suggestions, general messages).
+// ------------------------------------------------------------
+function ContributionsTab() {
+  const [rows, setRows] = useState<FeedbackIssue[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    listMyIssues()
+      .then((r) => { if (alive) setRows(r); })
+      .catch((e) => { if (alive) setError((e as Error).message); })
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, []);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[12px] text-muted-foreground">
+          كل مساهمة تفتح محادثة مباشرة مع فريق إرث.
+        </p>
+        <Link
+          to="/feedback/new"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-gold px-3 py-1.5 text-[12px] font-bold text-slate-950 hover:bg-gold/90"
+        >
+          <Plus className="size-3.5" aria-hidden="true" />
+          مساهمة جديدة
+        </Link>
+      </div>
+
+      {loading ? (
+        <div className="rounded-lg border border-white/10 bg-black/20 p-6 text-center text-sm text-muted-foreground">
+          جارٍ التحميل…
+        </div>
+      ) : error ? (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+          تعذّر تحميل مساهماتك.
+        </div>
+      ) : rows.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-white/10 bg-black/10 p-8 text-center text-sm text-muted-foreground">
+          <InboxIcon className="mx-auto mb-2 size-6 text-muted-foreground/60" aria-hidden="true" />
+          لا توجد مساهمات بعد. شارك أوّل اقتراح أو تصحيح لمساعدة إرث على النمو.
+        </div>
+      ) : (
+        <ul className="space-y-2">
+          {rows.map((r) => {
+            const cat = CATEGORY_MAP[r.category];
+            const st = STATUS_LABELS[r.status];
+            const Icon = cat?.icon ?? MessageSquare;
+            const hasReply = r.player_unread;
+            return (
+              <li key={r.id}>
+                <Link
+                  to="/feedback/$id"
+                  params={{ id: r.id }}
+                  className={cn(
+                    "flex items-start gap-3 rounded-lg border p-3 transition-colors",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold",
+                    hasReply
+                      ? "border-gold/40 bg-gold/5 hover:bg-gold/10"
+                      : "border-white/10 bg-black/20 hover:border-white/20",
+                  )}
+                >
+                  <span className={cn("grid size-8 shrink-0 place-items-center rounded-lg", cat?.accentBg, cat?.accent)}>
+                    <Icon className="size-4" aria-hidden="true" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <p className="truncate text-[13px] font-medium text-foreground">{r.title}</p>
+                      <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
+                        {formatRelativeAr(r.last_reply_at ?? r.created_at)}
+                      </span>
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                      <span className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5", st?.chip)}>
+                        <span className={cn("size-1.5 rounded-full", st?.dot)} />
+                        {st?.label}
+                      </span>
+                      <span>{cat?.label}</span>
+                      {hasReply && (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-gold/40 px-2 py-0.5 text-gold">
+                          <MessageCircle className="size-3" aria-hidden="true" />
+                          ردّ جديد
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
       )}
     </div>
   );
