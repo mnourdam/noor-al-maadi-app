@@ -40,6 +40,12 @@ function AdminCampaignsPage() {
   const [toast, setToast] = useState<Toast | null>(null);
   const [selected, setSelected] = useState<AdminCampaign | null>(null);
 
+  // ---- export selection & filters (read-only concerns) ----
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | Status>("all");
+  const [worldFilter, setWorldFilter] = useState<string>("all");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
   const notify = (kind: Toast["kind"], msg: string) => {
     setToast({ kind, msg });
     setTimeout(() => setToast(null), 3000);
@@ -56,6 +62,43 @@ function AdminCampaignsPage() {
   };
 
   useEffect(() => { refresh(); }, []);
+
+  const worlds = useMemo(() => {
+    const set = new Set<string>();
+    for (const r of rows ?? []) {
+      const w = (r.data?.worldSlug ?? r.data?.era ?? "") as string;
+      if (w) set.add(w);
+    }
+    return [...set].sort();
+  }, [rows]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return (rows ?? []).filter(r => {
+      if (statusFilter !== "all" && r.status !== statusFilter) return false;
+      if (worldFilter !== "all") {
+        const w = (r.data?.worldSlug ?? r.data?.era ?? "") as string;
+        if (w !== worldFilter) return false;
+      }
+      if (!q) return true;
+      return [r.title, r.slug ?? "", r.id, (r.data?.subtitle ?? "") as string]
+        .some(v => String(v).toLowerCase().includes(q));
+    });
+  }, [rows, query, statusFilter, worldFilter]);
+
+  // keep the selection consistent with what is loaded
+  useEffect(() => {
+    if (!rows) return;
+    const live = new Set(rows.map(r => r.id));
+    setSelectedIds(prev => {
+      const next = prev.filter(id => live.has(id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [rows]);
+
+  const toggleId = (id: string) =>
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+
 
   const setStatus = async (c: AdminCampaign, status: Status) => {
     const { error } = await supabase.from("admin_campaigns" as any)
