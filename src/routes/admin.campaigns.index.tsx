@@ -47,6 +47,7 @@ function AdminCampaignsPage() {
   const [statusFilter, setStatusFilter] = useState<"all" | Status>("all");
   const [worldFilter, setWorldFilter] = useState<string>("all");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [importOpen, setImportOpen] = useState(false);
 
   const notify = (kind: Toast["kind"], msg: string) => {
     setToast({ kind, msg });
