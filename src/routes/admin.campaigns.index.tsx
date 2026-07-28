@@ -9,6 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
 import { parseHistoricalPeriodYear } from "@/lib/campaignChronology";
 import { selectCampaignRows } from "@/lib/campaigns/entities";
+import { CampaignExportPanel } from "@/components/admin/CampaignExportPanel";
+
 
 export const Route = createFileRoute("/admin/campaigns/")({
   head: () => ({
