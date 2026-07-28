@@ -10,6 +10,7 @@ import { AdminGate } from "@/lib/admin-guard";
 import { parseHistoricalPeriodYear } from "@/lib/campaignChronology";
 import { selectCampaignRows } from "@/lib/campaigns/entities";
 import { CampaignExportPanel } from "@/components/admin/CampaignExportPanel";
+import { CampaignImportDialog } from "@/components/admin/CampaignImportDialog";
 
 
 export const Route = createFileRoute("/admin/campaigns/")({
@@ -47,6 +48,7 @@ function AdminCampaignsPage() {
   const [statusFilter, setStatusFilter] = useState<"all" | Status>("all");
   const [worldFilter, setWorldFilter] = useState<string>("all");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [importOpen, setImportOpen] = useState(false);
 
   const notify = (kind: Toast["kind"], msg: string) => {
     setToast({ kind, msg });
@@ -157,10 +159,10 @@ function AdminCampaignsPage() {
               className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/40 bg-amber-500/10 px-3 py-1.5 text-xs text-amber-200 hover:bg-amber-500/20">
               ترتيب الحملات
             </Link>
-            <Link to="/admin/import" search={{ type: "campaigns" } as any}
+            <button onClick={() => setImportOpen(true)}
               className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-amber-400">
               <Upload className="h-3.5 w-3.5" /> استيراد حملة JSON
-            </Link>
+            </button>
           </div>
         </header>
 
@@ -180,11 +182,11 @@ function AdminCampaignsPage() {
           <div className="rounded-xl border border-dashed border-amber-500/30 bg-slate-900/40 p-10 text-center">
             <Sword className="mx-auto mb-3 h-8 w-8 text-amber-400/70" />
             <p className="text-base font-semibold text-amber-100">لا توجد حملات مستوردة بعد</p>
-            <p className="mt-1 text-sm text-slate-400">استخدم مركز الاستيراد لإضافة حملة JSON جديدة.</p>
-            <Link to="/admin/import" search={{ type: "campaigns" } as any}
+            <p className="mt-1 text-sm text-slate-400">استخدم استيراد الحملات لإضافة ملف تصدير JSON.</p>
+            <button onClick={() => setImportOpen(true)}
               className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-amber-400">
               <Upload className="h-4 w-4" /> استيراد حملة JSON
-            </Link>
+            </button>
           </div>
         )}
 
@@ -261,6 +263,13 @@ function AdminCampaignsPage() {
       </div>
 
       {selected && <DetailsModal c={selected} onClose={() => setSelected(null)} />}
+
+      {importOpen && (
+        <CampaignImportDialog
+          onClose={() => setImportOpen(false)}
+          onImported={() => { refresh(); notify("ok", "تم تنفيذ استيراد الحملات."); }}
+        />
+      )}
 
       {toast && (
         <div className={`fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-xl border px-4 py-2 text-sm shadow-xl ${
