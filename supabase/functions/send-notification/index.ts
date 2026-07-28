@@ -205,6 +205,34 @@ Deno.serve(async (req) => {
       if (!body.title || !body.body) {
         return jsonResponse({ error: "title and body are required" }, { status: 400 });
       }
+
+      // ── Stable-ID dedupe ────────────────────────────────────────
+      // `dedupe_key` is the caller-supplied identity of the LOGICAL
+      // notification (e.g. "today_in_history:2026-07-28:slot=1").
+      // It is protected by a unique index, so a retried cron trigger,
+      // a concurrent invocation, a reconnect-driven resync or an app
+      // restart can never create a second row for the same event.
+      const dedupeKey: string | null = typeof body.dedupe_key === "string" && body.dedupe_key
+        ? body.dedupe_key
+        : null;
+
+      if (dedupeKey) {
+        const { data: existing } = await admin
+          .from("notifications")
+          .select("*")
+          .eq("dedupe_key", dedupeKey)
+          .maybeSingle();
+        if (existing) {
+          console.log("[send-notification] deduped by key", dedupeKey);
+          return jsonResponse({
+            ok: true,
+            deduped: true,
+            notification_id: existing.id,
+            dedupe_key: dedupeKey,
+          });
+        }
+      }
+
       const insert = {
         title: body.title,
         body: body.body,
@@ -213,6 +241,7 @@ Deno.serve(async (req) => {
         target_user_id: body.target_user_id ?? null,
         deep_link: body.deep_link ?? null,
         image_url: body.image_url ?? null,
+        dedupe_key: dedupeKey,
         // Mark as sent immediately. Push delivery is best-effort; in-app
         // visibility (banner, bell badge, notification center, realtime
         // listeners) MUST work even when the user has no FCM token or the
@@ -226,6 +255,22 @@ Deno.serve(async (req) => {
         .select("*")
         .single();
       if (error) {
+        // 23505 = unique violation on dedupe_key: another concurrent
+        // invocation won the race. Treat as success, not as an error.
+        if (error.code === "23505" && dedupeKey) {
+          const { data: winner } = await admin
+            .from("notifications")
+            .select("id")
+            .eq("dedupe_key", dedupeKey)
+            .maybeSingle();
+          console.log("[send-notification] lost dedupe race, skipping", dedupeKey);
+          return jsonResponse({
+            ok: true,
+            deduped: true,
+            notification_id: winner?.id ?? null,
+            dedupe_key: dedupeKey,
+          });
+        }
         console.error("[send-notification] insert failed", error);
         return jsonResponse({ error: error.message }, { status: 500 });
       }

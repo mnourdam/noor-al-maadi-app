@@ -64,6 +64,38 @@ async function alreadyRan(admin: any, jobKey: string, runDate: string): Promise<
   return !!data;
 }
 
+/**
+ * ATOMIC claim of a (job_key, run_date) slot.
+ *
+ * The old flow was check-then-act: `alreadyRan()` → send → `recordRun()`.
+ * Two concurrent cron triggers (or a retry while the first invocation was
+ * still sending) both saw "not ran yet" and both sent — that is the root
+ * cause of the duplicated recurring notifications.
+ *
+ * `claimRun` inserts the run row FIRST. A unique index on
+ * (job_key, run_date) means exactly one caller can win; the loser gets a
+ * 23505 unique violation and returns false, so it never sends.
+ */
+async function claimRun(admin: any, jobKey: string, runDate: string): Promise<boolean> {
+  const { error } = await admin
+    .from("automatic_notification_runs")
+    .insert({ job_key: jobKey, run_date: runDate, status: "running", details: {} });
+  if (!error) return true;
+  if (error.code === "23505") return false;      // another invocation won
+  console.error("[auto-notify] claim failed", jobKey, error);
+  return false;                                   // fail closed — never double-send
+}
+
+/** Release a claim taken by `claimRun` when the job turned out to be a no-op. */
+async function releaseRun(admin: any, jobKey: string, runDate: string) {
+  await admin
+    .from("automatic_notification_runs")
+    .delete()
+    .eq("job_key", jobKey)
+    .eq("run_date", runDate)
+    .eq("status", "running");
+}
+
 async function recordRun(
   admin: any,
   jobKey: string,
@@ -72,13 +104,14 @@ async function recordRun(
   notificationId: string | null,
   details: any,
 ) {
-  await admin.from("automatic_notification_runs").insert({
+  // Upsert: the row may already exist because `claimRun` inserted it.
+  await admin.from("automatic_notification_runs").upsert({
     job_key: jobKey,
     run_date: runDate,
     status,
     notification_id: notificationId,
     details,
-  });
+  }, { onConflict: "job_key,run_date" });
 }
 
 // ---------- Job 1: today in history ----------
@@ -109,7 +142,11 @@ async function runTodayInHistory(
 
   const jobKey = `today_in_history:slot=${slot}`;
   const runDate = todayISODate();
-  if (await alreadyRan(admin, jobKey, runDate)) {
+  // Atomic claim BEFORE any send — a retried/concurrent trigger loses here.
+  if (!dryRun && !(await claimRun(admin, jobKey, runDate))) {
+    return { job: jobKey, skipped: "already_ran" };
+  }
+  if (dryRun && await alreadyRan(admin, jobKey, runDate)) {
     return { job: jobKey, skipped: "already_ran" };
   }
 
@@ -127,12 +164,19 @@ async function runTodayInHistory(
     .order("created_at", { ascending: true })
     .order("id", { ascending: true });
 
-  if (error) return { job: jobKey, error: error.message };
-  if (!events || events.length === 0) return { job: jobKey, skipped: "no_event_for_today" };
+  if (error) {
+    if (!dryRun) await releaseRun(admin, jobKey, runDate);
+    return { job: jobKey, error: error.message };
+  }
+  if (!events || events.length === 0) {
+    if (!dryRun) await releaseRun(admin, jobKey, runDate);
+    return { job: jobKey, skipped: "no_event_for_today" };
+  }
 
   // Cap notifications per day at TIH_MAX_SLOTS. Extra events still appear
   // in the Home carousel — they just don't get their own notification.
   if (slot >= Math.min(events.length, TIH_MAX_SLOTS)) {
+    if (!dryRun) await releaseRun(admin, jobKey, runDate);
     return { job: jobKey, skipped: "no_event_for_slot", slot, total_events: events.length };
   }
 
@@ -152,6 +196,8 @@ async function runTodayInHistory(
     type: "today_in_history",
     target_type: "all",
     deep_link: deepLink,
+    // Stable ID: same day + same slot + same event can only exist once.
+    dedupe_key: `today_in_history:${runDate}:slot=${slot}:${event.id}`,
   });
   const sends = [{ event_id: event.id, ok: send.ok, notification_id: send.body?.notification_id ?? null }];
 
@@ -168,7 +214,11 @@ async function runTodayInHistory(
 async function runDailyFact(admin: any, baseUrl: string, serviceKey: string, dryRun: boolean) {
   const jobKey = "daily_fact";
   const runDate = todayISODate();
-  if (await alreadyRan(admin, jobKey, runDate)) {
+  // Atomic claim BEFORE any send (see claimRun).
+  if (!dryRun && !(await claimRun(admin, jobKey, runDate))) {
+    return { job: jobKey, skipped: "already_ran" };
+  }
+  if (dryRun && await alreadyRan(admin, jobKey, runDate)) {
     return { job: jobKey, skipped: "already_ran" };
   }
 
@@ -180,9 +230,15 @@ async function runDailyFact(admin: any, baseUrl: string, serviceKey: string, dry
     .order("last_sent_at", { ascending: true, nullsFirst: true })
     .limit(1);
 
-  if (error) return { job: jobKey, error: error.message };
+  if (error) {
+    if (!dryRun) await releaseRun(admin, jobKey, runDate);
+    return { job: jobKey, error: error.message };
+  }
   const fact = facts?.[0];
-  if (!fact) return { job: jobKey, skipped: "no_facts_available" };
+  if (!fact) {
+    if (!dryRun) await releaseRun(admin, jobKey, runDate);
+    return { job: jobKey, skipped: "no_facts_available" };
+  }
 
   if (dryRun) return { job: jobKey, would_send: fact };
 
@@ -192,6 +248,7 @@ async function runDailyFact(admin: any, baseUrl: string, serviceKey: string, dry
     type: "daily_fact",
     target_type: "all",
     deep_link: fact.deep_link ?? null,
+    dedupe_key: `daily_fact:${runDate}:${fact.id}`,
   });
 
   if (send.ok) {
@@ -260,6 +317,8 @@ async function runComebackReminder(admin: any, baseUrl: string, serviceKey: stri
       target_type: "user",
       target_user_id: p.id,
       deep_link: "/",
+      // Stable per inactivity period — re-arms only when last_active moves.
+      dedupe_key: `comeback_24h:${p.id}:${p.last_active}`,
     });
 
     await recordRun(
@@ -327,6 +386,7 @@ async function runIncompleteCampaignReminder(admin: any, baseUrl: string, servic
       target_type: "user",
       target_user_id: user_id,
       deep_link: `/campaigns/${campaign_id}`,
+      dedupe_key: `incomplete_campaign:${user_id}:${campaign_id}:${runDate}`,
     });
 
     await recordRun(
@@ -390,6 +450,7 @@ async function runStreakReminder(admin: any, baseUrl: string, serviceKey: string
       target_type: "user",
       target_user_id: p.id,
       deep_link: "/",
+      dedupe_key: `streak_reminder:${p.id}:${runDate}`,
     });
 
     await recordRun(
@@ -481,6 +542,8 @@ async function runHeartsFullReminder(admin: any, baseUrl: string, serviceKey: st
       target_type: "user",
       target_user_id: p.id,
       deep_link: "/",
+      // Stable per depletion cycle (anchored on hearts_at).
+      dedupe_key: `hearts_full:${p.id}:${p.hearts_at}`,
     });
 
     await recordRun(
@@ -564,6 +627,7 @@ async function runDailyChallengeReminder(admin: any, baseUrl: string, serviceKey
       target_type: "user",
       target_user_id: userId,
       deep_link: "/adventure",
+      dedupe_key: `daily_challenge:${userId}:${runDate}`,
     });
 
     await recordRun(

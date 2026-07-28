@@ -180,8 +180,22 @@ export async function ensurePermission(): Promise<NotificationPermission> {
 }
 
 function deliverWithStatus(n: Omit<InAppNotification, "at" | "id"> & { id?: string }): { notification: InAppNotification; pushed: boolean } {
+  // Stable ID contract: callers SHOULD pass a deterministic id. When they
+  // don't we derive one from (category + title + today) instead of
+  // `Date.now()` — a timestamped id made every retry, resync or restart
+  // look like a brand-new notification, which is how duplicates got into
+  // the inbox in the first place.
+  const id = n.id ?? `${n.category}:${todayKey()}:${hashText(`${n.title}|${n.body}|${n.href ?? ""}`)}`;
+
+  // Already delivered (this device, ever within the retained window) →
+  // do not resurface it and do not re-fire the OS notification.
+  const existing = getInbox().find((x) => x.id === id);
+  // `pushed` means "present in the inbox", so an already-delivered
+  // notification reports success — callers must not retry it forever.
+  if (existing) return { notification: existing, pushed: true };
+
   const final: InAppNotification = {
-    id: n.id ?? `${n.category}:${Date.now()}`,
+    id,
     category: n.category,
     title: n.title,
     body: n.body,
@@ -191,10 +205,17 @@ function deliverWithStatus(n: Omit<InAppNotification, "at" | "id"> & { id?: stri
     readAt: null,
   };
   const pushed = pushInbox(final);
-  if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
-    try { new Notification(final.title, { body: final.body, tag: final.category, icon: "/favicon.ico" }); } catch { /* ignore */ }
+  if (pushed && typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+    try { new Notification(final.title, { body: final.body, tag: final.id, icon: "/favicon.ico" }); } catch { /* ignore */ }
   }
   return { notification: final, pushed };
+}
+
+/** Small stable non-crypto hash — deterministic across restarts. */
+function hashText(input: string): string {
+  let h = 5381;
+  for (let i = 0; i < input.length; i++) h = ((h << 5) + h + input.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
 }
 
 function deliver(n: Omit<InAppNotification, "at" | "id"> & { id?: string }): InAppNotification {
@@ -245,13 +266,8 @@ export function lastOpenedAt(): number {
 
 // ============== Curiosity hooks for re-engagement ==============
 
-const REENGAGE_HOOKS: { title: string; body: string; href: string }[] = [
-  { title: "هل تعلم من أسقط بغداد؟", body: "اكتشف قصة سقوط الخلافة العباسية في الموسوعة.", href: "/encyclopedia" },
-  { title: "من القائد الذي هزم المغول؟", body: "تعرّف على قطز وعين جالوت في حملاتنا.", href: "/campaigns" },
-  { title: "ماذا كان داخل بيت الحكمة؟", body: "زر الأطلس وادخل بغداد العباسية.", href: "/map" },
-  { title: "كم استمرت الأندلس؟", body: "اكتشف قصة الأندلس من الفتح إلى السقوط في الموسوعة.", href: "/encyclopedia" },
-  { title: "أين دُفن صلاح الدين؟", body: "تجوّل في دمشق الأيوبية واكتشف أثره.", href: "/encyclopedia" },
-];
+// Re-engagement copy now lives server-side in the `comeback_24h` job
+// (single owner = no duplicate notifications).
 
 // ============== Public scheduler ==============
 
@@ -263,41 +279,29 @@ export interface SchedulerContext {
 
 
 /**
- * Call on every app open. Emits at most one notification per category per
- * day, based on stored "fired" markers. Pure-side-effect — safe in effects.
+ * Call on every app open.
+ *
+ * ⚠️ Ownership boundary (duplicate-notification fix):
+ *   "في مثل هذا اليوم" (`today_in_history`) and the 24h re-engagement
+ *   reminder (`comeback_24h`) are owned END-TO-END by the server
+ *   pipeline: the scheduled job creates ONE row with a stable
+ *   `dedupe_key`, realtime + FCM deliver it, and the Notification
+ *   Center reads the same row.
+ *
+ *   This local scheduler used to emit its own copy of both on every
+ *   app open, so the player received the server push AND a locally
+ *   generated twin. That was the real source of the duplicates — it is
+ *   removed here rather than hidden in the UI.
+ *
+ *   What remains local: last-open tracking (used by the server job's
+ *   inactivity window) and the ad-hoc `deliverNotification` helpers,
+ *   which now require stable ids.
  */
 export function runDailyNotifications(ctx: SchedulerContext): InAppNotification[] {
-  const out: InAppNotification[] = [];
-  if (!ctx.prefs.master) return out;
-
-  // 1) Daily history
-  if (ctx.prefs.daily && ctx.today && shouldFireDailyish("daily")) {
-    out.push(deliver({
-      category: "daily",
-      title: "حدث في مثل هذا اليوم",
-      body: `${ctx.today.title}${ctx.today.teaser ? " — " + ctx.today.teaser : ""}`,
-      href: ctx.today.href,
-    }));
-    markFired("daily");
-  }
-
-  // 2) Re-engagement (24h gap)
-  if (ctx.prefs.reengagement) {
-    const last = lastOpenedAt();
-    const gap = Date.now() - last;
-    if (gap >= 24 * 3600_000 && shouldFireDailyish("reengage")) {
-      const hook = REENGAGE_HOOKS[Math.floor(Math.random() * REENGAGE_HOOKS.length)];
-      out.push(deliver({ category: "reengagement", ...hook }));
-      markFired("reengage");
-    }
-  }
-
-  // 3) Season notifications removed in Phase 3B (Seasons demo deleted).
-
-
-  // Update last-opened *after* scheduling so the gap calc above is correct
+  if (!ctx.prefs.master) return [];
+  // Update last-opened so the server-side inactivity window stays accurate.
   touchLastOpened();
-  return out;
+  return [];
 }
 
 /** Fire a campaign-unlocked notification (call when a new/hidden campaign becomes available). */

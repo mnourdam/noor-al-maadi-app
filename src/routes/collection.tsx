@@ -68,6 +68,7 @@ import { listCampaigns } from "@/lib/campaignStorage";
 import { CollectibleRevealDialog, type CollectibleRevealItem } from "@/components/CollectibleRevealDialog";
 import { classifyArtifact, fetchCampaignArtifactRefSet } from "@/lib/museumVisibility";
 import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
+import { entityTypeLabelAr } from "@/lib/entityTypeLabels";
 import {
   RARITY_STYLE as RARITY_META,
   RARITY_ORDER,
@@ -267,6 +268,8 @@ function defaultRarity(type: string): Rarity {
 function CollectionPage() {
   const { profile } = useProfile();
   const [section, setSection] = useState<SectionId>("figures");
+  // Museum rarity filter — driven by the hero rarity chips. `null` = all.
+  const [rarityFilter, setRarityFilter] = useState<Rarity | null>(null);
   const [reveal, setReveal] = useState<RevealItem | null>(null);
   const navigate = useNavigate();
 
@@ -488,20 +491,26 @@ function CollectionPage() {
         const ts = open ? unlockedAtFor(current.type, e.slug, e.metadata) : 0;
         return { e, open, ts };
       })
-      .filter(({ open }) => open);
+      .filter(({ open }) => open)
+      .filter(({ e }) =>
+        !rarityFilter
+          ? true
+          : rarityFromMetadata(e.metadata, defaultRarity(current.type)) === rarityFilter,
+      );
     items.sort((a, b) => {
       if (a.ts !== b.ts) return b.ts - a.ts;
       return (a.e.title ?? "").localeCompare(b.e.title ?? "", "ar");
     });
     return items;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rawCurrentEntities, userCollection, userUnlockedAt, importedUnlockSet, profile, current.type, campaignArtifactRefs]);
+  }, [rawCurrentEntities, userCollection, userUnlockedAt, importedUnlockSet, profile, current.type, campaignArtifactRefs, rarityFilter]);
 
   const currentImported = useMemo(() => {
     return rawCurrentImported
       .filter(i => !!i.name && hasArabic(i.name) && i.unlocked)
+      .filter(i => !rarityFilter || normalizeRarity(registryItemRarity(i) as Rarity, "common") === rarityFilter)
       .sort((a, b) => (a.name ?? "").localeCompare(b.name ?? "", "ar"));
-  }, [rawCurrentImported]);
+  }, [rawCurrentImported, rarityFilter]);
 
   const openEntityReveal = (e: any, isOpen: boolean) => {
     const rarity = rarityFromMetadata(e.metadata, defaultRarity(current.type));
@@ -536,17 +545,19 @@ function CollectionPage() {
     });
   };
 
-  // ── Hero stats: rarity tally + latest unlock across all sections ──
+  // ── Hero stats: rarity tally (owned + total) + latest unlock ──
   const heroStats = useMemo(() => {
     const tally: Record<Rarity, number> = { common: 0, rare: 0, epic: 0, legendary: 0 };
+    const totals: Record<Rarity, number> = { common: 0, rare: 0, epic: 0, legendary: 0 };
     let latest: { title: string; section: SectionDef; ts: number } | null = null;
     for (const s of SECTIONS) {
       const list = supByType[s.type].data ?? [];
       for (const e of list) {
         const meta = (e.metadata as any) ?? {};
         if (s.type === "artifact" && !isArtifactVisible(e.slug, meta, meta.legacy_id)) continue;
-        if (!isEntityUnlocked(s.type, e.slug, e.metadata)) continue;
         const r = rarityFromMetadata(e.metadata, defaultRarity(s.type));
+        totals[r] += 1;
+        if (!isEntityUnlocked(s.type, e.slug, e.metadata)) continue;
         tally[r] += 1;
         const ts = unlockedAtFor(s.type, e.slug, e.metadata);
         if (ts && (!latest || ts > latest.ts) && e.title && /[\u0600-\u06FF]/.test(e.title)) {
@@ -554,9 +565,17 @@ function CollectionPage() {
         }
       }
     }
-    return { tally, latest };
+    // Imported-registry items participate in the same rarity economy.
+    for (const list of Object.values(importedByType)) {
+      for (const item of list) {
+        const r = normalizeRarity(registryItemRarity(item) as Rarity, "common");
+        totals[r] += 1;
+        if (item.unlocked) tally[r] += 1;
+      }
+    }
+    return { tally, totals, latest };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [supFigures.data, supArtifacts.data, supLandmarks.data, supCities.data, supBattles.data, supEvents.data, userCollection, userUnlockedAt, importedUnlockSet, profile, campaignArtifactRefs]);
+  }, [supFigures.data, supArtifacts.data, supLandmarks.data, supCities.data, supBattles.data, supEvents.data, importedByType, userCollection, userUnlockedAt, importedUnlockSet, profile, campaignArtifactRefs]);
 
   return (
     <AppShell>
@@ -623,18 +642,47 @@ function CollectionPage() {
               </div>
             </div>
 
-            {/* Rarity tally */}
+            {/* Rarity tally — tappable filters (stay inside the museum) */}
             <div className="mt-3 flex flex-wrap items-center gap-1.5">
-              {(["legendary", "epic", "rare", "common"] as Rarity[]).map(r => (
-                <span key={r} className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${RARITY_META[r].chip}`}>
-                  {r === "legendary" ? <Star className="size-3" /> :
-                   r === "epic"      ? <Award className="size-3" /> :
-                   r === "rare"      ? <Sparkles className="size-3" /> :
-                                       <Compass className="size-3" />}
-                  {RARITY_META[r].label} · {heroStats.tally[r]}
-                </span>
-              ))}
+              {(["legendary", "epic", "rare", "common"] as Rarity[]).map(r => {
+                const active = rarityFilter === r;
+                return (
+                  <button
+                    key={r}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setRarityFilter(active ? null : r)}
+                    className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold transition ${RARITY_META[r].chip} ${
+                      active ? "ring-2 ring-gold ring-offset-1 ring-offset-background" : "opacity-90 hover:opacity-100"
+                    }`}
+                  >
+                    {r === "legendary" ? <Star className="size-3" /> :
+                     r === "epic"      ? <Award className="size-3" /> :
+                     r === "rare"      ? <Sparkles className="size-3" /> :
+                                         <Compass className="size-3" />}
+                    {RARITY_META[r].label} · {heroStats.tally[r]}
+                  </button>
+                );
+              })}
             </div>
+
+            {/* Active rarity filter summary + clear */}
+            {rarityFilter && (
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gold/25 bg-black/30 px-3 py-2">
+                <p className="text-[11px] text-muted-foreground">
+                  <span className="font-bold text-gold">{RARITY_META[rarityFilter].label}</span>
+                  {" · "}اكتُشف {heroStats.tally[rarityFilter]}
+                  {" · "}متبقٍ {Math.max(0, heroStats.totals[rarityFilter] - heroStats.tally[rarityFilter])}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setRarityFilter(null)}
+                  className="rounded-full border border-gold/40 px-2.5 py-1 text-[10px] font-bold text-gold hover:bg-gold/10"
+                >
+                  إزالة التصفية
+                </button>
+              </div>
+            )}
 
             {/* Latest unlock */}
             {heroStats.latest && (
@@ -698,10 +746,23 @@ function CollectionPage() {
           </div>
         ) : currentEntities.length === 0 && currentImported.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-gold/25 bg-surface/40 p-6 text-center">
-            <p className="font-display text-sm font-bold text-gold">لم تكتشف عناصر في هذه الفئة بعد</p>
+            <p className="font-display text-sm font-bold text-gold">
+              {rarityFilter
+                ? `لا توجد مقتنيات من درجة «${RARITY_META[rarityFilter].label}» في هذه القاعة`
+                : "لم تكتشف عناصر في هذه الفئة بعد"}
+            </p>
             <p className="mt-2 text-[11px] leading-6 text-muted-foreground">
               تُفتح عناصر المتحف عند إكمال الحملات والتحقيقات والمكافآت. تصفّح الموسوعة الآن للاطلاع على المحتوى المتاح.
             </p>
+            {rarityFilter && (
+              <button
+                type="button"
+                onClick={() => setRarityFilter(null)}
+                className="mt-3 rounded-full border border-gold/40 px-3 py-1 text-[11px] font-bold text-gold hover:bg-gold/10"
+              >
+                عرض جميع المقتنيات
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3">
@@ -772,10 +833,8 @@ function RecentUnlocks() {
   const acquisitions = useLatestMuseumAcquisitions(30);
 
   const recents: Recent[] = useMemo(() => {
-    const kindLabel: Record<string, string> = {
-      figure: "شخصية", scholar: "شخصية", artifact: "أثر",
-      battle: "معركة", city: "مدينة", landmark: "معلم", state: "دولة",
-    };
+    // Canonical Arabic type dictionary — never show an English slug.
+    const kindLabel = (t: string) => entityTypeLabelAr(t);
     type EntShape = { slug?: string; title?: string; metadata?: { rarity?: Rarity; collectible?: boolean } };
     const lookupEntity = (t: string, slug: string): EntShape | null => {
       const probe = (m: { bySlug: Map<string, unknown> }): EntShape | null => {
@@ -802,9 +861,9 @@ function RecentUnlocks() {
         key: a.key,
         type: t,
         slug: ent?.slug ?? a.slug,
-        kind: kindLabel[t] ?? t,
+        kind: kindLabel(t),
         title: a.title,
-        subtitle: subtitleParts.join(" · ") || (kindLabel[t] ?? "—"),
+        subtitle: subtitleParts.join(" · ") || kindLabel(t),
         rarity,
       });
       if (list.length >= 3) break;
