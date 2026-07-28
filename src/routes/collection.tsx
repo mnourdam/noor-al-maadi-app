@@ -268,6 +268,8 @@ function defaultRarity(type: string): Rarity {
 function CollectionPage() {
   const { profile } = useProfile();
   const [section, setSection] = useState<SectionId>("figures");
+  // Museum rarity filter — driven by the hero rarity chips. `null` = all.
+  const [rarityFilter, setRarityFilter] = useState<Rarity | null>(null);
   const [reveal, setReveal] = useState<RevealItem | null>(null);
   const navigate = useNavigate();
 
