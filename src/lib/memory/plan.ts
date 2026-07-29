@@ -103,6 +103,7 @@ export function ensurePlan(
   chapterId: string,
   originalActivityIds: string[],
   now: number = Date.now(),
+  opts?: { allowReselect?: boolean },
 ): RuntimeChapterPlan {
   const ownerKey = getActiveOwner();
   const planKey = planKeyFor(campaignId, chapterId, ownerKey);
@@ -115,18 +116,50 @@ export function ensurePlan(
     && Array.isArray(existing.originalActivityIds)
     && existing.originalActivityIds.join("|") === originalActivityIds.join("|");
 
-  if (existing && structureValid) return existing;
+  if (existing && structureValid) {
+    // A plan frozen with NO review because the bank was empty or the
+    // daily cap was reached is a TRANSIENT miss, not a decision. When the
+    // caller says it is safe (chapter not started yet), retry selection —
+    // otherwise the very first visit permanently disables reviews for
+    // that chapter. Mid-chapter re-selection is never attempted.
+    if (existing.selectionDeferred && opts?.allowReselect && !existing.reviewCompleted) {
+      return selectInto(existing, originalActivityIds, campaignId, chapterId, now);
+    }
+    return existing;
+  }
 
   const fresh = blankPlan(planKey, ownerKey, campaignId, chapterId, originalActivityIds, now);
   if (!memoryEnabled()) {
+    fresh.selectionDeferred = true;
     savePlan(fresh);
     return fresh;
   }
+  return selectInto(fresh, originalActivityIds, campaignId, chapterId, now);
+}
 
+/** Runs the scheduler + selector against a (blank or deferred) plan. */
+function selectInto(
+  base: RuntimeChapterPlan,
+  originalActivityIds: string[],
+  campaignId: string,
+  chapterId: string,
+  now: number,
+): RuntimeChapterPlan {
   const decision = decideInsertion(originalActivityIds, now);
   if (decision.insertionAfterActivityId == null) {
-    savePlan(fresh);
-    return fresh;
+    // "chapter-too-short" is permanent for this chapter; "daily-cap-reached"
+    // is transient and must be retried on a later visit.
+    const next: RuntimeChapterPlan = {
+      ...base,
+      insertionAfterActivityId: null,
+      reviewItemId: null,
+      reviewItemRevision: null,
+      reviewAttemptId: null,
+      selectionDeferred: decision.reason === "daily-cap-reached",
+      updatedAt: nowIso(now),
+    };
+    savePlan(next);
+    return next;
   }
 
   const bank = loadBank();
@@ -138,20 +171,34 @@ export function ensurePlan(
     recentKinds: recent.kinds,
   });
   if (!item) {
-    savePlan(fresh);
-    return fresh;
+    // Empty / fully-excluded bank — transient (the bank fills up as the
+    // player completes more campaigns).
+    const next: RuntimeChapterPlan = {
+      ...base,
+      insertionAfterActivityId: null,
+      reviewItemId: null,
+      reviewItemRevision: null,
+      reviewAttemptId: null,
+      selectionDeferred: true,
+      updatedAt: nowIso(now),
+    };
+    savePlan(next);
+    return next;
   }
 
   const planned: RuntimeChapterPlan = {
-    ...fresh,
+    ...base,
     insertionAfterActivityId: decision.insertionAfterActivityId,
     reviewItemId: item.id,
     reviewItemRevision: item.revision,
-    reviewAttemptId: newUuid(),
+    reviewAttemptId: base.reviewAttemptId ?? newUuid(),
+    selectionDeferred: false,
+    updatedAt: nowIso(now),
   };
   savePlan(planned);
   return planned;
 }
+
 
 /**
  * Resolve the LIVE ReviewItem for a plan, applying amendment #2:
