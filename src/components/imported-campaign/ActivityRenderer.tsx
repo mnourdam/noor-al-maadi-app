@@ -1014,6 +1014,7 @@ function ReflectiveMomentRenderer({ activity, onResolve, onAdvance, alreadyDone,
               <textarea
                 ref={textareaRef}
                 defaultValue={text}
+                onInput={(e) => { setLiveLen(e.currentTarget.value.trim().length); setSaved(false); }}
                 onBlur={(e) => setText(e.currentTarget.value)}
                 rows={4}
                 autoComplete="off"
@@ -1028,7 +1029,7 @@ function ReflectiveMomentRenderer({ activity, onResolve, onAdvance, alreadyDone,
               <AndroidSafeTextarea
                 ref={textareaRef}
                 value={text}
-                onValueChange={setText}
+                onValueChange={(v) => { setText(v); setLiveLen(v.trim().length); setSaved(false); }}
                 commitMode="blur"
                 rows={4}
                 autoComplete="off"
@@ -1042,6 +1043,7 @@ function ReflectiveMomentRenderer({ activity, onResolve, onAdvance, alreadyDone,
                 className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-right text-foreground outline-none focus:border-gold/60 disabled:opacity-70"
               />
             )}
+
             <p className="mt-1 text-right text-[10px] text-muted-foreground/70">
               اختياري — لن يمنع إتمام الفصل.
             </p>
