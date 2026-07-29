@@ -273,6 +273,9 @@ function ImportedChapterPlayer() {
       audioManager.playSfx("chapter-complete", { dedupeKey: `ch:${chapter!.id}` });
       // Qualifying streak activity: completing a campaign chapter.
       void recordStreakActivity("campaign_chapter", chapter!.id);
+      // Memory Engine — chapter is over, drop the runtime plan so a
+      // re-entry (or the next chapter) starts from a clean slate.
+      if (plan) clearPlan(plan.planKey);
       const chDelta = claimChapterReward(campaign!, chapter!);
       if (chDelta.granted) {
         if (chDelta.xp > 0)    addPoints(chDelta.xp);
