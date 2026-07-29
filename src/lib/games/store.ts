@@ -156,79 +156,56 @@ export async function fetchMyDailyCompletedGameIds(): Promise<Set<string>> {
 /**
  * Pick daily challenges for the Home / Adventure screens.
  *
- * Selection rules (in order):
- *   1. Exclude every game the current player has already completed
- *      (all-time). Pass those ids in via `opts.completedIds`.
- *   2. Prefer two picks from two DIFFERENT game modes — deterministic per
- *      UTC day so the same picks persist across reloads/restarts.
- *   3. If fewer than `count` modes have uncompleted games, fall back to
- *      picking additional uncompleted games from any mode (never repeats
- *      the same game). Diversity is secondary to avoiding completed games.
- *   4. `allCompleted` is true when no uncompleted games remain.
+ * Delegates to the pure Shuffle-Bag rotation engine
+ * (`./dailyRotation`), which guarantees:
+ *   1. the two picks are never the same mode,
+ *   2. the mode stream never repeats across a day boundary,
+ *   3. a mode's catalogue is fully traversed before any repeat,
+ *   4. no mode stays unseen for more than two bag cycles,
+ *   5. the same calendar date always yields the same pair.
+ *
+ * Completed games are excluded per player; when a planned mode has no
+ * eligible content left, the engine substitutes the next mode in the bag.
  */
 export interface DailyChallengeSelection {
   picks: GameRow[];
   allCompleted: boolean;
   totalPublished: number;
+  /** Why each pick was chosen (rotation slot / substitution). Debug surfaces. */
+  reasons: string[];
 }
 
 export async function selectDailyChallenges(
   count = 2,
-  opts: { completedIds?: Set<string> } = {},
+  opts: { completedIds?: Set<string>; dateKey?: string } = {},
 ): Promise<DailyChallengeSelection> {
   const published = await listPublishedGames();
   const totalPublished = published.length;
   if (!totalPublished) {
-    return { picks: [], allCompleted: false, totalPublished: 0 };
+    return { picks: [], allCompleted: false, totalPublished: 0, reasons: [] };
   }
 
   const completed = opts.completedIds ?? new Set<string>();
-  const eligible = published.filter((g) => !completed.has(g.id));
+  const epochDay = epochDayFromDateKey(opts.dateKey ?? localDateKey());
 
-  if (!eligible.length) {
-    return { picks: [], allCompleted: true, totalPublished };
-  }
+  const rotatable = published.map((g) => ({
+    ...g,
+    era: typeof g.metadata?.era === "string" ? (g.metadata.era as string) : null,
+  }));
 
-  // Group ELIGIBLE (uncompleted) games by mode.
-  const byMode = new Map<GameMode, GameRow[]>();
-  for (const g of eligible) {
-    const arr = byMode.get(g.mode) ?? [];
-    arr.push(g);
-    byMode.set(g.mode, arr);
-  }
+  const result = selectDailyRotation(epochDay, rotatable, {
+    completedIds: completed,
+    count,
+  });
 
-  // Deterministic mode order per day, then deterministic pick within each mode.
-  const modes = [...byMode.keys()].sort(
-    (a, b) => dayHash(`mode:${a}`) - dayHash(`mode:${b}`),
-  );
+  const picks = result.picks.map((p) => published.find((g) => g.id === p.game.id)!).filter(Boolean);
 
-  const picks: GameRow[] = [];
-  const chosenIds = new Set<string>();
-  for (const m of modes) {
-    if (picks.length >= count) break;
-    const games = byMode.get(m)!;
-    const chosen = [...games].sort(
-      (a, b) => dayHash(a.slug) - dayHash(b.slug),
-    )[0];
-    if (chosen && !chosenIds.has(chosen.id)) {
-      picks.push(chosen);
-      chosenIds.add(chosen.id);
-    }
-  }
-
-  // Fallback: if mode diversity couldn't fill `count`, fill from remaining
-  // uncompleted games regardless of mode (deterministic order per day).
-  if (picks.length < count) {
-    const remaining = eligible
-      .filter((g) => !chosenIds.has(g.id))
-      .sort((a, b) => dayHash(a.id) - dayHash(b.id));
-    for (const g of remaining) {
-      if (picks.length >= count) break;
-      picks.push(g);
-      chosenIds.add(g.id);
-    }
-  }
-
-  return { picks, allCompleted: picks.length === 0, totalPublished };
+  return {
+    picks,
+    allCompleted: picks.length === 0,
+    totalPublished,
+    reasons: result.picks.map((p) => p.reason),
+  };
 }
+
 
