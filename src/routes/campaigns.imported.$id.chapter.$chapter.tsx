@@ -41,6 +41,22 @@ import { recordTrace } from "@/lib/diag-trace";
 import { recordCampaignGrant, getChapterGrantedTotals } from "@/lib/campaignRewardsGranted";
 import { computeCampaignRewardSummary } from "@/lib/campaigns/rewardSummary";
 import { Stagger, AnimatedNumber } from "@/components/motion/MotionPrimitives";
+import {
+  ensurePlan,
+  buildRuntimeActivities,
+  isReviewMarker,
+  markReviewCompleted,
+  clearPlan,
+  findItem,
+  grantReviewXp,
+  upsertEntry,
+  getEntry,
+  bumpDaily,
+  nextAfterCorrect,
+  nextAfterWrong,
+  type MemoryReviewActivityMarker,
+} from "@/lib/memory";
+import { ReviewActivity } from "@/components/memory/ReviewActivity";
 
 export const Route = createFileRoute("/campaigns/imported/$id/chapter/$chapter")({
   head: () => ({ meta: [{ title: "فصل من حملة — إرث" }] }),
