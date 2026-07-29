@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { BookOpen, CalendarDays, CheckSquare, Eye, EyeOff, Pencil, Plus, RefreshCw, Save, ShieldAlert, Square, Trash2, Upload, X } from "lucide-react";
+import { BookOpen, CalendarDays, CheckSquare, Download, Eye, EyeOff, FileJson, Pencil, Plus, RefreshCw, Save, ShieldAlert, Square, Trash2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccount } from "@/lib/account";
@@ -582,6 +582,119 @@ function FactEditor({
 }
 
 // ============================================================
+// Today in History Events — Export / Import (Golden Template)
+// ------------------------------------------------------------
+// Envelope schema mirrors the actual DB columns 1:1. No renaming,
+// no invented fields, no deep-link activation. On import, we match
+// existing rows by `id` when present (update in place) and insert
+// new rows otherwise — never duplicate.
+// ============================================================
+const TIH_EXPORT_VERSION = 1 as const;
+const TIH_EXPORT_GENERATOR = "irth.admin.content.today_in_history";
+const TIH_ALLOWED_FIELDS = [
+  "id", "month", "day", "title", "body",
+  "hijri_year", "gregorian_year", "deep_link",
+  "enabled", "created_at",
+] as const;
+
+function rowToExport(r: TodayEvent): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const k of TIH_ALLOWED_FIELDS) out[k] = (r as any)[k] ?? null;
+  return out;
+}
+
+function buildEnvelope(rows: TodayEvent[]) {
+  return {
+    schema: "today_in_history_events",
+    version: TIH_EXPORT_VERSION,
+    generator: TIH_EXPORT_GENERATOR,
+    exported_at: new Date().toISOString(),
+    count: rows.length,
+    events: rows.map(rowToExport),
+  };
+}
+
+function downloadJson(name: string, data: unknown) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 500);
+}
+
+function safeSlug(s: string): string {
+  return s.replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "event";
+}
+
+type TihImportIssue = { index: number; id?: string | null; field?: string; message: string };
+type TihImportPlan = {
+  toInsert: Array<{ index: number; payload: Record<string, unknown> }>;
+  toUpdate: Array<{ index: number; id: string; payload: Record<string, unknown> }>;
+  errors: TihImportIssue[];
+  duplicates: TihImportIssue[]; // duplicate (month,day,title) across the file
+};
+
+function normalizeImportedEvent(raw: any, index: number, existingIds: Set<string>): { ok: true; payload: Record<string, unknown>; id: string | null } | { ok: false; issues: TihImportIssue[] } {
+  const issues: TihImportIssue[] = [];
+  if (!raw || typeof raw !== "object") {
+    return { ok: false, issues: [{ index, message: "الحدث ليس كائن JSON صالحًا." }] };
+  }
+  const month = Number(raw.month);
+  const day = Number(raw.day);
+  const title = typeof raw.title === "string" ? raw.title.trim() : "";
+  const body = typeof raw.body === "string" ? raw.body.trim() : "";
+  if (!Number.isInteger(month) || month < 1 || month > 12) issues.push({ index, id: raw.id ?? null, field: "month", message: "الشهر يجب أن يكون عددًا بين 1 و12." });
+  if (!Number.isInteger(day) || day < 1 || day > 31) issues.push({ index, id: raw.id ?? null, field: "day", message: "اليوم يجب أن يكون عددًا بين 1 و31." });
+  if (!title) issues.push({ index, id: raw.id ?? null, field: "title", message: "العنوان مطلوب." });
+  if (!body) issues.push({ index, id: raw.id ?? null, field: "body", message: "المحتوى (body) مطلوب." });
+
+  const id = typeof raw.id === "string" && raw.id.trim() ? raw.id.trim() : null;
+  if (id && !existingIds.has(id)) {
+    // Not an error — treated as insert with client-supplied id below.
+  }
+  if (issues.length) return { ok: false, issues };
+
+  const payload: Record<string, unknown> = {
+    month, day, title, body,
+    hijri_year: raw.hijri_year != null && String(raw.hijri_year).trim() !== "" ? String(raw.hijri_year).trim() : null,
+    gregorian_year: raw.gregorian_year != null && String(raw.gregorian_year).trim() !== "" ? String(raw.gregorian_year).trim() : null,
+    // deep_link is preserved verbatim if provided; runtime already ignores it
+    // for tap behavior (see notifications/deepLink.ts). Never invented here.
+    deep_link: typeof raw.deep_link === "string" && raw.deep_link.trim() ? raw.deep_link.trim() : null,
+    enabled: typeof raw.enabled === "boolean" ? raw.enabled : true,
+  };
+  return { ok: true, payload, id };
+}
+
+function planImport(parsed: any, existing: TodayEvent[]): TihImportPlan {
+  const plan: TihImportPlan = { toInsert: [], toUpdate: [], errors: [], duplicates: [] };
+  let events: any[] | null = null;
+  if (Array.isArray(parsed)) events = parsed;
+  else if (parsed && Array.isArray(parsed.events)) events = parsed.events;
+  else if (parsed && typeof parsed === "object" && parsed.title) events = [parsed]; // single event
+  if (!events) {
+    plan.errors.push({ index: -1, message: "الملف لا يحتوي على أحداث. يجب أن يكون Envelope فيه events[] أو مصفوفة أحداث أو حدث واحد." });
+    return plan;
+  }
+  const existingIds = new Set(existing.map((r) => r.id));
+  const seenKeys = new Set<string>();
+  events.forEach((raw, i) => {
+    const res = normalizeImportedEvent(raw, i, existingIds);
+    if (!res.ok) { plan.errors.push(...res.issues); return; }
+    const key = `${res.payload.month}-${res.payload.day}-${String(res.payload.title).toLowerCase()}`;
+    if (seenKeys.has(key)) plan.duplicates.push({ index: i, message: `تكرار داخل الملف: ${res.payload.day}/${res.payload.month} — ${res.payload.title}` });
+    seenKeys.add(key);
+    if (res.id && existingIds.has(res.id)) plan.toUpdate.push({ index: i, id: res.id, payload: res.payload });
+    else plan.toInsert.push({ index: i, payload: res.id ? { id: res.id, ...res.payload } : res.payload });
+  });
+  return plan;
+}
+
+// ============================================================
 // Today in History Events
 // ============================================================
 function TodayEventsTab() {
@@ -681,6 +794,69 @@ function TodayEventsTab() {
     await load();
   };
 
+  // ---- Export / Import ----
+  const [importOpen, setImportOpen] = useState(false);
+  const [importPlan, setImportPlan] = useState<TihImportPlan | null>(null);
+  const [importFileName, setImportFileName] = useState<string | null>(null);
+  const [importApplying, setImportApplying] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const exportAll = () => {
+    downloadJson(`today-in-history-all-${new Date().toISOString().slice(0, 10)}.json`, buildEnvelope(rows));
+  };
+  const exportOne = (r: TodayEvent) => {
+    downloadJson(`tih-${r.month}-${r.day}-${safeSlug(r.title)}.json`, buildEnvelope([r]));
+  };
+  const downloadTemplate = () => {
+    // Prefer a real event as the Golden Template so the file matches DB reality
+    // exactly; fall back to an empty envelope only if no rows exist yet.
+    if (rows.length > 0) {
+      const sample = [...rows].sort((a, b) => (b.body?.length ?? 0) - (a.body?.length ?? 0))[0];
+      downloadJson("today-in-history-golden-template.json", buildEnvelope([sample]));
+    } else {
+      downloadJson("today-in-history-golden-template.json", buildEnvelope([]));
+    }
+  };
+
+  const onImportFile = async (file: File) => {
+    setImportFileName(file.name);
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      setImportPlan(planImport(parsed, rows));
+      setImportOpen(true);
+    } catch (e: any) {
+      setImportPlan({ toInsert: [], toUpdate: [], errors: [{ index: -1, message: `تعذر قراءة JSON: ${e?.message ?? e}` }], duplicates: [] });
+      setImportOpen(true);
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const applyImport = async () => {
+    if (!importPlan) return;
+    if (importPlan.errors.length > 0) { toast.error("يوجد أخطاء — عالجها قبل التطبيق."); return; }
+    setImportApplying(true);
+    try {
+      if (importPlan.toInsert.length > 0) {
+        const { error } = await supabase.from("today_in_history_events" as any).insert(importPlan.toInsert.map((x) => x.payload));
+        if (error) throw error;
+      }
+      for (const u of importPlan.toUpdate) {
+        const { error } = await supabase.from("today_in_history_events" as any).update(u.payload).eq("id", u.id);
+        if (error) throw error;
+      }
+      toast.success(`تم الاستيراد: ${importPlan.toInsert.length} جديد، ${importPlan.toUpdate.length} محدّث.`);
+      setImportOpen(false);
+      setImportPlan(null);
+      await load();
+    } catch (e: any) {
+      toast.error(`فشل الاستيراد: ${e?.message ?? e}`);
+    } finally {
+      setImportApplying(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <Feedback msg={msg} />
@@ -697,6 +873,22 @@ function TodayEventsTab() {
           someSelected={selectedVisible.length > 0}
           onToggle={() => setAll(visibleIds, !allSelected)}
         />
+        <button onClick={exportAll} className="inline-flex items-center gap-2 rounded-md border border-input px-3 py-2 text-sm hover:bg-muted" title="تصدير جميع الأحداث">
+          <Download className="h-4 w-4" /> تصدير الكل ({rows.length})
+        </button>
+        <button onClick={downloadTemplate} className="inline-flex items-center gap-2 rounded-md border border-input px-3 py-2 text-sm hover:bg-muted" title="Golden Template مبنيّ من حدث حقيقي">
+          <FileJson className="h-4 w-4" /> النموذج المرجعي JSON
+        </button>
+        <button onClick={() => fileInputRef.current?.click()} className="inline-flex items-center gap-2 rounded-md border border-input px-3 py-2 text-sm hover:bg-muted">
+          <Upload className="h-4 w-4" /> استيراد JSON
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="application/json,.json"
+          className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) void onImportFile(f); }}
+        />
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -707,6 +899,16 @@ function TodayEventsTab() {
           <RefreshCw className="h-4 w-4" /> تحديث
         </button>
       </div>
+
+      {importOpen && importPlan && (
+        <ImportPreview
+          fileName={importFileName}
+          plan={importPlan}
+          applying={importApplying}
+          onCancel={() => { setImportOpen(false); setImportPlan(null); }}
+          onApply={applyImport}
+        />
+      )}
 
       {editing && (
         <EventEditor value={editing} onChange={setEditing} onCancel={() => setEditing(null)} onSave={save} />
@@ -752,7 +954,10 @@ function TodayEventsTab() {
                     <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{r.body}</p>
                     {r.deep_link && <p className="mt-1 text-xs text-muted-foreground" dir="ltr">{r.deep_link}</p>}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    <button onClick={() => exportOne(r)} className="inline-flex items-center gap-1 rounded-md border border-input px-3 py-1.5 text-xs hover:bg-muted" title="تصدير JSON">
+                      <Download className="h-3 w-3" /> JSON
+                    </button>
                     <button onClick={() => toggle(r)} className="rounded-md border border-input px-3 py-1.5 text-xs hover:bg-muted">
                       {r.enabled ? "تعطيل" : "تفعيل"}
                     </button>
@@ -870,6 +1075,86 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     <div>
       <label className="mb-1 block text-sm font-medium">{label}</label>
       {children}
+    </div>
+  );
+}
+
+function ImportPreview({
+  fileName, plan, applying, onCancel, onApply,
+}: {
+  fileName: string | null;
+  plan: TihImportPlan;
+  applying: boolean;
+  onCancel: () => void;
+  onApply: () => void;
+}) {
+  const hasErrors = plan.errors.length > 0;
+  const nothing = plan.toInsert.length === 0 && plan.toUpdate.length === 0;
+  return (
+    <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+      <div className="mb-3 flex items-center justify-between">
+        <div>
+          <h3 className="font-semibold">معاينة الاستيراد {fileName ? `— ${fileName}` : ""}</h3>
+          <p className="text-xs text-muted-foreground">راجع النتائج قبل التطبيق. الأحداث الحالية ذات المعرّف نفسه ستُحدَّث في مكانها، ولن تُنشأ نسخة مكررة.</p>
+        </div>
+        <button onClick={onCancel} className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <StatBox label="جديد" value={plan.toInsert.length} tone="ok" />
+        <StatBox label="تحديث" value={plan.toUpdate.length} tone="info" />
+        <StatBox label="تكرار داخل الملف" value={plan.duplicates.length} tone="warn" />
+        <StatBox label="أخطاء" value={plan.errors.length} tone={hasErrors ? "err" : "muted"} />
+      </div>
+
+      {plan.errors.length > 0 && (
+        <div className="mt-4 rounded-md border border-destructive/30 bg-destructive/5 p-3">
+          <p className="mb-1 text-sm font-semibold text-destructive">أخطاء ({plan.errors.length})</p>
+          <ul className="max-h-48 space-y-1 overflow-y-auto text-xs text-destructive/90">
+            {plan.errors.map((e, i) => (
+              <li key={i}>
+                #{e.index >= 0 ? e.index + 1 : "-"}{e.field ? ` — الحقل «${e.field}»` : ""}{e.id ? ` — id: ${e.id}` : ""}: {e.message}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {plan.duplicates.length > 0 && (
+        <div className="mt-3 rounded-md border border-amber-500/30 bg-amber-500/5 p-3">
+          <p className="mb-1 text-sm font-semibold text-amber-600">تنبيه: تواريخ/عناوين مكررة داخل نفس الملف</p>
+          <ul className="max-h-32 space-y-1 overflow-y-auto text-xs text-amber-700">
+            {plan.duplicates.map((d, i) => <li key={i}>#{d.index + 1}: {d.message}</li>)}
+          </ul>
+        </div>
+      )}
+
+      <div className="mt-4 flex gap-2">
+        <button
+          onClick={onApply}
+          disabled={applying || hasErrors || nothing}
+          className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Upload className="h-4 w-4" /> {applying ? "جارٍ التطبيق…" : "تطبيق الاستيراد"}
+        </button>
+        <button onClick={onCancel} className="rounded-md border border-input px-4 py-2 text-sm hover:bg-muted">إلغاء</button>
+      </div>
+    </div>
+  );
+}
+
+function StatBox({ label, value, tone }: { label: string; value: number; tone: "ok" | "info" | "warn" | "err" | "muted" }) {
+  const toneCls = {
+    ok: "border-green-500/30 bg-green-500/5 text-green-600",
+    info: "border-primary/30 bg-primary/5 text-primary",
+    warn: "border-amber-500/30 bg-amber-500/5 text-amber-600",
+    err: "border-destructive/30 bg-destructive/5 text-destructive",
+    muted: "border-border bg-muted/30 text-muted-foreground",
+  }[tone];
+  return (
+    <div className={`rounded-md border p-3 text-center ${toneCls}`}>
+      <div className="text-2xl font-bold">{value}</div>
+      <div className="text-xs">{label}</div>
     </div>
   );
 }
