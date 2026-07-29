@@ -181,14 +181,18 @@ function ImportedChapterPlayer() {
   }
   if (!campaign || !chapter) throw notFound();
 
-  const activity = runtimeActivities[currentIdx];
-  const activityIsReview = isReviewMarker(activity);
+  const runtimeStep = runtimeActivities[currentIdx];
+  const activityIsReview = isReviewMarker(runtimeStep);
+  const reviewMarker: MemoryReviewActivityMarker | null = activityIsReview ? (runtimeStep as MemoryReviewActivityMarker) : null;
+  const activity: import("@/types/campaign").CampaignActivity | null =
+    !runtimeStep || activityIsReview ? null : (runtimeStep as import("@/types/campaign").CampaignActivity);
+
   // Chapter completion is decided purely on the AUTHORED activity list.
   const allDone  = chapter.activities.length > 0
     && chapter.activities.every(a => chProgress?.completedActivityIds.includes(a.id))
     && Object.values(pendingAck).every(v => v !== "correct");
 
-  const currentAck = activity && !activityIsReview ? pendingAck[activity.id] : undefined;
+  const currentAck = activity ? pendingAck[activity.id] : undefined;
   const wrongAttempts = activity ? (wrongFlash[activity.id] ?? 0) : 0;
 
   const onResolve = async (correct: boolean, meta?: { viaReveal?: boolean }) => {
