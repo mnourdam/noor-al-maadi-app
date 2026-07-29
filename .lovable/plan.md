@@ -1,153 +1,231 @@
-# Review Engine — طبقة مراجعة مستوحاة من Duolingo (تصميم فقط)
+# Memory Engine — محرك تثبيت المعلومات (تصميم فقط)
 
-طبقة Runtime مستقلة تعرض أحيانًا **سؤال مراجعة واحد** مأخوذ من حملات أتمّها اللاعب، دون أي تعديل على الحملات أو الفصول أو الأنشطة أو منطق التقدم أو الـGolden Template. إذا عُطّلت الطبقة عبر feature flag واحد يعود النظام لسلوكه الحالي بالكامل.
+طبقة Runtime مستقلة تعرض للاعب أحيانًا **عنصر مراجعة واحدًا** (ReviewItem) مأخوذًا من محتوى أتمّه سابقًا — بدأ اليوم بالحملات، وينمو لاحقًا للتحقيقات والقصص والموسوعة والتحديات — دون أي تعديل على الحملات أو الفصول أو الأنشطة أو منطق التقدم أو الـGolden Template. تعطيل الطبقة عبر flag واحد يُعيد السلوك 100% لما هو عليه الآن.
+
+الاسم: **Memory Engine** (سابقًا Review Engine) — يعكس أنه ليس مجرد مراجعة، بل محرك تثبيت متعدد الأنماط (مراجعات، تكرار متباعد، تذكيرات، تحديات لاحقًا).
 
 ---
 
-## 1) الحدود المعمارية (Isolation Contract)
+## 1) المبدأ الأساس: نربط بالمعلومة، لا بالحملة
 
-**لا يمس** الـReview Engine أيًا مما يلي:
-- ملفات JSON للحملات / الفصول / الأنشطة.
-- `campaignStorage`, `campaignReconciliation`, `admin_run_campaign_batch`, Import/Export.
-- `ActivityRenderer`, ترتيب الأنشطة، `currentIdx`, `completedActivityIds`.
-- منطق `claimActivityReward` واحتساب إكمال الفصل/الحملة.
-- Offline Snapshot و Golden Template.
+الوحدة الذرية = **ReviewItem** بمعرّف مستقر مستقل عن المصدر:
 
-**نقطة الاتصال الوحيدة**: مكوّن Overlay جديد يُركَّب داخل `campaigns.imported.$id.chapter.$chapter.tsx` **بين** انتهاء نشاط ناجح وعرض النشاط التالي. لا يستهلك أي API من محرك الحملات سوى القراءة (`campaign.id`, `chapter.id`, `activity.id`) لأغراض إشارة التوقيت.
+```ts
+type SourceType = "campaign" | "investigation" | "story" | "museum" | "daily_challenge";
 
-Kill switch: `VITE_FEATURE_REVIEW_ENGINE` + مفتاح Runtime في إعدادات اللاعب. إيقافه = عودة سطر واحد شرطي إلى null، لا يتغير أي سلوك آخر.
+interface ReviewItem {
+  id: string;                 // hash(source_type + source_id + local_ref) — مستقر
+  sourceType: SourceType;
+  sourceId: string;           // campaignId / investigationId / storyId / ...
+  localRef: string;           // activityId / questionId / factId داخل المصدر
+  kind: "mcq" | "true_false" | "ordering" | "matching" | "fill_blank";
+  prompt: string;
+  options?: string[];
+  correctAnswer: unknown;
+  originalXp: number;         // لحساب مكافأة المراجعة
+  era?: string;
+  tags?: string[];
+}
+```
+
+أي مزوّد مستقبلي (Story/Investigation) يُنتج نفس الشكل — المحرك لا يعرف ولا يهتم بمصدر العنصر.
 
 ---
 
 ## 2) البنية (Modules)
 
-جميعها تحت `src/lib/review/` — معزولة، بدون استيراد من `campaignStorage` عدا الأنواع.
+```
+src/lib/memory/
+  types.ts                    ReviewItem, Attempt, ScheduleDecision, Provider
+  providers/
+    index.ts                  registerProvider(), listItemsForOwner()
+    campaignProvider.ts       المزود الأول (قراءة فقط من campaignStorage)
+    # مستقبلًا: storyProvider.ts, investigationProvider.ts, museumProvider.ts
+  bank.ts                     تجميع العناصر من كل المزودين + كاش
+  eligibility.ts              فلترة عناصر مؤهلة للاعب الحالي
+  scheduler.ts                قرار deterministic بموقع الحقن
+  selector.ts                 اختيار عنصر واحد بأولويات + منع تكرار
+  spacing.ts                  حساب next-due عبر SM-2 مبسّط
+  history.ts                  attempts + due dates (partitioned per owner)
+  rewards.ts                  حساب XP المتغير
+  index.ts                    الواجهة العامة
+
+src/components/memory/
+  ReviewActivity.tsx          يُقدَّم كـ Activity كامل داخل نفس Renderer
+  ReviewActivityCard.tsx      عرض السؤال والخيارات
+```
+
+---
+
+## 3) الحقن: كـ Runtime Activity، لا Overlay
+
+**المبدأ**: الفصل يبقى في JSON كما هو. عند تشغيل الفصل نبني نسخة runtime من `chapter.activities` تُضاف فيها **Injected Activities** في مواقع محسوبة. JSON الأصلي لا يُلمس، ولا يُحفظ Injected في `completedActivityIds` ولا في أي storage للحملات.
+
+```ts
+// داخل play/chapter runtime فقط:
+const runtimeActivities = injectReviewActivities(chapter.activities, {
+  campaignId, chapterId, ownerKey, dateKey,
+});
+// runtimeActivities: (Activity | InjectedReviewActivity)[]
+```
+
+`InjectedReviewActivity` يحمل علامة `__injected: true` ومعرّف مؤقت `review:<itemId>`. `ActivityRenderer` يعرف هذا النوع الواحد الجديد ويستدعي `<ReviewActivity/>`. لا Overlay، لا تعديل على Navigation/Hearts/Focus/Back. تفاعلات النشاط تمر عبر نفس دورة الحياة الحالية.
+
+**ماذا يتغير في محرك الحملات؟** لا شيء في بيانات الحملة. فقط `ActivityRenderer` يضيف حالة واحدة: `if (activity.type === "__memory_review__") return <ReviewActivity/>;`. هذا التعديل الوحيد المسموح خارج `src/lib/memory/` — سطر case واحد.
+
+**الحماية**:
+- `completeActivity` و `claimActivityReward` و `recordActivity` لا تُستدعى للـInjected.
+- `currentIdx` يحسب على `runtimeActivities.length` لكن `allDone` يحسب على الأنشطة الأصلية فقط — لا تأثير على شرط إكمال الفصل.
+- لو عُطّل الـflag: `injectReviewActivities` تُرجع المصفوفة الأصلية كما هي.
+
+---
+
+## 4) الجدولة (Deterministic Scheduler)
+
+لا احتمالات. القاعدة:
+
+- عنصر مراجعة يُحقن **قبل** كل نشاط رقمه من مضاعفات 4 داخل الفصل (4، 8، 12، ...)، بشرط:
+  - ليس أول نشاط في الفصل.
+  - ليس آخر نشاط في الفصل.
+  - يوجد على الأقل عنصر مؤهل واحد **حان موعده** (due) للاعب.
+- حد أعلى **مراجعة واحدة لكل فصل** (لو الفصل يحوي 16 نشاطًا: تُحقن عند 4 فقط، ثم تُتخطى البقية).
+- حد أعلى **5 مراجعات يوميًا** عبر كل الفصول.
+
+المرجع في القرار = `runtimeActivities` قبل الحقن، بحيث يبقى موقع الحقن ثابتًا حتى لو اختلف تقدم اللاعب.
+
+---
+
+## 5) الاختيار (Selector)
+
+ترتيب صارم:
+
+1. عناصر **due** (تجاوزت `nextDueAt`) ومن ضمنها أخطاء سابقة (`lastAttemptCorrect=false`) لها الأولوية.
+2. الأقدم مراجعة (`lastReviewedAt` أبعد زمنيًا).
+3. البقية من العناصر التي لم تُراجَع بعد.
+
+قواعد منع التكرار:
+- لا نفس `itemId` قبل `nextDueAt`.
+- لا نفس `sourceId` في آخر 3 مراجعات (تنويع الحملات/المصادر).
+- لا نفس `kind` مرتين متتاليتين إن أمكن.
+
+لو لا يوجد أي عنصر مؤهل → لا حقن (بصمت).
+
+---
+
+## 6) التكرار المتباعد (Spaced Repetition)
+
+نموذج SM-2 مبسّط لكل عنصر:
 
 ```
-src/lib/review/
-  types.ts              ReviewItem, ReviewAttempt, ReviewDecision
-  bank.ts               بناء بنك الأسئلة من الحملات المكتملة (قراءة فقط)
-  eligibility.ts        فلترة: مكتملة + سبق حلها + قابلة للمراجعة
-  scheduler.ts          متى يُعرض سؤال (قرار حقن/تخطي)
-  selector.ts           اختيار سؤال واحد بالأولويات + منع التكرار
-  history.ts            سجل المراجعات (partitioned per owner)
-  telemetry.ts          XP grant عبر مسار مستقل عن claimActivityReward
-  index.ts              واجهة عامة: pickReviewForMoment(), recordAttempt()
+correctStreak = 0, 1, 2, 3, 4, ...
+interval (أيام) = [2, 4, 7, 14, 30, 60, 120]
 
-src/components/review/
-  ReviewOverlay.tsx     شاشة مودال منفصلة تمامًا عن ActivityRenderer
-  ReviewQuestionCard.tsx  عرض SSOT-only للأنواع المدعومة
+- إجابة صحيحة: correctStreak++, nextDueAt = now + interval[min(streak, 6)]
+- إجابة خاطئة: correctStreak = 0, nextDueAt = now + 2 أيام
+- تخطي: لا يعدّل الجدولة، يُسجَّل كـ "seen"
 ```
 
----
-
-## 3) بنك الأسئلة (Read-Only Projection)
-
-- يُبنى **مرة واحدة** بعد boot من `getCompletedCampaigns()` (يعرفها `campaignStorage` مسبقًا).
-- لكل حملة مكتملة نمرّ على `chapters[].activities[]` ونستخرج فقط الأنشطة التي:
-  - نوعها ضمن قائمة بيضاء: `mcq`, `true_false`, `ordering`, `matching`, `fill_blank`.
-  - لها `correctAnswer` موثوق (يعبر `admin_validate_activity_shape`).
-  - **مسجَّلة كـ completed في `completedActivityIds` للاعب الحالي** (ضمان "سبق أن حلها").
-- **مستبعد**: reading, reflection, decision-only, open-text, و أي نشاط تأملي بدون تحقق.
-
-المخرج: `ReviewItem[]` مع `{ campaignId, chapterId, activityId, kind, prompt, options, correctIndex, era }` — snapshot immutable في الذاكرة، يُعاد بناؤه فقط عند إكمال حملة جديدة.
+النتيجة العملية:
+- صح متتالٍ ⇒ 2د → 4د → 7د → 14د → 30د → 60د → 120د.
+- خطأ ⇒ يرجع بعد يومين.
+- عناصر متأخرة (overdue) تُقدَّم تلقائيًا في الأولوية 1.
 
 ---
 
-## 4) نقاط الحقن (Injection Points)
+## 7) الواجهة (UX)
 
-الحقن **بعد** لحظة النجاح في نشاط داخل الفصل الحالي، قبل الانتقال للنشاط التالي. لا يُحقن أبدًا:
-- في أول نشاط بالفصل.
-- في آخر نشاط بالفصل (لتفادي الخلط مع شاشة الإكمال).
-- إذا لم يُكمل اللاعب أي حملة سابقة.
-- إذا الفصل الحالي هو أول فصل في أول حملة يبدأها اللاعب.
-
-معدل الحقن (Scheduler):
-- حد أعلى **سؤال مراجعة واحد لكل فصل**.
-- حد أعلى **3 أسئلة مراجعة يوميًا**.
-- Cooldown: لا حقن قبل مرور ≥ 3 أنشطة صحيحة منذ آخر مراجعة.
-- احتمال أساسي 25% لكل نشاط مؤهّل، يُعدَّل بـ decay إذا تجاوز اللاعب حصته اليومية.
-- deterministic seed: `hash(ownerKey + dateKey + campaignId + chapterId + activityId)` لضمان الثبات ومنع اللعب على العشوائية.
+- الـReviewActivity تبدو كأي نشاط، بشارة صغيرة أعلى البطاقة: **«مراجعة»** فقط، بدون ذكر اسم الحملة.
+- بعد الإجابة يظهر السطر: **«تمت مراجعة معلومة من: عام الحزن»** — بعد الكشف عن الإجابة، لا قبلها. أيقونة صغيرة تكفي إن كان الاسم قد يكشف الجواب.
+- زر «تخطي» متاح بدون عقوبة.
+- زر «متابعة» يعيد الـRenderer للنشاط التالي في `runtimeActivities`.
 
 ---
 
-## 5) الاختيار (Selector Priorities)
+## 8) المكافآت (XP متغيّرة)
 
-بترتيب صارم، لا عشوائية بسيطة:
+```
+xp = clamp( round(originalXp * 0.25), 3, 10 )
+```
 
-1. **أخطاء سابقة**: أسئلة سُجّل لها attempt خاطئ في `review.history` ولم تُصحّح بعد.
-2. **الأقدم مراجعة**: `lastReviewedAt` الأبعد زمنيًا (spaced repetition خفيف).
-3. **البقية** مع منع تكرار قريب:
-   - لا تكرار نفس `activityId` خلال 14 يومًا.
-   - لا تكرار نفس `campaignId` خلال آخر 3 مراجعات (تنويع المصادر).
-   - لا تكرار نفس `chapterId` مرتين متتاليتين.
+- صحيحة: منح `xp` عبر `awardXp({ source: "memory_review", itemId })`.
+- خاطئة/تخطي: صفر XP، لا خصم قلوب، لا أثر على تقدم الحملة.
 
-Fallback: إن كانت كل الأسئلة في cooldown يُتخطى الحقن بصمت.
+المكافأة تمر عبر مسار XP العام الموجود مسبقًا — لا مسار جديد للحملات.
 
 ---
 
-## 6) التخزين (History)
+## 9) التخزين (History)
 
-- مفتاح واحد فقط: `irth.review.history.v1` — يمرّ عبر Identity Partition تلقائيًا فيصبح `...::owner=user:<id>` أو `...::owner=guest:<id>`.
-- شكل السجل:
-  ```ts
-  {
-    attempts: Array<{ itemKey, correct, at, campaignId, chapterId }>,
-    dailyCount: { [dateKey]: number },
-    lastAt: string
-  }
-  ```
-- Cap: آخر 500 attempt، truncation FIFO.
-- **لا** يُكتب في `game_progress` ولا `user_campaign_progress` ولا أي جدول تقدم موجود.
-- (اختياري لاحقًا) جدول `user_review_attempts` منفصل تمامًا — خارج نطاق هذه المرحلة.
+مفتاح واحد `irth.memory.history.v1` يمر تلقائيًا عبر Identity Partition (`::owner=user:<id>` أو `guest:<id>`).
 
----
+```ts
+interface MemoryHistory {
+  items: {
+    [itemId: string]: {
+      lastReviewedAt: string;
+      lastAttemptCorrect: boolean;
+      correctStreak: number;
+      totalAttempts: number;
+      nextDueAt: string;
+      sourceType: SourceType;
+      sourceId: string;
+    };
+  };
+  attempts: Array<{ itemId, correct, at }>;  // آخر 500 FIFO
+  daily: { [dateKey: string]: number };
+}
+```
 
-## 7) المكافآت
-
-- إجابة صحيحة: `+5 XP` عبر `awardXp({ source: "review" })` — مسار موجود مستقل عن `claimActivityReward`.
-- إجابة خاطئة: لا خصم قلوب، لا أثر على التقدم، تُسجَّل فقط في history لأولوية اختيار مستقبلي.
-- **تخطي/إغلاق**: مسموح، بدون عقوبة، يُحسب كـ "seen but not answered".
-
----
-
-## 8) الواجهة (UX)
-
-- Overlay فوق شاشة الفصل، خلفية مموّهة، بادج ذهبي: «مراجعة سريعة من حملة سابقة».
-- يذكر مصدر السؤال: «من حملة: عام الحزن».
-- زر «تخطي» ظاهر دائمًا.
-- بعد الإجابة: تغذية راجعة قصيرة + زر «متابعة الفصل».
-- لا تعديل على `ActivityRenderer` — يُعرض الـOverlay فوقه.
+- **لا كتابة** في `game_progress`, `user_campaign_progress`, `campaignStorage`, أو أي جدول تقدم موجود.
+- مزامنة سحابية (`user_memory_attempts`) خارج نطاق هذه المرحلة.
 
 ---
 
-## 9) ضمانات عدم الكسر (Safety Contract)
+## 10) المزوّدون (Providers Pattern)
 
-1. **Feature Flag**: تعطيله يُرجع `pickReviewForMoment()` فارغة → Overlay لا يُعرض → صفر تغيير سلوكي.
-2. **بدون كتابة في حالة الحملات**: يستحيل معماريًا لأن الملف الوحيد الذي يكتب هو `history.ts` بمفتاحه الخاص.
-3. **بدون تعديل ترتيب/عدد الأنشطة**: `chapter.activities` لا يُلمس، ولا `currentIdx`, ولا `completedActivityIds`.
-4. **بدون تأثير على شرط إكمال الفصل/الحملة**: `allDone` لا يعتمد على أي state من Review.
-5. **Offline-safe**: البنك يُبنى من بيانات محلية أصلاً، والـhistory محلية.
-6. **Identity-safe**: يمر تلقائيًا عبر Storage Partition الحالي.
-7. **اختبارات وحدة**:
-   - `scheduler` يحترم الحدود اليومية والcooldown.
-   - `selector` يحترم الأولويات ومنع التكرار.
-   - `bank` يستبعد الأنشطة غير المؤهلة.
-   - snapshot test يثبت أن ملفات `campaignStorage` لم تُلمس.
+الواجهة الوحيدة:
+
+```ts
+interface ReviewProvider {
+  sourceType: SourceType;
+  listItemsForOwner(ownerKey: string): Promise<ReviewItem[]>;
+}
+```
+
+اليوم مسجّل واحد فقط: `campaignProvider` يقرأ الحملات المكتملة ويستخرج الأنشطة المؤهلة (mcq/true_false/ordering/matching/fill_blank) التي **سبق أن أنهاها اللاعب**، مع تخطي reading/reflection/decision بلا correctAnswer.
+
+المستقبل: `storyProvider`, `investigationProvider`, `museumProvider`, `dailyChallengeProvider` — يُضاف كل واحد بسطر `registerProvider()` دون أي تعديل في `bank/scheduler/selector/spacing/history`.
 
 ---
 
-## 10) خارج نطاق هذه المرحلة
+## 11) ضمانات عدم الكسر
 
-- مراجعات من التحقيقات/القصص.
-- Spaced repetition متقدم (SM-2).
-- مزامنة history للسحابة.
-- مراجعات في نهاية اليوم / إشعارات.
+1. **Kill switch**: `VITE_FEATURE_MEMORY_ENGINE=false` ⇒ `injectReviewActivities` تُعيد المصفوفة الأصلية ⇒ صفر تغيير.
+2. **معماريًا** لا يكتب المحرك في أي storage للحملات — الملف الوحيد الذي يكتب هو `history.ts` بمفتاحه الخاص.
+3. `chapter.activities` غير معدَّلة، `completedActivityIds` لا تحوي أي `review:*`، `allDone` يحسب على الأصل فقط.
+4. Offline-safe: البنك محلي، History محلي، مرور عبر Identity Partition.
+5. Golden Template و Import/Export و admin_run_campaign_batch لا يمسّها.
+6. اختبارات وحدة:
+   - `scheduler`: المواقع 4/8/12، حد يومي، حد لكل فصل.
+   - `selector`: أولوية due/wrong، منع تكرار source/kind.
+   - `spacing`: منحنى SM-2 المبسّط، سلوك بعد خطأ.
+   - `campaignProvider`: يستبعد غير المؤهلة، يحترم "سبق حلها".
+   - snapshot: ملفات `campaignStorage/*` لم تُلمس، `ActivityRenderer` يحوي case واحدًا فقط للنوع الجديد.
+
+---
+
+## 12) خارج نطاق هذه المرحلة
+
+- مزودو Story/Investigation/Museum/DailyChallenge.
+- مزامنة سحابية.
+- إشعارات "لديك 5 مراجعات مستحقّة اليوم".
+- تحليلات ذاكرة (heatmap للنسيان).
 
 ---
 
 ## نقاط تحتاج قرارك قبل التنفيذ
 
-1. الحد اليومي: 3 مراجعات/يوم — مقبول؟
-2. مكافأة XP الثابتة: 5 — أم متغيرة حسب صعوبة السؤال الأصلي؟
-3. هل نبدأ محلي فقط الآن، ونؤجل مزامنة `user_review_attempts` للسحابة لمرحلة لاحقة؟
+1. الحد اليومي: **5 مراجعات/يوم** — مناسب؟
+2. موقع الحقن: **مضاعفات 4** — أم تفضّل «مرة واحدة في منتصف الفصل» فقط؟
+3. صيغة XP: `clamp(originalXp * 0.25, 3, 10)` — تعديل الحدود؟
+4. الشارة أثناء السؤال: كلمة **«مراجعة»** فقط — أم أيقونة صامتة تمامًا حتى بعد الكشف؟
