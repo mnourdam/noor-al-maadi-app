@@ -877,7 +877,11 @@ function ReflectiveMomentRenderer({ activity, onResolve, onAdvance, alreadyDone,
   const showTextarea = !isReplay || editing;
   const requireChoice = mode === "choose" && choices.length > 0;
   const currentText = () => (textareaRef.current?.value ?? text).trim();
-  const hasText = currentText().length > 0;
+  // Live length so the single action button can switch between
+  // "تخطي والمتابعة" (nothing written) and "حفظ" (something written)
+  // while the player types, before any blur commit.
+  const [liveLen, setLiveLen] = useState<number>((prior?.text ?? "").trim().length);
+  const hasText = liveLen > 0;
 
   const persist = () => {
     const noteText = currentText();
@@ -897,6 +901,12 @@ function ReflectiveMomentRenderer({ activity, onResolve, onAdvance, alreadyDone,
 
   const canSubmit = requireChoice ? choiceIdx !== null : true;
 
+  const advance = () => { onAdvance?.(); };
+
+  // Single-button contract:
+  //   no note        → "تخطي والمتابعة"  (persist + complete + advance)
+  //   note written   → "حفظ"             (persist + complete, stays)
+  //   after saving   → "التالي"          (advance only)
   const submit = () => {
     if (submitLockRef.current) return;
     if (!canSubmit) return;
@@ -911,9 +921,12 @@ function ReflectiveMomentRenderer({ activity, onResolve, onAdvance, alreadyDone,
     }
     setResolved(true);
     onResolve(true);
+    if (!hasText) advance();
   };
 
-  const submitLabel = hasText ? "حفظ ومتابعة" : "تخطي والمتابعة";
+  const showNextOnly = saved && resolved && hasText && !(isReplay && editing);
+  const submitLabel = hasText ? "حفظ" : "تخطي والمتابعة";
+
 
   return (
     <div className="motion-page animate-fade-in" key={`reflect:${activity.id}`}>
