@@ -264,7 +264,14 @@ export function buildRuntimeActivities<T extends { id: string }>(
   originalActivities: T[],
   plan: RuntimeChapterPlan,
 ): (T | MemoryReviewActivityMarker)[] {
-  if (!memoryEnabled() || plan.reviewCompleted) return [...originalActivities];
+  // Point #1: once a plan has committed a review (insertionAfterActivityId set),
+  // the chapter session honours it to the end even if the runtime kill switch
+  // flips mid-session. Flag flips only affect NEW plans (see `ensurePlan`).
+  // A plan with no review committed is still gated by the flag so we don't
+  // start injecting after re-enable.
+  const hasCommittedReview = plan.reviewItemId != null && plan.insertionAfterActivityId != null;
+  if (plan.reviewCompleted) return [...originalActivities];
+  if (!hasCommittedReview && !memoryEnabled()) return [...originalActivities];
   const item = resolveReviewFromPlan(plan);
   if (!item || !plan.insertionAfterActivityId) return [...originalActivities];
 
