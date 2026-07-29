@@ -213,8 +213,9 @@ function stratifyByEra<T extends RotatableGame>(mode: GameMode, list: readonly T
  * force the identity permutation, i.e. the same order every lap — so the
  * seam is smoothed instead: games seen in the FIRST half of the previous
  * lap (the ones seen longest ago) are placed ahead of games from its
- * second half, keeping the fresh shuffle inside each half. Era
- * stratification is applied afterwards so historical variety survives.
+ * second half, keeping the fresh shuffle inside each half. The reordering
+ * happens INSIDE each era bucket before interleaving, so the era rhythm
+ * of the lap is preserved untouched.
  */
 export function catalogueOrder<T extends RotatableGame>(
   mode: GameMode,
@@ -228,14 +229,16 @@ export function catalogueOrder<T extends RotatableGame>(
   const prevIndex = new Map<string, number>();
   previous.forEach((g, i) => prevIndex.set(g.slug, i));
   const midpoint = previous.length / 2;
+  const seenRecently = (g: T) => (prevIndex.get(g.slug) ?? -1) >= midpoint;
 
-  const oldest: T[] = [];
-  const recent: T[] = [];
-  for (const g of current) {
-    const p = prevIndex.get(g.slug);
-    (p === undefined || p < midpoint ? oldest : recent).push(g);
-  }
-  return [...stratifyByEra(mode, oldest), ...stratifyByEra(mode, recent)];
+  // Stable partition: within the lap shuffle, games seen in the previous
+  // lap's second half sink behind the rest. Era interleaving then runs on
+  // this carryover-aware order, so both guarantees hold simultaneously.
+  const carryover = [
+    ...current.filter((g) => !seenRecently(g)),
+    ...current.filter(seenRecently),
+  ];
+  return stratifyByEra(mode, carryover);
 }
 
 
