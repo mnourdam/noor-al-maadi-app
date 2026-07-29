@@ -54,7 +54,10 @@ import {
   bumpDaily,
   nextAfterCorrect,
   nextAfterWrong,
+  harvestCampaignIntoBank,
+  refreshMemoryBank,
   type MemoryReviewActivityMarker,
+
 } from "@/lib/memory";
 import { ReviewActivity } from "@/components/memory/ReviewActivity";
 
@@ -145,15 +148,31 @@ function ImportedChapterPlayer() {
     }
   }, [campaign, chapter, navigate, reviewMode]);
 
-  // Memory Engine — build the frozen RuntimeChapterPlan and interleave
-  // (at most) one review question. Original campaign data is never
+  // Memory Engine — keep the review bank in sync with what the player has
+  // actually finished (published snapshot + local progress ledger), then
+  // build the frozen RuntimeChapterPlan. Original campaign data is never
   // mutated: `chapter.activities` stays the source of truth for
   // completion/allDone.
+  const [bankTick, setBankTick] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    harvestCampaignIntoBank(campaign ?? null);
+    void refreshMemoryBank().then(() => { if (alive) setBankTick(t => t + 1); });
+    return () => { alive = false; };
+  }, [campaign?.id]);
+
   const plan = useMemo(() => {
     if (!chapter || reviewMode) return null;
-    return ensurePlan(campaign?.id ?? "", chapter.id, chapter.activities.map(a => a.id));
+    // Re-selection is only ever allowed BEFORE the chapter is started, so a
+    // review can never appear behind the player's current position.
+    const started = (chProgress?.completedActivityIds.length ?? 0) > 0;
+    return ensurePlan(
+      campaign?.id ?? "", chapter.id, chapter.activities.map(a => a.id),
+      Date.now(), { allowReselect: !started },
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [campaign?.id, chapter?.id, chapter?.activities.map(a => a.id).join("|"), reviewMode, progressTick]);
+  }, [campaign?.id, chapter?.id, chapter?.activities.map(a => a.id).join("|"), reviewMode, progressTick, bankTick]);
+
 
   const runtimeActivities = useMemo(() => {
     if (!chapter) return [];
@@ -552,6 +571,7 @@ function ImportedChapterPlayer() {
                       key={`${activity.id}:${wrongAttempts}`}
                       activity={activity}
                       onResolve={onResolve}
+                      onAdvance={acknowledgeAndAdvance}
                       alreadyDone={chProgress?.completedActivityIds.includes(activity.id) && currentAck !== "correct"}
                       campaignId={campaign.id}
                     />
@@ -566,8 +586,10 @@ function ImportedChapterPlayer() {
                   </div>
                 )}
 
-                {/* Advance only after a correct answer. */}
-                {!activityIsReview && currentAck === "correct" && (
+                {/* Advance only after a correct answer.
+                    Reflection prompts own their single button (save → next),
+                    so the parent never renders a second "التالي" for them. */}
+                {!activityIsReview && currentAck === "correct" && activity?.type !== "reflection_prompt" && (
                   <button
                     onClick={acknowledgeAndAdvance}
                     className="motion-tap motion-reveal is-in mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground shadow-gold"
@@ -576,6 +598,7 @@ function ImportedChapterPlayer() {
                     <ArrowLeft className="size-4" />
                   </button>
                 )}
+
 
                 <p className="mt-3 text-center text-[11px] text-muted-foreground">
                   النشاط {((chProgress?.completedActivityIds.length ?? 0) + 1).toLocaleString("en-US")} من {chapter.activities.length.toLocaleString("en-US")}

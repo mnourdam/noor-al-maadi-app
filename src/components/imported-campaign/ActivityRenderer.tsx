@@ -15,6 +15,8 @@ import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
 import type { CampaignActivity } from "@/types/campaign";
 import { RichReadingText } from "./RichReadingText";
 import { coerceRichText } from "@/lib/campaigns/richText";
+import { shuffleOptions } from "@/lib/campaigns/optionShuffle";
+import { useProfile } from "@/lib/profile";
 import { sfx as gameSfx } from "@/components/games/sfx";
 import {
   DndContext,
@@ -52,12 +54,20 @@ export interface RendererProps {
    *   so the parent should apply the minimum reward tier.
    */
   onResolve: (correct: boolean, meta?: ResolveMeta) => void;
+  /**
+   * Advances to the next activity. Provided by the chapter player.
+   * Only renderers that own their own "التالي" button (reflection
+   * prompts) call it — every other renderer leaves advancement to the
+   * parent's Next button, exactly as before.
+   */
+  onAdvance?: () => void;
   alreadyDone?: boolean;
   /** Owning campaign id — required by data-driven Reflective Moments so
    *  auxiliary state (chosen option, personal note) can be keyed and
    *  restored on resume. Optional for other renderers. */
   campaignId?: string;
 }
+
 
 
 const FALLBACK_WRONG = "إجابة غير صحيحة، حاول مرة أخرى.";
@@ -122,15 +132,26 @@ function MultipleChoiceRenderer({ activity, onResolve, alreadyDone }: RendererPr
   const [wrongPicks, setWrongPicks] = useState<Set<number>>(new Set());
   const [wrongCount, setWrongCount] = useState(0);
   const [feedback, setFeedback] = useState<"ok" | "err" | null>(alreadyDone ? "ok" : null);
-  const options = activity.options ?? [];
+  const authoredOptions = activity.options ?? [];
 
-  if (!options.length) return <FallbackRenderer activity={activity} onResolve={onResolve} alreadyDone={alreadyDone} />;
-
-  const correctIndex = typeof activity.correctAnswer === "number"
+  const authoredCorrectIndex = typeof activity.correctAnswer === "number"
     ? activity.correctAnswer
-    : options.findIndex(o => o === String(activity.correctAnswer));
+    : authoredOptions.findIndex(o => o === String(activity.correctAnswer));
+
+  // Runtime-only shuffle — the authored JSON keeps its original order.
+  const shuffled = useMemo(
+    () => shuffleOptions(activity.id, authoredOptions, authoredCorrectIndex),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [activity.id, authoredOptions.join("\u241E"), authoredCorrectIndex],
+  );
+
+  if (!authoredOptions.length) return <FallbackRenderer activity={activity} onResolve={onResolve} alreadyDone={alreadyDone} />;
+
+  const options = shuffled.options;
+  const correctIndex = shuffled.correctIndex;
 
   const locked = resolved || revealed;
+
 
   const submit = () => {
     if (picked === null || locked) return;
@@ -322,6 +343,12 @@ function TrueFalseRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
 }
 
 // ---------- Arrange Events ----------
+// Optional paid hint (ARRANGE_HINT_COST dinars, once per question):
+// pins exactly ONE item in its correct slot, turns it green and makes it
+// undraggable. It does not change validation, scoring, rewards or
+// progress — the player still has to order everything else.
+const ARRANGE_HINT_COST = 20;
+
 function ArrangeEventsRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
   const correctOrder = activity.correctOrder ?? activity.options ?? [];
   // Stable item ids so dnd-kit can track items even when labels repeat.
@@ -332,6 +359,10 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone }: RendererPro
   const [order, setOrder] = useState<string[]>(() => shuffle(items.map((it) => it.id)));
   const [resolved, setResolved] = useState(alreadyDone ?? false);
   const [feedback, setFeedback] = useState<"ok" | "err" | null>(alreadyDone ? "ok" : null);
+  const [pinnedId, setPinnedId] = useState<string | null>(null);
+  const [hintUsed, setHintUsed] = useState(false);
+  const [hintError, setHintError] = useState<string | null>(null);
+  const { profile, spendDinars } = useProfile();
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -342,12 +373,24 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone }: RendererPro
   if (!correctOrder.length) return <FallbackRenderer activity={activity} onResolve={onResolve} alreadyDone={alreadyDone} />;
 
   const labelById = (id: string) => items.find((it) => it.id === id)?.label ?? "";
+  /** `evt-<i>` — i is the item's correct final position. */
+  const correctIndexOf = (id: string) => Number(id.replace("evt-", ""));
+
+  /** Keeps a revealed item glued to its correct slot after any move. */
+  const pin = (next: string[]): string[] => {
+    if (!pinnedId) return next;
+    const target = correctIndexOf(pinnedId);
+    const without = next.filter((id) => id !== pinnedId);
+    without.splice(Math.min(target, without.length), 0, pinnedId);
+    return without;
+  };
 
   const move = (idx: number, dir: -1 | 1) => {
     if (resolved) return;
+    if (order[idx] === pinnedId) return;
     const j = idx + dir;
     if (j < 0 || j >= order.length) return;
-    setOrder(arrayMove(order, idx, j));
+    setOrder(pin(arrayMove(order, idx, j)));
     setFeedback(null);
   };
 
@@ -355,10 +398,30 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone }: RendererPro
     if (resolved) return;
     const { active, over } = e;
     if (!over || active.id === over.id) return;
+    if (String(active.id) === pinnedId) return;
     const from = order.indexOf(String(active.id));
     const to = order.indexOf(String(over.id));
     if (from < 0 || to < 0) return;
-    setOrder(arrayMove(order, from, to));
+    setOrder(pin(arrayMove(order, from, to)));
+    setFeedback(null);
+  };
+
+  const useHint = () => {
+    if (resolved || hintUsed) return;
+    // Reveal the first item that is currently in the wrong slot.
+    const wrongId = order.find((id, i) => correctIndexOf(id) !== i);
+    if (!wrongId) { setHintUsed(true); return; }
+    if (!spendDinars(ARRANGE_HINT_COST)) {
+      setHintError(`تحتاج ${ARRANGE_HINT_COST} دينارًا لاستخدام التلميح.`);
+      return;
+    }
+    setHintError(null);
+    setHintUsed(true);
+    setPinnedId(wrongId);
+    const target = correctIndexOf(wrongId);
+    const without = order.filter((id) => id !== wrongId);
+    without.splice(Math.min(target, without.length), 0, wrongId);
+    setOrder(without);
     setFeedback(null);
   };
 
@@ -392,7 +455,8 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone }: RendererPro
                 id={id}
                 index={i}
                 label={labelById(id)}
-                disabled={resolved}
+                disabled={resolved || id === pinnedId}
+                pinned={id === pinnedId}
                 onMove={(dir) => move(i, dir)}
                 canMoveUp={i > 0}
                 canMoveDown={i < order.length - 1}
@@ -401,6 +465,28 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone }: RendererPro
           </ol>
         </SortableContext>
       </DndContext>
+
+      {!resolved && (
+        <div className="mt-3 flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={useHint}
+            disabled={hintUsed}
+            className="inline-flex items-center gap-1 rounded-lg border border-amber-300/30 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-200 disabled:opacity-40"
+          >
+            <Lightbulb className="size-3" />
+            {hintUsed ? "تم استخدام التلميح" : `إظهار تلميح — ${ARRANGE_HINT_COST} دينارًا`}
+          </button>
+          <span className="text-[10px] text-muted-foreground">
+            رصيدك: {(profile?.dinars ?? 0).toLocaleString("en-US")} دينار
+          </span>
+        </div>
+      )}
+      {hintError && <p className="mt-2 text-[11px] text-rose-300">{hintError}</p>}
+      {pinnedId && (
+        <p className="mt-2 text-[11px] text-emerald-300/80">ثُبِّت عنصر واحد في مكانه الصحيح — رتّب البقية بنفسك.</p>
+      )}
+
       <HintRow hint={activity.hint} />
       {!resolved && (
         <button onClick={submit} className="motion-tap mt-4 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold">
@@ -419,18 +505,21 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone }: RendererPro
   );
 }
 
+
 function SortableArrangeRow({
-  id, index, label, disabled, onMove, canMoveUp, canMoveDown,
+  id, index, label, disabled, pinned, onMove, canMoveUp, canMoveDown,
 }: {
   id: string;
   index: number;
   label: string;
   disabled: boolean;
+  /** Revealed by a paid hint: locked in place and shown in green. */
+  pinned?: boolean;
   onMove: (dir: -1 | 1) => void;
   canMoveUp: boolean;
   canMoveDown: boolean;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled });
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -441,10 +530,13 @@ function SortableArrangeRow({
     <li
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-2 rounded-xl border bg-black/30 px-2 py-2 text-[12px] ${
-        isDragging ? "border-gold/60" : "border-white/10"
+      className={`flex items-center gap-2 rounded-xl border px-2 py-2 text-[12px] ${
+        pinned
+          ? "border-emerald-400/60 bg-emerald-500/10 text-emerald-100"
+          : isDragging ? "border-gold/60 bg-black/30" : "border-white/10 bg-black/30"
       }`}
     >
+
       <button
         type="button"
         {...attributes}
@@ -754,7 +846,7 @@ interface ReflectiveMomentRendererProps extends RendererProps {
   campaignId: string;
 }
 
-function ReflectiveMomentRenderer({ activity, onResolve, alreadyDone, campaignId }: ReflectiveMomentRendererProps) {
+function ReflectiveMomentRenderer({ activity, onResolve, onAdvance, alreadyDone, campaignId }: ReflectiveMomentRendererProps) {
   const mode = resolveReflectionMode(activity);
   const choices = reflectionChoices(activity);
   const disableCampaignFocusLogic = isAndroidFocusABDisabled("disableCampaignFocusLogic");
@@ -785,7 +877,11 @@ function ReflectiveMomentRenderer({ activity, onResolve, alreadyDone, campaignId
   const showTextarea = !isReplay || editing;
   const requireChoice = mode === "choose" && choices.length > 0;
   const currentText = () => (textareaRef.current?.value ?? text).trim();
-  const hasText = currentText().length > 0;
+  // Live length so the single action button can switch between
+  // "تخطي والمتابعة" (nothing written) and "حفظ" (something written)
+  // while the player types, before any blur commit.
+  const [liveLen, setLiveLen] = useState<number>((prior?.text ?? "").trim().length);
+  const hasText = liveLen > 0;
 
   const persist = () => {
     const noteText = currentText();
@@ -805,6 +901,12 @@ function ReflectiveMomentRenderer({ activity, onResolve, alreadyDone, campaignId
 
   const canSubmit = requireChoice ? choiceIdx !== null : true;
 
+  const advance = () => { onAdvance?.(); };
+
+  // Single-button contract:
+  //   no note        → "تخطي والمتابعة"  (persist + complete + advance)
+  //   note written   → "حفظ"             (persist + complete, stays)
+  //   after saving   → "التالي"          (advance only)
   const submit = () => {
     if (submitLockRef.current) return;
     if (!canSubmit) return;
@@ -819,9 +921,12 @@ function ReflectiveMomentRenderer({ activity, onResolve, alreadyDone, campaignId
     }
     setResolved(true);
     onResolve(true);
+    if (!hasText) advance();
   };
 
-  const submitLabel = hasText ? "حفظ ومتابعة" : "تخطي والمتابعة";
+  const showNextOnly = saved && resolved && hasText && !(isReplay && editing);
+  const submitLabel = hasText ? "حفظ" : "تخطي والمتابعة";
+
 
   return (
     <div className="motion-page animate-fade-in" key={`reflect:${activity.id}`}>
@@ -909,6 +1014,7 @@ function ReflectiveMomentRenderer({ activity, onResolve, alreadyDone, campaignId
               <textarea
                 ref={textareaRef}
                 defaultValue={text}
+                onInput={(e) => { setLiveLen(e.currentTarget.value.trim().length); setSaved(false); }}
                 onBlur={(e) => setText(e.currentTarget.value)}
                 rows={4}
                 autoComplete="off"
@@ -923,7 +1029,7 @@ function ReflectiveMomentRenderer({ activity, onResolve, alreadyDone, campaignId
               <AndroidSafeTextarea
                 ref={textareaRef}
                 value={text}
-                onValueChange={setText}
+                onValueChange={(v) => { setText(v); setLiveLen(v.trim().length); setSaved(false); }}
                 commitMode="blur"
                 rows={4}
                 autoComplete="off"
@@ -937,6 +1043,7 @@ function ReflectiveMomentRenderer({ activity, onResolve, alreadyDone, campaignId
                 className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-right text-foreground outline-none focus:border-gold/60 disabled:opacity-70"
               />
             )}
+
             <p className="mt-1 text-right text-[10px] text-muted-foreground/70">
               اختياري — لن يمنع إتمام الفصل.
             </p>
@@ -944,7 +1051,7 @@ function ReflectiveMomentRenderer({ activity, onResolve, alreadyDone, campaignId
         )}
       </div>
 
-      {/* Actions */}
+      {/* Actions — exactly one button at a time. */}
       {isReplay && !editing ? (
         <button
           onClick={() => setEditing(true)}
@@ -952,18 +1059,26 @@ function ReflectiveMomentRenderer({ activity, onResolve, alreadyDone, campaignId
         >
           تعديل التأمل
         </button>
+      ) : showNextOnly ? (
+        <button
+          onClick={advance}
+          className="motion-tap mt-5 w-full rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground shadow-gold"
+        >
+          التالي ←
+        </button>
       ) : (
         <button
           onClick={submit}
           disabled={!canSubmit}
           className="motion-tap mt-5 w-full rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground shadow-gold disabled:opacity-50"
         >
-          {submitLabel} ←
+          {submitLabel} {hasText ? "" : "←"}
         </button>
       )}
-      {saved && (
+      {saved && showNextOnly && (
         <p className="mt-3 text-center text-[11px] text-emerald-300/80">تم الحفظ ✓</p>
       )}
+
     </div>
   );
 }

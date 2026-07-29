@@ -1,97 +1,47 @@
 // ============================================================
 // Memory Engine — Campaign Provider
 // ------------------------------------------------------------
-// Reads the owner's completed campaign chapters and exposes every
-// MCQ / true_false activity as a ReviewItem. Content is READ-ONLY —
-// this provider never writes back to campaign progress.
+// Exposes completed-campaign MCQ / true_false activities as
+// ReviewItems. Content is READ-ONLY.
 //
-// SUPPORTED REVIEW KINDS (must match ReviewActivity renderer exactly):
-//   - "mcq"        (from multiple_choice + reading_then_question w/ options)
-//   - "true_false"
-// DO NOT add ordering / matching / fill_blank here until the renderer
-// supports them. An item entering the bank without a renderer would
-// crash the review UI. Keep provider ↔ renderer 1:1.
+// Two sources are merged (by item id, cache wins):
+//   1. `bank-cache` — harvested from the PUBLISHED campaign snapshot
+//      the player actually plays. This is the real player path.
+//   2. `campaignStorage.listCampaigns()` — the admin editor cache
+//      (`irth_admin_campaigns`), kept so admin devices still work.
+//
+// Historical bug: only (2) existed, and it is empty for every normal
+// player, so the review bank was always empty. See `bank-cache.ts`.
 // ============================================================
 
-import type { Campaign, CampaignActivity } from "@/types/campaign";
 import { listCampaigns } from "@/lib/campaignStorage";
 import { getCampaignProgress } from "@/lib/importedCampaignProgress";
 import type { ReviewItem } from "../types";
-import { computeItemRevision, computeItemId } from "../bank";
+import { toReviewItem } from "./campaignReviewItem";
+import { readBankCache } from "../bank-cache";
 
-function toReviewItem(
-  campaign: Campaign,
-  chapterId: string,
-  activity: CampaignActivity,
-): ReviewItem | null {
-  if (activity.type === "multiple_choice"
-    || (activity.type === "reading_then_question" && (activity.options?.length ?? 0) > 0)
-  ) {
-    const options = activity.options ?? [];
-    if (options.length < 2) return null;
-    const correct = typeof activity.correctAnswer === "number"
-      ? activity.correctAnswer
-      : Number(activity.correctAnswer);
-    if (!Number.isInteger(correct) || correct < 0 || correct >= options.length) return null;
-    const localRef = `chapter:${chapterId}#activity:${activity.id}`;
-    const id = computeItemId("campaign", campaign.id, localRef);
-    return {
-      id,
-      sourceType: "campaign",
-      sourceId: campaign.id,
-      sourceLabel: campaign.title,
-      localRef,
-      kind: "mcq",
-      prompt: activity.prompt,
-      options,
-      correctAnswer: correct,
-      originalXp: activity.xpReward ?? 10,
-      era: campaign.historicalPeriod,
-      tags: campaign.tags ?? [],
-      revision: computeItemRevision("mcq", correct, options),
-    };
-  }
-
-  if (activity.type === "true_false") {
-    const canonical = activity.correctAnswer;
-    if (typeof canonical !== "boolean") return null;
-    const localRef = `chapter:${chapterId}#activity:${activity.id}`;
-    const id = computeItemId("campaign", campaign.id, localRef);
-    return {
-      id,
-      sourceType: "campaign",
-      sourceId: campaign.id,
-      sourceLabel: campaign.title,
-      localRef,
-      kind: "true_false",
-      prompt: activity.prompt,
-      correctAnswer: canonical,
-      originalXp: activity.xpReward ?? 10,
-      era: campaign.historicalPeriod,
-      tags: campaign.tags ?? [],
-      revision: computeItemRevision("true_false", canonical),
-    };
-  }
-
-  return null;
-}
-
-export function listCampaignReviewItems(): ReviewItem[] {
+function listLegacyAdminCacheItems(): ReviewItem[] {
   const out: ReviewItem[] = [];
-  const campaigns = listCampaigns();
-  for (const campaign of campaigns) {
+  for (const campaign of listCampaigns()) {
     const progress = getCampaignProgress(campaign.id);
-    for (const chapter of campaign.chapters) {
-      const chProg = progress.chapters[chapter.id];
+    for (const chapter of campaign.chapters ?? []) {
+      const chProg = progress.chapters?.[chapter.id];
       if (!chProg?.completed) continue;
-      for (const activity of chapter.activities) {
-        if (!chProg.completedActivityIds.includes(activity.id)) continue;
+      for (const activity of chapter.activities ?? []) {
+        if (!chProg.completedActivityIds?.includes(activity.id)) continue;
         const item = toReviewItem(campaign, chapter.id, activity);
         if (item) out.push(item);
       }
     }
   }
   return out;
+}
+
+export function listCampaignReviewItems(): ReviewItem[] {
+  const byId = new Map<string, ReviewItem>();
+  for (const it of listLegacyAdminCacheItems()) byId.set(it.id, it);
+  for (const it of readBankCache()) byId.set(it.id, it);
+  return [...byId.values()];
 }
 
 export const campaignProvider = {
