@@ -4,6 +4,13 @@
 // Reads the owner's completed campaign chapters and exposes every
 // MCQ / true_false activity as a ReviewItem. Content is READ-ONLY —
 // this provider never writes back to campaign progress.
+//
+// SUPPORTED REVIEW KINDS (must match ReviewActivity renderer exactly):
+//   - "mcq"        (from multiple_choice + reading_then_question w/ options)
+//   - "true_false"
+// DO NOT add ordering / matching / fill_blank here until the renderer
+// supports them. An item entering the bank without a renderer would
+// crash the review UI. Keep provider ↔ renderer 1:1.
 // ============================================================
 
 import type { Campaign, CampaignActivity } from "@/types/campaign";
