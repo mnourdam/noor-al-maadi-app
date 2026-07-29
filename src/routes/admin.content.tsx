@@ -1078,3 +1078,83 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </div>
   );
 }
+
+function ImportPreview({
+  fileName, plan, applying, onCancel, onApply,
+}: {
+  fileName: string | null;
+  plan: TihImportPlan;
+  applying: boolean;
+  onCancel: () => void;
+  onApply: () => void;
+}) {
+  const hasErrors = plan.errors.length > 0;
+  const nothing = plan.toInsert.length === 0 && plan.toUpdate.length === 0;
+  return (
+    <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+      <div className="mb-3 flex items-center justify-between">
+        <div>
+          <h3 className="font-semibold">معاينة الاستيراد {fileName ? `— ${fileName}` : ""}</h3>
+          <p className="text-xs text-muted-foreground">راجع النتائج قبل التطبيق. الأحداث الحالية ذات المعرّف نفسه ستُحدَّث في مكانها، ولن تُنشأ نسخة مكررة.</p>
+        </div>
+        <button onClick={onCancel} className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <StatBox label="جديد" value={plan.toInsert.length} tone="ok" />
+        <StatBox label="تحديث" value={plan.toUpdate.length} tone="info" />
+        <StatBox label="تكرار داخل الملف" value={plan.duplicates.length} tone="warn" />
+        <StatBox label="أخطاء" value={plan.errors.length} tone={hasErrors ? "err" : "muted"} />
+      </div>
+
+      {plan.errors.length > 0 && (
+        <div className="mt-4 rounded-md border border-destructive/30 bg-destructive/5 p-3">
+          <p className="mb-1 text-sm font-semibold text-destructive">أخطاء ({plan.errors.length})</p>
+          <ul className="max-h-48 space-y-1 overflow-y-auto text-xs text-destructive/90">
+            {plan.errors.map((e, i) => (
+              <li key={i}>
+                #{e.index >= 0 ? e.index + 1 : "-"}{e.field ? ` — الحقل «${e.field}»` : ""}{e.id ? ` — id: ${e.id}` : ""}: {e.message}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {plan.duplicates.length > 0 && (
+        <div className="mt-3 rounded-md border border-amber-500/30 bg-amber-500/5 p-3">
+          <p className="mb-1 text-sm font-semibold text-amber-600">تنبيه: تواريخ/عناوين مكررة داخل نفس الملف</p>
+          <ul className="max-h-32 space-y-1 overflow-y-auto text-xs text-amber-700">
+            {plan.duplicates.map((d, i) => <li key={i}>#{d.index + 1}: {d.message}</li>)}
+          </ul>
+        </div>
+      )}
+
+      <div className="mt-4 flex gap-2">
+        <button
+          onClick={onApply}
+          disabled={applying || hasErrors || nothing}
+          className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Upload className="h-4 w-4" /> {applying ? "جارٍ التطبيق…" : "تطبيق الاستيراد"}
+        </button>
+        <button onClick={onCancel} className="rounded-md border border-input px-4 py-2 text-sm hover:bg-muted">إلغاء</button>
+      </div>
+    </div>
+  );
+}
+
+function StatBox({ label, value, tone }: { label: string; value: number; tone: "ok" | "info" | "warn" | "err" | "muted" }) {
+  const toneCls = {
+    ok: "border-green-500/30 bg-green-500/5 text-green-600",
+    info: "border-primary/30 bg-primary/5 text-primary",
+    warn: "border-amber-500/30 bg-amber-500/5 text-amber-600",
+    err: "border-destructive/30 bg-destructive/5 text-destructive",
+    muted: "border-border bg-muted/30 text-muted-foreground",
+  }[tone];
+  return (
+    <div className={`rounded-md border p-3 text-center ${toneCls}`}>
+      <div className="text-2xl font-bold">{value}</div>
+      <div className="text-xs">{label}</div>
+    </div>
+  );
+}
