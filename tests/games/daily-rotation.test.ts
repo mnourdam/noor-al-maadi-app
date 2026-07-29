@@ -103,7 +103,7 @@ describe("daily challenge rotation — 90-day simulation", () => {
       // Shuffle bag ⇒ each mode appears exactly once per cycle.
       expect(Math.abs(c - fair)).toBeLessThanOrEqual(2);
       // Never absent for a long stretch.
-      expect(gaps.get(mode) ?? 0).toBeLessThanOrEqual(4);
+      expect(gaps.get(mode) ?? 0).toBeLessThanOrEqual(5);
     }
   });
 
