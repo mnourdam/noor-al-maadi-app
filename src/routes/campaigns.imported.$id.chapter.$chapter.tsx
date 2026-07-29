@@ -16,7 +16,7 @@ import { AppShell } from "@/components/AppShell";
 import { ReadingScale } from "@/components/ReadingScale";
 import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
 
-import type { Campaign, CampaignChapter } from "@/types/campaign";
+import type { Campaign, CampaignActivity, CampaignChapter } from "@/types/campaign";
 import { ACTIVITY_DEFAULTS } from "@/types/campaign";
 import { fetchCampaignByIdOrSlug, onCampaignPublished } from "@/lib/supabaseCampaigns";
 import {
@@ -184,8 +184,8 @@ function ImportedChapterPlayer() {
   const runtimeStep = runtimeActivities[currentIdx];
   const activityIsReview = isReviewMarker(runtimeStep);
   const reviewMarker: MemoryReviewActivityMarker | null = activityIsReview ? (runtimeStep as MemoryReviewActivityMarker) : null;
-  const activity: import("@/types/campaign").CampaignActivity | null =
-    !runtimeStep || activityIsReview ? null : (runtimeStep as import("@/types/campaign").CampaignActivity);
+  const activity: CampaignActivity | null =
+    !runtimeStep || activityIsReview ? null : (runtimeStep as CampaignActivity);
 
   // Chapter completion is decided purely on the AUTHORED activity list.
   const allDone  = chapter.activities.length > 0
