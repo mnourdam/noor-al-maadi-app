@@ -152,12 +152,8 @@ export interface RotatableGame {
   era?: string | null;
 }
 
-/**
- * Deterministic ordering of one mode's catalogue for a given lap.
- * Games are keyed by `slug` (stable across environments) and the
- * ordering re-shuffles once per full lap through the catalogue.
- */
-export function catalogueOrder<T extends RotatableGame>(
+/** Plain deterministic per-lap shuffle, keyed by stable slugs. */
+function lapShuffle<T extends RotatableGame>(
   mode: GameMode,
   games: readonly T[],
   lap: number,
@@ -165,21 +161,25 @@ export function catalogueOrder<T extends RotatableGame>(
   const sorted = games
     .slice()
     .sort((a, b) => (a.slug < b.slug ? -1 : a.slug > b.slug ? 1 : 0));
-  const shuffled = seededShuffle(sorted, `irth.catalogue|${mode}|${lap}`);
+  return seededShuffle(sorted, `irth.catalogue|${mode}|${lap}`);
+}
 
-  // Era stratification: instead of correcting era clashes at pick time
-  // (which would break the "every game once per lap" guarantee), the
-  // catalogue is interleaved so consecutive positions walk DIFFERENT eras,
-  // each mode starting at its own phase. Two modes advancing one era per
-  // cycle from different phases therefore rarely land on the same era.
+/**
+ * Era stratification: instead of correcting era clashes at pick time
+ * (which would break the "every game once per lap" guarantee), the
+ * catalogue is interleaved so consecutive positions walk DIFFERENT eras,
+ * each mode starting at its own phase. Two modes advancing one era per
+ * cycle from different phases therefore rarely land on the same era.
+ */
+function stratifyByEra<T extends RotatableGame>(mode: GameMode, list: readonly T[]): T[] {
   const buckets = new Map<string, T[]>();
-  for (const g of shuffled) {
+  for (const g of list) {
     const key = eraOf(g);
     const arr = buckets.get(key) ?? [];
     arr.push(g);
     buckets.set(key, arr);
   }
-  if (buckets.size < 2) return shuffled;
+  if (buckets.size < 2) return list.slice();
 
   const eras = [...buckets.keys()].sort();
   const phase = hash32(`irth.eraphase|${mode}`) % eras.length;
@@ -187,7 +187,7 @@ export function catalogueOrder<T extends RotatableGame>(
 
   const out: T[] = [];
   let round = 0;
-  while (out.length < shuffled.length) {
+  while (out.length < list.length) {
     let progressed = false;
     for (const era of rotated) {
       const bucket = buckets.get(era)!;
@@ -201,6 +201,46 @@ export function catalogueOrder<T extends RotatableGame>(
   }
   return out;
 }
+
+/**
+ * Deterministic ordering of one mode's catalogue for a given lap,
+ * with LAP-BOUNDARY CARRYOVER.
+ *
+ * A plain per-lap reshuffle keeps the "each game once per lap" guarantee
+ * but destroys the spacing at the seam: a game shown at the end of lap L
+ * could reappear at position 0 of lap L+1 (a gap of 1). A gap of a full
+ * catalogue across a reshuffle is mathematically impossible — it would
+ * force the identity permutation, i.e. the same order every lap — so the
+ * seam is smoothed instead: games seen in the FIRST half of the previous
+ * lap (the ones seen longest ago) are placed ahead of games from its
+ * second half, keeping the fresh shuffle inside each half. The reordering
+ * happens INSIDE each era bucket before interleaving, so the era rhythm
+ * of the lap is preserved untouched.
+ */
+export function catalogueOrder<T extends RotatableGame>(
+  mode: GameMode,
+  games: readonly T[],
+  lap: number,
+): T[] {
+  const current = lapShuffle(mode, games, lap);
+  if (lap <= 0 || current.length < 4) return stratifyByEra(mode, current);
+
+  const previous = stratifyByEra(mode, lapShuffle(mode, games, lap - 1));
+  const prevIndex = new Map<string, number>();
+  previous.forEach((g, i) => prevIndex.set(g.slug, i));
+  const midpoint = previous.length / 2;
+  const seenRecently = (g: T) => (prevIndex.get(g.slug) ?? -1) >= midpoint;
+
+  // Stable partition: within the lap shuffle, games seen in the previous
+  // lap's second half sink behind the rest. Era interleaving then runs on
+  // this carryover-aware order, so both guarantees hold simultaneously.
+  const carryover = [
+    ...current.filter((g) => !seenRecently(g)),
+    ...current.filter(seenRecently),
+  ];
+  return stratifyByEra(mode, carryover);
+}
+
 
 
 // ─── Daily selection ─────────────────────────────────────────

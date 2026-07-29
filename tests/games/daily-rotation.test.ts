@@ -158,3 +158,76 @@ describe("daily challenge rotation — degraded catalogues", () => {
     expect(d.picks).toHaveLength(0);
   });
 });
+
+describe("daily challenge rotation — 365-day statistics", () => {
+  const PER_MODE = 12;
+  const games = catalogue(PER_MODE);
+  const sim = simulate(games, 365);
+
+  const picks = sim.flatMap((d) => d.picks);
+  const perMode = new Map<string, { slug: string; slot: number; day: number }[]>();
+  sim.forEach((d, day) =>
+    d.picks.forEach((p) => {
+      const arr = perMode.get(p.game.mode) ?? [];
+      arr.push({ slug: p.game.slug, slot: p.slot, day });
+      perMode.set(p.game.mode, arr);
+    }),
+  );
+
+  it("gives every mode a near-identical number of appearances", () => {
+    const counts = ROTATION_MODES.map((m) => perMode.get(m)?.length ?? 0);
+    expect(Math.max(...counts) - Math.min(...counts)).toBeLessThanOrEqual(2);
+    expect(counts.reduce((a, b) => a + b, 0)).toBe(picks.length);
+  });
+
+  it("never leaves a mode unseen for more than one bag cycle of days", () => {
+    for (const m of ROTATION_MODES) {
+      const days = (perMode.get(m) ?? []).map((p) => p.day);
+      let maxGap = 0;
+      for (let i = 1; i < days.length; i++) maxGap = Math.max(maxGap, days[i] - days[i - 1]);
+      expect(maxGap).toBeLessThanOrEqual(ROTATION_MODES.length);
+    }
+  });
+
+  it("records zero consecutive same-mode slots over a full year", () => {
+    let consecutive = 0;
+    for (let i = 1; i < picks.length; i++) {
+      if (picks[i].game.mode === picks[i - 1].game.mode) consecutive++;
+    }
+    expect(consecutive).toBe(0);
+  });
+
+  it("records zero days holding two identical modes over a full year", () => {
+    const sameDay = sim.filter(
+      (d) => d.picks.length === 2 && d.picks[0].game.mode === d.picks[1].game.mode,
+    ).length;
+    expect(sameDay).toBe(0);
+  });
+
+  it("never repeats a game before its catalogue lap is fully consumed", () => {
+    for (const m of ROTATION_MODES) {
+      const byLap = new Map<number, string[]>();
+      for (const p of perMode.get(m) ?? []) {
+        const lap = Math.floor(Math.floor(p.slot / ROTATION_MODES.length) / PER_MODE);
+        byLap.set(lap, [...(byLap.get(lap) ?? []), p.slug]);
+      }
+      for (const chunk of byLap.values()) {
+        expect(chunk.length - new Set(chunk).size).toBe(0);
+      }
+    }
+  });
+
+  it("keeps a wide spacing across lap seams (carryover ordering)", () => {
+    for (const m of ROTATION_MODES) {
+      const plays = (perMode.get(m) ?? []).map((p) => p.slug);
+      const last = new Map<string, number>();
+      let minGap = Infinity;
+      plays.forEach((slug, i) => {
+        const prev = last.get(slug);
+        if (prev !== undefined) minGap = Math.min(minGap, i - prev);
+        last.set(slug, i);
+      });
+      expect(minGap).toBeGreaterThanOrEqual(Math.floor(PER_MODE / 3));
+    }
+  });
+});
