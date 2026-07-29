@@ -571,6 +571,7 @@ function ImportedChapterPlayer() {
                       key={`${activity.id}:${wrongAttempts}`}
                       activity={activity}
                       onResolve={onResolve}
+                      onAdvance={acknowledgeAndAdvance}
                       alreadyDone={chProgress?.completedActivityIds.includes(activity.id) && currentAck !== "correct"}
                       campaignId={campaign.id}
                     />
@@ -585,8 +586,10 @@ function ImportedChapterPlayer() {
                   </div>
                 )}
 
-                {/* Advance only after a correct answer. */}
-                {!activityIsReview && currentAck === "correct" && (
+                {/* Advance only after a correct answer.
+                    Reflection prompts own their single button (save → next),
+                    so the parent never renders a second "التالي" for them. */}
+                {!activityIsReview && currentAck === "correct" && activity?.type !== "reflection_prompt" && (
                   <button
                     onClick={acknowledgeAndAdvance}
                     className="motion-tap motion-reveal is-in mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground shadow-gold"
@@ -595,6 +598,7 @@ function ImportedChapterPlayer() {
                     <ArrowLeft className="size-4" />
                   </button>
                 )}
+
 
                 <p className="mt-3 text-center text-[11px] text-muted-foreground">
                   النشاط {((chProgress?.completedActivityIds.length ?? 0) + 1).toLocaleString("en-US")} من {chapter.activities.length.toLocaleString("en-US")}
