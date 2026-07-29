@@ -4,21 +4,7 @@ import { epochDayFromDateKey, selectDailyRotation } from "./dailyRotation";
 import type { GameMode, GameStatus } from "./types";
 
 
-// Daily seed based on the player's LOCAL calendar date. Rotates once per
-// local day so timezone differences never cause an intra-day reshuffle.
-function dailySeed(): number {
-  const d = new Date();
-  return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
-}
 
-// Deterministic hash combining the daily seed with a stable per-item key.
-function dayHash(key: string): number {
-  let h = dailySeed() >>> 0;
-  for (let i = 0; i < key.length; i++) {
-    h = (h * 31 + key.charCodeAt(i)) >>> 0;
-  }
-  return h;
-}
 
 
 export interface GameRow {
