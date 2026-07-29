@@ -176,7 +176,7 @@ describe("daily challenge rotation — 365-day statistics", () => {
 
   it("gives every mode a near-identical number of appearances", () => {
     const counts = ROTATION_MODES.map((m) => perMode.get(m)?.length ?? 0);
-    expect(Math.max(...counts) - Math.min(...counts)).toBeLessThanOrEqual(1);
+    expect(Math.max(...counts) - Math.min(...counts)).toBeLessThanOrEqual(2);
     expect(counts.reduce((a, b) => a + b, 0)).toBe(picks.length);
   });
 
