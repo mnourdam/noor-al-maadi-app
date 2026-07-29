@@ -330,6 +330,96 @@ function SelectAllButton({
 // ============================================================
 // Daily Facts
 // ============================================================
+// ============================================================
+// Daily Facts (المعلومات اليومية) — Export / Import (Golden Template)
+// ------------------------------------------------------------
+// Envelope mirrors DB columns 1:1 EXCEPT deep_link, which is
+// intentionally excluded from export/import/editor per product
+// decision (daily facts do not open encyclopedia pages; tapping
+// their notification opens /notifications only). Legacy rows keep
+// their deep_link column value; runtime already ignores it via
+// `isInformationalNotification` in notifications/deepLink.ts.
+// ============================================================
+const DF_EXPORT_VERSION = 1 as const;
+const DF_EXPORT_GENERATOR = "irth.admin.content.daily_information";
+const DF_EXPORT_FIELDS = ["id", "title", "body", "enabled", "created_at"] as const;
+
+function factToExport(r: DailyFact): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const k of DF_EXPORT_FIELDS) out[k] = (r as any)[k] ?? null;
+  return out;
+}
+
+function buildFactsEnvelope(rows: DailyFact[]) {
+  return {
+    schema: "daily_information_items",
+    version: DF_EXPORT_VERSION,
+    generator: DF_EXPORT_GENERATOR,
+    exported_at: new Date().toISOString(),
+    count: rows.length,
+    items: rows.map(factToExport),
+  };
+}
+
+type DfImportIssue = { index: number; id?: string | null; field?: string; message: string };
+type DfImportPlan = {
+  toInsert: Array<{ index: number; payload: Record<string, unknown> }>;
+  toUpdate: Array<{ index: number; id: string; payload: Record<string, unknown> }>;
+  errors: DfImportIssue[];
+  duplicates: DfImportIssue[];
+};
+
+function normalizeImportedFact(raw: any, index: number, existingIds: Set<string>):
+  { ok: true; payload: Record<string, unknown>; id: string | null }
+  | { ok: false; issues: DfImportIssue[] }
+{
+  const issues: DfImportIssue[] = [];
+  if (!raw || typeof raw !== "object") {
+    return { ok: false, issues: [{ index, message: "العنصر ليس كائن JSON صالحًا." }] };
+  }
+  const title = typeof raw.title === "string" ? raw.title.trim() : "";
+  const body = typeof raw.body === "string" ? raw.body.trim() : "";
+  if (!title) issues.push({ index, id: raw.id ?? null, field: "title", message: "العنوان مطلوب." });
+  if (!body) issues.push({ index, id: raw.id ?? null, field: "body", message: "المحتوى (body) مطلوب." });
+  const id = typeof raw.id === "string" && raw.id.trim() ? raw.id.trim() : null;
+  if (id && !existingIds.has(id)) {
+    // client-supplied id for a new row — allowed, treated as insert
+  }
+  if (issues.length) return { ok: false, issues };
+  const payload: Record<string, unknown> = {
+    title, body,
+    enabled: typeof raw.enabled === "boolean" ? raw.enabled : true,
+    // deep_link is intentionally NOT set from import — daily facts are
+    // reminder-only notifications; legacy rows keep their column value.
+  };
+  return { ok: true, payload, id };
+}
+
+function planFactsImport(parsed: any, existing: DailyFact[]): DfImportPlan {
+  const plan: DfImportPlan = { toInsert: [], toUpdate: [], errors: [], duplicates: [] };
+  let items: any[] | null = null;
+  if (Array.isArray(parsed)) items = parsed;
+  else if (parsed && Array.isArray(parsed.items)) items = parsed.items;
+  else if (parsed && Array.isArray(parsed.events)) items = parsed.events; // tolerate mislabeled files
+  else if (parsed && typeof parsed === "object" && parsed.title) items = [parsed]; // single item
+  if (!items) {
+    plan.errors.push({ index: -1, message: "الملف لا يحتوي على عناصر. يجب أن يكون Envelope فيه items[] أو مصفوفة عناصر أو عنصر واحد." });
+    return plan;
+  }
+  const existingIds = new Set(existing.map((r) => r.id));
+  const seenKeys = new Set<string>();
+  items.forEach((raw, i) => {
+    const res = normalizeImportedFact(raw, i, existingIds);
+    if (!res.ok) { plan.errors.push(...res.issues); return; }
+    const key = String(res.payload.title).toLowerCase();
+    if (seenKeys.has(key)) plan.duplicates.push({ index: i, message: `تكرار عنوان داخل الملف: ${res.payload.title}` });
+    seenKeys.add(key);
+    if (res.id && existingIds.has(res.id)) plan.toUpdate.push({ index: i, id: res.id, payload: res.payload });
+    else plan.toInsert.push({ index: i, payload: res.id ? { id: res.id, ...res.payload } : res.payload });
+  });
+  return plan;
+}
+
 function DailyFactsTab() {
   const [rows, setRows] = useState<DailyFact[]>([]);
   const [loading, setLoading] = useState(true);
@@ -371,8 +461,9 @@ function DailyFactsTab() {
     const payload: any = {
       title,
       body,
-      deep_link: editing.deep_link?.trim() || null,
       enabled: editing.enabled ?? true,
+      // deep_link intentionally omitted — daily facts do not open pages.
+      // Existing rows keep their column value on update.
     };
     const op = editing.id
       ? supabase.from("daily_facts" as any).update(payload).eq("id", editing.id)
@@ -421,9 +512,86 @@ function DailyFactsTab() {
     await load();
   };
 
+  // ---- Export / Import (Daily Facts) ----
+  const [importOpen, setImportOpen] = useState(false);
+  const [importPlan, setImportPlan] = useState<DfImportPlan | null>(null);
+  const [importFileName, setImportFileName] = useState<string | null>(null);
+  const [importApplying, setImportApplying] = useState(false);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const exportAll = () => {
+    downloadJson(`daily-information-all-${new Date().toISOString().slice(0, 10)}.json`, buildFactsEnvelope(rows));
+    setExportMenuOpen(false);
+  };
+  const exportSelected = () => {
+    const picked = rows.filter((r) => selected.has(r.id));
+    if (picked.length === 0) { toast.error("لا يوجد عناصر محددة."); return; }
+    downloadJson(`daily-information-selected-${new Date().toISOString().slice(0, 10)}.json`, buildFactsEnvelope(picked));
+    setExportMenuOpen(false);
+  };
+  const exportOne = (r: DailyFact) => {
+    downloadJson(`daily-information-${safeSlug(r.title)}.json`, buildFactsEnvelope([r]));
+  };
+  const downloadTemplate = () => {
+    if (rows.length > 0) {
+      const sample = [...rows].sort((a, b) => (b.body?.length ?? 0) - (a.body?.length ?? 0))[0];
+      downloadJson("daily-information-golden-template.json", buildFactsEnvelope([sample]));
+    } else {
+      downloadJson("daily-information-golden-template.json", buildFactsEnvelope([{
+        id: "REPLACE-WITH-UUID-OR-OMIT-FOR-NEW",
+        title: "عنوان المعلومة",
+        body: "النص الكامل للمعلومة اليومية.",
+        deep_link: null,
+        enabled: true,
+        created_at: new Date().toISOString(),
+      } as any]));
+    }
+  };
+
+  const onImportFile = async (file: File) => {
+    setImportFileName(file.name);
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      setImportPlan(planFactsImport(parsed, rows));
+      setImportOpen(true);
+    } catch (e: any) {
+      setImportPlan({ toInsert: [], toUpdate: [], errors: [{ index: -1, message: `تعذر قراءة JSON: ${e?.message ?? e}` }], duplicates: [] });
+      setImportOpen(true);
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const applyImport = async () => {
+    if (!importPlan) return;
+    if (importPlan.errors.length > 0) { toast.error("يوجد أخطاء — عالجها قبل التطبيق."); return; }
+    setImportApplying(true);
+    try {
+      if (importPlan.toInsert.length > 0) {
+        const { error } = await supabase.from("daily_facts" as any).insert(importPlan.toInsert.map((x) => x.payload));
+        if (error) throw error;
+      }
+      for (const u of importPlan.toUpdate) {
+        const { error } = await supabase.from("daily_facts" as any).update(u.payload).eq("id", u.id);
+        if (error) throw error;
+      }
+      toast.success(`تم الاستيراد: ${importPlan.toInsert.length} جديد، ${importPlan.toUpdate.length} محدّث.`);
+      setImportOpen(false);
+      setImportPlan(null);
+      await load();
+    } catch (e: any) {
+      toast.error(`فشل الاستيراد: ${e?.message ?? e}`);
+    } finally {
+      setImportApplying(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <Feedback msg={msg} />
+
 
       <div className="flex flex-wrap gap-2">
         <button
@@ -437,6 +605,40 @@ function DailyFactsTab() {
           someSelected={selectedVisible.length > 0}
           onToggle={() => setAll(visibleIds, !allSelected)}
         />
+        <div className="relative">
+          <button
+            onClick={() => setExportMenuOpen((v) => !v)}
+            className="inline-flex items-center gap-2 rounded-md border border-input px-3 py-2 text-sm hover:bg-muted"
+            title="تصدير JSON"
+          >
+            <Download className="h-4 w-4" /> تصدير JSON
+          </button>
+          {exportMenuOpen && (
+            <div className="absolute right-0 z-10 mt-1 w-64 rounded-md border border-border bg-popover p-1 shadow-md">
+              {selected.size > 0 && (
+                <button onClick={exportSelected} className="block w-full rounded px-3 py-2 text-right text-sm hover:bg-muted">
+                  تصدير المحدد ({selected.size})
+                </button>
+              )}
+              <button onClick={exportAll} className="block w-full rounded px-3 py-2 text-right text-sm hover:bg-muted">
+                تصدير جميع المعلومات اليومية ({rows.length})
+              </button>
+            </div>
+          )}
+        </div>
+        <button onClick={downloadTemplate} className="inline-flex items-center gap-2 rounded-md border border-input px-3 py-2 text-sm hover:bg-muted" title="Golden Template مبنيّ من عنصر حقيقي">
+          <FileJson className="h-4 w-4" /> تحميل النموذج الذهبي
+        </button>
+        <button onClick={() => fileInputRef.current?.click()} className="inline-flex items-center gap-2 rounded-md border border-input px-3 py-2 text-sm hover:bg-muted">
+          <Upload className="h-4 w-4" /> استيراد JSON
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="application/json,.json"
+          className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) void onImportFile(f); }}
+        />
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -447,6 +649,16 @@ function DailyFactsTab() {
           <RefreshCw className="h-4 w-4" /> تحديث
         </button>
       </div>
+
+      {importOpen && importPlan && (
+        <ImportPreview
+          fileName={importFileName}
+          plan={importPlan as unknown as TihImportPlan}
+          applying={importApplying}
+          onCancel={() => { setImportOpen(false); setImportPlan(null); }}
+          onApply={applyImport}
+        />
+      )}
 
       {editing && (
         <FactEditor
@@ -486,9 +698,11 @@ function DailyFactsTab() {
                       <h3 className="truncate font-medium">{r.title}</h3>
                     </div>
                     <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{r.body}</p>
-                    {r.deep_link && <p className="mt-1 text-xs text-muted-foreground" dir="ltr">{r.deep_link}</p>}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    <button onClick={() => exportOne(r)} className="inline-flex items-center gap-1 rounded-md border border-input px-3 py-1.5 text-xs hover:bg-muted" title="تصدير هذا العنصر">
+                      <Download className="h-3 w-3" /> JSON
+                    </button>
                     <button onClick={() => toggle(r)} className="rounded-md border border-input px-3 py-1.5 text-xs hover:bg-muted">
                       {r.enabled ? "تعطيل" : "تفعيل"}
                     </button>
@@ -505,6 +719,7 @@ function DailyFactsTab() {
           </ul>
         )}
       </div>
+
 
       <BulkBar
         count={selected.size}
@@ -561,10 +776,6 @@ function FactEditor({
         <Field label="المحتوى">
           <textarea value={value.body ?? ""} onChange={e => onChange({ ...value, body: e.target.value })}
             rows={3} className="w-full rounded-md border border-input bg-background px-3 py-2" />
-        </Field>
-        <Field label="الرابط (اختياري)">
-          <input dir="ltr" value={value.deep_link ?? ""} onChange={e => onChange({ ...value, deep_link: e.target.value })}
-            placeholder="/timeline" className="w-full rounded-md border border-input bg-background px-3 py-2" />
         </Field>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={value.enabled ?? true} onChange={e => onChange({ ...value, enabled: e.target.checked })} />

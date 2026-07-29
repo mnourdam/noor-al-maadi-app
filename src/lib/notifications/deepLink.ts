@@ -43,6 +43,7 @@ export interface NotificationLike {
  */
 const INFORMATIONAL_TYPES = new Set<string>([
   "daily_fact",
+  "daily_information",
   "daily_reminder",
   "reengagement",
   "comeback_24h",
@@ -82,7 +83,8 @@ export function resolveDeepLink(n: NotificationLike): string {
     && !(typeof payload.url === "string" && payload.url.startsWith("/"))
     && !(n.deep_link && n.deep_link.startsWith("/"))
   ) {
-    return "/notifications";
+    const id = (n as { id?: string | null }).id;
+    return id ? `/notifications?notification_id=${encodeURIComponent(String(id))}` : "/notifications";
   }
 
   // Today-in-history entries are reminder-only — always send to Home's section,
