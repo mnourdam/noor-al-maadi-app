@@ -54,7 +54,10 @@ import {
   bumpDaily,
   nextAfterCorrect,
   nextAfterWrong,
+  harvestCampaignIntoBank,
+  refreshMemoryBank,
   type MemoryReviewActivityMarker,
+
 } from "@/lib/memory";
 import { ReviewActivity } from "@/components/memory/ReviewActivity";
 
