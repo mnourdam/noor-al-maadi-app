@@ -284,16 +284,12 @@ export function selectDailyRotation<T extends RotatableGame>(
       if (!list.length) continue;
       const lap = Math.floor(cycle / list.length);
       const ordered = catalogueOrder(m, list, lap);
-      let game = ordered[cycle % ordered.length];
-      // Secondary diversity: avoid two picks from the same historical era
-      // when the same mode offers an alternative.
-      if (picks.length && ordered.length > 1) {
-        const otherEra = eraOf(picks[0].game);
-        if (otherEra && eraOf(game) === otherEra) {
-          const alt = ordered.find((g) => eraOf(g) !== otherEra);
-          if (alt) game = alt;
-        }
-      }
+      // Content index = cycle count for this mode, so the catalogue is
+      // traversed exactly once per lap. Era diversity is already baked
+      // into `catalogueOrder`, so no pick-time correction is needed here
+      // (a correction would re-show a game before its lap is over).
+      const game = ordered[cycle % ordered.length];
+
       chosen = { game, mode: m, substituted: m !== planned };
       break;
     }
