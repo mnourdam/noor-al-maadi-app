@@ -1051,7 +1051,7 @@ function ReflectiveMomentRenderer({ activity, onResolve, onAdvance, alreadyDone,
         )}
       </div>
 
-      {/* Actions */}
+      {/* Actions — exactly one button at a time. */}
       {isReplay && !editing ? (
         <button
           onClick={() => setEditing(true)}
@@ -1059,18 +1059,26 @@ function ReflectiveMomentRenderer({ activity, onResolve, onAdvance, alreadyDone,
         >
           تعديل التأمل
         </button>
+      ) : showNextOnly ? (
+        <button
+          onClick={advance}
+          className="motion-tap mt-5 w-full rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground shadow-gold"
+        >
+          التالي ←
+        </button>
       ) : (
         <button
           onClick={submit}
           disabled={!canSubmit}
           className="motion-tap mt-5 w-full rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground shadow-gold disabled:opacity-50"
         >
-          {submitLabel} ←
+          {submitLabel} {hasText ? "" : "←"}
         </button>
       )}
-      {saved && (
+      {saved && showNextOnly && (
         <p className="mt-3 text-center text-[11px] text-emerald-300/80">تم الحفظ ✓</p>
       )}
+
     </div>
   );
 }
