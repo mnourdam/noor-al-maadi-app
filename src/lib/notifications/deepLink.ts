@@ -43,6 +43,7 @@ export interface NotificationLike {
  */
 const INFORMATIONAL_TYPES = new Set<string>([
   "daily_fact",
+  "daily_information",
   "daily_reminder",
   "reengagement",
   "comeback_24h",
