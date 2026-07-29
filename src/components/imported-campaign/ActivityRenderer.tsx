@@ -507,17 +507,19 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone }: RendererPro
 
 
 function SortableArrangeRow({
-  id, index, label, disabled, onMove, canMoveUp, canMoveDown,
+  id, index, label, disabled, pinned, onMove, canMoveUp, canMoveDown,
 }: {
   id: string;
   index: number;
   label: string;
   disabled: boolean;
+  /** Revealed by a paid hint: locked in place and shown in green. */
+  pinned?: boolean;
   onMove: (dir: -1 | 1) => void;
   canMoveUp: boolean;
   canMoveDown: boolean;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled });
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -528,10 +530,13 @@ function SortableArrangeRow({
     <li
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-2 rounded-xl border bg-black/30 px-2 py-2 text-[12px] ${
-        isDragging ? "border-gold/60" : "border-white/10"
+      className={`flex items-center gap-2 rounded-xl border px-2 py-2 text-[12px] ${
+        pinned
+          ? "border-emerald-400/60 bg-emerald-500/10 text-emerald-100"
+          : isDragging ? "border-gold/60 bg-black/30" : "border-white/10 bg-black/30"
       }`}
     >
+
       <button
         type="button"
         {...attributes}
