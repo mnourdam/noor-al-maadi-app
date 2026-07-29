@@ -541,10 +541,14 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       }
     }
     await cloudSignOut();
+    // Atomic identity switch back to this device's guest space. The auth
+    // listener also calls this (idempotent) — doing it here guarantees the
+    // swap has completed before signOut() resolves, so no frame can render
+    // the previous account's data.
+    await resetForIdentityChange({ nextUserId: null, reason: "sign-out" });
     setUser(null);
     setAccount(null);
     setLastSyncAt(null);
-    try { resetProfileRef.current?.(); } catch { /* ignore */ }
   }, [user]);
 
   const syncNow = useCallback(async () => {
