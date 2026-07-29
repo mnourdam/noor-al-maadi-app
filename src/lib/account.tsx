@@ -81,48 +81,39 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     });
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       const u = session?.user ?? null;
-      // Invalidate the onboarding hydration cache on every identity
-      // transition so a new UID always re-hydrates once (and only once).
-      void import("@/lib/tutorial/persistence").then((m) => {
-        try { m.invalidateOnboardingCache(); } catch { /* ignore */ }
-      });
       if (event === "SIGNED_OUT") {
         setReconciliationState("idle");
       } else if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
         setReconciliationState(u ? "loading-local" : "idle");
       }
+
+      // THE single approved identity-switch path. Idempotent: repeated
+      // INITIAL_SESSION / TOKEN_REFRESHED events for the same user are
+      // no-ops, while any real change (login, logout, account switch,
+      // expired session) atomically swaps the storage namespace, clears
+      // the query cache, drops realtime channels and invalidates every
+      // in-flight response guard.
+      void resetForIdentityChange({
+        nextUserId: u?.id ?? null,
+        reason: event === "SIGNED_OUT" ? "sign-out" : event === "SIGNED_IN" ? "sign-in" : "auth-listener",
+      }).then((res) => {
+        if (!res.changed) return;
+        if (!u) {
+          autoPushEnabled.current = false;
+          setAccount(null);
+          setLastSyncAt(null);
+        }
+      });
+
       setUser(u);
 
       if (event === "SIGNED_OUT") {
         autoPushEnabled.current = false;
         setAccount(null);
         setLastSyncAt(null);
-        // Clear cached profile (XP, dinars, hearts, name) so UI returns to guest state.
-        try { resetProfileRef.current?.(); } catch { /* ignore */ }
-        try {
-          if (typeof localStorage !== "undefined") {
-            // Strip user-scoped keys that survive the profile reset and the
-            // stored profile snapshot itself, so the NEXT sign-in cannot
-            // inherit the previous user's XP/coins/progress.
-            localStorage.removeItem("hakaya.profile.v2");
-            localStorage.removeItem("hakaya.profile.userId");
-            for (const k of Object.keys(localStorage)) {
-              if (k.startsWith("irth.refclaim.")) localStorage.removeItem(k);
-            }
-          }
-        } catch { /* ignore */ }
-        // Clear the signed offline-unlock cache so the next signed-in
-        // user cannot inherit the previous user's unlocked-story set.
-        void import("@/lib/stories/unlock-cache").then((m) => {
-          try { m.clearUnlockCache(); } catch { /* ignore */ }
-        });
-        // Same reasoning for a pending emblem pick: it belongs to the
-        // signed-out user and must never be replayed onto the next account.
-        void import("@/lib/emblems/avatar-persistence").then((m) => {
-          try { m.clearPendingAvatar(); } catch { /* ignore */ }
-        });
       }
     });
+
     return () => {
       alive = false;
       sub.subscription.unsubscribe();
