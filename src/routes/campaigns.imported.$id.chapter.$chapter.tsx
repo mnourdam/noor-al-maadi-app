@@ -145,15 +145,31 @@ function ImportedChapterPlayer() {
     }
   }, [campaign, chapter, navigate, reviewMode]);
 
-  // Memory Engine — build the frozen RuntimeChapterPlan and interleave
-  // (at most) one review question. Original campaign data is never
+  // Memory Engine — keep the review bank in sync with what the player has
+  // actually finished (published snapshot + local progress ledger), then
+  // build the frozen RuntimeChapterPlan. Original campaign data is never
   // mutated: `chapter.activities` stays the source of truth for
   // completion/allDone.
+  const [bankTick, setBankTick] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    harvestCampaignIntoBank(campaign ?? null);
+    void refreshMemoryBank().then(() => { if (alive) setBankTick(t => t + 1); });
+    return () => { alive = false; };
+  }, [campaign?.id]);
+
   const plan = useMemo(() => {
     if (!chapter || reviewMode) return null;
-    return ensurePlan(campaign?.id ?? "", chapter.id, chapter.activities.map(a => a.id));
+    // Re-selection is only ever allowed BEFORE the chapter is started, so a
+    // review can never appear behind the player's current position.
+    const started = (chProgress?.completedActivityIds.length ?? 0) > 0;
+    return ensurePlan(
+      campaign?.id ?? "", chapter.id, chapter.activities.map(a => a.id),
+      Date.now(), { allowReselect: !started },
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [campaign?.id, chapter?.id, chapter?.activities.map(a => a.id).join("|"), reviewMode, progressTick]);
+  }, [campaign?.id, chapter?.id, chapter?.activities.map(a => a.id).join("|"), reviewMode, progressTick, bankTick]);
+
 
   const runtimeActivities = useMemo(() => {
     if (!chapter) return [];
