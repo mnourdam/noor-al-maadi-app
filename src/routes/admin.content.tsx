@@ -954,7 +954,10 @@ function TodayEventsTab() {
                     <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{r.body}</p>
                     {r.deep_link && <p className="mt-1 text-xs text-muted-foreground" dir="ltr">{r.deep_link}</p>}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    <button onClick={() => exportOne(r)} className="inline-flex items-center gap-1 rounded-md border border-input px-3 py-1.5 text-xs hover:bg-muted" title="تصدير JSON">
+                      <Download className="h-3 w-3" /> JSON
+                    </button>
                     <button onClick={() => toggle(r)} className="rounded-md border border-input px-3 py-1.5 text-xs hover:bg-muted">
                       {r.enabled ? "تعطيل" : "تفعيل"}
                     </button>
