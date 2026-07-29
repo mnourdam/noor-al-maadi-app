@@ -162,9 +162,46 @@ export function catalogueOrder<T extends RotatableGame>(
   games: readonly T[],
   lap: number,
 ): T[] {
-  const sorted = games.slice().sort((a, b) => (a.slug < b.slug ? -1 : a.slug > b.slug ? 1 : 0));
-  return seededShuffle(sorted, `irth.catalogue|${mode}|${lap}`);
+  const sorted = games
+    .slice()
+    .sort((a, b) => (a.slug < b.slug ? -1 : a.slug > b.slug ? 1 : 0));
+  const shuffled = seededShuffle(sorted, `irth.catalogue|${mode}|${lap}`);
+
+  // Era stratification: instead of correcting era clashes at pick time
+  // (which would break the "every game once per lap" guarantee), the
+  // catalogue is interleaved so consecutive positions walk DIFFERENT eras,
+  // each mode starting at its own phase. Two modes advancing one era per
+  // cycle from different phases therefore rarely land on the same era.
+  const buckets = new Map<string, T[]>();
+  for (const g of shuffled) {
+    const key = eraOf(g);
+    const arr = buckets.get(key) ?? [];
+    arr.push(g);
+    buckets.set(key, arr);
+  }
+  if (buckets.size < 2) return shuffled;
+
+  const eras = [...buckets.keys()].sort();
+  const phase = hash32(`irth.eraphase|${mode}`) % eras.length;
+  const rotated = [...eras.slice(phase), ...eras.slice(0, phase)];
+
+  const out: T[] = [];
+  let round = 0;
+  while (out.length < shuffled.length) {
+    let progressed = false;
+    for (const era of rotated) {
+      const bucket = buckets.get(era)!;
+      if (round < bucket.length) {
+        out.push(bucket[round]);
+        progressed = true;
+      }
+    }
+    if (!progressed) break;
+    round++;
+  }
+  return out;
 }
+
 
 // ─── Daily selection ─────────────────────────────────────────
 
