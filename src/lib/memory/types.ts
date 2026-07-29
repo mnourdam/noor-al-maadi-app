@@ -82,6 +82,15 @@ export interface RuntimeChapterPlan {
   /** null ⇒ no review in this chapter (final decision, taken once). */
   insertionAfterActivityId: string | null;
 
+  /**
+   * True when the "no review" outcome was TRANSIENT (empty bank, daily
+   * cap, feature flag off) rather than a real decision. Such a plan may
+   * re-run selection on a later visit, but only before the chapter has
+   * been started — never mid-chapter.
+   */
+  selectionDeferred?: boolean;
+
+
   /** Chosen once at plan creation, then FROZEN. Never re-selected. */
   reviewItemId: string | null;
   /** Content revision at plan-creation time — see amendment #2. */
