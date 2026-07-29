@@ -130,15 +130,26 @@ function MultipleChoiceRenderer({ activity, onResolve, alreadyDone }: RendererPr
   const [wrongPicks, setWrongPicks] = useState<Set<number>>(new Set());
   const [wrongCount, setWrongCount] = useState(0);
   const [feedback, setFeedback] = useState<"ok" | "err" | null>(alreadyDone ? "ok" : null);
-  const options = activity.options ?? [];
+  const authoredOptions = activity.options ?? [];
 
-  if (!options.length) return <FallbackRenderer activity={activity} onResolve={onResolve} alreadyDone={alreadyDone} />;
-
-  const correctIndex = typeof activity.correctAnswer === "number"
+  const authoredCorrectIndex = typeof activity.correctAnswer === "number"
     ? activity.correctAnswer
-    : options.findIndex(o => o === String(activity.correctAnswer));
+    : authoredOptions.findIndex(o => o === String(activity.correctAnswer));
+
+  // Runtime-only shuffle — the authored JSON keeps its original order.
+  const shuffled = useMemo(
+    () => shuffleOptions(activity.id, authoredOptions, authoredCorrectIndex),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [activity.id, authoredOptions.join("\u241E"), authoredCorrectIndex],
+  );
+
+  if (!authoredOptions.length) return <FallbackRenderer activity={activity} onResolve={onResolve} alreadyDone={alreadyDone} />;
+
+  const options = shuffled.options;
+  const correctIndex = shuffled.correctIndex;
 
   const locked = resolved || revealed;
+
 
   const submit = () => {
     if (picked === null || locked) return;
