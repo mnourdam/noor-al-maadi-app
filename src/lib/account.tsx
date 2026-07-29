@@ -21,6 +21,8 @@ import { flushOutbox } from "./offline/flush";
 import { setReconciliationState } from "./boot/reconciliation";
 import { withBoundedTimeout } from "./boot/withTimeout";
 import { recordStartupMark } from "./boot/startup-timeline";
+import { resetForIdentityChange } from "./identity/reset";
+import { getActiveUserId } from "./identity/owner";
 
 
 interface AccountCtx {
@@ -81,48 +83,39 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     });
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       const u = session?.user ?? null;
-      // Invalidate the onboarding hydration cache on every identity
-      // transition so a new UID always re-hydrates once (and only once).
-      void import("@/lib/tutorial/persistence").then((m) => {
-        try { m.invalidateOnboardingCache(); } catch { /* ignore */ }
-      });
       if (event === "SIGNED_OUT") {
         setReconciliationState("idle");
       } else if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
         setReconciliationState(u ? "loading-local" : "idle");
       }
+
+      // THE single approved identity-switch path. Idempotent: repeated
+      // INITIAL_SESSION / TOKEN_REFRESHED events for the same user are
+      // no-ops, while any real change (login, logout, account switch,
+      // expired session) atomically swaps the storage namespace, clears
+      // the query cache, drops realtime channels and invalidates every
+      // in-flight response guard.
+      void resetForIdentityChange({
+        nextUserId: u?.id ?? null,
+        reason: event === "SIGNED_OUT" ? "sign-out" : event === "SIGNED_IN" ? "sign-in" : "auth-listener",
+      }).then((res) => {
+        if (!res.changed) return;
+        if (!u) {
+          autoPushEnabled.current = false;
+          setAccount(null);
+          setLastSyncAt(null);
+        }
+      });
+
       setUser(u);
 
       if (event === "SIGNED_OUT") {
         autoPushEnabled.current = false;
         setAccount(null);
         setLastSyncAt(null);
-        // Clear cached profile (XP, dinars, hearts, name) so UI returns to guest state.
-        try { resetProfileRef.current?.(); } catch { /* ignore */ }
-        try {
-          if (typeof localStorage !== "undefined") {
-            // Strip user-scoped keys that survive the profile reset and the
-            // stored profile snapshot itself, so the NEXT sign-in cannot
-            // inherit the previous user's XP/coins/progress.
-            localStorage.removeItem("hakaya.profile.v2");
-            localStorage.removeItem("hakaya.profile.userId");
-            for (const k of Object.keys(localStorage)) {
-              if (k.startsWith("irth.refclaim.")) localStorage.removeItem(k);
-            }
-          }
-        } catch { /* ignore */ }
-        // Clear the signed offline-unlock cache so the next signed-in
-        // user cannot inherit the previous user's unlocked-story set.
-        void import("@/lib/stories/unlock-cache").then((m) => {
-          try { m.clearUnlockCache(); } catch { /* ignore */ }
-        });
-        // Same reasoning for a pending emblem pick: it belongs to the
-        // signed-out user and must never be replayed onto the next account.
-        void import("@/lib/emblems/avatar-persistence").then((m) => {
-          try { m.clearPendingAvatar(); } catch { /* ignore */ }
-        });
       }
     });
+
     return () => {
       alive = false;
       sub.subscription.unsubscribe();
@@ -132,7 +125,11 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   // ============ On user change: hydrate account + reconcile cloud save ============
   useEffect(() => {
     if (!user) return;
-    let cancelled = false;
+    let cancelledFlag = false;
+    // Anti-race: a response for THIS user is only applied while it is still
+    // the active identity. A slow fetch that resolves after logout / account
+    // switch is dropped instead of poisoning the new identity's state.
+    const isStale = () => cancelledFlag || getActiveUserId() !== user.id;
     setReconciliationState("loading-server");
 
     // Guard against leaking a previous account's local snapshot into a new
@@ -171,7 +168,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       // engine, hero recommendation) unblock. The work continues in the
       // background and, on eventual success, upgrades to "reconciled".
       const softTimer = setTimeout(() => {
-        if (cancelled || reconciled) return;
+        if (isStale() || reconciled) return;
         recordStartupMark("server-reconciliation-soft-timeout");
         recordStartupMark("offline-local-entered");
         setReconciliationState("offline-local", "soft-timeout");
@@ -181,7 +178,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
           fetchAccountProfile(user.id),
           fetchCloudSave(user.id),
         ]);
-        if (cancelled) return;
+        if (isStale()) return;
 
         setAccount(acc);
         if (!androidStable) void touchLastActive(user.id);
@@ -231,7 +228,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         try {
           const { reconcileAvatarOnHydrate } = await import("@/lib/emblems/avatar-persistence");
           const resolved = await reconcileAvatarOnHydrate(user.id, profileRef.current?.avatarId);
-          if (!cancelled && resolved) adoptServerAvatar(resolved);
+          if (!isStale() && resolved) adoptServerAvatar(resolved);
         } catch { /* keep the merged value — non-fatal */ }
 
         try {
@@ -268,7 +265,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
             hydrateOnboardingFromServer("irth-first-time"),
             5000,
             (late) => {
-              if (cancelled) return;
+              if (isStale()) return;
               if (late.kind === "success") {
                 recordStartupMark("server-reconciliation-success", "late");
                 setReconciliationState("reconciled");
@@ -321,17 +318,17 @@ export function AccountProvider({ children }: { children: ReactNode }) {
             if (r.ok && r.value) setAccount((prev) => prev ? { ...prev, display_name: r.value! } : prev);
           } catch { /* ignore */ }
         }
-        if (reconciled && !cancelled) setReconciliationState("reconciled");
+        if (reconciled && !isStale()) setReconciliationState("reconciled");
       } catch (e) {
-        if (!cancelled) setReconciliationState("failed", e instanceof Error ? e.message : String(e));
+        if (!isStale()) setReconciliationState("failed", e instanceof Error ? e.message : String(e));
       } finally {
         clearTimeout(softTimer);
         androidMeasure("account.hydrate", started);
-        if (!cancelled) setSyncing(false);
+        if (!isStale()) setSyncing(false);
       }
     })();
     return () => {
-      cancelled = true;
+      cancelledFlag = true;
 
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -362,6 +359,8 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     if (androidStable) return;
     if (pushTimer.current) clearTimeout(pushTimer.current);
     pushTimer.current = setTimeout(() => {
+      // Never push a profile that now belongs to a different identity.
+      if (getActiveUserId() !== user.id) return;
       setSyncing(true);
       pushSave(user.id, profileRef.current)
         .then((ok) => { if (ok) setLastSyncAt(Date.now()); })
@@ -394,7 +393,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       // Drain the durable outbox first so completions land before we push
       // the profile blob. Both are idempotent server-side.
       void flushOutbox(uid).finally(() => {
-        if (!autoPushEnabled.current) return;
+        if (!autoPushEnabled.current || getActiveUserId() !== uid) return;
         setSyncing(true);
         pushSave(uid, profileRef.current)
           .then((ok) => { if (ok) setLastSyncAt(Date.now()); })
@@ -425,7 +424,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     (async () => {
       try {
         const { data, error } = await supabase.rpc("get_my_profile");
-        if (cancelled || error || !data) return;
+        if (cancelled || getActiveUserId() !== uid || error || !data) return;
         // Skip if local has unpushed gameplay changes that just happened.
         if (Date.now() - lastLocalChangeRef.current < REALTIME_GUARD_MS) return;
         const row = data as { xp?: number; dinars?: number; hearts?: number; streak?: number };
@@ -444,6 +443,8 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${uid}` },
         (payload) => {
+          // Late broadcast for a signed-out / switched-away account.
+          if (getActiveUserId() !== uid) return;
           if (Date.now() - lastLocalChangeRef.current < REALTIME_GUARD_MS) {
             // Local has unpushed changes — the broadcast row is stale.
             return;
@@ -548,10 +549,14 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       }
     }
     await cloudSignOut();
+    // Atomic identity switch back to this device's guest space. The auth
+    // listener also calls this (idempotent) — doing it here guarantees the
+    // swap has completed before signOut() resolves, so no frame can render
+    // the previous account's data.
+    await resetForIdentityChange({ nextUserId: null, reason: "sign-out" });
     setUser(null);
     setAccount(null);
     setLastSyncAt(null);
-    try { resetProfileRef.current?.(); } catch { /* ignore */ }
   }, [user]);
 
   const syncNow = useCallback(async () => {

@@ -1,3 +1,5 @@
+// Identity partition must be installed before ANY module touches storage.
+import "./lib/identity/install";
 import { QueryClient } from "@tanstack/react-query";
 import { createRouter, Link } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
@@ -5,6 +7,7 @@ import { isAndroidUltraStableMode } from "./lib/androidFreezeDiagnostics";
 import { releaseStaleUiLocks } from "./lib/ui/ui-locks";
 import { FatalRecoveryScreen } from "./components/FatalRecoveryScreen";
 import { noteResolvedRoute } from "./lib/diagnostics/crash-report";
+import { registerIdentityQueryClient } from "./lib/identity/reset";
 
 function DefaultRouteError({ error, reset }: { error: Error; reset: () => void }) {
   return <FatalRecoveryScreen error={error} reset={reset} boundary="tanstack_default_error_component" />;
@@ -43,6 +46,8 @@ export const getRouter = () => {
         }
       : undefined,
   });
+
+  registerIdentityQueryClient(queryClient);
 
   const router = createRouter({
     routeTree,

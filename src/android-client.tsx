@@ -1,3 +1,4 @@
+import "@/lib/identity/install";
 import { createRoot } from "react-dom/client";
 import { assertProductionPublicOrigin, CONFIGURED_PUBLIC_ORIGIN } from "@/lib/share/publicOrigin";
 import { runSafeBootContract } from "@/lib/diagnostics/safe-boot";
