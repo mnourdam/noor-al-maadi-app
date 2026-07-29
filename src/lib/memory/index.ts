@@ -22,6 +22,7 @@ export {
 } from "./plan";
 export { grantReviewXp, computeReviewXp } from "./rewards";
 export { getEntry, upsertEntry, bumpDaily, dailyCount, dailyCap } from "./history";
+export { refreshMemoryBank, harvestCampaignIntoBank, readBankCache } from "./bank-cache";
 export { nextAfterCorrect, nextAfterWrong } from "./spacing";
 export { findItem } from "./bank";
 export type {
