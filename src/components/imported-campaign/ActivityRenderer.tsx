@@ -846,7 +846,7 @@ interface ReflectiveMomentRendererProps extends RendererProps {
   campaignId: string;
 }
 
-function ReflectiveMomentRenderer({ activity, onResolve, alreadyDone, campaignId }: ReflectiveMomentRendererProps) {
+function ReflectiveMomentRenderer({ activity, onResolve, onAdvance, alreadyDone, campaignId }: ReflectiveMomentRendererProps) {
   const mode = resolveReflectionMode(activity);
   const choices = reflectionChoices(activity);
   const disableCampaignFocusLogic = isAndroidFocusABDisabled("disableCampaignFocusLogic");
