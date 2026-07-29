@@ -301,46 +301,53 @@ export function readPersistedProfileState(): ProfileState {
   }
 }
 
+/** Read + normalise the persisted profile of the CURRENT owner namespace. */
+function hydrateFromStorage(): ProfileState | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    let merged: ProfileState = {
+      ...initial,
+      ...parsed,
+      settings: { ...initial.settings, ...(parsed.settings ?? {}) },
+    };
+    // Passive streak expiry: streak is derived, never trusted as a
+    // stored number. If the last active day is older than yesterday
+    // (or missing entirely), force streak to 0 BEFORE first paint so
+    // the HUD never flashes a stale value.
+    const derived = deriveStreak(merged.streak, merged.lastActiveDay);
+    if (derived.streak !== merged.streak) {
+      merged = { ...merged, streak: derived.streak };
+    }
+    return merged;
+  } catch {
+    return null;
+  }
+}
+
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<ProfileState>(initial);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        let merged: ProfileState = {
-          ...initial,
-          ...parsed,
-          settings: { ...initial.settings, ...(parsed.settings ?? {}) },
-        };
-        // Passive streak expiry: if the player missed an entire calendar day
-        // since their last active day, the streak must reset to 0 — even if
-        // they don't open a screen that calls touchStreak immediately. This
-        // keeps the HUD honest the moment the app boots.
-        // Passive streak expiry: streak is derived, never trusted as a
-        // stored number. If the last active day is older than yesterday
-        // (or missing entirely), force streak to 0 BEFORE first paint so
-        // the HUD never flashes a stale value.
-        const derived = deriveStreak(merged.streak, merged.lastActiveDay);
-        if (derived.streak !== merged.streak) {
-          merged = { ...merged, streak: derived.streak };
-        }
-        if (import.meta.env.DEV) {
-          console.debug("[streak] hydrate", {
-            today: todayKey(),
-            lastActiveDay: merged.lastActiveDay,
-            storedStreak: parsed.streak,
-            computedStreak: derived.streak,
-            reason: derived.status,
-          });
-        }
-        setProfile(merged);
-      }
-    } catch {}
+    setProfile(hydrateFromStorage() ?? initial);
     setHydrated(true);
   }, []);
+
+  // Identity switch (login / logout / account switch): the storage
+  // namespace has already been repointed at the new owner, so the ONLY
+  // correct state is whatever that owner has stored — never a merge with
+  // the outgoing identity's in-memory profile.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onIdentityChange = () => {
+      setProfile(hydrateFromStorage() ?? initial);
+    };
+    window.addEventListener("irth:identity-changed", onIdentityChange);
+    return () => window.removeEventListener("irth:identity-changed", onIdentityChange);
+  }, []);
+
 
 
 
