@@ -359,6 +359,8 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     if (androidStable) return;
     if (pushTimer.current) clearTimeout(pushTimer.current);
     pushTimer.current = setTimeout(() => {
+      // Never push a profile that now belongs to a different identity.
+      if (getActiveUserId() !== user.id) return;
       setSyncing(true);
       pushSave(user.id, profileRef.current)
         .then((ok) => { if (ok) setLastSyncAt(Date.now()); })
@@ -391,7 +393,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       // Drain the durable outbox first so completions land before we push
       // the profile blob. Both are idempotent server-side.
       void flushOutbox(uid).finally(() => {
-        if (!autoPushEnabled.current) return;
+        if (!autoPushEnabled.current || getActiveUserId() !== uid) return;
         setSyncing(true);
         pushSave(uid, profileRef.current)
           .then((ok) => { if (ok) setLastSyncAt(Date.now()); })
@@ -441,6 +443,8 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${uid}` },
         (payload) => {
+          // Late broadcast for a signed-out / switched-away account.
+          if (getActiveUserId() !== uid) return;
           if (Date.now() - lastLocalChangeRef.current < REALTIME_GUARD_MS) {
             // Local has unpushed changes — the broadcast row is stale.
             return;
