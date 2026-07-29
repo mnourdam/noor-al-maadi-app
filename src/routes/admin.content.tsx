@@ -582,6 +582,119 @@ function FactEditor({
 }
 
 // ============================================================
+// Today in History Events — Export / Import (Golden Template)
+// ------------------------------------------------------------
+// Envelope schema mirrors the actual DB columns 1:1. No renaming,
+// no invented fields, no deep-link activation. On import, we match
+// existing rows by `id` when present (update in place) and insert
+// new rows otherwise — never duplicate.
+// ============================================================
+const TIH_EXPORT_VERSION = 1 as const;
+const TIH_EXPORT_GENERATOR = "irth.admin.content.today_in_history";
+const TIH_ALLOWED_FIELDS = [
+  "id", "month", "day", "title", "body",
+  "hijri_year", "gregorian_year", "deep_link",
+  "enabled", "created_at",
+] as const;
+
+function rowToExport(r: TodayEvent): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const k of TIH_ALLOWED_FIELDS) out[k] = (r as any)[k] ?? null;
+  return out;
+}
+
+function buildEnvelope(rows: TodayEvent[]) {
+  return {
+    schema: "today_in_history_events",
+    version: TIH_EXPORT_VERSION,
+    generator: TIH_EXPORT_GENERATOR,
+    exported_at: new Date().toISOString(),
+    count: rows.length,
+    events: rows.map(rowToExport),
+  };
+}
+
+function downloadJson(name: string, data: unknown) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 500);
+}
+
+function safeSlug(s: string): string {
+  return s.replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "event";
+}
+
+type TihImportIssue = { index: number; id?: string | null; field?: string; message: string };
+type TihImportPlan = {
+  toInsert: Array<{ index: number; payload: Record<string, unknown> }>;
+  toUpdate: Array<{ index: number; id: string; payload: Record<string, unknown> }>;
+  errors: TihImportIssue[];
+  duplicates: TihImportIssue[]; // duplicate (month,day,title) across the file
+};
+
+function normalizeImportedEvent(raw: any, index: number, existingIds: Set<string>): { ok: true; payload: Record<string, unknown>; id: string | null } | { ok: false; issues: TihImportIssue[] } {
+  const issues: TihImportIssue[] = [];
+  if (!raw || typeof raw !== "object") {
+    return { ok: false, issues: [{ index, message: "الحدث ليس كائن JSON صالحًا." }] };
+  }
+  const month = Number(raw.month);
+  const day = Number(raw.day);
+  const title = typeof raw.title === "string" ? raw.title.trim() : "";
+  const body = typeof raw.body === "string" ? raw.body.trim() : "";
+  if (!Number.isInteger(month) || month < 1 || month > 12) issues.push({ index, id: raw.id ?? null, field: "month", message: "الشهر يجب أن يكون عددًا بين 1 و12." });
+  if (!Number.isInteger(day) || day < 1 || day > 31) issues.push({ index, id: raw.id ?? null, field: "day", message: "اليوم يجب أن يكون عددًا بين 1 و31." });
+  if (!title) issues.push({ index, id: raw.id ?? null, field: "title", message: "العنوان مطلوب." });
+  if (!body) issues.push({ index, id: raw.id ?? null, field: "body", message: "المحتوى (body) مطلوب." });
+
+  const id = typeof raw.id === "string" && raw.id.trim() ? raw.id.trim() : null;
+  if (id && !existingIds.has(id)) {
+    // Not an error — treated as insert with client-supplied id below.
+  }
+  if (issues.length) return { ok: false, issues };
+
+  const payload: Record<string, unknown> = {
+    month, day, title, body,
+    hijri_year: raw.hijri_year != null && String(raw.hijri_year).trim() !== "" ? String(raw.hijri_year).trim() : null,
+    gregorian_year: raw.gregorian_year != null && String(raw.gregorian_year).trim() !== "" ? String(raw.gregorian_year).trim() : null,
+    // deep_link is preserved verbatim if provided; runtime already ignores it
+    // for tap behavior (see notifications/deepLink.ts). Never invented here.
+    deep_link: typeof raw.deep_link === "string" && raw.deep_link.trim() ? raw.deep_link.trim() : null,
+    enabled: typeof raw.enabled === "boolean" ? raw.enabled : true,
+  };
+  return { ok: true, payload, id };
+}
+
+function planImport(parsed: any, existing: TodayEvent[]): TihImportPlan {
+  const plan: TihImportPlan = { toInsert: [], toUpdate: [], errors: [], duplicates: [] };
+  let events: any[] | null = null;
+  if (Array.isArray(parsed)) events = parsed;
+  else if (parsed && Array.isArray(parsed.events)) events = parsed.events;
+  else if (parsed && typeof parsed === "object" && parsed.title) events = [parsed]; // single event
+  if (!events) {
+    plan.errors.push({ index: -1, message: "الملف لا يحتوي على أحداث. يجب أن يكون Envelope فيه events[] أو مصفوفة أحداث أو حدث واحد." });
+    return plan;
+  }
+  const existingIds = new Set(existing.map((r) => r.id));
+  const seenKeys = new Set<string>();
+  events.forEach((raw, i) => {
+    const res = normalizeImportedEvent(raw, i, existingIds);
+    if (!res.ok) { plan.errors.push(...res.issues); return; }
+    const key = `${res.payload.month}-${res.payload.day}-${String(res.payload.title).toLowerCase()}`;
+    if (seenKeys.has(key)) plan.duplicates.push({ index: i, message: `تكرار داخل الملف: ${res.payload.day}/${res.payload.month} — ${res.payload.title}` });
+    seenKeys.add(key);
+    if (res.id && existingIds.has(res.id)) plan.toUpdate.push({ index: i, id: res.id, payload: res.payload });
+    else plan.toInsert.push({ index: i, payload: res.id ? { id: res.id, ...res.payload } : res.payload });
+  });
+  return plan;
+}
+
+// ============================================================
 // Today in History Events
 // ============================================================
 function TodayEventsTab() {
