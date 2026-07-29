@@ -15,6 +15,7 @@ import { isAndroidFocusABDisabled } from "@/lib/androidFocusAB";
 import type { CampaignActivity } from "@/types/campaign";
 import { RichReadingText } from "./RichReadingText";
 import { coerceRichText } from "@/lib/campaigns/richText";
+import { shuffleOptions } from "@/lib/campaigns/optionShuffle";
 import { sfx as gameSfx } from "@/components/games/sfx";
 import {
   DndContext,
