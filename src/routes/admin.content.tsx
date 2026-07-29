@@ -461,8 +461,9 @@ function DailyFactsTab() {
     const payload: any = {
       title,
       body,
-      deep_link: editing.deep_link?.trim() || null,
       enabled: editing.enabled ?? true,
+      // deep_link intentionally omitted — daily facts do not open pages.
+      // Existing rows keep their column value on update.
     };
     const op = editing.id
       ? supabase.from("daily_facts" as any).update(payload).eq("id", editing.id)
