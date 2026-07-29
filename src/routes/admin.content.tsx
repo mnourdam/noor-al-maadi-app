@@ -650,6 +650,16 @@ function DailyFactsTab() {
         </button>
       </div>
 
+      {importOpen && importPlan && (
+        <ImportPreviewDaily
+          fileName={importFileName}
+          plan={importPlan}
+          applying={importApplying}
+          onCancel={() => { setImportOpen(false); setImportPlan(null); }}
+          onApply={applyImport}
+        />
+      )}
+
       {editing && (
         <FactEditor
           value={editing}
@@ -688,9 +698,11 @@ function DailyFactsTab() {
                       <h3 className="truncate font-medium">{r.title}</h3>
                     </div>
                     <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{r.body}</p>
-                    {r.deep_link && <p className="mt-1 text-xs text-muted-foreground" dir="ltr">{r.deep_link}</p>}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    <button onClick={() => exportOne(r)} className="inline-flex items-center gap-1 rounded-md border border-input px-3 py-1.5 text-xs hover:bg-muted" title="تصدير هذا العنصر">
+                      <Download className="h-3 w-3" /> JSON
+                    </button>
                     <button onClick={() => toggle(r)} className="rounded-md border border-input px-3 py-1.5 text-xs hover:bg-muted">
                       {r.enabled ? "تعطيل" : "تفعيل"}
                     </button>
@@ -707,6 +719,7 @@ function DailyFactsTab() {
           </ul>
         )}
       </div>
+
 
       <BulkBar
         count={selected.size}
