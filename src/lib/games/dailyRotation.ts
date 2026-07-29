@@ -153,11 +153,11 @@ export interface RotatableGame {
 }
 
 /**
- * Deterministic ordering of one mode's catalogue for a given lap.
- * Games are keyed by `slug` (stable across environments) and the
- * ordering re-shuffles once per full lap through the catalogue.
+ * Raw per-lap ordering: deterministic shuffle + era stratification.
+ * Every game appears exactly once, so a lap is a full traversal of
+ * the mode's catalogue.
  */
-export function catalogueOrder<T extends RotatableGame>(
+function lapOrder<T extends RotatableGame>(
   mode: GameMode,
   games: readonly T[],
   lap: number,
@@ -201,6 +201,44 @@ export function catalogueOrder<T extends RotatableGame>(
   }
   return out;
 }
+
+/**
+ * Deterministic ordering of one mode's catalogue for a given lap,
+ * with LAP-BOUNDARY CARRYOVER.
+ *
+ * A plain per-lap reshuffle keeps the "each game once per lap"
+ * guarantee but destroys the spacing at the seam: a game shown at the
+ * end of lap L can reappear at position 0 of lap L+1 (gap of 1).
+ * A gap of a full catalogue length across a reshuffle is mathematically
+ * impossible (it would force the identity permutation, i.e. no variety),
+ * so the seam is smoothed instead: games that appeared in the FIRST half
+ * of the previous lap — the ones seen longest ago — are placed before
+ * games from its second half, preserving the fresh shuffle inside each
+ * half. That bounds the worst-case repeat distance at roughly half a
+ * catalogue while keeping the order varied every lap.
+ */
+export function catalogueOrder<T extends RotatableGame>(
+  mode: GameMode,
+  games: readonly T[],
+  lap: number,
+): T[] {
+  const current = lapOrder(mode, games, lap);
+  if (lap <= 0 || current.length < 4) return current;
+
+  const previous = lapOrder(mode, games, lap - 1);
+  const prevIndex = new Map<string, number>();
+  previous.forEach((g, i) => prevIndex.set(g.slug, i));
+  const midpoint = previous.length / 2;
+
+  const oldest: T[] = [];
+  const recent: T[] = [];
+  for (const g of current) {
+    const p = prevIndex.get(g.slug);
+    (p === undefined || p < midpoint ? oldest : recent).push(g);
+  }
+  return [...oldest, ...recent];
+}
+
 
 
 // ─── Daily selection ─────────────────────────────────────────
