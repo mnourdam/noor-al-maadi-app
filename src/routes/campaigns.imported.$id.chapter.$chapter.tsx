@@ -384,6 +384,43 @@ function ImportedChapterPlayer() {
     bump();
   };
 
+  // ---- Memory Engine — review-done handler ----
+  // Runs when the player finishes (or skips) the injected review card.
+  // Never touches campaign progress, hearts, dinars, or unlocks.
+  const onReviewDone = (outcome: { correct: boolean | null; skipped: boolean }) => {
+    if (!reviewMarker || !plan) return;
+    const now = Date.now();
+    const live = findItem(reviewMarker.reviewItemId);
+    // Skip: no history mutation, no XP, but still cap the daily slot so a
+    // player can't cycle through chapters to force new reviews.
+    if (outcome.skipped || outcome.correct == null) {
+      bumpDaily(now);
+      markReviewCompleted(reviewMarker.planKey, false);
+      bump();
+      return;
+    }
+    if (live) {
+      const prev = getEntry(live.id) ?? {
+        itemId: live.id, correctStreak: 0,
+        lastAttemptCorrect: null, lastAttemptAt: null,
+        nextDueAt: null, seen: 0,
+      };
+      const nextEntry = outcome.correct
+        ? nextAfterCorrect(prev, now)
+        : nextAfterWrong(prev, now);
+      upsertEntry(nextEntry);
+      if (outcome.correct && plan.reviewAttemptId) {
+        grantReviewXp(plan.reviewAttemptId, live.originalXp, (xp) => addPoints(xp));
+      }
+    }
+    bumpDaily(now);
+    markReviewCompleted(reviewMarker.planKey, outcome.correct === true);
+    audioManager.playSfx(outcome.correct ? "success" : "unlock-reward", {
+      dedupeKey: `review:${reviewMarker.runtimeId}`,
+    });
+    bump();
+  };
+
   return (
     <AppShell>
       <ReadingScale className="animate-reveal pb-10">
