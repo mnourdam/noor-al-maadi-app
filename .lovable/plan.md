@@ -1,82 +1,153 @@
-# Phase 3 — Cinematic World Atlas
+# Review Engine — طبقة مراجعة مستوحاة من Duolingo (تصميم فقط)
 
-Transform `/map` from a filter screen into a full-screen, zoom-driven exploration experience anchored on `encyclopedia_entities`. No new tables, no fake data, no enlargement of the current canvas.
+طبقة Runtime مستقلة تعرض أحيانًا **سؤال مراجعة واحد** مأخوذ من حملات أتمّها اللاعب، دون أي تعديل على الحملات أو الفصول أو الأنشطة أو منطق التقدم أو الـGolden Template. إذا عُطّلت الطبقة عبر feature flag واحد يعود النظام لسلوكه الحالي بالكامل.
 
-## Experience model
+---
 
-Full-screen parchment atlas. The user pans and pinch/scroll-zooms a single continuous SVG world. Content reveals progressively across four zoom tiers:
+## 1) الحدود المعمارية (Isolation Contract)
 
-```text
-zoom 1.0 – 1.8x  Level 1  Regions          (الأندلس، الشام، العراق، ...)
-zoom 1.8 – 3.5x  Level 2  Cities (hubs)    (دمشق، بغداد، مكة، القاهرة، قرطبة، ...)
-zoom 3.5 – 6.0x  Level 3  Landmarks        (المسجد الحرام، بيت الحكمة، قبة الصخرة، ...)
-zoom 6.0x +      Level 4  Historical items (figures / battles / events / artifacts)
+**لا يمس** الـReview Engine أيًا مما يلي:
+- ملفات JSON للحملات / الفصول / الأنشطة.
+- `campaignStorage`, `campaignReconciliation`, `admin_run_campaign_batch`, Import/Export.
+- `ActivityRenderer`, ترتيب الأنشطة، `currentIdx`, `completedActivityIds`.
+- منطق `claimActivityReward` واحتساب إكمال الفصل/الحملة.
+- Offline Snapshot و Golden Template.
+
+**نقطة الاتصال الوحيدة**: مكوّن Overlay جديد يُركَّب داخل `campaigns.imported.$id.chapter.$chapter.tsx` **بين** انتهاء نشاط ناجح وعرض النشاط التالي. لا يستهلك أي API من محرك الحملات سوى القراءة (`campaign.id`, `chapter.id`, `activity.id`) لأغراض إشارة التوقيت.
+
+Kill switch: `VITE_FEATURE_REVIEW_ENGINE` + مفتاح Runtime في إعدادات اللاعب. إيقافه = عودة سطر واحد شرطي إلى null، لا يتغير أي سلوك آخر.
+
+---
+
+## 2) البنية (Modules)
+
+جميعها تحت `src/lib/review/` — معزولة، بدون استيراد من `campaignStorage` عدا الأنواع.
+
+```
+src/lib/review/
+  types.ts              ReviewItem, ReviewAttempt, ReviewDecision
+  bank.ts               بناء بنك الأسئلة من الحملات المكتملة (قراءة فقط)
+  eligibility.ts        فلترة: مكتملة + سبق حلها + قابلة للمراجعة
+  scheduler.ts          متى يُعرض سؤال (قرار حقن/تخطي)
+  selector.ts           اختيار سؤال واحد بالأولويات + منع التكرار
+  history.ts            سجل المراجعات (partitioned per owner)
+  telemetry.ts          XP grant عبر مسار مستقل عن claimActivityReward
+  index.ts              واجهة عامة: pickReviewForMoment(), recordAttempt()
+
+src/components/review/
+  ReviewOverlay.tsx     شاشة مودال منفصلة تمامًا عن ActivityRenderer
+  ReviewQuestionCard.tsx  عرض SSOT-only للأنواع المدعومة
 ```
 
-Selecting a hub (city/landmark) opens a right-side **Hub Panel** listing every encyclopedia entity tied to that place — figures who lived there, battles fought there, events, artifacts — each linking to its encyclopedia page. This makes Jerusalem a hub for (فتح القدس، المسجد الأقصى، صلاح الدين، الأيوبية) and Baghdad for (بيت الحكمة، العباسيون، الرشيد، المأمون) purely from existing data.
+---
 
-A top control bar holds: era timeline scrubber, type filters (figure / battle / event / place / artifact), search, and "fit world" / "my last location".
+## 3) بنك الأسئلة (Read-Only Projection)
 
-A bottom-left compass shows current zoom tier label ("المستوى: المدن").
+- يُبنى **مرة واحدة** بعد boot من `getCompletedCampaigns()` (يعرفها `campaignStorage` مسبقًا).
+- لكل حملة مكتملة نمرّ على `chapters[].activities[]` ونستخرج فقط الأنشطة التي:
+  - نوعها ضمن قائمة بيضاء: `mcq`, `true_false`, `ordering`, `matching`, `fill_blank`.
+  - لها `correctAnswer` موثوق (يعبر `admin_validate_activity_shape`).
+  - **مسجَّلة كـ completed في `completedActivityIds` للاعب الحالي** (ضمان "سبق أن حلها").
+- **مستبعد**: reading, reflection, decision-only, open-text, و أي نشاط تأملي بدون تحقق.
 
-## Atlas architecture
+المخرج: `ReviewItem[]` مع `{ campaignId, chapterId, activityId, kind, prompt, options, correctIndex, era }` — snapshot immutable في الذاكرة، يُعاد بناؤه فقط عند إكمال حملة جديدة.
 
-```text
-src/routes/map.tsx
-  └── <AtlasShell/>                full-screen, hides AppShell chrome
-        ├── <AtlasControls/>       era + type + search + zoom tier readout
-        ├── <AtlasStage/>          pan/zoom controller (single source of transform)
-        │     └── <WorldAtlasCanvas/>   parchment, regions, references (existing, reused)
-        │           ├── RegionsLayer        (visible tier 1+, labels fade by tier)
-        │           ├── CitiesLayer         (tier 2+, clustered when dense)
-        │           ├── LandmarksLayer      (tier 3+)
-        │           └── EntitiesLayer       (tier 4, virtualized within viewport bbox)
-        └── <HubPanel/>            slide-in detail, lists linked encyclopedia entities
-```
+---
 
-Pan/zoom: a thin controller built on pointer events + wheel + touch pinch, writing a single `{x,y,scale}` transform to the SVG `<g>`. No external map lib — we keep the existing `WorldAtlasCanvas` SVG and just wrap it.
+## 4) نقاط الحقن (Injection Points)
 
-## Data model (no schema change)
+الحقن **بعد** لحظة النجاح في نشاط داخل الفصل الحالي، قبل الانتقال للنشاط التالي. لا يُحقن أبدًا:
+- في أول نشاط بالفصل.
+- في آخر نشاط بالفصل (لتفادي الخلط مع شاشة الإكمال).
+- إذا لم يُكمل اللاعب أي حملة سابقة.
+- إذا الفصل الحالي هو أول فصل في أول حملة يبدأها اللاعب.
 
-Hubs are derived, not stored:
-- A hub = an `encyclopedia_entities` row of type `place` (city or landmark) that has `metadata.coords`.
-- Linked entities = other enabled entities whose `metadata.region` matches the hub's region OR whose `metadata.linked_place_id` equals the hub id (already-supported optional field; populated later via admin, no migration needed).
-- Tier classification uses `metadata.place_tier ∈ {'city','landmark'}`; rows without it default to `city` for places inside a region, `landmark` otherwise. This is additive metadata — no SQL.
+معدل الحقن (Scheduler):
+- حد أعلى **سؤال مراجعة واحد لكل فصل**.
+- حد أعلى **3 أسئلة مراجعة يوميًا**.
+- Cooldown: لا حقن قبل مرور ≥ 3 أنشطة صحيحة منذ آخر مراجعة.
+- احتمال أساسي 25% لكل نشاط مؤهّل، يُعدَّل بـ decay إذا تجاوز اللاعب حصته اليومية.
+- deterministic seed: `hash(ownerKey + dateKey + campaignId + chapterId + activityId)` لضمان الثبات ومنع اللعب على العشوائية.
 
-A new `src/lib/atlas-hubs.ts` exposes:
-- `useAtlasLayers(filters)` → memoized `{ regions, cities, landmarks, entities }` derived from `world-map-source`.
-- `useHubEntities(hubId)` → linked encyclopedia entities for the side panel.
+---
 
-## Performance
+## 5) الاختيار (Selector Priorities)
 
-- Single SVG, one transform — no re-render per pan frame (use `requestAnimationFrame` + ref-applied `transform`).
-- Tier-gated rendering: layers only mount when zoom enters their range.
-- Marker clustering for cities/landmarks when more than N fall inside a 40px screen radius (simple grid hash, not d3).
-- Viewport culling for tier 4 entities (bbox test before render).
-- Labels use CSS `content-visibility: auto` and fade via opacity on tier change.
-- Mobile: passive touch listeners, `touch-action: none` only on stage, momentum pan, no shadows on markers below tier 3.
+بترتيب صارم، لا عشوائية بسيطة:
 
-## Files
+1. **أخطاء سابقة**: أسئلة سُجّل لها attempt خاطئ في `review.history` ولم تُصحّح بعد.
+2. **الأقدم مراجعة**: `lastReviewedAt` الأبعد زمنيًا (spaced repetition خفيف).
+3. **البقية** مع منع تكرار قريب:
+   - لا تكرار نفس `activityId` خلال 14 يومًا.
+   - لا تكرار نفس `campaignId` خلال آخر 3 مراجعات (تنويع المصادر).
+   - لا تكرار نفس `chapterId` مرتين متتاليتين.
 
-Created
-- `src/components/atlas/AtlasShell.tsx`
-- `src/components/atlas/AtlasStage.tsx` (pan/zoom controller)
-- `src/components/atlas/AtlasControls.tsx`
-- `src/components/atlas/HubPanel.tsx`
-- `src/components/atlas/useAtlasZoom.ts`
-- `src/lib/atlas-hubs.ts`
+Fallback: إن كانت كل الأسئلة في cooldown يُتخطى الحقن بصمت.
 
-Modified
-- `src/routes/map.tsx` — replace current list+canvas layout with `<AtlasShell/>`.
-- `src/components/WorldAtlasCanvas.tsx` — accept `zoomTier`, expose layer slots, keep `editMode` for `/admin/map`.
+---
 
-Untouched
-- `src/lib/world-map-source.ts`, `src/lib/atlas-regions.ts`, `/admin/map`, all encyclopedia routes, DB schema.
+## 6) التخزين (History)
 
-## Out of scope (later phases)
+- مفتاح واحد فقط: `irth.review.history.v1` — يمرّ عبر Identity Partition تلقائيًا فيصبح `...::owner=user:<id>` أو `...::owner=guest:<id>`.
+- شكل السجل:
+  ```ts
+  {
+    attempts: Array<{ itemKey, correct, at, campaignId, chapterId }>,
+    dailyCount: { [dateKey]: number },
+    lastAt: string
+  }
+  ```
+- Cap: آخر 500 attempt، truncation FIFO.
+- **لا** يُكتب في `game_progress` ولا `user_campaign_progress` ولا أي جدول تقدم موجود.
+- (اختياري لاحقًا) جدول `user_review_attempts` منفصل تمامًا — خارج نطاق هذه المرحلة.
 
-- Animated timeline playback, campaign routes, fog-of-discovery, conquest layers — atlas structure leaves layer slots open for them.
+---
 
-## Verification
+## 7) المكافآت
 
-`tsc --noEmit` + app build after implementation; Playwright smoke on `/map` to confirm pan, zoom-tier transitions, and hub panel open from a known city (e.g. بغداد).
+- إجابة صحيحة: `+5 XP` عبر `awardXp({ source: "review" })` — مسار موجود مستقل عن `claimActivityReward`.
+- إجابة خاطئة: لا خصم قلوب، لا أثر على التقدم، تُسجَّل فقط في history لأولوية اختيار مستقبلي.
+- **تخطي/إغلاق**: مسموح، بدون عقوبة، يُحسب كـ "seen but not answered".
+
+---
+
+## 8) الواجهة (UX)
+
+- Overlay فوق شاشة الفصل، خلفية مموّهة، بادج ذهبي: «مراجعة سريعة من حملة سابقة».
+- يذكر مصدر السؤال: «من حملة: عام الحزن».
+- زر «تخطي» ظاهر دائمًا.
+- بعد الإجابة: تغذية راجعة قصيرة + زر «متابعة الفصل».
+- لا تعديل على `ActivityRenderer` — يُعرض الـOverlay فوقه.
+
+---
+
+## 9) ضمانات عدم الكسر (Safety Contract)
+
+1. **Feature Flag**: تعطيله يُرجع `pickReviewForMoment()` فارغة → Overlay لا يُعرض → صفر تغيير سلوكي.
+2. **بدون كتابة في حالة الحملات**: يستحيل معماريًا لأن الملف الوحيد الذي يكتب هو `history.ts` بمفتاحه الخاص.
+3. **بدون تعديل ترتيب/عدد الأنشطة**: `chapter.activities` لا يُلمس، ولا `currentIdx`, ولا `completedActivityIds`.
+4. **بدون تأثير على شرط إكمال الفصل/الحملة**: `allDone` لا يعتمد على أي state من Review.
+5. **Offline-safe**: البنك يُبنى من بيانات محلية أصلاً، والـhistory محلية.
+6. **Identity-safe**: يمر تلقائيًا عبر Storage Partition الحالي.
+7. **اختبارات وحدة**:
+   - `scheduler` يحترم الحدود اليومية والcooldown.
+   - `selector` يحترم الأولويات ومنع التكرار.
+   - `bank` يستبعد الأنشطة غير المؤهلة.
+   - snapshot test يثبت أن ملفات `campaignStorage` لم تُلمس.
+
+---
+
+## 10) خارج نطاق هذه المرحلة
+
+- مراجعات من التحقيقات/القصص.
+- Spaced repetition متقدم (SM-2).
+- مزامنة history للسحابة.
+- مراجعات في نهاية اليوم / إشعارات.
+
+---
+
+## نقاط تحتاج قرارك قبل التنفيذ
+
+1. الحد اليومي: 3 مراجعات/يوم — مقبول؟
+2. مكافأة XP الثابتة: 5 — أم متغيرة حسب صعوبة السؤال الأصلي؟
+3. هل نبدأ محلي فقط الآن، ونؤجل مزامنة `user_review_attempts` للسحابة لمرحلة لاحقة؟
