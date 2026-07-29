@@ -330,6 +330,96 @@ function SelectAllButton({
 // ============================================================
 // Daily Facts
 // ============================================================
+// ============================================================
+// Daily Facts (المعلومات اليومية) — Export / Import (Golden Template)
+// ------------------------------------------------------------
+// Envelope mirrors DB columns 1:1 EXCEPT deep_link, which is
+// intentionally excluded from export/import/editor per product
+// decision (daily facts do not open encyclopedia pages; tapping
+// their notification opens /notifications only). Legacy rows keep
+// their deep_link column value; runtime already ignores it via
+// `isInformationalNotification` in notifications/deepLink.ts.
+// ============================================================
+const DF_EXPORT_VERSION = 1 as const;
+const DF_EXPORT_GENERATOR = "irth.admin.content.daily_information";
+const DF_EXPORT_FIELDS = ["id", "title", "body", "enabled", "created_at"] as const;
+
+function factToExport(r: DailyFact): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const k of DF_EXPORT_FIELDS) out[k] = (r as any)[k] ?? null;
+  return out;
+}
+
+function buildFactsEnvelope(rows: DailyFact[]) {
+  return {
+    schema: "daily_information_items",
+    version: DF_EXPORT_VERSION,
+    generator: DF_EXPORT_GENERATOR,
+    exported_at: new Date().toISOString(),
+    count: rows.length,
+    items: rows.map(factToExport),
+  };
+}
+
+type DfImportIssue = { index: number; id?: string | null; field?: string; message: string };
+type DfImportPlan = {
+  toInsert: Array<{ index: number; payload: Record<string, unknown> }>;
+  toUpdate: Array<{ index: number; id: string; payload: Record<string, unknown> }>;
+  errors: DfImportIssue[];
+  duplicates: DfImportIssue[];
+};
+
+function normalizeImportedFact(raw: any, index: number, existingIds: Set<string>):
+  { ok: true; payload: Record<string, unknown>; id: string | null }
+  | { ok: false; issues: DfImportIssue[] }
+{
+  const issues: DfImportIssue[] = [];
+  if (!raw || typeof raw !== "object") {
+    return { ok: false, issues: [{ index, message: "العنصر ليس كائن JSON صالحًا." }] };
+  }
+  const title = typeof raw.title === "string" ? raw.title.trim() : "";
+  const body = typeof raw.body === "string" ? raw.body.trim() : "";
+  if (!title) issues.push({ index, id: raw.id ?? null, field: "title", message: "العنوان مطلوب." });
+  if (!body) issues.push({ index, id: raw.id ?? null, field: "body", message: "المحتوى (body) مطلوب." });
+  const id = typeof raw.id === "string" && raw.id.trim() ? raw.id.trim() : null;
+  if (id && !existingIds.has(id)) {
+    // client-supplied id for a new row — allowed, treated as insert
+  }
+  if (issues.length) return { ok: false, issues };
+  const payload: Record<string, unknown> = {
+    title, body,
+    enabled: typeof raw.enabled === "boolean" ? raw.enabled : true,
+    // deep_link is intentionally NOT set from import — daily facts are
+    // reminder-only notifications; legacy rows keep their column value.
+  };
+  return { ok: true, payload, id };
+}
+
+function planFactsImport(parsed: any, existing: DailyFact[]): DfImportPlan {
+  const plan: DfImportPlan = { toInsert: [], toUpdate: [], errors: [], duplicates: [] };
+  let items: any[] | null = null;
+  if (Array.isArray(parsed)) items = parsed;
+  else if (parsed && Array.isArray(parsed.items)) items = parsed.items;
+  else if (parsed && Array.isArray(parsed.events)) items = parsed.events; // tolerate mislabeled files
+  else if (parsed && typeof parsed === "object" && parsed.title) items = [parsed]; // single item
+  if (!items) {
+    plan.errors.push({ index: -1, message: "الملف لا يحتوي على عناصر. يجب أن يكون Envelope فيه items[] أو مصفوفة عناصر أو عنصر واحد." });
+    return plan;
+  }
+  const existingIds = new Set(existing.map((r) => r.id));
+  const seenKeys = new Set<string>();
+  items.forEach((raw, i) => {
+    const res = normalizeImportedFact(raw, i, existingIds);
+    if (!res.ok) { plan.errors.push(...res.issues); return; }
+    const key = String(res.payload.title).toLowerCase();
+    if (seenKeys.has(key)) plan.duplicates.push({ index: i, message: `تكرار عنوان داخل الملف: ${res.payload.title}` });
+    seenKeys.add(key);
+    if (res.id && existingIds.has(res.id)) plan.toUpdate.push({ index: i, id: res.id, payload: res.payload });
+    else plan.toInsert.push({ index: i, payload: res.id ? { id: res.id, ...res.payload } : res.payload });
+  });
+  return plan;
+}
+
 function DailyFactsTab() {
   const [rows, setRows] = useState<DailyFact[]>([]);
   const [loading, setLoading] = useState(true);
