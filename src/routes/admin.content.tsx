@@ -777,10 +777,6 @@ function FactEditor({
           <textarea value={value.body ?? ""} onChange={e => onChange({ ...value, body: e.target.value })}
             rows={3} className="w-full rounded-md border border-input bg-background px-3 py-2" />
         </Field>
-        <Field label="الرابط (اختياري)">
-          <input dir="ltr" value={value.deep_link ?? ""} onChange={e => onChange({ ...value, deep_link: e.target.value })}
-            placeholder="/timeline" className="w-full rounded-md border border-input bg-background px-3 py-2" />
-        </Field>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={value.enabled ?? true} onChange={e => onChange({ ...value, enabled: e.target.checked })} />
           مفعّلة
