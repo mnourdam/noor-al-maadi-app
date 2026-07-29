@@ -512,9 +512,86 @@ function DailyFactsTab() {
     await load();
   };
 
+  // ---- Export / Import (Daily Facts) ----
+  const [importOpen, setImportOpen] = useState(false);
+  const [importPlan, setImportPlan] = useState<DfImportPlan | null>(null);
+  const [importFileName, setImportFileName] = useState<string | null>(null);
+  const [importApplying, setImportApplying] = useState(false);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const exportAll = () => {
+    downloadJson(`daily-information-all-${new Date().toISOString().slice(0, 10)}.json`, buildFactsEnvelope(rows));
+    setExportMenuOpen(false);
+  };
+  const exportSelected = () => {
+    const picked = rows.filter((r) => selected.has(r.id));
+    if (picked.length === 0) { toast.error("لا يوجد عناصر محددة."); return; }
+    downloadJson(`daily-information-selected-${new Date().toISOString().slice(0, 10)}.json`, buildFactsEnvelope(picked));
+    setExportMenuOpen(false);
+  };
+  const exportOne = (r: DailyFact) => {
+    downloadJson(`daily-information-${safeSlug(r.title)}.json`, buildFactsEnvelope([r]));
+  };
+  const downloadTemplate = () => {
+    if (rows.length > 0) {
+      const sample = [...rows].sort((a, b) => (b.body?.length ?? 0) - (a.body?.length ?? 0))[0];
+      downloadJson("daily-information-golden-template.json", buildFactsEnvelope([sample]));
+    } else {
+      downloadJson("daily-information-golden-template.json", buildFactsEnvelope([{
+        id: "REPLACE-WITH-UUID-OR-OMIT-FOR-NEW",
+        title: "عنوان المعلومة",
+        body: "النص الكامل للمعلومة اليومية.",
+        deep_link: null,
+        enabled: true,
+        created_at: new Date().toISOString(),
+      } as any]));
+    }
+  };
+
+  const onImportFile = async (file: File) => {
+    setImportFileName(file.name);
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      setImportPlan(planFactsImport(parsed, rows));
+      setImportOpen(true);
+    } catch (e: any) {
+      setImportPlan({ toInsert: [], toUpdate: [], errors: [{ index: -1, message: `تعذر قراءة JSON: ${e?.message ?? e}` }], duplicates: [] });
+      setImportOpen(true);
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const applyImport = async () => {
+    if (!importPlan) return;
+    if (importPlan.errors.length > 0) { toast.error("يوجد أخطاء — عالجها قبل التطبيق."); return; }
+    setImportApplying(true);
+    try {
+      if (importPlan.toInsert.length > 0) {
+        const { error } = await supabase.from("daily_facts" as any).insert(importPlan.toInsert.map((x) => x.payload));
+        if (error) throw error;
+      }
+      for (const u of importPlan.toUpdate) {
+        const { error } = await supabase.from("daily_facts" as any).update(u.payload).eq("id", u.id);
+        if (error) throw error;
+      }
+      toast.success(`تم الاستيراد: ${importPlan.toInsert.length} جديد، ${importPlan.toUpdate.length} محدّث.`);
+      setImportOpen(false);
+      setImportPlan(null);
+      await load();
+    } catch (e: any) {
+      toast.error(`فشل الاستيراد: ${e?.message ?? e}`);
+    } finally {
+      setImportApplying(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <Feedback msg={msg} />
+
 
       <div className="flex flex-wrap gap-2">
         <button
