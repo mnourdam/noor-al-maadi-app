@@ -125,7 +125,11 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   // ============ On user change: hydrate account + reconcile cloud save ============
   useEffect(() => {
     if (!user) return;
-    let cancelled = false;
+    let cancelledFlag = false;
+    // Anti-race: a response for THIS user is only applied while it is still
+    // the active identity. A slow fetch that resolves after logout / account
+    // switch is dropped instead of poisoning the new identity's state.
+    const isStale = () => cancelledFlag || getActiveUserId() !== user.id;
     setReconciliationState("loading-server");
 
     // Guard against leaking a previous account's local snapshot into a new
@@ -164,7 +168,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       // engine, hero recommendation) unblock. The work continues in the
       // background and, on eventual success, upgrades to "reconciled".
       const softTimer = setTimeout(() => {
-        if (cancelled || reconciled) return;
+        if (isStale() || reconciled) return;
         recordStartupMark("server-reconciliation-soft-timeout");
         recordStartupMark("offline-local-entered");
         setReconciliationState("offline-local", "soft-timeout");
@@ -174,7 +178,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
           fetchAccountProfile(user.id),
           fetchCloudSave(user.id),
         ]);
-        if (cancelled) return;
+        if (isStale()) return;
 
         setAccount(acc);
         if (!androidStable) void touchLastActive(user.id);
@@ -224,7 +228,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         try {
           const { reconcileAvatarOnHydrate } = await import("@/lib/emblems/avatar-persistence");
           const resolved = await reconcileAvatarOnHydrate(user.id, profileRef.current?.avatarId);
-          if (!cancelled && resolved) adoptServerAvatar(resolved);
+          if (!isStale() && resolved) adoptServerAvatar(resolved);
         } catch { /* keep the merged value — non-fatal */ }
 
         try {
@@ -261,7 +265,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
             hydrateOnboardingFromServer("irth-first-time"),
             5000,
             (late) => {
-              if (cancelled) return;
+              if (isStale()) return;
               if (late.kind === "success") {
                 recordStartupMark("server-reconciliation-success", "late");
                 setReconciliationState("reconciled");
@@ -314,17 +318,17 @@ export function AccountProvider({ children }: { children: ReactNode }) {
             if (r.ok && r.value) setAccount((prev) => prev ? { ...prev, display_name: r.value! } : prev);
           } catch { /* ignore */ }
         }
-        if (reconciled && !cancelled) setReconciliationState("reconciled");
+        if (reconciled && !isStale()) setReconciliationState("reconciled");
       } catch (e) {
-        if (!cancelled) setReconciliationState("failed", e instanceof Error ? e.message : String(e));
+        if (!isStale()) setReconciliationState("failed", e instanceof Error ? e.message : String(e));
       } finally {
         clearTimeout(softTimer);
         androidMeasure("account.hydrate", started);
-        if (!cancelled) setSyncing(false);
+        if (!isStale()) setSyncing(false);
       }
     })();
     return () => {
-      cancelled = true;
+      cancelledFlag = true;
 
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -418,7 +422,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     (async () => {
       try {
         const { data, error } = await supabase.rpc("get_my_profile");
-        if (cancelled || error || !data) return;
+        if (cancelled || getActiveUserId() !== uid || error || !data) return;
         // Skip if local has unpushed gameplay changes that just happened.
         if (Date.now() - lastLocalChangeRef.current < REALTIME_GUARD_MS) return;
         const row = data as { xp?: number; dinars?: number; hearts?: number; streak?: number };
