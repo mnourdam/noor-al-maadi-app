@@ -651,9 +651,9 @@ function DailyFactsTab() {
       </div>
 
       {importOpen && importPlan && (
-        <ImportPreviewDaily
+        <ImportPreview
           fileName={importFileName}
-          plan={importPlan}
+          plan={importPlan as unknown as TihImportPlan}
           applying={importApplying}
           onCancel={() => { setImportOpen(false); setImportPlan(null); }}
           onApply={applyImport}
