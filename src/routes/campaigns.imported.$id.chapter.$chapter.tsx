@@ -16,7 +16,7 @@ import { AppShell } from "@/components/AppShell";
 import { ReadingScale } from "@/components/ReadingScale";
 import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
 
-import type { Campaign, CampaignChapter } from "@/types/campaign";
+import type { Campaign, CampaignActivity, CampaignChapter } from "@/types/campaign";
 import { ACTIVITY_DEFAULTS } from "@/types/campaign";
 import { fetchCampaignByIdOrSlug, onCampaignPublished } from "@/lib/supabaseCampaigns";
 import {
@@ -41,6 +41,22 @@ import { recordTrace } from "@/lib/diag-trace";
 import { recordCampaignGrant, getChapterGrantedTotals } from "@/lib/campaignRewardsGranted";
 import { computeCampaignRewardSummary } from "@/lib/campaigns/rewardSummary";
 import { Stagger, AnimatedNumber } from "@/components/motion/MotionPrimitives";
+import {
+  ensurePlan,
+  buildRuntimeActivities,
+  isReviewMarker,
+  markReviewCompleted,
+  clearPlan,
+  findItem,
+  grantReviewXp,
+  upsertEntry,
+  getEntry,
+  bumpDaily,
+  nextAfterCorrect,
+  nextAfterWrong,
+  type MemoryReviewActivityMarker,
+} from "@/lib/memory";
+import { ReviewActivity } from "@/components/memory/ReviewActivity";
 
 export const Route = createFileRoute("/campaigns/imported/$id/chapter/$chapter")({
   head: () => ({ meta: [{ title: "فصل من حملة — إرث" }] }),
@@ -129,24 +145,49 @@ function ImportedChapterPlayer() {
     }
   }, [campaign, chapter, navigate, reviewMode]);
 
-  // Current activity = first activity that is either un-completed,
-  // OR completed-and-not-yet-acknowledged (correct feedback pending).
+  // Memory Engine — build the frozen RuntimeChapterPlan and interleave
+  // (at most) one review question. Original campaign data is never
+  // mutated: `chapter.activities` stays the source of truth for
+  // completion/allDone.
+  const plan = useMemo(() => {
+    if (!chapter || reviewMode) return null;
+    return ensurePlan(campaign?.id ?? "", chapter.id, chapter.activities.map(a => a.id));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [campaign?.id, chapter?.id, chapter?.activities.map(a => a.id).join("|"), reviewMode, progressTick]);
+
+  const runtimeActivities = useMemo(() => {
+    if (!chapter) return [];
+    if (!plan) return [...chapter.activities];
+    return buildRuntimeActivities(chapter.activities, plan);
+  }, [chapter, plan]);
+
+  // Current runtime step = first entry that is not-yet-completed OR is
+  // an original activity with a correct-ack pending.
   const currentIdx = useMemo(() => {
     if (!chapter || !chProgress) return 0;
-    const idx = chapter.activities.findIndex(a => {
-      const done = chProgress.completedActivityIds.includes(a.id);
+    const originalDone = new Set(chProgress.completedActivityIds);
+    const reviewDone = !!plan?.reviewCompleted;
+    const idx = runtimeActivities.findIndex(a => {
+      if (isReviewMarker(a)) return !reviewDone;
+      const done = originalDone.has(a.id);
       const ackPending = pendingAck[a.id] === "correct";
       return !done || ackPending;
     });
-    return idx === -1 ? chapter.activities.length - 1 : idx;
-  }, [chapter, chProgress, progressTick, pendingAck]);
+    return idx === -1 ? Math.max(0, runtimeActivities.length - 1) : idx;
+  }, [chapter, chProgress, progressTick, pendingAck, runtimeActivities, plan?.reviewCompleted]);
 
   if (loading) {
     return <AppShell><div className="px-5 pt-20 text-center text-muted-foreground">جاري التحميل…</div></AppShell>;
   }
   if (!campaign || !chapter) throw notFound();
 
-  const activity = chapter.activities[currentIdx];
+  const runtimeStep = runtimeActivities[currentIdx];
+  const activityIsReview = isReviewMarker(runtimeStep);
+  const reviewMarker: MemoryReviewActivityMarker | null = activityIsReview ? (runtimeStep as MemoryReviewActivityMarker) : null;
+  const activity: CampaignActivity | null =
+    !runtimeStep || activityIsReview ? null : (runtimeStep as CampaignActivity);
+
+  // Chapter completion is decided purely on the AUTHORED activity list.
   const allDone  = chapter.activities.length > 0
     && chapter.activities.every(a => chProgress?.completedActivityIds.includes(a.id))
     && Object.values(pendingAck).every(v => v !== "correct");
@@ -232,6 +273,9 @@ function ImportedChapterPlayer() {
       audioManager.playSfx("chapter-complete", { dedupeKey: `ch:${chapter!.id}` });
       // Qualifying streak activity: completing a campaign chapter.
       void recordStreakActivity("campaign_chapter", chapter!.id);
+      // Memory Engine — chapter is over, drop the runtime plan so a
+      // re-entry (or the next chapter) starts from a clean slate.
+      if (plan) clearPlan(plan.planKey);
       const chDelta = claimChapterReward(campaign!, chapter!);
       if (chDelta.granted) {
         if (chDelta.xp > 0)    addPoints(chDelta.xp);
@@ -343,6 +387,43 @@ function ImportedChapterPlayer() {
     bump();
   };
 
+  // ---- Memory Engine — review-done handler ----
+  // Runs when the player finishes (or skips) the injected review card.
+  // Never touches campaign progress, hearts, dinars, or unlocks.
+  const onReviewDone = (outcome: { correct: boolean | null; skipped: boolean }) => {
+    if (!reviewMarker || !plan) return;
+    const now = Date.now();
+    const live = findItem(reviewMarker.reviewItemId);
+    // Skip: no history mutation, no XP, but still cap the daily slot so a
+    // player can't cycle through chapters to force new reviews.
+    if (outcome.skipped || outcome.correct == null) {
+      bumpDaily(now);
+      markReviewCompleted(reviewMarker.planKey, false);
+      bump();
+      return;
+    }
+    if (live) {
+      const prev = getEntry(live.id) ?? {
+        itemId: live.id, correctStreak: 0,
+        lastAttemptCorrect: null, lastAttemptAt: null,
+        nextDueAt: null, seen: 0,
+      };
+      const nextEntry = outcome.correct
+        ? nextAfterCorrect(prev, now)
+        : nextAfterWrong(prev, now);
+      upsertEntry(nextEntry);
+      if (outcome.correct && plan.reviewAttemptId) {
+        grantReviewXp(plan.reviewAttemptId, live.originalXp, (xp) => addPoints(xp));
+      }
+    }
+    bumpDaily(now);
+    markReviewCompleted(reviewMarker.planKey, outcome.correct === true);
+    audioManager.playSfx(outcome.correct ? "success" : "unlock-reward", {
+      dedupeKey: `review:${reviewMarker.runtimeId}`,
+    });
+    bump();
+  };
+
   return (
     <AppShell>
       <ReadingScale className="animate-reveal pb-10">
@@ -448,10 +529,25 @@ function ImportedChapterPlayer() {
                 )}
 
                 <div
-                  key={activity ? activity.id : "none"}
+                  key={runtimeStep ? (activityIsReview ? reviewMarker!.runtimeId : (activity?.id ?? "none")) : "none"}
                   className={`motion-page mt-4 rounded-3xl border border-gold/30 bg-[#0f1a36]/60 p-5 ${heartsDepleted ? "pointer-events-none opacity-60" : ""}`}
                 >
-                  {activity ? (
+                  {activityIsReview && reviewMarker ? (() => {
+                    const liveItem = findItem(reviewMarker.reviewItemId);
+                    if (!liveItem) {
+                      // Item vanished between plan creation and render — resolve
+                      // the plan so the runtime list rebuilds without it.
+                      onReviewDone({ correct: null, skipped: true });
+                      return null;
+                    }
+                    return (
+                      <ReviewActivity
+                        key={reviewMarker.runtimeId}
+                        item={liveItem}
+                        onDone={onReviewDone}
+                      />
+                    );
+                  })() : activity ? (
                     <ActivityRenderer
                       key={`${activity.id}:${wrongAttempts}`}
                       activity={activity}
@@ -463,7 +559,7 @@ function ImportedChapterPlayer() {
                 </div>
 
                 {/* PR2: wrong-answer banner — no Next button, must retry. */}
-                {currentAck !== "correct" && wrongAttempts === 1 && !heartsDepleted && (
+                {!activityIsReview && currentAck !== "correct" && wrongAttempts === 1 && !heartsDepleted && (
                   <div className="motion-toast mt-3 flex items-center gap-2 rounded-xl border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-[12px] text-rose-100">
                     <XIcon className="size-3.5" />
                     <span className="flex-1">إجابة غير صحيحة. خسرتَ قلبًا — حاول مرة أخرى.</span>
@@ -471,7 +567,7 @@ function ImportedChapterPlayer() {
                 )}
 
                 {/* Advance only after a correct answer. */}
-                {currentAck === "correct" && (
+                {!activityIsReview && currentAck === "correct" && (
                   <button
                     onClick={acknowledgeAndAdvance}
                     className="motion-tap motion-reveal is-in mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground shadow-gold"
@@ -482,7 +578,7 @@ function ImportedChapterPlayer() {
                 )}
 
                 <p className="mt-3 text-center text-[11px] text-muted-foreground">
-                  النشاط {(currentIdx + 1).toLocaleString("en-US")} من {chapter.activities.length.toLocaleString("en-US")}
+                  النشاط {((chProgress?.completedActivityIds.length ?? 0) + 1).toLocaleString("en-US")} من {chapter.activities.length.toLocaleString("en-US")}
                 </p>
               </div>
             )}
