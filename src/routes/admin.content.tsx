@@ -605,6 +605,40 @@ function DailyFactsTab() {
           someSelected={selectedVisible.length > 0}
           onToggle={() => setAll(visibleIds, !allSelected)}
         />
+        <div className="relative">
+          <button
+            onClick={() => setExportMenuOpen((v) => !v)}
+            className="inline-flex items-center gap-2 rounded-md border border-input px-3 py-2 text-sm hover:bg-muted"
+            title="تصدير JSON"
+          >
+            <Download className="h-4 w-4" /> تصدير JSON
+          </button>
+          {exportMenuOpen && (
+            <div className="absolute right-0 z-10 mt-1 w-64 rounded-md border border-border bg-popover p-1 shadow-md">
+              {selected.size > 0 && (
+                <button onClick={exportSelected} className="block w-full rounded px-3 py-2 text-right text-sm hover:bg-muted">
+                  تصدير المحدد ({selected.size})
+                </button>
+              )}
+              <button onClick={exportAll} className="block w-full rounded px-3 py-2 text-right text-sm hover:bg-muted">
+                تصدير جميع المعلومات اليومية ({rows.length})
+              </button>
+            </div>
+          )}
+        </div>
+        <button onClick={downloadTemplate} className="inline-flex items-center gap-2 rounded-md border border-input px-3 py-2 text-sm hover:bg-muted" title="Golden Template مبنيّ من عنصر حقيقي">
+          <FileJson className="h-4 w-4" /> تحميل النموذج الذهبي
+        </button>
+        <button onClick={() => fileInputRef.current?.click()} className="inline-flex items-center gap-2 rounded-md border border-input px-3 py-2 text-sm hover:bg-muted">
+          <Upload className="h-4 w-4" /> استيراد JSON
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="application/json,.json"
+          className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) void onImportFile(f); }}
+        />
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
