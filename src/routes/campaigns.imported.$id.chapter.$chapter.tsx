@@ -526,10 +526,25 @@ function ImportedChapterPlayer() {
                 )}
 
                 <div
-                  key={activity ? activity.id : "none"}
+                  key={runtimeStep ? (activityIsReview ? reviewMarker!.runtimeId : (activity?.id ?? "none")) : "none"}
                   className={`motion-page mt-4 rounded-3xl border border-gold/30 bg-[#0f1a36]/60 p-5 ${heartsDepleted ? "pointer-events-none opacity-60" : ""}`}
                 >
-                  {activity ? (
+                  {activityIsReview && reviewMarker ? (() => {
+                    const liveItem = findItem(reviewMarker.reviewItemId);
+                    if (!liveItem) {
+                      // Item vanished between plan creation and render — resolve
+                      // the plan so the runtime list rebuilds without it.
+                      onReviewDone({ correct: null, skipped: true });
+                      return null;
+                    }
+                    return (
+                      <ReviewActivity
+                        key={reviewMarker.runtimeId}
+                        item={liveItem}
+                        onDone={onReviewDone}
+                      />
+                    );
+                  })() : activity ? (
                     <ActivityRenderer
                       key={`${activity.id}:${wrongAttempts}`}
                       activity={activity}
@@ -541,7 +556,7 @@ function ImportedChapterPlayer() {
                 </div>
 
                 {/* PR2: wrong-answer banner — no Next button, must retry. */}
-                {currentAck !== "correct" && wrongAttempts === 1 && !heartsDepleted && (
+                {!activityIsReview && currentAck !== "correct" && wrongAttempts === 1 && !heartsDepleted && (
                   <div className="motion-toast mt-3 flex items-center gap-2 rounded-xl border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-[12px] text-rose-100">
                     <XIcon className="size-3.5" />
                     <span className="flex-1">إجابة غير صحيحة. خسرتَ قلبًا — حاول مرة أخرى.</span>
@@ -549,7 +564,7 @@ function ImportedChapterPlayer() {
                 )}
 
                 {/* Advance only after a correct answer. */}
-                {currentAck === "correct" && (
+                {!activityIsReview && currentAck === "correct" && (
                   <button
                     onClick={acknowledgeAndAdvance}
                     className="motion-tap motion-reveal is-in mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground shadow-gold"
@@ -560,7 +575,7 @@ function ImportedChapterPlayer() {
                 )}
 
                 <p className="mt-3 text-center text-[11px] text-muted-foreground">
-                  النشاط {(currentIdx + 1).toLocaleString("en-US")} من {chapter.activities.length.toLocaleString("en-US")}
+                  النشاط {((chProgress?.completedActivityIds.length ?? 0) + 1).toLocaleString("en-US")} من {chapter.activities.length.toLocaleString("en-US")}
                 </p>
               </div>
             )}
