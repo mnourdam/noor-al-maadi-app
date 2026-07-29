@@ -165,6 +165,20 @@ export function resolveReviewFromPlan(plan: RuntimeChapterPlan): ReviewItem | nu
   if (!plan.reviewItemId) return null;
   const live = findItem(plan.reviewItemId);
   if (!live || live.revision !== plan.reviewItemRevision) {
+    // Telemetry: don't let content deletion / revision drift disappear
+    // silently — we want to know if reviews are being dropped in the wild.
+    try {
+      const reason = !live ? "content_missing" : "revision_changed";
+      logReviewDrop({
+        reason,
+        planKey: plan.planKey,
+        reviewItemId: plan.reviewItemId,
+        reviewItemRevision: plan.reviewItemRevision,
+        campaignId: plan.campaignId,
+        chapterId: plan.chapterId,
+        at: new Date().toISOString(),
+      });
+    } catch { /* telemetry must never break gameplay */ }
     if (plan.reviewItemId || plan.reviewItemRevision) {
       const patched: RuntimeChapterPlan = {
         ...plan,
@@ -179,6 +193,46 @@ export function resolveReviewFromPlan(plan: RuntimeChapterPlan): ReviewItem | nu
     return null;
   }
   return live;
+}
+
+// ---- Telemetry for silent-drop protection (point #2) ----
+const TELEMETRY_KEY = "irth.memory.telemetry.drops.v1";
+const TELEMETRY_MAX = 50;
+export type MemoryReviewDropReason = "content_missing" | "revision_changed";
+export interface MemoryReviewDropEntry {
+  reason: MemoryReviewDropReason;
+  planKey: string;
+  reviewItemId: string | null;
+  reviewItemRevision: string | null;
+  campaignId: string;
+  chapterId: string;
+  at: string;
+}
+function logReviewDrop(entry: MemoryReviewDropEntry): void {
+  if (typeof window === "undefined") return;
+  try {
+    const raw = window.localStorage.getItem(TELEMETRY_KEY);
+    const arr: MemoryReviewDropEntry[] = raw ? JSON.parse(raw) : [];
+    arr.push(entry);
+    while (arr.length > TELEMETRY_MAX) arr.shift();
+    window.localStorage.setItem(TELEMETRY_KEY, JSON.stringify(arr));
+  } catch { /* ignore */ }
+  try {
+    // Also surface in console so QA / support can spot missing content fast.
+    // eslint-disable-next-line no-console
+    console.warn("[memory] review dropped", entry);
+  } catch { /* ignore */ }
+}
+export function readReviewDropLog(): MemoryReviewDropEntry[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(TELEMETRY_KEY);
+    return raw ? (JSON.parse(raw) as MemoryReviewDropEntry[]) : [];
+  } catch { return []; }
+}
+export function clearReviewDropLog(): void {
+  if (typeof window === "undefined") return;
+  try { window.localStorage.removeItem(TELEMETRY_KEY); } catch { /* ignore */ }
 }
 
 export function markReviewCompleted(planKey: string, correct: boolean): RuntimeChapterPlan | null {
