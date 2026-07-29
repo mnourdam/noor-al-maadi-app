@@ -1,5 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
+import { localDateKey } from "@/lib/daily-quest";
+import { epochDayFromDateKey, selectDailyRotation } from "./dailyRotation";
 import type { GameMode, GameStatus } from "./types";
+
 
 // Daily seed based on the player's LOCAL calendar date. Rotates once per
 // local day so timezone differences never cause an intra-day reshuffle.
