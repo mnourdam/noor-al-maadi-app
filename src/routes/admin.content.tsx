@@ -794,6 +794,69 @@ function TodayEventsTab() {
     await load();
   };
 
+  // ---- Export / Import ----
+  const [importOpen, setImportOpen] = useState(false);
+  const [importPlan, setImportPlan] = useState<TihImportPlan | null>(null);
+  const [importFileName, setImportFileName] = useState<string | null>(null);
+  const [importApplying, setImportApplying] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const exportAll = () => {
+    downloadJson(`today-in-history-all-${new Date().toISOString().slice(0, 10)}.json`, buildEnvelope(rows));
+  };
+  const exportOne = (r: TodayEvent) => {
+    downloadJson(`tih-${r.month}-${r.day}-${safeSlug(r.title)}.json`, buildEnvelope([r]));
+  };
+  const downloadTemplate = () => {
+    // Prefer a real event as the Golden Template so the file matches DB reality
+    // exactly; fall back to an empty envelope only if no rows exist yet.
+    if (rows.length > 0) {
+      const sample = [...rows].sort((a, b) => (b.body?.length ?? 0) - (a.body?.length ?? 0))[0];
+      downloadJson("today-in-history-golden-template.json", buildEnvelope([sample]));
+    } else {
+      downloadJson("today-in-history-golden-template.json", buildEnvelope([]));
+    }
+  };
+
+  const onImportFile = async (file: File) => {
+    setImportFileName(file.name);
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      setImportPlan(planImport(parsed, rows));
+      setImportOpen(true);
+    } catch (e: any) {
+      setImportPlan({ toInsert: [], toUpdate: [], errors: [{ index: -1, message: `تعذر قراءة JSON: ${e?.message ?? e}` }], duplicates: [] });
+      setImportOpen(true);
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const applyImport = async () => {
+    if (!importPlan) return;
+    if (importPlan.errors.length > 0) { toast.error("يوجد أخطاء — عالجها قبل التطبيق."); return; }
+    setImportApplying(true);
+    try {
+      if (importPlan.toInsert.length > 0) {
+        const { error } = await supabase.from("today_in_history_events" as any).insert(importPlan.toInsert.map((x) => x.payload));
+        if (error) throw error;
+      }
+      for (const u of importPlan.toUpdate) {
+        const { error } = await supabase.from("today_in_history_events" as any).update(u.payload).eq("id", u.id);
+        if (error) throw error;
+      }
+      toast.success(`تم الاستيراد: ${importPlan.toInsert.length} جديد، ${importPlan.toUpdate.length} محدّث.`);
+      setImportOpen(false);
+      setImportPlan(null);
+      await load();
+    } catch (e: any) {
+      toast.error(`فشل الاستيراد: ${e?.message ?? e}`);
+    } finally {
+      setImportApplying(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <Feedback msg={msg} />
@@ -810,6 +873,22 @@ function TodayEventsTab() {
           someSelected={selectedVisible.length > 0}
           onToggle={() => setAll(visibleIds, !allSelected)}
         />
+        <button onClick={exportAll} className="inline-flex items-center gap-2 rounded-md border border-input px-3 py-2 text-sm hover:bg-muted" title="تصدير جميع الأحداث">
+          <Download className="h-4 w-4" /> تصدير الكل ({rows.length})
+        </button>
+        <button onClick={downloadTemplate} className="inline-flex items-center gap-2 rounded-md border border-input px-3 py-2 text-sm hover:bg-muted" title="Golden Template مبنيّ من حدث حقيقي">
+          <FileJson className="h-4 w-4" /> النموذج المرجعي JSON
+        </button>
+        <button onClick={() => fileInputRef.current?.click()} className="inline-flex items-center gap-2 rounded-md border border-input px-3 py-2 text-sm hover:bg-muted">
+          <Upload className="h-4 w-4" /> استيراد JSON
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="application/json,.json"
+          className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) void onImportFile(f); }}
+        />
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -820,6 +899,16 @@ function TodayEventsTab() {
           <RefreshCw className="h-4 w-4" /> تحديث
         </button>
       </div>
+
+      {importOpen && importPlan && (
+        <ImportPreview
+          fileName={importFileName}
+          plan={importPlan}
+          applying={importApplying}
+          onCancel={() => { setImportOpen(false); setImportPlan(null); }}
+          onApply={applyImport}
+        />
+      )}
 
       {editing && (
         <EventEditor value={editing} onChange={setEditing} onCancel={() => setEditing(null)} onSave={save} />
