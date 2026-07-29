@@ -145,29 +145,50 @@ function ImportedChapterPlayer() {
     }
   }, [campaign, chapter, navigate, reviewMode]);
 
-  // Current activity = first activity that is either un-completed,
-  // OR completed-and-not-yet-acknowledged (correct feedback pending).
+  // Memory Engine — build the frozen RuntimeChapterPlan and interleave
+  // (at most) one review question. Original campaign data is never
+  // mutated: `chapter.activities` stays the source of truth for
+  // completion/allDone.
+  const plan = useMemo(() => {
+    if (!chapter || reviewMode) return null;
+    return ensurePlan(campaign?.id ?? "", chapter.id, chapter.activities.map(a => a.id));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [campaign?.id, chapter?.id, chapter?.activities.map(a => a.id).join("|"), reviewMode, progressTick]);
+
+  const runtimeActivities = useMemo(() => {
+    if (!chapter) return [];
+    if (!plan) return [...chapter.activities];
+    return buildRuntimeActivities(chapter.activities, plan);
+  }, [chapter, plan]);
+
+  // Current runtime step = first entry that is not-yet-completed OR is
+  // an original activity with a correct-ack pending.
   const currentIdx = useMemo(() => {
     if (!chapter || !chProgress) return 0;
-    const idx = chapter.activities.findIndex(a => {
-      const done = chProgress.completedActivityIds.includes(a.id);
+    const originalDone = new Set(chProgress.completedActivityIds);
+    const reviewDone = !!plan?.reviewCompleted;
+    const idx = runtimeActivities.findIndex(a => {
+      if (isReviewMarker(a)) return !reviewDone;
+      const done = originalDone.has(a.id);
       const ackPending = pendingAck[a.id] === "correct";
       return !done || ackPending;
     });
-    return idx === -1 ? chapter.activities.length - 1 : idx;
-  }, [chapter, chProgress, progressTick, pendingAck]);
+    return idx === -1 ? Math.max(0, runtimeActivities.length - 1) : idx;
+  }, [chapter, chProgress, progressTick, pendingAck, runtimeActivities, plan?.reviewCompleted]);
 
   if (loading) {
     return <AppShell><div className="px-5 pt-20 text-center text-muted-foreground">جاري التحميل…</div></AppShell>;
   }
   if (!campaign || !chapter) throw notFound();
 
-  const activity = chapter.activities[currentIdx];
+  const activity = runtimeActivities[currentIdx];
+  const activityIsReview = isReviewMarker(activity);
+  // Chapter completion is decided purely on the AUTHORED activity list.
   const allDone  = chapter.activities.length > 0
     && chapter.activities.every(a => chProgress?.completedActivityIds.includes(a.id))
     && Object.values(pendingAck).every(v => v !== "correct");
 
-  const currentAck = activity ? pendingAck[activity.id] : undefined;
+  const currentAck = activity && !activityIsReview ? pendingAck[activity.id] : undefined;
   const wrongAttempts = activity ? (wrongFlash[activity.id] ?? 0) : 0;
 
   const onResolve = async (correct: boolean, meta?: { viaReveal?: boolean }) => {
