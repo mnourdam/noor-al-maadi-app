@@ -342,6 +342,12 @@ function TrueFalseRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
 }
 
 // ---------- Arrange Events ----------
+// Optional paid hint (ARRANGE_HINT_COST dinars, once per question):
+// pins exactly ONE item in its correct slot, turns it green and makes it
+// undraggable. It does not change validation, scoring, rewards or
+// progress — the player still has to order everything else.
+const ARRANGE_HINT_COST = 20;
+
 function ArrangeEventsRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
   const correctOrder = activity.correctOrder ?? activity.options ?? [];
   // Stable item ids so dnd-kit can track items even when labels repeat.
@@ -352,6 +358,10 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone }: RendererPro
   const [order, setOrder] = useState<string[]>(() => shuffle(items.map((it) => it.id)));
   const [resolved, setResolved] = useState(alreadyDone ?? false);
   const [feedback, setFeedback] = useState<"ok" | "err" | null>(alreadyDone ? "ok" : null);
+  const [pinnedId, setPinnedId] = useState<string | null>(null);
+  const [hintUsed, setHintUsed] = useState(false);
+  const [hintError, setHintError] = useState<string | null>(null);
+  const { profile, spendDinars } = useProfile();
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -362,12 +372,24 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone }: RendererPro
   if (!correctOrder.length) return <FallbackRenderer activity={activity} onResolve={onResolve} alreadyDone={alreadyDone} />;
 
   const labelById = (id: string) => items.find((it) => it.id === id)?.label ?? "";
+  /** `evt-<i>` — i is the item's correct final position. */
+  const correctIndexOf = (id: string) => Number(id.replace("evt-", ""));
+
+  /** Keeps a revealed item glued to its correct slot after any move. */
+  const pin = (next: string[]): string[] => {
+    if (!pinnedId) return next;
+    const target = correctIndexOf(pinnedId);
+    const without = next.filter((id) => id !== pinnedId);
+    without.splice(Math.min(target, without.length), 0, pinnedId);
+    return without;
+  };
 
   const move = (idx: number, dir: -1 | 1) => {
     if (resolved) return;
+    if (order[idx] === pinnedId) return;
     const j = idx + dir;
     if (j < 0 || j >= order.length) return;
-    setOrder(arrayMove(order, idx, j));
+    setOrder(pin(arrayMove(order, idx, j)));
     setFeedback(null);
   };
 
@@ -375,10 +397,30 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone }: RendererPro
     if (resolved) return;
     const { active, over } = e;
     if (!over || active.id === over.id) return;
+    if (String(active.id) === pinnedId) return;
     const from = order.indexOf(String(active.id));
     const to = order.indexOf(String(over.id));
     if (from < 0 || to < 0) return;
-    setOrder(arrayMove(order, from, to));
+    setOrder(pin(arrayMove(order, from, to)));
+    setFeedback(null);
+  };
+
+  const useHint = () => {
+    if (resolved || hintUsed) return;
+    // Reveal the first item that is currently in the wrong slot.
+    const wrongId = order.find((id, i) => correctIndexOf(id) !== i);
+    if (!wrongId) { setHintUsed(true); return; }
+    if (!spendDinars(ARRANGE_HINT_COST)) {
+      setHintError(`تحتاج ${ARRANGE_HINT_COST} دينارًا لاستخدام التلميح.`);
+      return;
+    }
+    setHintError(null);
+    setHintUsed(true);
+    setPinnedId(wrongId);
+    const target = correctIndexOf(wrongId);
+    const without = order.filter((id) => id !== wrongId);
+    without.splice(Math.min(target, without.length), 0, wrongId);
+    setOrder(without);
     setFeedback(null);
   };
 
@@ -412,7 +454,8 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone }: RendererPro
                 id={id}
                 index={i}
                 label={labelById(id)}
-                disabled={resolved}
+                disabled={resolved || id === pinnedId}
+                pinned={id === pinnedId}
                 onMove={(dir) => move(i, dir)}
                 canMoveUp={i > 0}
                 canMoveDown={i < order.length - 1}
@@ -421,6 +464,28 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone }: RendererPro
           </ol>
         </SortableContext>
       </DndContext>
+
+      {!resolved && (
+        <div className="mt-3 flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={useHint}
+            disabled={hintUsed}
+            className="inline-flex items-center gap-1 rounded-lg border border-amber-300/30 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-200 disabled:opacity-40"
+          >
+            <Lightbulb className="size-3" />
+            {hintUsed ? "تم استخدام التلميح" : `إظهار تلميح — ${ARRANGE_HINT_COST} دينارًا`}
+          </button>
+          <span className="text-[10px] text-muted-foreground">
+            رصيدك: {(profile?.dinars ?? 0).toLocaleString("en-US")} دينار
+          </span>
+        </div>
+      )}
+      {hintError && <p className="mt-2 text-[11px] text-rose-300">{hintError}</p>}
+      {pinnedId && (
+        <p className="mt-2 text-[11px] text-emerald-300/80">ثُبِّت عنصر واحد في مكانه الصحيح — رتّب البقية بنفسك.</p>
+      )}
+
       <HintRow hint={activity.hint} />
       {!resolved && (
         <button onClick={submit} className="motion-tap mt-4 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold">
@@ -438,6 +503,7 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone }: RendererPro
     </div>
   );
 }
+
 
 function SortableArrangeRow({
   id, index, label, disabled, onMove, canMoveUp, canMoveDown,
