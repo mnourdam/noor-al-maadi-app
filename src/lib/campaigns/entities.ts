@@ -48,9 +48,15 @@ export interface CampaignSectionDivider {
   title: string;
   subtitle?: string;
   era?: string;
+  /**
+   * Explicit, authored ambience section key. Never inferred from era/title.
+   * `null` ⇒ the section uses the default campaign ambience.
+   */
+  sectionKey: CampaignSectionKey | null;
   /** Shared ordering axis with campaigns. */
   order: number | null;
 }
+
 
 /** Tagged campaign entity. `type` makes the discriminated union exhaustive. */
 export interface CampaignEntity {
