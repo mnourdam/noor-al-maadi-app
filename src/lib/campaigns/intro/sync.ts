@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { recordCampaignIntroWatch } from "@/lib/offline/record";
 import type { CampaignIntroRef, CampaignIntroStatus } from "./types";
 import { mergeCampaignIntroRecord } from "./state";
+import { introDebug, introError } from "./debug";
 
 /**
  * Fire-and-forget mirror of a local intro transition.
@@ -29,6 +30,7 @@ export function queueCampaignIntroSync(
   lastSceneIndex = 0,
 ): void {
   try {
+    introDebug("sync:queue", { campaignId: ref.campaignId, status });
     void recordCampaignIntroWatch({
       campaignId: ref.campaignId,
       introVersion: ref.version,
@@ -36,10 +38,12 @@ export function queueCampaignIntroSync(
       status,
       lastSceneIndex,
     });
-  } catch {
-    /* the local record remains authoritative */
+  } catch (error) {
+    // The local record remains authoritative; the outbox retries later.
+    introError("sync:queue-failed", error);
   }
 }
+
 
 export interface ServerCampaignIntroRow {
   campaign_id: string;
@@ -77,8 +81,11 @@ export async function hydrateCampaignIntrosFromServer(): Promise<number> {
       });
       if (applied) changed += 1;
     }
+    introDebug("sync:hydrated", { changed });
     return changed;
-  } catch {
+  } catch (error) {
+    introError("sync:hydrate-failed", error);
     return 0;
   }
 }
+
