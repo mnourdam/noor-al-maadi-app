@@ -21,7 +21,15 @@ export {
 } from "./state";
 export { mergeCampaignIntroRecord } from "./state";
 export { queueCampaignIntroSync, hydrateCampaignIntrosFromServer } from "./sync";
-export { areCampaignIntrosEnabled, CAMPAIGN_INTRO_FLAG_KEYS } from "./flags";
+export {
+  areCampaignIntrosEnabled,
+  isCampaignIntroEnabledFor,
+  isCampaignIntroRolledOut,
+  readCampaignIntroRollout,
+  CAMPAIGN_INTRO_FLAG_KEYS,
+} from "./flags";
+export { introDebug, introError } from "./debug";
+
 export {
   auditCampaignIntroAssets,
   readCampaignIntroFromRow,
