@@ -32,14 +32,15 @@ function setConfig(cfg: Record<string, unknown> | null) {
 describe("rollout ladder", () => {
   beforeEach(() => store.clear());
 
-  it("step 1 (build default) — the pilot campaign only", async () => {
+  it("build default — any campaign with an authored intro (no slug list)", async () => {
     const { CAMPAIGN_INTRO_PILOT_CAMPAIGNS } = await import("@/lib/campaigns/intro/flags");
     expect(areCampaignIntrosEnabled()).toBe(true);
     expect(isCampaignIntroEnabledFor(CAMPAIGN_INTRO_PILOT_CAMPAIGNS[0])).toBe(true);
-    expect(isCampaignIntroEnabledFor("some-other-campaign")).toBe(false);
-    expect(readCampaignIntroRollout()).toEqual([...CAMPAIGN_INTRO_PILOT_CAMPAIGNS]);
+    expect(isCampaignIntroEnabledFor("some-other-campaign")).toBe(true);
+    expect(readCampaignIntroRollout()).toEqual([KEYS.all]);
     expect(isCampaignIntroEnabledFor("prophetic-mission")).toBe(true);
   });
+
 
 
   it("step 1 — one pilot campaign only", () => {
