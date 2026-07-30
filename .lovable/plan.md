@@ -136,6 +136,30 @@ intro_version?: number;   // default 1
 6. لا يوجد تحديث ⇒ تُستخدم النسخة المحلية دائمًا.
 - التبديل لا يقاطع افتتاحية قيد التشغيل؛ يُطبَّق عند التشغيل التالي.
 
+**بوابة البناء (Build Gate) — فشل صريح لا تحذير**
+
+`scripts/verify-offline-snapshot.mjs` + `scripts/verify-apk-snapshot.mjs` يضيفان فحصًا إلزاميًا قبل أي إصدار APK:
+
+```text
+حملة status='published'  +  intro_story_id مضبوط
++ الافتتاحية (JSON أو أي أصل وسائط) غير موجودة في Offline Pack
+=> exit 1  ·  BUILD FAILED
+```
+
+- الفحص يشمل: وجود سجل القصة، تطابق `intro_version`، وجود كل ملف وسائط مُشار إليه، وصحة `checksum` لكل ملف.
+- التقرير يذكر بالاسم كل حملة مخالفة (id + العنوان + السبب) — لا رسالة عامة.
+- لا يوجد `--force` ولا تجاوز بيئي. الحملات `draft` أو التي بلا `intro_story_id` خارج الفحص تمامًا.
+- نفس الفحص يعمل في CI (`.github/workflows/build-android.yml`) قبل خطوة Gradle.
+
+**توافق الإصدارات (Forward-compat / Rollback)**
+
+- كل من Snapshot و`campaign_intro` يحمل `schema_version` رقميًا؛ التطبيق يعلن `SUPPORTED_INTRO_SCHEMA` و`SUPPORTED_SNAPSHOT_SCHEMA` في `src/lib/build-info.ts`.
+- قراءة أي سجل بـ`schema_version > SUPPORTED_*` ⇒ **تجاهل آمن**: يُتخطّى السجل ويُستخدم آخر إصدار مدعوم متاح محليًا؛ وإن لم يوجد ⇒ الحملة تُفتح مباشرة بلا افتتاحية. لا Crash، لا مسح، لا كتابة فوق البيانات الأحدث (نسخة APK أحدث لاحقًا تجدها سليمة).
+- المزامنة ترفض تنزيل أي إصدار أعلى من المدعوم بدل محاولة تحليله.
+- التخزين مفهرس بالإصدار (`…/v<n>/`)، فتعايش إصدارين متوازيين آمن؛ التنظيف يحذف الأقدم فقط، لا الأحدث غير المفهوم.
+
+
+
 
 ## 7) استبعاد `campaign_intro` من كل سطح Stories
 
