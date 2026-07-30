@@ -111,7 +111,7 @@ function ImportedCampaignOverview() {
   const hasStarted = completedCount > 0 || Boolean(progress && Object.keys(progress.chapters).length);
 
   return (
-    <CampaignAudioScope sectionKey={resolveCampaignSection(campaign as never)}>
+
     <CampaignIntroGate
       campaign={campaign as never}
       renderIntro={({ intro, onComplete, onSkip }) => (
