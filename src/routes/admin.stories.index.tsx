@@ -51,12 +51,22 @@ export const Route = createFileRoute("/admin/stories/")({
 
 type Toast = { kind: "ok" | "err"; msg: string };
 type FilterKey = "all" | StoryStatus | "test";
+/** Display-only classification filter (see src/lib/stories/admin-kinds.ts). */
+type KindFilter = "library" | "intro" | "all";
 
 const STATUS_LABEL: Record<StoryStatus, string> = {
   draft: "مسودة",
   published: "منشورة",
   archived: "مؤرشفة",
 };
+
+const KIND_LABEL: Record<KindFilter, string> = {
+  library: "قصص المكتبة",
+  intro: "افتتاحيات الحملات",
+  all: "الكل",
+};
+
+const UNLINKED_INTRO = "__unlinked__";
 
 const TEST_PREFIXES = ["p1e2e_", "pub_probe_", "draft_probe_", "test_", "probe_"];
 const isTestStory = (id: string) => TEST_PREFIXES.some((p) => id.toLowerCase().startsWith(p));
@@ -66,6 +76,10 @@ function AdminStoriesPage() {
   const [err, setErr] = useState<string | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
   const [filter, setFilter] = useState<FilterKey>("all");
+  const [kindFilter, setKindFilter] = useState<KindFilter>("library");
+  const [campaignFilter, setCampaignFilter] = useState<string>("all");
+  const [kinds, setKinds] = useState<Map<string, StoryKindInfo>>(new Map());
+  const [campaigns, setCampaigns] = useState<Map<string, CampaignLabel>>(new Map());
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showIds, setShowIds] = useState(false);
@@ -91,6 +105,13 @@ function AdminStoriesPage() {
         prev.forEach((id) => { if (ids.has(id)) next.add(id); });
         return next;
       });
+      // Display-only reads; failures must never block the console.
+      const [kindMap, campaignMap] = await Promise.all([
+        fetchStoryKindMap().catch(() => new Map<string, StoryKindInfo>()),
+        fetchCampaignTitleMap().catch(() => new Map<string, CampaignLabel>()),
+      ]);
+      setKinds(kindMap);
+      setCampaigns(campaignMap);
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
     }
@@ -98,10 +119,40 @@ function AdminStoriesPage() {
 
   useEffect(() => { void refresh(); }, []);
 
+  const kindOf = (id: string): StoryKindInfo =>
+    kinds.get(id) ?? { isCampaignIntro: false, campaignId: null };
+
+  /** Resolved campaign label for an intro, or null when unlinked/unknown. */
+  const campaignOf = (id: string): CampaignLabel | null => {
+    const info = kindOf(id);
+    if (!info.isCampaignIntro || !info.campaignId) return null;
+    return campaigns.get(info.campaignId) ?? null;
+  };
+
+  const introCampaignOptions = useMemo(() => {
+    const seen = new Map<string, CampaignLabel>();
+    (rows ?? []).forEach((r) => {
+      const c = campaignOf(r.id);
+      if (c) seen.set(c.id, c);
+    });
+    return [...seen.values()].sort((a, b) => a.title.localeCompare(b.title, "ar"));
+  }, [rows, kinds, campaigns]);
+
   const visible = useMemo(() => {
     const list = rows ?? [];
     const needle = q.trim().toLowerCase();
     return list
+      .filter((r) => {
+        if (kindFilter === "all") return true;
+        const intro = kindOf(r.id).isCampaignIntro;
+        return kindFilter === "intro" ? intro : !intro;
+      })
+      .filter((r) => {
+        if (kindFilter !== "intro" || campaignFilter === "all") return true;
+        const c = campaignOf(r.id);
+        if (campaignFilter === UNLINKED_INTRO) return !c;
+        return c?.id === campaignFilter;
+      })
       .filter((r) => {
         if (filter === "test") return isTestStory(r.id);
         return filter === "all" || r.status === filter;
@@ -113,6 +164,7 @@ function AdminStoriesPage() {
         r.title_ar.toLowerCase().includes(needle) ||
         (r.title_en?.toLowerCase().includes(needle) ?? false),
       );
+
   }, [rows, filter, q]);
 
   const allVisibleSelected = visible.length > 0 && visible.every((r) => selected.has(r.id));
