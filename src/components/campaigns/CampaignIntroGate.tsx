@@ -74,7 +74,7 @@ export function CampaignIntroGate({
       // eslint-disable-next-line no-console
       console.info("[campaign-intro] rejected:", report.rejectionReason, report);
       void auditCampaignIntroRuntime(campaign, { forceReplay, hasRenderer: !!renderIntro }).then(
-        (full) => {
+        (full: IntroDecisionReport) => {
           // eslint-disable-next-line no-console
           console.info("[campaign-intro] runtime audit:", full);
           publishIntroDiagnostics(full, ref);
