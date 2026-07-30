@@ -142,6 +142,70 @@ export function recordCampaignIntroScene(
 }
 
 /**
+ * Merge a SERVER record into the local store (Stage 4 restore path).
+ * Strictly strengthening: it can raise the status, advance the scene
+ * bookmark, or back-date `firstStartedAt` — never the reverse, and it
+ * never influences the (purely local) display decision beyond that.
+ * Returns `true` when the local record actually changed.
+ */
+export function mergeCampaignIntroRecord(remote: {
+  campaignId: string;
+  storyId: string;
+  version: number;
+  status: CampaignIntroStatus;
+  lastSceneIndex?: number;
+  firstStartedAt?: string;
+  resolvedAt?: string | null;
+}): boolean {
+  if (!remote?.campaignId) return false;
+  const store = readStore();
+  const key = introStateKey(remote.campaignId, remote.version);
+  const prev = store[key];
+
+  const status = prev ? strongerIntroStatus(prev.status, remote.status) : remote.status;
+  const lastSceneIndex = Math.max(
+    prev?.lastSceneIndex ?? 0,
+    Math.max(0, Math.trunc(remote.lastSceneIndex ?? 0)),
+  );
+  const firstStartedAt = (() => {
+    const candidates = [prev?.firstStartedAt, remote.firstStartedAt].filter(
+      (v): v is string => typeof v === "string" && !!v,
+    );
+    if (!candidates.length) return new Date().toISOString();
+    return candidates.sort()[0];
+  })();
+  const resolvedAt =
+    status === "started"
+      ? (prev?.resolvedAt ?? null)
+      : (prev?.resolvedAt ?? remote.resolvedAt ?? new Date().toISOString());
+
+  const next: CampaignIntroState = {
+    campaignId: remote.campaignId,
+    storyId: prev?.storyId || remote.storyId || "",
+    version: remote.version,
+    status,
+    lastSceneIndex,
+    firstStartedAt,
+    resolvedAt,
+  };
+
+  if (
+    prev &&
+    prev.status === next.status &&
+    prev.lastSceneIndex === next.lastSceneIndex &&
+    prev.firstStartedAt === next.firstStartedAt &&
+    (prev.resolvedAt ?? null) === (next.resolvedAt ?? null) &&
+    prev.storyId === next.storyId
+  ) {
+    return false;
+  }
+
+  store[key] = next;
+  writeStore(store);
+  return true;
+}
+
+/**
  * EXPLICIT replay hatch — the ONLY way an already-resolved intro can be
  * shown again. Nothing in the runtime calls this implicitly.
  */

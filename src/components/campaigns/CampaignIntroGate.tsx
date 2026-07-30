@@ -24,7 +24,8 @@ import {
   markCampaignIntroStarted,
   shouldShowCampaignIntro,
 } from "@/lib/campaigns/intro/state";
-import type { CampaignIntroRef } from "@/lib/campaigns/intro/types";
+import { queueCampaignIntroSync } from "@/lib/campaigns/intro/sync";
+import type { CampaignIntroRef, CampaignIntroState } from "@/lib/campaigns/intro/types";
 
 export interface CampaignIntroRenderArgs {
   intro: CampaignIntroRef;
@@ -56,7 +57,11 @@ export function CampaignIntroGate({
       areCampaignIntrosEnabled() &&
       (forceReplay || shouldShowCampaignIntro(ref));
     decision.current = eligible ? ref : null;
-    if (eligible && ref) markCampaignIntroStarted(ref);
+    if (eligible && ref) {
+      markCampaignIntroStarted(ref);
+      // Mirror only — fire-and-forget, never awaited.
+      queueCampaignIntroSync(ref, "started");
+    }
   }
 
   const intro = decision.current;
@@ -64,11 +69,14 @@ export function CampaignIntroGate({
   const resolving = useRef(false);
 
   const resolve = useCallback(
-    (mark: (ref: CampaignIntroRef) => void) => {
+    (mark: (ref: CampaignIntroRef) => CampaignIntroState) => {
       if (resolving.current || !intro) return;
       resolving.current = true; // synchronous double-press guard
-      mark(intro); // local write first — no await before the transition
+      const record = mark(intro); // local write first — no await before the transition
       setOpen(false);
+      // Backup mirror AFTER the local write + transition. If it fails or the
+      // device is offline the outbox retries; the intro never re-shows.
+      queueCampaignIntroSync(intro, record.status, record.lastSceneIndex);
     },
     [intro],
   );

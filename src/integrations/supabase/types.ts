@@ -2700,6 +2700,48 @@ export type Database = {
         }
         Relationships: []
       }
+      user_campaign_intros: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          first_started_at: string
+          id: string
+          intro_version: number
+          last_scene_index: number
+          resolved_at: string | null
+          status: string
+          story_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          first_started_at?: string
+          id?: string
+          intro_version?: number
+          last_scene_index?: number
+          resolved_at?: string | null
+          status?: string
+          story_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          first_started_at?: string
+          id?: string
+          intro_version?: number
+          last_scene_index?: number
+          resolved_at?: string | null
+          status?: string
+          story_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_campaign_progress: {
         Row: {
           campaign_id: string
@@ -4154,6 +4196,18 @@ export type Database = {
           source: string
         }[]
       }
+      list_my_campaign_intros: {
+        Args: never
+        Returns: {
+          campaign_id: string
+          first_started_at: string
+          intro_version: number
+          last_scene_index: number
+          resolved_at: string
+          status: string
+          story_id: string
+        }[]
+      }
       list_my_feedback_issues: {
         Args: never
         Returns: {
@@ -4341,6 +4395,16 @@ export type Database = {
           p_campaign_id: string
           p_campaign_version?: number
           p_source?: string
+        }
+        Returns: Json
+      }
+      record_campaign_intro_v1: {
+        Args: {
+          p_campaign_id: string
+          p_intro_version?: number
+          p_last_scene_index?: number
+          p_status?: string
+          p_story_id?: string
         }
         Returns: Json
       }

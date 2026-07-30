@@ -254,6 +254,11 @@ function RootComponent() {
               if (event === "SIGNED_IN") void l.hydrateLedgerFromCloud();
             }).catch(() => {});
             if (event === "SIGNED_IN") {
+              // Campaign intro history: restore-only mirror. Never gates
+              // playback — the local record stays the display authority.
+              import("../lib/campaigns/intro/sync")
+                .then((m) => m.hydrateCampaignIntrosFromServer())
+                .catch(() => {});
               import("../lib/importedCampaignProgress")
                 .then((m) => m.hydrateLegacyProgressFromCloud())
                 .catch(() => {})
@@ -263,6 +268,7 @@ function RootComponent() {
                     .catch(() => {});
                 });
             }
+
           }
         });
         unsub = () => data.subscription.unsubscribe();
