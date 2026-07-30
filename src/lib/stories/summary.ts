@@ -62,6 +62,17 @@ export interface StorySummary {
   } | null;
 }
 
+// Campaign cinematic intros are authored as stories so they can reuse the
+// story renderer, but they are NOT library content — they only ever play at
+// the start of their campaign. One tag, one exclusion point.
+export const CAMPAIGN_INTRO_TAG = "campaign-intro";
+
+function isCampaignIntroStory(tags: unknown): boolean {
+  return Array.isArray(tags) && tags.includes(CAMPAIGN_INTRO_TAG);
+}
+
+
+
 
 export async function listStoriesSummary(
   worldSlug?: string | null,
