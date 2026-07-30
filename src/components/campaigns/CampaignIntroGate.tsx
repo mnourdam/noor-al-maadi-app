@@ -55,23 +55,33 @@ export function CampaignIntroGate({
     // Cheapest check first: a campaign without an authored intro exits
     // here, before any storage read — no measurable start-up cost.
     const ref = resolveCampaignIntro(campaign);
-    const eligible =
-      !!ref &&
-      !!renderIntro &&
-      isCampaignIntroEnabledFor(ref.campaignId) &&
-      (forceReplay || shouldShowCampaignIntro(ref));
-    decision.current = eligible ? ref : null;
-    introDebug(eligible ? "gate:open" : "gate:pass-through", {
-      campaignId: ref?.campaignId ?? null,
-      version: ref?.version ?? null,
+    const report = diagnoseCampaignIntro(campaign, {
       forceReplay,
+      hasRenderer: !!renderIntro,
     });
+    const eligible = report.decision === "show" && !!ref && !!renderIntro;
+    decision.current = eligible ? ref : null;
+    introDebug(eligible ? "gate:open" : "gate:pass-through", report as never);
+    publishIntroDiagnostics(report, ref);
+    if (!eligible && import.meta.env?.DEV) {
+      // Never fail silently while authoring content.
+      // eslint-disable-next-line no-console
+      console.info("[campaign-intro] rejected:", report.rejectionReason, report);
+      void auditCampaignIntroRuntime(campaign, { forceReplay, hasRenderer: !!renderIntro }).then(
+        (full) => {
+          // eslint-disable-next-line no-console
+          console.info("[campaign-intro] runtime audit:", full);
+          publishIntroDiagnostics(full, ref);
+        },
+      );
+    }
     if (eligible && ref) {
       markCampaignIntroStarted(ref);
       // Mirror only — fire-and-forget, never awaited.
       queueCampaignIntroSync(ref, "started");
     }
   }
+
 
 
   const intro = decision.current;
