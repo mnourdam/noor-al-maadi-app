@@ -29,6 +29,7 @@ import {
   markCampaignIntroCompleted,
   markCampaignIntroSkipped,
   markCampaignIntroStarted,
+  resetCampaignIntro,
   shouldShowCampaignIntro,
 } from "@/lib/campaigns/intro/state";
 import { queueCampaignIntroSync } from "@/lib/campaigns/intro/sync";
