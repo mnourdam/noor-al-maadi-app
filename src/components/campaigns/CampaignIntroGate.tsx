@@ -16,7 +16,8 @@
 // ============================================================
 
 import { useCallback, useRef, useState, type ReactNode } from "react";
-import { areCampaignIntrosEnabled } from "@/lib/campaigns/intro/flags";
+import { isCampaignIntroEnabledFor } from "@/lib/campaigns/intro/flags";
+import { introDebug } from "@/lib/campaigns/intro/debug";
 import { resolveCampaignIntro, type IntroCarrier } from "@/lib/campaigns/intro/resolve";
 import {
   markCampaignIntroCompleted,
@@ -26,6 +27,7 @@ import {
 } from "@/lib/campaigns/intro/state";
 import { queueCampaignIntroSync } from "@/lib/campaigns/intro/sync";
 import type { CampaignIntroRef, CampaignIntroState } from "@/lib/campaigns/intro/types";
+
 
 export interface CampaignIntroRenderArgs {
   intro: CampaignIntroRef;
