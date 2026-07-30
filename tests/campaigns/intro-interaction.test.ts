@@ -241,7 +241,7 @@ describe("fade transitions", () => {
     const during = h.machine.getRemainingMs();
     h.advance(FADE_OUT_MS);
     expect(h.machine.getRemainingMs()).toBe(during);
-    h.settle();
+    h.advance(FADE_IN_MS);
     expect(h.machine.getRemainingMs()).toBe(DWELL);
   });
 
