@@ -170,6 +170,11 @@ const tracks: Record<AmbienceLayer, AmbienceTrack> = {
 };
 
 let activeLayer: AmbienceLayer = "global";
+/**
+ * Active campaign section theme (see `audio/campaignThemes.ts`).
+ * `null` = the default campaign ambience, i.e. today's behaviour exactly.
+ */
+let campaignTheme: CampaignThemeId | null = null;
 let fadeTimer: number | null = null;
 const FADE_MS = 1500;
 const FADE_STEP_MS = 50;
