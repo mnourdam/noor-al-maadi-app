@@ -118,6 +118,7 @@ export function CampaignIntroGate({
 
   if (intro && open && renderIntro) {
     return <>{renderIntro({ intro, onComplete, onSkip })}</>;
+
   }
   return <>{children}</>;
 }
