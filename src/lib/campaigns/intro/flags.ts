@@ -1,19 +1,16 @@
 // ============================================================
-// Campaign Intros — kill switch + staged rollout (Stage 6)
+// Campaign Intros — kill switch + (optional) pilot restriction
 // ------------------------------------------------------------
-// Fail-safe: the feature is OFF unless something explicitly turns it
-// on, and even when ON it only applies to the campaigns named in the
-// rollout allowlist.
+// Default production behaviour: an authored `intro_story_id` IS the
+// rollout. No slug list to maintain — import the story, it plays.
 //
 //   server `enabled === false` → OFF, always (no local escape hatch)
-//   server `enabled === true`  → ON for the allowlisted campaigns only
-//   unknown/offline            → last known value, else build flag, else OFF
+//   server `campaign_intros.campaigns` → explicit allowlist ("*" = all)
+//   nothing configured        → every campaign with an authored intro
 //
-// Rollout ladder (no code change between steps — config only):
-//   1. []                        → nobody (default)
-//   2. ["campaign-a"]            → one campaign (pilot)
-//   3. ["campaign-a","camp-b"]   → two campaigns
-//   4. ["*"]                     → every campaign
+// The pilot list below is a development-only narrowing, opted into with
+// `VITE_CAMPAIGN_INTROS=pilot` (or the `irth.debug.campaignIntros` dev
+// override). It is NOT consulted in a normal build.
 //
 // The whole decision is synchronous, local and allocation-light: a
 // campaign with no intro never reaches this module (the gate resolves
@@ -28,17 +25,15 @@ const ROLLOUT_KEY = "campaign_intros.campaigns";
 const ALL = "*";
 
 /**
- * Step 1 of the rollout ladder, shipped as the build default: the intro
- * engine runs only for the approved pilot campaigns. Both ids and slugs
- * are listed because player surfaces may resolve either one.
- * A server-side config (`campaign_intros.*`) always overrides this, and a
- * server-side `enabled === false` still switches the engine off entirely.
+ * Development-only narrowing. Active only when the build flag is set to
+ * `pilot`; otherwise every campaign with an authored intro is rolled out.
  */
 export const CAMPAIGN_INTRO_PILOT_CAMPAIGNS = [
   "conquest-of-makkah-campaign",
   "conquest-of-makkah",
   "prophetic-mission",
 ] as const;
+
 
 
 function readConfigCache(): Record<string, unknown> | null {
