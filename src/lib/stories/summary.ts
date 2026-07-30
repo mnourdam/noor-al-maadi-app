@@ -155,6 +155,7 @@ export async function listStoriesSummary(
     const guestState = uid ? null : guestUnlockState();
     const all = localStoriesAll()
       .filter((s: any) => !worldSlug || s.world_slug === worldSlug)
+      .filter((s: any) => !isCampaignIntroStory(s.tags))
       .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0));
     return all.map((s: any) => {
       const alwaysOn = isAlwaysUnlockSpec(s.unlock_spec);
