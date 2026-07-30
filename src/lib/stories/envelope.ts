@@ -145,7 +145,7 @@ function normalizeStoryItem(s: Json): StoryExportItemV2 {
     collection_order: numOrNull(s.collection_order),
     time_precision: str(s.time_precision) ?? "unknown",
     length_class: str(s.length_class) ?? "standard",
-    tags: arr(s.tags).filter((t): t is string => typeof t === "string"),
+    tags,
     snapshot_tier: str(s.snapshot_tier) ?? "standard",
     scenes: arr(s.scenes).map((sc) => {
       const x = obj(sc);
