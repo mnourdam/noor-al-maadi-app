@@ -494,7 +494,7 @@ function ImportedCampaignOverview() {
 
       </div>
     </AppShell>
-    </CampaignAudioScope>
+    </CampaignIntroGate>
   );
 
 }
