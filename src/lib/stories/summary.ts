@@ -62,6 +62,17 @@ export interface StorySummary {
   } | null;
 }
 
+// Campaign cinematic intros are authored as stories so they can reuse the
+// story renderer, but they are NOT library content — they only ever play at
+// the start of their campaign. One tag, one exclusion point.
+export const CAMPAIGN_INTRO_TAG = "campaign-intro";
+
+function isCampaignIntroStory(tags: unknown): boolean {
+  return Array.isArray(tags) && tags.includes(CAMPAIGN_INTRO_TAG);
+}
+
+
+
 
 export async function listStoriesSummary(
   worldSlug?: string | null,
@@ -92,14 +103,16 @@ export async function listStoriesSummary(
     }
     // Normalise the editorial taxonomy so filters never see undefined/null
     // shapes coming from either the authoritative or the guest RPC.
-    const rows = ((data ?? []) as StorySummary[]).map((r) => ({
-      ...r,
-      category: r.category ?? null,
-      rarity: r.rarity ?? null,
-      length_class: r.length_class ?? null,
-      historical_confidence: r.historical_confidence ?? null,
-      tags: Array.isArray(r.tags) ? r.tags.filter((t) => typeof t === "string") : [],
-    }));
+    const rows = ((data ?? []) as StorySummary[])
+      .filter((r) => !isCampaignIntroStory(r.tags))
+      .map((r) => ({
+        ...r,
+        category: r.category ?? null,
+        rarity: r.rarity ?? null,
+        length_class: r.length_class ?? null,
+        historical_confidence: r.historical_confidence ?? null,
+        tags: Array.isArray(r.tags) ? r.tags.filter((t) => typeof t === "string") : [],
+      }));
 
     if (!worldSlug) {
       void (async () => {
@@ -142,6 +155,7 @@ export async function listStoriesSummary(
     const guestState = uid ? null : guestUnlockState();
     const all = localStoriesAll()
       .filter((s: any) => !worldSlug || s.world_slug === worldSlug)
+      .filter((s: any) => !isCampaignIntroStory(s.tags))
       .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0));
     return all.map((s: any) => {
       const alwaysOn = isAlwaysUnlockSpec(s.unlock_spec);
