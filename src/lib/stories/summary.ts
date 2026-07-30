@@ -103,14 +103,16 @@ export async function listStoriesSummary(
     }
     // Normalise the editorial taxonomy so filters never see undefined/null
     // shapes coming from either the authoritative or the guest RPC.
-    const rows = ((data ?? []) as StorySummary[]).map((r) => ({
-      ...r,
-      category: r.category ?? null,
-      rarity: r.rarity ?? null,
-      length_class: r.length_class ?? null,
-      historical_confidence: r.historical_confidence ?? null,
-      tags: Array.isArray(r.tags) ? r.tags.filter((t) => typeof t === "string") : [],
-    }));
+    const rows = ((data ?? []) as StorySummary[])
+      .filter((r) => !isCampaignIntroStory(r.tags))
+      .map((r) => ({
+        ...r,
+        category: r.category ?? null,
+        rarity: r.rarity ?? null,
+        length_class: r.length_class ?? null,
+        historical_confidence: r.historical_confidence ?? null,
+        tags: Array.isArray(r.tags) ? r.tags.filter((t) => typeof t === "string") : [],
+      }));
 
     if (!worldSlug) {
       void (async () => {
