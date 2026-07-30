@@ -169,6 +169,8 @@ export interface StoryImportPreviewReportV2 {
   totals: Record<PreviewItemKind, number>;
   items: StoryImportPreviewItemV2[];
   options: { allow_deletes: boolean };
+  /** Server-side campaign-link validation for campaign_intro stories. */
+  intro_link_issues?: PreviewIssue[];
 }
 
 export interface StoryImportApplyOptionsV2 {
@@ -180,6 +182,8 @@ export interface StoryImportApplyOptionsV2 {
    * whatever the database already holds.
    */
   clear_media?: boolean;
+  /** Explicitly replace a campaign's currently authored intro link. */
+  allow_intro_replace?: boolean;
 }
 
 export interface StoryImportApplyItemV2 {
@@ -195,6 +199,7 @@ export type StoryImportApplyResultV2 =
       envelope_version: 2;
       totals: { created: number; updated: number; unchanged: number };
       items: StoryImportApplyItemV2[];
+       campaign_intros_linked?: boolean;
     }
   | {
       ok: false;

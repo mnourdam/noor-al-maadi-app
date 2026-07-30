@@ -5,6 +5,8 @@
 //   * a legacy v1 export file (the shape admin_export_stories emits)
 //     normalizes into a valid v2 envelope,
 //   * metadata.kind / campaign_id / scenes / media / cover survive,
+//   * metadata.campaign_id — the portable linking contract consumed by
+//     the transactional importer — survives unchanged,
 //   * intro-specific guards (campaign existence, duplicate published
 //     intro) behave, and
 //   * re-normalizing an already-v2 envelope is a no-op (round-trip).
@@ -90,6 +92,12 @@ describe("campaign intro v1 → v2 envelope", () => {
     const once = normalizeStoryEnvelope(V1_EXPORT);
     const twice = normalizeStoryEnvelope(once);
     expect(twice).toBe(once);
+  });
+
+  it("keeps the official portable campaign link in metadata", () => {
+    const env = normalizeStoryEnvelope(V1_EXPORT);
+    const serialized = JSON.parse(JSON.stringify(env)) as typeof env;
+    expect(campaignIdOfItem(serialized.stories[0])).toBe("conquest-of-makkah-campaign");
   });
 });
 
