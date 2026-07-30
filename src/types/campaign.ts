@@ -131,6 +131,13 @@ export interface Campaign {
   worldSlug?: string;
   /** Optional canonical era key. */
   era?: string;
+  /**
+   * Explicit ambience section override (one of CAMPAIGN_SECTION_KEYS).
+   * Optional and backward-compatible: when absent the campaign inherits the
+   * section key authored on its divider. Never inferred from worldSlug/era.
+   */
+  section_key?: string | null;
+
   createdAt?: string;
   updatedAt?: string;
 }
