@@ -110,3 +110,31 @@ export function groupFeedIntoSections(feed: FeedItem[]): EraSection[] {
 
 // Re-exported for callers that need the raw-row predicate under the old name.
 export { isDividerRow as isDividerStorageRow, toDivider as normalizeDivider };
+
+// ------------------------------------------------------------
+// Section keys (ambience) — derived ONLY from authored values
+// ------------------------------------------------------------
+import { resolveCampaignSection, type CampaignSectionKey } from "./campaigns/sections";
+
+/**
+ * Map every campaign id in an ordered feed to its authored section key.
+ * The owning divider is simply the last divider seen before the campaign.
+ * Campaign-level `section_key` always wins. No inference, ever.
+ */
+export function sectionKeysFromFeed(feed: FeedItem[]): Map<string, CampaignSectionKey | null> {
+  const map = new Map<string, CampaignSectionKey | null>();
+  let divider: CampaignSectionDivider | null = null;
+  for (const it of feed) {
+    if (it.type === "divider") { divider = it.divider; continue; }
+    map.set(it.campaign.id, resolveCampaignSection(it.campaign as never, divider));
+  }
+  return map;
+}
+
+/** Section key for one campaign given the section it renders in. */
+export function sectionKeyForCampaign(
+  campaign: Campaign,
+  divider: CampaignSectionDivider | null | undefined,
+): CampaignSectionKey | null {
+  return resolveCampaignSection(campaign as never, divider);
+}
