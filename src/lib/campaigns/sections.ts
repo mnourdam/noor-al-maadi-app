@@ -48,3 +48,42 @@ export function asCampaignSectionKey(value: unknown): CampaignSectionKey | null 
   if (typeof value !== "string") return null;
   return KEY_SET.has(value) ? (value as CampaignSectionKey) : null;
 }
+
+// ------------------------------------------------------------
+// Stage 2 — explicit section resolution
+// ------------------------------------------------------------
+// Resolution order (no inference, ever):
+//   1. campaign-level authored override (`section_key`)
+//   2. the section key authored on the divider that opens the section
+//   3. null → default campaign ambience
+// A campaign that belongs to no divider, or a divider with no authored
+// key, resolves to null. `worldSlug` / `era` / titles are NEVER consulted.
+
+/** Minimal shapes so this module stays free of campaign/divider imports. */
+export interface SectionKeyCarrier {
+  section_key?: unknown;
+  sectionKey?: unknown;
+}
+
+/** Read an authored key off a campaign or divider, strictly. */
+export function readSectionKey(
+  value: SectionKeyCarrier | null | undefined,
+): CampaignSectionKey | null {
+  if (!value) return null;
+  return (
+    asCampaignSectionKey((value as SectionKeyCarrier).section_key) ??
+    asCampaignSectionKey((value as SectionKeyCarrier).sectionKey)
+  );
+}
+
+/**
+ * The single sanctioned way to determine a campaign's section.
+ * `divider` is the section divider that opens the campaign's section
+ * (or null when the campaign sits before any divider).
+ */
+export function resolveCampaignSection(
+  campaign: SectionKeyCarrier | null | undefined,
+  divider?: SectionKeyCarrier | null,
+): CampaignSectionKey | null {
+  return readSectionKey(campaign) ?? readSectionKey(divider) ?? null;
+}
