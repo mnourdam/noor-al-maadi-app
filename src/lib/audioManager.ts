@@ -560,12 +560,35 @@ export const audioManager = {
     return activeLayer;
   },
 
+  /**
+   * Select the campaign section ambience. Additive API — `setAmbienceLayer`
+   * is unchanged and still owns which layer is audible.
+   *
+   * - Same theme (including repeated calls while navigating campaign →
+   *   intro → chapter) ⇒ exact no-op: no reload, no restart, no gap.
+   * - `null` ⇒ back to the default campaign ambience (today's behaviour).
+   * - Missing file ⇒ handled by the existing candidate walk; the layer just
+   *   stays silent and the app keeps running.
+   */
+  setCampaignTheme(theme: CampaignThemeId | null) {
+    if (typeof window === "undefined") return;
+    if (isAndroidUltraStableMode()) return;
+    if (theme === campaignTheme) return;
+    campaignTheme = theme;
+    swapCampaignSource(campaignThemeSources(theme) ?? [CAMPAIGN_AMBIENCE_SRC]);
+  },
+
+  getCampaignTheme(): CampaignThemeId | null {
+    return campaignTheme;
+  },
+
   getDebugSnapshot() {
     const campaign = tracks.campaign;
     const investigation = tracks.investigation;
     return {
       activeLayer,
-      campaignSrc: CAMPAIGN_AMBIENCE_SRC,
+      campaignTheme,
+      campaignSrc: campaign.url,
       campaignReadyState: campaign.el?.readyState ?? 0,
       campaignPaused: campaign.el?.paused ?? true,
       campaignVolume: Number((campaign.el?.volume ?? 0).toFixed(3)),
@@ -589,6 +612,10 @@ export const audioManager = {
       t.gain = layer === "global" ? 1 : 0;
     });
     activeLayer = "global";
+    campaignTheme = null;
+    tracks.campaign.url = CAMPAIGN_AMBIENCE_SRC;
+    tracks.campaign.fallbacks = [];
+    tracks.campaign.failed = false;
   },
 };
 
