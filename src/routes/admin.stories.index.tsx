@@ -406,6 +406,8 @@ function AdminStoriesPage() {
               {visible.map((r) => {
                 const isSel = selected.has(r.id);
                 const isTest = isTestStory(r.id);
+                const isIntro = kindOf(r.id).isCampaignIntro;
+                const campaign = campaignOf(r.id);
                 return (
                   <tr key={r.id} className={`border-t ${isSel ? "bg-primary/5" : ""}`}>
                     <td className="px-2 py-2 text-center">
@@ -416,7 +418,7 @@ function AdminStoriesPage() {
                       </button>
                     </td>
                     <td className="px-3 py-2">
-                      <div className="font-medium flex items-center gap-1.5">
+                      <div className="font-medium flex flex-wrap items-center gap-1.5">
                         {r.title_ar}
                         {isTest && (
                           <span className="rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] text-amber-700">
@@ -424,8 +426,31 @@ function AdminStoriesPage() {
                           </span>
                         )}
                       </div>
+                      <div className="mt-1 flex flex-wrap items-center gap-1">
+                        <span
+                          className={`max-w-full truncate rounded-full px-1.5 py-0.5 text-[10px] ${
+                            isIntro
+                              ? "bg-primary/10 text-primary"
+                              : "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {isIntro ? "افتتاحية حملة" : "قصة مكتبة"}
+                        </span>
+                        {isIntro && (
+                          campaign ? (
+                            <span className="max-w-[16rem] truncate rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                              الحملة: {campaign.title}
+                            </span>
+                          ) : (
+                            <span className="rounded-full bg-destructive/10 px-1.5 py-0.5 text-[10px] text-destructive">
+                              افتتاحية غير مرتبطة
+                            </span>
+                          )
+                        )}
+                      </div>
                       {r.title_en && <div className="text-xs text-muted-foreground">{r.title_en}</div>}
                     </td>
+
                     <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{r.slug}</td>
                     {showIds && (
                       <td className="px-3 py-2 font-mono text-[11px] text-muted-foreground">
