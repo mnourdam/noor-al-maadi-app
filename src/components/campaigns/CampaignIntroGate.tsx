@@ -25,7 +25,7 @@ import {
   shouldShowCampaignIntro,
 } from "@/lib/campaigns/intro/state";
 import { queueCampaignIntroSync } from "@/lib/campaigns/intro/sync";
-import type { CampaignIntroRef } from "@/lib/campaigns/intro/types";
+import type { CampaignIntroRef, CampaignIntroState } from "@/lib/campaigns/intro/types";
 
 export interface CampaignIntroRenderArgs {
   intro: CampaignIntroRef;
