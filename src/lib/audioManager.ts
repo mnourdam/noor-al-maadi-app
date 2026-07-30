@@ -351,6 +351,30 @@ function startCrossfade(target: AmbienceLayer) {
 }
 
 
+// ---------- Campaign section themes ----------
+/**
+ * Swap the campaign layer's source file. The old element is discarded and the
+ * layer is re-armed (`failed` reset) so a previously missing file can succeed
+ * for a different section. When the campaign layer is currently audible the
+ * new source fades in through the ONE existing crossfade timer — no overlap,
+ * no second scheduler.
+ */
+function swapCampaignSource(sources: string[]) {
+  const t = tracks.campaign;
+  const [url, ...rest] = sources;
+  if (!url) return;
+  if (t.el) { try { t.el.pause(); } catch {/*ignore*/} }
+  t.el = null;
+  t.failed = false;
+  t.lastPlayError = null;
+  t.url = url;
+  t.fallbacks = rest;
+  if (activeLayer === "campaign") {
+    t.gain = 0;
+    startCrossfade("campaign");
+  }
+}
+
 // ---------- First-interaction unlock ----------
 function bindFirstInteraction() {
   if (interactionBound || typeof window === "undefined") return;
