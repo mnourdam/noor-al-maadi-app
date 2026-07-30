@@ -38,6 +38,7 @@ describe("rollout ladder", () => {
     expect(isCampaignIntroEnabledFor(CAMPAIGN_INTRO_PILOT_CAMPAIGNS[0])).toBe(true);
     expect(isCampaignIntroEnabledFor("some-other-campaign")).toBe(false);
     expect(readCampaignIntroRollout()).toEqual([...CAMPAIGN_INTRO_PILOT_CAMPAIGNS]);
+    expect(isCampaignIntroEnabledFor("prophetic-mission")).toBe(true);
   });
 
 

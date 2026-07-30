@@ -74,6 +74,21 @@ describe("offline asset audit", () => {
     expect(r.entries[0].mediaCount).toBe(2);
   });
 
+  it("accepts a published six-scene intro without a cover when every scene medium is valid", () => {
+    const scenes = Array.from({ length: 6 }, (_, index) =>
+      scene({ id: `scene-${index}`, scene_index: index, primary_media_id: `media-${index}` }),
+    );
+    const r = full({
+      stories: [story({ cover_media_id: null, production_status: "idea" })],
+      story_scenes: scenes,
+      story_media: scenes.map((_, index) => media(`media-${index}`)),
+    });
+    expect(r.ok).toBe(true);
+    expect(r.entries[0].ready).toBe(true);
+    expect(r.entries[0].sceneCount).toBe(6);
+    expect(r.entries[0].mediaCount).toBe(6);
+  });
+
   it("campaigns without an intro never fail the gate", () => {
     const r = auditCampaignIntroAssets({ campaigns: [{ id: "c", data: {} }] });
     expect(r.ok).toBe(true);
