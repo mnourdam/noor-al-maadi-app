@@ -155,8 +155,10 @@ describe("rapid section switching", () => {
       play() { this.paused = false; return Promise.resolve(); }
       pause() { this.paused = true; }
     };
-    (globalThis as any).window.setInterval = (...a: any[]) => { intervals++; return (setInterval as any)(...a); };
-    (globalThis as any).window.clearInterval = (id: any) => { intervals--; clearInterval(id); };
+    const realSet = setInterval;
+    const realClear = clearInterval;
+    (globalThis as any).window.setInterval = (...a: any[]) => { intervals++; return (realSet as any)(...a); };
+    (globalThis as any).window.clearInterval = (id: any) => { intervals--; realClear(id); };
     (globalThis as any).window.addEventListener = () => {};
     (globalThis as any).window.removeEventListener = () => {};
     audioManager = (await import("@/lib/audioManager")).audioManager;
