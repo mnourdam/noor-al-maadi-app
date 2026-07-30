@@ -23,6 +23,7 @@
 // ============================================================
 
 import type { Campaign } from "@/types/campaign";
+import { asCampaignSectionKey, type CampaignSectionKey } from "./sections";
 
 /** Discriminator persisted inside `admin_campaigns.data`. */
 export const DIVIDER_KIND = "divider" as const;
@@ -136,6 +137,7 @@ export function toDivider(row: RawCampaignRow): CampaignSectionDivider {
     title: String(d.title ?? row?.title ?? "عصر جديد"),
     subtitle: typeof d.subtitle === "string" && d.subtitle.trim() ? d.subtitle : undefined,
     era: typeof d.era === "string" && d.era.trim() ? d.era : undefined,
+    sectionKey: asCampaignSectionKey(d.section_key) ?? asCampaignSectionKey(d.sectionKey),
     order,
   };
 }
@@ -145,6 +147,7 @@ export function dividerPayload(input: {
   title: string;
   subtitle?: string;
   era?: string;
+  sectionKey?: CampaignSectionKey | null;
   order?: number | null;
 }): Record<string, unknown> {
   return {
@@ -152,6 +155,7 @@ export function dividerPayload(input: {
     title: input.title,
     subtitle: input.subtitle?.trim() || undefined,
     era: input.era?.trim() || undefined,
+    section_key: asCampaignSectionKey(input.sectionKey) ?? undefined,
     chronological_order: typeof input.order === "number" ? input.order : 0,
     order_status: "manual",
     order_updated_at: new Date().toISOString(),
