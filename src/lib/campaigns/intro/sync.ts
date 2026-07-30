@@ -81,8 +81,11 @@ export async function hydrateCampaignIntrosFromServer(): Promise<number> {
       });
       if (applied) changed += 1;
     }
+    introDebug("sync:hydrated", { changed });
     return changed;
-  } catch {
+  } catch (error) {
+    introError("sync:hydrate-failed", error);
     return 0;
   }
 }
+
