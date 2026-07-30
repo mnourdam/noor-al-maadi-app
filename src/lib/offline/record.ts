@@ -283,3 +283,34 @@ export async function recordCampaignCompletion(p: {
   const { recordCampaignCompletion: impl } = await import("@/lib/campaigns/completions");
   await impl(p);
 }
+
+/**
+ * Campaign intro watch record (Stage 4 mirror).
+ *
+ * Backup/restore only — the "should the intro play?" decision is taken
+ * locally and synchronously before this is ever called, so this never
+ * blocks campaign start. Guest: no-op.
+ *
+ * Stable idempotency key per (user, campaign, intro_version): a re-queue
+ * overwrites rather than duplicating, and the RPC merge is monotonic
+ * (completed > skipped > started, scene index never rewinds).
+ */
+export async function recordCampaignIntroWatch(p: {
+  campaignId: string;
+  introVersion: number;
+  storyId?: string | null;
+  status: "started" | "completed" | "skipped";
+  lastSceneIndex?: number;
+}): Promise<void> {
+  const uid = await currentUserId();
+  if (!uid) return;
+  const id = `campaign_intro:${uid}:${p.campaignId}:v${p.introVersion}`;
+  await enqueueWithId(uid, id, "campaign_intro", {
+    campaignId: p.campaignId,
+    introVersion: p.introVersion,
+    storyId: p.storyId ?? null,
+    status: p.status,
+    lastSceneIndex: Math.max(0, Math.trunc(p.lastSceneIndex ?? 0)),
+  });
+  void flushOutbox(uid);
+}
