@@ -30,6 +30,13 @@ import {
   type ImportApplyOptions,
 } from "@/lib/stories/admin";
 import { adminExportStoriesV2 } from "@/lib/stories/import-v2";
+import {
+  fetchStoryKindMap,
+  fetchCampaignTitleMap,
+  type StoryKindInfo,
+  type CampaignLabel,
+} from "@/lib/stories/admin-kinds";
+
 
 import type { StoryStatus } from "@/lib/stories/types";
 import { suggestSlug, suggestStoryId } from "@/lib/stories/slug";
