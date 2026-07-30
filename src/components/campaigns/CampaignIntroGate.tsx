@@ -69,7 +69,7 @@ export function CampaignIntroGate({
   const resolving = useRef(false);
 
   const resolve = useCallback(
-    (mark: (ref: CampaignIntroRef) => void) => {
+    (mark: (ref: CampaignIntroRef) => CampaignIntroState) => {
       if (resolving.current || !intro) return;
       resolving.current = true; // synchronous double-press guard
       const record = mark(intro); // local write first — no await before the transition
