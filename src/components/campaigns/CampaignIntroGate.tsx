@@ -52,19 +52,27 @@ export function CampaignIntroGate({
   // Frozen on first render — the decision never re-evaluates for this mount.
   const decision = useRef<CampaignIntroRef | null | undefined>(undefined);
   if (decision.current === undefined) {
+    // Cheapest check first: a campaign without an authored intro exits
+    // here, before any storage read — no measurable start-up cost.
     const ref = resolveCampaignIntro(campaign);
     const eligible =
       !!ref &&
       !!renderIntro &&
-      areCampaignIntrosEnabled() &&
+      isCampaignIntroEnabledFor(ref.campaignId) &&
       (forceReplay || shouldShowCampaignIntro(ref));
     decision.current = eligible ? ref : null;
+    introDebug(eligible ? "gate:open" : "gate:pass-through", {
+      campaignId: ref?.campaignId ?? null,
+      version: ref?.version ?? null,
+      forceReplay,
+    });
     if (eligible && ref) {
       markCampaignIntroStarted(ref);
       // Mirror only — fire-and-forget, never awaited.
       queueCampaignIntroSync(ref, "started");
     }
   }
+
 
   const intro = decision.current;
   const [open, setOpen] = useState<boolean>(!!intro);
