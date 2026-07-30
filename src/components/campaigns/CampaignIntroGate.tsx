@@ -118,7 +118,26 @@ export function CampaignIntroGate({
 
   if (intro && open && renderIntro) {
     return <>{renderIntro({ intro, onComplete, onSkip })}</>;
-
   }
-  return <>{children}</>;
+
+  // Dev-only replay hatch. Never rendered in a production build.
+  const authored = resolveCampaignIntro(campaign);
+  return (
+    <>
+      {children}
+      {import.meta.env?.DEV && authored ? (
+        <button
+          type="button"
+          onClick={() => {
+            resetCampaignIntro(authored);
+            window.location.reload();
+          }}
+          className="fixed bottom-24 left-3 z-50 rounded-full border border-border bg-card/90 px-3 py-1.5 text-[11px] text-muted-foreground shadow-lg backdrop-blur"
+        >
+          إعادة ضبط الافتتاحية
+        </button>
+      ) : null}
+    </>
+  );
 }
+
