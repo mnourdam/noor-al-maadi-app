@@ -97,6 +97,8 @@ export function normalizeStoryEnvelope(raw: unknown): StoryExportEnvelopeV2 {
   };
 }
 
+const CAMPAIGN_INTRO_TAG_LOCAL = "campaign-intro";
+
 function normalizeStoryItem(s: Json): StoryExportItemV2 {
   const id = str(s.id) ?? "";
   // A campaign intro is identified by `metadata.kind`. The library exclusion
@@ -105,8 +107,8 @@ function normalizeStoryItem(s: Json): StoryExportItemV2 {
   const rawTags = arr(s.tags).filter((t): t is string => typeof t === "string");
   const isIntro = str(obj(s.metadata).kind) === CAMPAIGN_INTRO_KIND;
   const tags =
-    isIntro && !rawTags.includes(CAMPAIGN_INTRO_TAG_VALUE)
-      ? [...rawTags, CAMPAIGN_INTRO_TAG_VALUE]
+    isIntro && !rawTags.includes(CAMPAIGN_INTRO_TAG_LOCAL)
+      ? [...rawTags, CAMPAIGN_INTRO_TAG_LOCAL]
       : rawTags;
   return {
 
@@ -174,7 +176,7 @@ function numOrNull(v: unknown): number | null {
 export function isCampaignIntroItem(item: { metadata?: unknown; tags?: unknown }): boolean {
   const kind = str(obj(item.metadata).kind);
   if (kind === CAMPAIGN_INTRO_KIND) return true;
-  return arr(item.tags).includes("campaign-intro");
+  return arr(item.tags).includes(CAMPAIGN_INTRO_TAG_LOCAL);
 }
 
 export function campaignIdOfItem(item: { metadata?: unknown }): string | null {
