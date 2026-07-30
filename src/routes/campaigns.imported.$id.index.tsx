@@ -16,6 +16,11 @@ import {
 import { AppShell } from "@/components/AppShell";
 import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
 import { fetchCampaignByIdOrSlug, onCampaignPublished } from "@/lib/supabaseCampaigns";
+import { CampaignAudioScope } from "@/components/campaigns/CampaignAudioScope";
+import { CampaignIntroGate } from "@/components/campaigns/CampaignIntroGate";
+import { CampaignIntroPlayer } from "@/components/campaigns/CampaignIntroPlayer";
+import { resolveCampaignSection } from "@/lib/campaigns/sections";
+
 import { CampaignArtwork, hasCampaignKeyArt, type CampaignArtworkInput } from "@/lib/campaignArtwork";
 import { KeyArtDissolve } from "@/components/KeyArtDissolve";
 
@@ -106,7 +111,15 @@ function ImportedCampaignOverview() {
   const hasStarted = completedCount > 0 || Boolean(progress && Object.keys(progress.chapters).length);
 
   return (
+    <CampaignAudioScope sectionKey={resolveCampaignSection(campaign as never)}>
+    <CampaignIntroGate
+      campaign={campaign as never}
+      renderIntro={({ intro, onComplete, onSkip }) => (
+        <CampaignIntroPlayer intro={intro} onComplete={onComplete} onSkip={onSkip} />
+      )}
+    >
     <AppShell>
+
       <div className="animate-reveal pb-10">
         {/* ================= CINEMATIC CHAPTER HEADER =================
             The Key Art is not a background for text — it is a painting
@@ -483,7 +496,10 @@ function ImportedCampaignOverview() {
 
       </div>
     </AppShell>
+    </CampaignIntroGate>
+    </CampaignAudioScope>
   );
+
 }
 
 

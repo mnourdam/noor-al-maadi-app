@@ -27,6 +27,19 @@ const ROLLOUT_KEY = "campaign_intros.campaigns";
 
 const ALL = "*";
 
+/**
+ * Step 1 of the rollout ladder, shipped as the build default: the intro
+ * engine runs for the PILOT campaign only ("فتح مكة"). Both the campaign
+ * id and its slug are listed because surfaces resolve either one.
+ * A server-side config (`campaign_intros.*`) always overrides this, and a
+ * server-side `enabled === false` still switches the engine off entirely.
+ */
+export const CAMPAIGN_INTRO_PILOT_CAMPAIGNS = [
+  "conquest-of-makkah-campaign",
+  "conquest-of-makkah",
+] as const;
+
+
 function readConfigCache(): Record<string, unknown> | null {
   try {
     if (typeof window === "undefined") return null;
@@ -95,7 +108,9 @@ export function areCampaignIntrosEnabled(): boolean {
   if (server === false) return false;
   if (server === true) return true;
   const dev = readDevOverride();
-  return readBuildFlag() || (!!dev && dev !== "0");
+  if (dev) return dev !== "0";
+  // Build default = pilot step of the ladder.
+  return readBuildFlag() || CAMPAIGN_INTRO_PILOT_CAMPAIGNS.length > 0;
 }
 
 /** The campaigns currently included in the rollout ("*" = all). */
@@ -105,8 +120,10 @@ export function readCampaignIntroRollout(): string[] {
   if (server) return []; // explicitly empty on the server → nobody
   const dev = readDevOverride();
   if (dev && dev !== "0") return dev === "1" ? [ALL] : normalizeList(dev);
-  return readBuildFlag() ? [ALL] : [];
+  if (dev === "0") return [];
+  return readBuildFlag() ? [ALL] : [...CAMPAIGN_INTRO_PILOT_CAMPAIGNS];
 }
+
 
 /** Is this specific campaign inside the rollout? */
 export function isCampaignIntroRolledOut(campaignId: string | null | undefined): boolean {
