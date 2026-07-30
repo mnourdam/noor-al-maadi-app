@@ -18,6 +18,12 @@
 import { useCallback, useRef, useState, type ReactNode } from "react";
 import { isCampaignIntroEnabledFor } from "@/lib/campaigns/intro/flags";
 import { introDebug } from "@/lib/campaigns/intro/debug";
+import {
+  diagnoseCampaignIntro,
+  auditCampaignIntroRuntime,
+  publishIntroDiagnostics,
+  type IntroDecisionReport,
+} from "@/lib/campaigns/intro/diagnose";
 import { resolveCampaignIntro, type IntroCarrier } from "@/lib/campaigns/intro/resolve";
 import {
   markCampaignIntroCompleted,
