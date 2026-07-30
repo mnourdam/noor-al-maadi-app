@@ -286,7 +286,38 @@ function AdminStoriesPage() {
         .btn-danger:hover{background:hsl(var(--destructive)/.1)}
       `}</style>
 
+      {/* Story kind filter — display only, default: library stories */}
       <div className="flex flex-wrap items-center gap-2">
+        <div className="inline-flex rounded-full border p-0.5">
+          {(["library", "intro", "all"] as const).map((k) => (
+            <button
+              key={k}
+              onClick={() => { setKindFilter(k); if (k !== "intro") setCampaignFilter("all"); }}
+              className={`rounded-full px-3 py-1 text-xs ${
+                kindFilter === k ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+              }`}
+            >
+              {KIND_LABEL[k]}
+            </button>
+          ))}
+        </div>
+        {kindFilter === "intro" && (
+          <select
+            value={campaignFilter}
+            onChange={(e) => setCampaignFilter(e.target.value)}
+            className="max-w-[60vw] truncate rounded-md border bg-background px-2 py-1 text-xs"
+          >
+            <option value="all">كل الحملات</option>
+            {introCampaignOptions.map((c) => (
+              <option key={c.id} value={c.id}>{c.title}</option>
+            ))}
+            <option value={UNLINKED_INTRO}>افتتاحيات غير مرتبطة</option>
+          </select>
+        )}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+
         {(["all", "draft", "published", "archived", "test"] as const).map((k) => (
           <button
             key={k}
