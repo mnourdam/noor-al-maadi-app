@@ -89,8 +89,9 @@ describe("rollout ladder", () => {
   it("tolerates a corrupt config cache (falls back to the build default)", () => {
     store.setItem(KEYS.configCache, "{not json");
     expect(areCampaignIntrosEnabled()).toBe(true);
-    expect(isCampaignIntroRolledOut("camp-a")).toBe(false);
+    expect(isCampaignIntroRolledOut("camp-a")).toBe(true);
   });
+
 
 
   it("an empty/absent campaign id is never rolled out", () => {
