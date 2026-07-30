@@ -192,12 +192,13 @@ describe("campaign intro — end to end", () => {
     const intro = resolveCampaignIntro(campaign);
     expect(intro?.storyId).toBe("story_intro_prophetic_mission");
     expect(gateDecision(campaign)).toBe(true);
+    if (!intro) throw new Error("prophetic-mission intro did not resolve");
 
     const visitedScenes = Array.from({ length: 6 }, (_, index) => index);
     expect(visitedScenes).toEqual([0, 1, 2, 3, 4, 5]);
-    markCampaignIntroCompleted(intro!, visitedScenes.at(-1));
+    markCampaignIntroCompleted(intro, visitedScenes.at(-1));
 
-    expect(readCampaignIntroState(intro!)?.lastSceneIndex).toBe(5);
+    expect(readCampaignIntroState(intro)?.lastSceneIndex).toBe(5);
     expect(gateDecision(campaign)).toBe(false);
   });
 });
