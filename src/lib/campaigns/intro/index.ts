@@ -22,3 +22,11 @@ export {
 export { mergeCampaignIntroRecord } from "./state";
 export { queueCampaignIntroSync, hydrateCampaignIntrosFromServer } from "./sync";
 export { areCampaignIntrosEnabled, CAMPAIGN_INTRO_FLAG_KEYS } from "./flags";
+export {
+  auditCampaignIntroAssets,
+  readCampaignIntroFromRow,
+  INTRO_ENGINE_VERSION,
+} from "./audit";
+export type { IntroAuditEntry, IntroAuditResult, IntroAuditInput } from "./audit";
+export { loadCampaignIntroBundle, isCampaignIntroPlayableOffline } from "./offline";
+export type { CampaignIntroBundle } from "./offline";
