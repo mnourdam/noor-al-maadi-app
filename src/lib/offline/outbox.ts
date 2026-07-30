@@ -28,8 +28,9 @@ export type OutboxKind =
   | "story_completion"      // complete_story_v2 RPC (sticky, version-independent reward)
   | "avatar_select"         // sync_my_public_stats RPC (durable Premium Emblem pick)
   | "reflection_save"       // user_reflections upsert (durable Reflective Moment)
-  | "reflection_delete"
-  | "campaign_intro";       // record_campaign_intro_v1 RPC (idempotent, monotonic)    // user_reflections delete (durable, tombstoned)
+  | "reflection_delete"     // user_reflections delete (durable, tombstoned)
+  | "campaign_intro";       // record_campaign_intro_v1 RPC (idempotent, monotonic)
+
 
 export interface OutboxItem {
   id: string;               // uuid, doubles as idempotency key
