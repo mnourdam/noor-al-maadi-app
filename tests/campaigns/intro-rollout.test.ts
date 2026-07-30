@@ -32,11 +32,14 @@ function setConfig(cfg: Record<string, unknown> | null) {
 describe("rollout ladder", () => {
   beforeEach(() => store.clear());
 
-  it("step 0 — OFF by default (no config, no override)", () => {
-    expect(areCampaignIntrosEnabled()).toBe(false);
-    expect(isCampaignIntroEnabledFor("camp-a")).toBe(false);
-    expect(readCampaignIntroRollout()).toEqual([]);
+  it("step 1 (build default) — the pilot campaign only", async () => {
+    const { CAMPAIGN_INTRO_PILOT_CAMPAIGNS } = await import("@/lib/campaigns/intro/flags");
+    expect(areCampaignIntrosEnabled()).toBe(true);
+    expect(isCampaignIntroEnabledFor(CAMPAIGN_INTRO_PILOT_CAMPAIGNS[0])).toBe(true);
+    expect(isCampaignIntroEnabledFor("some-other-campaign")).toBe(false);
+    expect(readCampaignIntroRollout()).toEqual([...CAMPAIGN_INTRO_PILOT_CAMPAIGNS]);
   });
+
 
   it("step 1 — one pilot campaign only", () => {
     setConfig({ [KEYS.configKey]: true, [KEYS.rolloutKey]: ["camp-a"] });
