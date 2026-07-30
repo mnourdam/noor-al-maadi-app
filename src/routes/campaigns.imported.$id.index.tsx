@@ -16,10 +16,8 @@ import {
 import { AppShell } from "@/components/AppShell";
 import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
 import { fetchCampaignByIdOrSlug, onCampaignPublished } from "@/lib/supabaseCampaigns";
-import { CampaignAudioScope } from "@/components/campaigns/CampaignAudioScope";
 import { CampaignIntroGate } from "@/components/campaigns/CampaignIntroGate";
 import { CampaignIntroPlayer } from "@/components/campaigns/CampaignIntroPlayer";
-import { resolveCampaignSection } from "@/lib/campaigns/sections";
 
 import { CampaignArtwork, hasCampaignKeyArt, type CampaignArtworkInput } from "@/lib/campaignArtwork";
 import { KeyArtDissolve } from "@/components/KeyArtDissolve";
@@ -496,7 +494,6 @@ function ImportedCampaignOverview() {
 
       </div>
     </AppShell>
-    </CampaignIntroGate>
     </CampaignAudioScope>
   );
 
