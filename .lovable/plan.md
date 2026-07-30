@@ -1,324 +1,130 @@
-# Memory Engine — محرك تثبيت المعلومات (تصميم فقط، v2)
+# افتتاحيات الحملات + خلفيات صوتية حسب القسم — تصميم معماري (بدون تنفيذ)
 
-طبقة Runtime مستقلة تعرض للاعب أحيانًا **عنصر مراجعة واحدًا** (ReviewItem) مأخوذًا من محتوى أتمّه سابقًا — تبدأ بالحملات وتنمو لاحقًا للتحقيقات والقصص والموسوعة والتحديات — دون أي تعديل على بيانات الحملات، منطق التقدم، شرط إكمال الفصل، أو Golden Template. تعطّل الطبقة بمفتاحين (Build + Runtime) وتعود التجربة 100% لما هي عليه.
+## 1) تدقيق البنية الحالية
 
-الاسم: **Memory Engine** (سابقًا Review Engine).
+**الصوت** — `src/lib/audioManager.ts` فيه بالفعل نظام طبقات:
+`AmbienceLayer = "global" | "campaign" | "investigation"` مع `startCrossfade()` (~1500ms)، تخفيف لكل طبقة (`LAYER_ATTENUATION`)، إعدادات محفوظة (`irth_audio_settings`)، احترام الكتم/الوضع الصامت (`deviceAllowsAudio`)، ووضع Android فائق الاستقرار. لكن مصدر الحملة ثابت: `CAMPAIGN_AMBIENCE_SRC = "/audio/campaign-ambient.mp3"`، و`AudioInitializer.tsx` يختار الطبقة من المسار فقط (`layerForRoute`). لا يوجد أي ربط بالقسم.
 
----
+**الحملات** — `Campaign` فيها `worldSlug?` و`era?` (اختياريان أصلًا). الدخول عبر `campaigns.imported.$id.index.tsx` ثم `...chapter.$chapter.tsx`. التقدم في `importedCampaignProgress` + `campaignLedger`.
 
-## 1) الوحدة الذرية: ReviewItem مرتبط بالمعلومة
+**القصص** — Story Engine كامل: `StoryPlayer.tsx` (مشاهد، انتقالات، Reflection، RewardMoment)، `fetchStoryAccess` / `recordStoryProgress` / `completeStory`، `list_stories_v3` (منشور فقط)، `unlock_spec` v2، استيراد/تصدير v2، أغلفة أوفلاين. جدول `stories` فيه `metadata jsonb`.
 
-```ts
-type SourceType = "campaign" | "investigation" | "story" | "museum" | "daily_challenge";
+**العزل** — `src/lib/identity/*` يوفّر `physicalKey(logicalKey, owner)` وتقسيم localStorage تلقائيًا.
 
-interface ReviewItem {
-  id: string;               // hash(sourceType + sourceId + localRef) — مستقر
-  sourceType: SourceType;
-  sourceId: string;
-  sourceLabel: string;      // "عام الحزن" — يعرض بعد الإجابة فقط
-  localRef: string;
-  kind: "mcq" | "true_false" | "ordering" | "matching" | "fill_blank";
-  prompt: string;
-  options?: string[];
-  correctAnswer: unknown;
-  originalXp: number;       // قد يكون 0 → يُطبّق fallback
-  era?: string;
-  tags?: string[];
-}
+## 2) التصميم المقترح
+
+```text
+Campaign.sectionKey ─► SECTION_AUDIO_THEMES ─► audioManager.setAmbienceLayer("campaign", themeId)
+Campaign.intro_story_id ─► stories(kind='campaign_intro') ─► StoryPlayer (introMode)
+CampaignIntroState (owner-partitioned) ─► يقرر: تشغيل تلقائي / دخول مباشر / استئناف
 ```
 
----
+طبقتان جديدتان فقط، لا نظام قصص موازٍ:
 
-## 2) البنية
+- `src/lib/audio/campaignThemes.ts` — خريطة قسم → ملف صوتي + `CampaignAudioThemeManager` رقيق فوق `audioManager`.
+- `src/lib/campaigns/intro/*` — `resolve.ts` (أي افتتاحية؟), `state.ts` (سجل المشاهدة), `flags.ts`.
 
-```
-src/lib/memory/
-  types.ts
-  flags.ts                  # buildFlag && runtimeFlag
-  providers/
-    index.ts                # registerProvider() / listItemsForOwner()
-    campaignProvider.ts
-  bank.ts                   # تجميع + كاش
-  eligibility.ts            # neverReviewed => فوري
-  scheduler.ts              # قرار موضع الحقن (deterministic)
-  selector.ts               # اختيار عنصر واحد + منع تكرار
-  spacing.ts                # SM-2 مبسّط
-  history.ts                # attempts + due (partitioned per owner)
-  rewards.ts                # XP + Idempotency
-  plan.ts                   # RuntimeChapterPlan + persistence + TTL
-  index.ts
+### الخلفية الصوتية
+الأقسام الثمانية المعتمدة تُربط بمفاتيح العوالم الحالية: prophetic, rashidun, umayyad, abbasid, andalus, crusades, mongols-mamluks (mamluk-sultanate)، ottoman. يُشتق `sectionKey` من `campaign.worldSlug` مع خريطة تطبيع، وOverride اختياري لاحق `campaign.audio_theme_id?`.
 
-src/components/memory/
-  ReviewActivity.tsx
-  ReviewActivityCard.tsx
-```
+توسعة `audioManager` (إضافية فقط): `setCampaignTheme(themeId | null)` تُبدّل مصدر مسار طبقة `campaign` **مع crossfade** بدل قطع/تشغيل ملفين. إن كان `themeId` نفسه ⇒ no-op كامل (لا إعادة تشغيل عند التنقل بين حملتين من نفس القسم). لا ملف للقسم ⇒ لا صوت حملة (تبقى الطبقة العامة كما هي اليوم). لا تُوضع روابط داخل الفصول أو الأنشطة إطلاقًا.
 
----
+### الافتتاحية
+- توسعة `stories`: `kind` ضمن `metadata` أو عمود جديد `story_kind text not null default 'standalone'`. المفضّل: عمود مع default ⇒ كل الصفوف الحالية standalone تلقائيًا.
+- `list_stories_v3` وكل قوائم/بحث اللاعب تُصفّي `story_kind = 'standalone'`. الإدارة فقط ترى `campaign_intro`.
+- `campaign_intro`: لا شروط فتح مستقلة (تُتجاهل `unlock_spec`)، لا XP/دنانير/مقتنيات، لا `user_story_completions`، لا يدخل Journey ولا Related Stories.
+- `StoryPlayer` يقبل `mode?: "standalone" | "campaign_intro"` — في وضع intro: يُخفى Reward/Journey، ويظهر «تخطي والبدء» دائمًا و«ابدأ الحملة» في المشهد الأخير، والخروج يستدعي `onIntroResolved(reason)`.
 
-## 3) RuntimeChapterPlan — الأساس الذي يمنع الكسر
+## 3) الجداول والحقول الجديدة
 
-**قاعدة صارمة: التنقّل والاستئناف لا يعتمدان على Index داخل runtimeActivities، بل على معرّفات الأنشطة الأصلية.**
+```sql
+alter table public.stories
+  add column if not exists story_kind text not null default 'standalone'
+  check (story_kind in ('standalone','campaign_intro'));
 
-```ts
-interface RuntimeChapterPlan {
-  version: 1;
-  campaignId: string;
-  chapterId: string;
-  ownerKey: string;                          // "user:<id>" | "guest:<id>"
-  originalActivityIds: string[];             // مصدر الحقيقة للتقدم والإكمال
-  insertionAfterActivityId: string | null;   // مثال: "activity-3" | null إذا لا مراجعة
-  reviewItemId: string | null;               // مُثبّت عند إنشاء الخطة
-  reviewSnapshot: ReviewItem | null;         // نسخة مجمّدة من السؤال (للعرض المستقر)
-  reviewAttemptId: string | null;            // UUID للـIdempotency
-  createdAt: string;
-  planKey: string;                           // hash(campaignId+chapterId+ownerKey)
-}
+create table public.campaign_intro_states (
+  user_id uuid not null,
+  campaign_id text not null,
+  intro_story_id uuid not null,
+  status text not null check (status in ('started','completed','skipped')),
+  last_scene_index int not null default 0,
+  first_started_at timestamptz not null default now(),
+  resolved_at timestamptz,
+  primary key (user_id, campaign_id)
+);
+-- GRANT SELECT,INSERT,UPDATE,DELETE ... TO authenticated;  GRANT ALL ... TO service_role;
+-- RLS: user_id = auth.uid() لكل السياسات (لا anon).
 ```
 
-- **يُنشأ مرة واحدة** عند دخول الفصل، ويُحفظ في `irth.memory.plan.<planKey>` (يمر عبر Identity Partition).
-- **يُعاد استخدامه** عند إعادة الفتح/التحديث/الاستئناف.
-- **لا يتغير** حتى لو تبدّل بنك المراجعات، تجاوز اللاعب منتصف الليل، أو أتمّ حملة أخرى.
-- **يُحذف** فقط عند إكمال الفصل، أو مغادرته نهائيًا، أو تغيير الهوية.
-- **الاستئناف**: يعتمد `currentActivityId` (أصلي)، ثم يُوسّع محليًا للـruntime عبر تطبيق الخطة على `chapter.activities`.
+ربط الحملة: `campaigns.intro_story_id uuid null` (أو حقل اختياري في JSON الحملة `intro_story_id?: string | null` لمسار الاستيراد). كلاهما اختياري تمامًا.
 
-`runtimeActivities` تُبنى دائمًا من:
+الضيف: نفس الشكل في localStorage تحت مفتاح `irth.campaign.intro.v1` مقسّم بالهوية.
 
-```
-originalActivityIds.map(id => chapter.activities[id])
-  .then(insertReviewAfter(insertionAfterActivityId, reviewSnapshot))
-```
+## 4) خطة التوافق الخلفي
 
-`allDone` و`completedActivityIds` يُحسبان على `originalActivityIds` **حصريًا**.
+- كل الحقول الجديدة اختيارية وذات default ⇒ لا Migration إجباري لأي JSON قديم.
+- Import/Export v2 للقصص: يُضاف `story_kind` للمخرجات؛ غيابه في الاستيراد ⇒ `standalone`.
+- Export الحملات: يُضاف `intro_story_id` فقط عند وجوده (لا مفاتيح فارغة جديدة في Golden Templates الحالية).
+- `admin_validate_*` تقبل الحقلين ولا تشترطهما.
 
----
+## 5) الأوفلاين
 
-## 4) اختيار مرة واحدة، تجميد أبدي داخل الجلسة
+- ملفات الأقسام الصوتية تُبنى ضمن `public/audio/sections/<section>.mp3` (mono 64kbps) local-first مثل مؤثرات التحقيقات؛ فشل التحميل ⇒ الطبقة تُعلَّم failed مرة واحدة وتستمر الحملة بصمت.
+- مشاهد الافتتاحية ووسائطها تدخل نفس Offline Snapshot ومسار أغلفة القصص. وسائط ناقصة أوفلاين ⇒ لا تشغيل تلقائي للافتتاحية؛ الحملة تُفتح مباشرة ويُسجَّل تشخيص، ولا يُكتب أي سجل مشاهدة.
+- كتابات `campaign_intro_states` تمر عبر Outbox الحالي (`src/lib/offline/outbox.ts`).
 
-- عند إنشاء الخطة: يستدعى `selector.pickForChapter(ownerKey, chapterCtx)` مرة **واحدة**.
-- الناتج (`reviewItemId` + `reviewSnapshot` + `reviewAttemptId`) يُخزَّن في الخطة.
-- أي إعادة Render/Reload/يوم جديد/إجابة في تبويب آخر → لا إعادة اختيار.
-- إذا أعاد Selector `null` وقت إنشاء الخطة → لا مراجعة في هذا الفصل (نهائيًا).
+## 6) عزل الهوية
 
----
+- المفتاح المحلي يمر عبر `physicalKey()` تلقائيًا ⇒ لا تسريب Guest/A/B.
+- `resetForIdentityChange()` يُضاف إليه مسح كاش الافتتاحيات في الذاكرة، وإيقاف الافتتاحية الجارية فورًا والعودة إلى صفحة الحملة دون كتابة أي سجل للهوية الجديدة.
+- كل كتابة تمر بـ `runOwned()` ⇒ استجابة متأخرة بعد تبديل الحساب تُهمَل.
 
-## 5) التأهيل (Eligibility)
+## 7) مخططات الحالات الحرجة
 
-```
-eligibleNow(item):
-  - إذا لم يُراجع قبل الآن ⇒ true (neverReviewed = eligibleImmediately)
-  - إذا nextDueAt <= now ⇒ true
-  - غير ذلك ⇒ false
-```
+| الحالة | السلوك |
+|---|---|
+| حملة بلا افتتاحية | دخول مباشر، صفر استعلامات إضافية |
+| أول دخول لحملة لها افتتاحية | تشغيل تلقائي، كتابة `started` قبل المشهد الأول |
+| «تخطي والبدء» من المشهد الأول | `skipped` فورًا، بلا نافذة تأكيد، انتقال للحملة |
+| إغلاق التطبيق في المنتصف | يبقى `started`؛ العودة تستأنف من `last_scene_index` مع بقاء التخطي |
+| مشاهدة كاملة | `completed` عند «ابدأ الحملة»، ثم الفصل الأول |
+| إعادة مشاهدة يدوية | `replay=1`: لا كتابة، لا مكافآت، لا تغيير للسجل |
+| حذف الافتتاحية بعد الربط | resolve يعيد null ⇒ حملة عادية + تشخيص |
+| وسائط غير متاحة أوفلاين | تخطٍّ صامت، لا سجل |
+| تعطيل Flag أثناء المشاهدة | الجلسة الحالية تُكمل (استقرار جلسة) ولا تشغيل جديد بعدها |
+| تسجيل خروج/تبديل حساب | إغلاق فوري + عدم كتابة عبر الهوية الجديدة |
+| Deep Link للحملة | نفس منطق أول دخول (يحترم السجل) |
+| ضغط سريع مكرر على «ابدأ» | حارس `resolvingRef` + كتابة Idempotent (upsert بمفتاح مركّب) |
 
-ترتيب الأولويات في Selector:
-1. أخطاء سابقة حان موعدها (`lastAttemptCorrect === false && due`).
-2. متأخّرة عن موعدها (`overdue`).
-3. لم تُراجع سابقًا.
-4. مستحقّات بحسب الأقدمية.
+الرجوع (Android Back) أثناء الافتتاحية = إغلاق الافتتاحية والعودة لصفحة الحملة عبر Overlay Stack الحالي — **لا يُكمل الحملة ولا يغيّر أي تقدم**.
 
-منع التكرار:
-- لا نفس `itemId` قبل `nextDueAt`.
-- لا نفس `sourceId` في آخر 3 مراجعات.
-- لا نفس `kind` مرتين متتاليتين إن أمكن.
+## 8) نقاط التكامل الحسّاسة (تأثير مقصود = صفر)
 
----
+Campaign routing (نقطة قرار واحدة قبل التنقل للفصل) · شروط فتح الحملات (بلا تغيير) · Campaign progress/الاستئناف (بلا تغيير) · Story Renderer (وضع إضافي) · Story progress (لا يُكتب لـ intro) · Import/Export v2 (حقول اختيارية) · Offline Snapshot (إضافة مجموعة) · Identity Isolation (مفاتيح مقسّمة) · Android Back (Overlay) · Audio Manager (API إضافي) · مؤثرات الأنشطة (طبقة SFX منفصلة، غير متأثرة) · Memory Engine (لا مساس بالخطط) · Deep Links (بلا تغيير).
 
-## 6) الجدولة (Scheduler)
+## 9) الملفات التي ستتغيّر
 
-**القاعدة**: مراجعة واحدة كحد أقصى لكل فصل، تُحقن بعد **إكمال 3 أنشطة أصلية ناجحة**، بشرط ألا يكون النشاط الثالث هو الأخير في الفصل.
+جديدة: `src/lib/audio/campaignThemes.ts` · `src/lib/campaigns/intro/{flags,resolve,state,types}.ts` · `src/components/campaigns/CampaignIntroGate.tsx` · اختبارات `tests/campaigns/intro-state.test.ts`, `tests/audio/section-themes.test.ts`.
 
-```
-insertionAfterActivityId =
-  originalActivityIds[2]                      // بعد النشاط الثالث
-  إذا originalActivityIds.length >= 4         // ≥ نشاط إضافي بعده
-  وإلا: null                                  // لا مراجعة
-```
+معدَّلة (إضافات فقط): `src/lib/audioManager.ts` · `src/components/AudioInitializer.tsx` · `src/types/campaign.ts` · `src/routes/campaigns.imported.$id.index.tsx` (زر ثانوي «إعادة مشاهدة الافتتاحية» + بوابة الدخول) · `src/routes/campaigns.imported.$id.chapter.$chapter.tsx` (تثبيت ثيم القسم) · `src/components/stories/player/StoryPlayer.tsx` (وضع intro) · `src/lib/stories/{summary,admin,import-v2}.ts` (تمرير `story_kind`) · `src/lib/identity/reset.ts` · `src/lib/offline-snapshot.ts` · واجهة إدارة القصص لعرض النوع والربط.
 
-قيود عالمية:
-- **حد يومي: 3 مراجعات/يوم/مالك** (عبر `history.daily[dateKey]`).
-- إذا تجاوز الحد وقت إنشاء الخطة → `reviewItemId = null`.
-- الحساب اليومي بتوقيت الجهاز، مفتاح `YYYY-MM-DD`.
+Migration واحدة: عمود `story_kind`، عمود `intro_story_id`، جدول `campaign_intro_states` + GRANT + RLS.
 
----
+## 10) اختبارات القبول
 
-## 7) Spaced Repetition
+1. Flags مطفأة ⇒ لا استعلامات جديدة، لا عمود جديد مقروء، سلوك الحملات والقصص مطابق بايت-لبايت لسلوك اليوم (اختبار لقطة على مسار الدخول).
+2. الافتتاحية تظهر مرة واحدة لكل (لاعب × حملة) في الحالتين completed/skipped.
+3. إعادة المشاهدة لا تغيّر السجل ولا التقدم ولا المكافآت.
+4. `campaign_intro` لا يظهر في `/stories` ولا البحث ولا Journey ولا Related.
+5. لا XP/دنانير/مقتنيات من الافتتاحية (فحص السجلات بعد المشاهدة).
+6. تبديل الحساب أثناء الافتتاحية: لا تسريب سجل، A ≠ B ≠ Guest.
+7. الانتقال بين حملتين من نفس القسم لا يعيد تشغيل الموسيقى؛ من قسم مختلف يعمل crossfade بلا تراكب.
+8. الكتم/مستوى الصوت/الوضع الصامت يحكم الثيم كما يحكم الطبقات الحالية.
+9. قسم بلا ملف صوتي ⇒ حملة صامتة بلا أخطاء.
+10. حذف القصة المرتبطة ⇒ الحملة تعمل، تشخيص فقط، بلا Crash.
+11. Android Back ورجوع النظام أثناء الافتتاحية لا يغيّران أي تقدم.
+12. Import/Export قديم بدون الحقول الجديدة يمر Dry Run وApply بنجاح.
 
-```
-intervals = [2, 4, 7, 14, 30, 60, 120] days
+## إثبات الرجوع الآمن
 
-correct:  correctStreak++; nextDueAt = now + intervals[min(streak, 6)]
-wrong:    correctStreak = 0; nextDueAt = now + 2 days
-skip:     seen count فقط، لا تعديل جدولة
-```
-
----
-
-## 8) UX
-
-- شارة **«مراجعة»** فقط أثناء السؤال (بدون اسم المصدر).
-- بعد الكشف عن الإجابة: **«تمت مراجعة معلومة من حملة: عام الحزن»**.
-- زر «تخطي» متاح — 0 XP، لا يعدّل الجدولة.
-- «متابعة» يُرجع الـRenderer للنشاط الأصلي التالي.
-
----
-
-## 9) XP + Idempotency
-
-```
-raw = originalXp && originalXp > 0 ? round(originalXp * 0.25) : 5
-xp  = clamp(raw, 3, 10)
-```
-
-- المنح يمر عبر `awardXp({ source: "memory_review", attemptId: plan.reviewAttemptId })`.
-- `history.grantedAttemptIds: Set<string>` يمنع المنح المزدوج (نفس `attemptId` = no-op).
-- إعادة فتح شاشة النتيجة، Reload، Realtime، أي مسار — لا يمنح مرة ثانية.
-- خطأ/تخطي: 0 XP، لا خصم قلوب، لا أثر على تقدم الحملة.
-
----
-
-## 10) Feature Flags — مستويان
-
-```ts
-// src/lib/memory/flags.ts
-export function memoryEnabled(): boolean {
-  return BUILD_FLAG && RUNTIME_FLAG.current();
-}
-```
-
-- **Build**: `VITE_FEATURE_MEMORY_ENGINE` (حماية أساسية، تحتاج APK لتعطيله).
-- **Runtime**: قيمة مقروءة من `admin_feature_flags` (أو `app_config`) وتُكاش محليًا. Kill switch فوري بدون إصدار جديد.
-- عند `false`:
-  - `injectReviewActivities` تُرجع القائمة الأصلية كما هي.
-  - `plan.reviewItemId` يُتعامل معه كأنه `null`.
-  - Selector/Bank/History لا تُستدعى.
-
----
-
-## 11) التخزين
-
-- `irth.memory.history.v1` — attempts + due + daily counter + grantedAttemptIds.
-- `irth.memory.plan.<planKey>` — خطة كل فصل نشط.
-- كلاهما يمر عبر Identity Partition (`::owner=user:<id>`).
-- **لا كتابة** في `game_progress`, `user_campaign_progress`, `campaignStorage`, أو أي جدول تقدم.
-
----
-
-## 12) التغيير الوحيد خارج `src/lib/memory/` و`src/components/memory/`
-
-- سطر واحد في `ActivityRenderer`:
-  ```ts
-  if (activity.__memoryReview) return <ReviewActivity plan={plan} />;
-  ```
-- سطر واحد في مكوّن تشغيل الفصل يستدعي `ensurePlan(...)` عند الدخول ويطبّق الخطة قبل تمرير القائمة للـRenderer.
-- سطر واحد في مسار إكمال الفصل يستدعي `plan.clear(planKey)`.
-
-لا تعديل على شرط الإكمال، لا على Hearts، لا على Navigation، لا على Import/Export.
-
----
-
-## 13) مخططات التدفق (7 سيناريوهات حرجة)
-
-### أ) بدء الفصل
-```
-enterChapter(campaignId, chapterId)
-  ├─ planKey = hash(campaignId, chapterId, ownerKey)
-  ├─ existing = loadPlan(planKey)
-  ├─ if existing: use it (لا اختيار جديد)
-  └─ else:
-       ├─ memoryEnabled? ─── no ── plan = {reviewItemId:null}
-       ├─ dailyCount >= 3? ─ yes ─ plan = {reviewItemId:null}
-       ├─ insertionAfter = originalActivityIds[2] if len>=4 else null
-       ├─ item = selector.pickForChapter(ownerKey)
-       ├─ if !item OR insertionAfter==null: reviewItemId=null
-       └─ save plan {reviewItemId, reviewSnapshot, reviewAttemptId=uuid()}
-  → build runtimeActivities من originalActivityIds + insertion
-  → currentActivityId = first original not-completed
-```
-
-### ب) إغلاق التطبيق قبل المراجعة
-```
-- الخطة محفوظة، الأنشطة الأصلية المكتملة محفوظة كالمعتاد.
-- عند الفتح: نفس الخطة تُقرأ، نفس السؤال، نفس الموضع.
-- لا اختيار جديد. لا تغيّر في السؤال حتى لو تغيّر البنك.
-```
-
-### ج) إغلاق أثناء المراجعة (السؤال ظاهر ولم يُجب)
-```
-- المراجعة ليست في completedActivityIds (المحرك لا يكتبها أصلًا).
-- history.attempts لم يُسجَّل بعد.
-- عند الفتح: الخطة نفسها، السؤال نفسه، موضعه نفسه.
-- currentActivityId يشير للنشاط الأصلي السابق (activity-3)؛ الـRenderer
-  يعرض المراجعة بعده لأنها في runtimeActivities.
-- لا خصم قلوب، لا XP.
-```
-
-### د) فتح التطبيق في اليوم التالي (بدون إتمام الفصل)
-```
-- الخطة لم تُحذف (نُبقي TTL 7 أيام على الأقل، ولا نحذف بعبور منتصف الليل).
-- نفس reviewItemId يُعرض. dailyCount الجديد لا يؤثر لأن الاختيار تم أمس.
-- إذا أجاب اليوم: history.daily[today]++ (يُحسب لليوم الحالي).
-```
-
-### هـ) تعطيل الـFeature Flag وسط فصل (Runtime kill switch)
-```
-- عند إعادة بناء runtimeActivities في الـRender التالي:
-    memoryEnabled()==false → نتجاهل plan.reviewItemId ونعرض القائمة الأصلية فقط.
-- إذا كان اللاعب داخل شاشة المراجعة لحظة التعطيل:
-    نُظهر «متابعة» تلقائيًا (auto-skip بلا خصم) ثم ننتقل للنشاط الأصلي التالي.
-- الخطة تبقى محفوظة (كي لا نُعيد الاختيار لو أُعيد التفعيل قبل إكمال الفصل).
-- التقدم الأصلي غير متأثر إطلاقًا.
-```
-
-### و) إجابة صحيحة ثم إعادة تحميل الشاشة
-```
-onCorrect:
-  ├─ history.record(itemId, correct=true, at=now)
-  ├─ spacing.update → nextDueAt
-  ├─ if !grantedAttemptIds.has(plan.reviewAttemptId):
-  │     awardXp(...); grantedAttemptIds.add(plan.reviewAttemptId)
-  └─ mark plan.reviewCompleted = true (in plan, not in completedActivityIds)
-
-Reload بعد ذلك:
-  - plan.reviewCompleted==true → ReviewActivity تعرض شاشة النتيجة الجاهزة أو
-    ينتقل الـRenderer فورًا للنشاط الأصلي التالي (سلوك ثابت بحسب UX).
-  - awardXp لن يُنفَّذ (Idempotency عبر attemptId).
-```
-
-### ز) تسجيل خروج/تبديل حساب وسط الفصل
-```
-resetForIdentityChange (المسار المعتمد):
-  ├─ يُلغي كل خطط الذاكرة من الحالة (الملفات في localStorage تبقى
-  │  لكن ضمن partition المالك القديم — غير مقروءة للمالك الجديد).
-  ├─ Query cache تُمسح.
-  └─ Realtime تُلغى.
-
-المالك الجديد يدخل نفس الفصل:
-  - planKey مختلف (يعتمد ownerKey).
-  - خطة جديدة، سؤال جديد، dailyCount خاص به.
-  - تقدم الحملات ينحدر من مصدره الأصلي (server أو campaignStorage
-    الخاص بالمالك)، غير متأثر بالمحرك.
-```
-
----
-
-## 14) اختبارات الوحدة قبل التنفيذ
-
-- `plan.ensurePlan`: idempotent، يعيد نفس الخطة، لا يعيد الاختيار.
-- `plan.clear`: يمسح فقط عند الإكمال/المغادرة النهائية.
-- `scheduler`: insertion بعد النشاط الثالث فقط، لا يظهر إذا len<4، لا يظهر إذا daily>=3.
-- `selector`: أولوية wrong→overdue→neverReviewed→oldest، منع تكرار source/kind.
-- `spacing`: منحنى الفواصل + إعادة التصفير بعد الخطأ.
-- `rewards`: fallback 5، clamp [3,10]، Idempotency عبر attemptId.
-- `flags`: build=false OR runtime=false ⇒ لا حقن.
-- `identity`: تبديل الهوية = مفتاح خطة جديد، لا تسرّب.
-- `snapshot`: `completedActivityIds` لا يحوي `review:*`، `allDone` يحسب على الأصل.
-
----
-
-## 15) خارج النطاق
-
-Story/Investigation/Museum/DailyChallenge providers, مزامنة سحابية، إشعارات مراجعات مستحقة، تحليلات heatmap.
-
----
-
-هذه الخطة v2 تلبّي القرارات السبعة المعتمدة: `RuntimeChapterPlan` بمعرّفات أصلية، تجميد السؤال، `neverReviewed=eligible`، Build+Runtime flags، Idempotency، حد 3/يوم، حقن بعد النشاط الثالث، XP fallback 5، شارة صامتة قبل الإجابة.
+`FEATURE_CAMPAIGN_INTROS` و`FEATURE_CAMPAIGN_AUDIO_THEMES` كلٌ منهما Build (`VITE_…`) + Runtime (مفتاح localStorage) على نمط `src/lib/memory/flags.ts`. عند الإطفاء: بوابة الافتتاحية تعيد `null` قبل أي استعلام أو قراءة سجل، و`CampaignAudioThemeManager` لا يستدعي شيئًا فيبقى `CAMPAIGN_AMBIENCE_SRC` الحالي هو مصدر طبقة الحملة. المسارات القديمة تبقى كما هي حرفيًا — الإضافات كلها خلف شرط الـFlag، لا استبدال لأي مسار قائم.
