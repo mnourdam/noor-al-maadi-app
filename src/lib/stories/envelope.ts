@@ -99,7 +99,17 @@ export function normalizeStoryEnvelope(raw: unknown): StoryExportEnvelopeV2 {
 
 function normalizeStoryItem(s: Json): StoryExportItemV2 {
   const id = str(s.id) ?? "";
+  // A campaign intro is identified by `metadata.kind`. The library exclusion
+  // reads the tag, so the two are kept in lockstep at import time — an intro
+  // can never leak into the story library because a tag was missing.
+  const rawTags = arr(s.tags).filter((t): t is string => typeof t === "string");
+  const isIntro = str(obj(s.metadata).kind) === CAMPAIGN_INTRO_KIND;
+  const tags =
+    isIntro && !rawTags.includes(CAMPAIGN_INTRO_TAG_VALUE)
+      ? [...rawTags, CAMPAIGN_INTRO_TAG_VALUE]
+      : rawTags;
   return {
+
     id,
     slug: str(s.slug) ?? id,
     schema_version: 2,
