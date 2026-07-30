@@ -138,6 +138,19 @@ export interface Campaign {
    */
   section_key?: string | null;
 
+  /**
+   * Authored cinematic intro (a story with `story_kind = 'campaign_intro'`).
+   * Absent ⇒ no intro. Never inferred.
+   */
+  intro_story_id?: string | null;
+  /**
+   * Manual, admin-only version. Raising it re-shows the intro exactly once.
+   * Editing the intro's text/images without raising it does NOT re-show it.
+   */
+  intro_version?: number;
+
+
+
   createdAt?: string;
   updatedAt?: string;
 }
