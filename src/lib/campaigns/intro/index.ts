@@ -19,4 +19,6 @@ export {
   __clearCampaignIntroStates,
   CAMPAIGN_INTRO_STORE_KEY,
 } from "./state";
+export { mergeCampaignIntroRecord } from "./state";
+export { queueCampaignIntroSync, hydrateCampaignIntrosFromServer } from "./sync";
 export { areCampaignIntrosEnabled, CAMPAIGN_INTRO_FLAG_KEYS } from "./flags";
