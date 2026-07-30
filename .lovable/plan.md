@@ -1,130 +1,167 @@
-# افتتاحيات الحملات + خلفيات صوتية حسب القسم — تصميم معماري (بدون تنفيذ)
+# افتتاحيات الحملات + موسيقى الأقسام — الخطة النهائية (Rev 2، قبل التنفيذ)
 
-## 1) تدقيق البنية الحالية
+كل ملاحظاتك الأربع + الملاحظات الأصغر مدمجة أدناه. ما لم يُذكر هنا يبقى كما في Rev 1.
 
-**الصوت** — `src/lib/audioManager.ts` فيه بالفعل نظام طبقات:
-`AmbienceLayer = "global" | "campaign" | "investigation"` مع `startCrossfade()` (~1500ms)، تخفيف لكل طبقة (`LAYER_ATTENUATION`)، إعدادات محفوظة (`irth_audio_settings`)، احترام الكتم/الوضع الصامت (`deviceAllowsAudio`)، ووضع Android فائق الاستقرار. لكن مصدر الحملة ثابت: `CAMPAIGN_AMBIENCE_SRC = "/audio/campaign-ambient.mp3"`، و`AudioInitializer.tsx` يختار الطبقة من المسار فقط (`layerForRoute`). لا يوجد أي ربط بالقسم.
+## 1) قسم الحملة: حقل صريح، لا استنتاج
 
-**الحملات** — `Campaign` فيها `worldSlug?` و`era?` (اختياريان أصلًا). الدخول عبر `campaigns.imported.$id.index.tsx` ثم `...chapter.$chapter.tsx`. التقدم في `importedCampaignProgress` + `campaignLedger`.
+**ملغى نهائيًا**: أي اشتقاق من `worldSlug` أو `era` أو `state`. لا خريطة تطبيع.
 
-**القصص** — Story Engine كامل: `StoryPlayer.tsx` (مشاهد، انتقالات، Reflection، RewardMoment)، `fetchStoryAccess` / `recordStoryProgress` / `completeStory`، `list_stories_v3` (منشور فقط)، `unlock_spec` v2، استيراد/تصدير v2، أغلفة أوفلاين. جدول `stories` فيه `metadata jsonb`.
+القيم الثمانية المعتمدة (نهائية، مغلقة):
 
-**العزل** — `src/lib/identity/*` يوفّر `physicalKey(logicalKey, owner)` وتقسيم localStorage تلقائيًا.
-
-## 2) التصميم المقترح
-
-```text
-Campaign.sectionKey ─► SECTION_AUDIO_THEMES ─► audioManager.setAmbienceLayer("campaign", themeId)
-Campaign.intro_story_id ─► stories(kind='campaign_intro') ─► StoryPlayer (introMode)
-CampaignIntroState (owner-partitioned) ─► يقرر: تشغيل تلقائي / دخول مباشر / استئناف
+```ts
+export type CampaignSectionKey =
+  | "prophetic" | "rashidun" | "umayyad" | "abbasid"
+  | "andalus" | "crusades" | "mongols_mamluks" | "ottoman";
 ```
 
-طبقتان جديدتان فقط، لا نظام قصص موازٍ:
+مصدر الحقيقة = نفس ما تستخدمه واجهة `/campaigns` للتقسيم اليوم: صفوف **Section Divider** (`src/lib/campaigns/entities.ts`) المرتّبة على `chronological_order`. لذلك:
 
-- `src/lib/audio/campaignThemes.ts` — خريطة قسم → ملف صوتي + `CampaignAudioThemeManager` رقيق فوق `audioManager`.
-- `src/lib/campaigns/intro/*` — `resolve.ts` (أي افتتاحية؟), `state.ts` (سجل المشاهدة), `flags.ts`.
+- `CampaignSectionDivider.sectionKey?: CampaignSectionKey` — يُؤلَّف مرة واحدة على الفاصل (ثمانية فواصل فقط تحمله).
+- الحملة ترث `section_key` من الفاصل الذي تنتمي إليه في نفس التجميع الذي ترسمه الصفحة الآن — تجميع واحد، لا تصنيف ثانٍ.
+- `Campaign.sectionKey?: CampaignSectionKey` — **Override صريح اختياري** للحالات الشاذة (حملة زنكية داخل قسم الحروب الصليبية مثلًا). أولوية القرار: `campaign.sectionKey` ← `divider.sectionKey` ← `null`.
+- `null` ⇒ لا موسيقى قسم (الطبقة العامة كما اليوم). لا تخمين إطلاقًا.
+- دالة واحدة `resolveCampaignSection(campaign, dividerIndex)` في `src/lib/campaigns/sections.ts` هي المستهلك الوحيد؛ أي قراءة أخرى ممنوعة.
+- `era` / `worldSlug` / `state` لا تتغيّر ولا تُقرأ في هذا المسار.
 
-### الخلفية الصوتية
-الأقسام الثمانية المعتمدة تُربط بمفاتيح العوالم الحالية: prophetic, rashidun, umayyad, abbasid, andalus, crusades, mongols-mamluks (mamluk-sultanate)، ottoman. يُشتق `sectionKey` من `campaign.worldSlug` مع خريطة تطبيع، وOverride اختياري لاحق `campaign.audio_theme_id?`.
+أدوات الإدارة: حقل اختيار للفاصل + Override في محرر الحملة، وتقرير «حملات بلا قسم» في `/admin/campaign-order`.
 
-توسعة `audioManager` (إضافية فقط): `setCampaignTheme(themeId | null)` تُبدّل مصدر مسار طبقة `campaign` **مع crossfade** بدل قطع/تشغيل ملفين. إن كان `themeId` نفسه ⇒ no-op كامل (لا إعادة تشغيل عند التنقل بين حملتين من نفس القسم). لا ملف للقسم ⇒ لا صوت حملة (تبقى الطبقة العامة كما هي اليوم). لا تُوضع روابط داخل الفصول أو الأنشطة إطلاقًا.
+## 2) دورة حياة الصوت — Campaign Context هو المالك
 
-### الافتتاحية
-- توسعة `stories`: `kind` ضمن `metadata` أو عمود جديد `story_kind text not null default 'standalone'`. المفضّل: عمود مع default ⇒ كل الصفوف الحالية standalone تلقائيًا.
-- `list_stories_v3` وكل قوائم/بحث اللاعب تُصفّي `story_kind = 'standalone'`. الإدارة فقط ترى `campaign_intro`.
-- `campaign_intro`: لا شروط فتح مستقلة (تُتجاهل `unlock_spec`)، لا XP/دنانير/مقتنيات، لا `user_story_completions`، لا يدخل Journey ولا Related Stories.
-- `StoryPlayer` يقبل `mode?: "standalone" | "campaign_intro"` — في وضع intro: يُخفى Reward/Journey، ويظهر «تخطي والبدء» دائمًا و«ابدأ الحملة» في المشهد الأخير، والخروج يستدعي `onIntroResolved(reason)`.
+المالك مكوّن واحد `CampaignAudioScope` يُركَّب في **layout مسار الحملة** (`src/routes/campaigns.tsx` → فرع `imported/$id`)، لا في صفحة الفصل.
 
-## 3) الجداول والحقول الجديدة
+```text
+/campaigns (قائمة)          → layer=campaign، theme=null (الوضع الحالي حرفيًا)
+        │
+        ▼ فتح حملة
+/campaigns/imported/$id     → mount CampaignAudioScope
+                              resolveCampaignSection() → setCampaignTheme("abbasid")
+                              crossfade 1500ms من global/الثيم السابق
+        │
+        ▼ CampaignIntroGate يفتح الافتتاحية (نفس الشجرة، overlay)
+StoryPlayer (introMode)     → لا لمس للصوت إطلاقًا. الموسيقى مستمرة كما هي.
+        │
+        ▼ «ابدأ الحملة» أو «تخطي والبدء»
+/campaigns/imported/$id/chapter/$c
+                            → نفس الـScope (لم يُفكَّك) ⇒ setCampaignTheme نفس القيمة ⇒ no-op تام
+                              لا إعادة تشغيل، لا فجوة، لا إعادة تحميل للمصدر
+        │
+        ▼ الانتقال إلى حملة أخرى من نفس القسم
+                            → themeId متطابق ⇒ no-op، الصوت يستمر بلا انقطاع
+        ▼ حملة من قسم آخر
+                            → crossfade إلى الملف الجديد (لا تراكب، مؤقّت واحد)
+        ▼ مغادرة سياق الحملة كليًا (خروج من layout)
+                            → unmount ⇒ setCampaignTheme(null) + العودة إلى global بـcrossfade
+```
+
+- الافتتاحية **لا تملك** الصوت ولا تبدأه ولا توقفه؛ هي مستهلك سلبي. لذلك يستحيل أن تُعرض بلا موسيقى قسمها.
+- إن فُتحت الافتتاحية عبر Deep Link مباشر، فالـScope يُركَّب قبلها في نفس الشجرة (layout أعلى)، فالترتيب مضمون.
+- API الجديد على `audioManager` (إضافي فقط): `setCampaignTheme(themeId: string | null)` — يُبدّل مصدر مسار طبقة `campaign` بـcrossfade، no-op عند التطابق. `setAmbienceLayer` كما هو.
+- الملفات: `public/audio/sections/<section_key>.mp3` (mono 64kbps) local-first. ملف مفقود ⇒ `failed` مرة واحدة + صمت، بلا أخطاء.
+- الكتم / مستويات الصوت / الوضع الصامت / Android ultra-stable: تُطبَّق من المسار الحالي بلا استثناء.
+
+## 3) `intro_version`
+
+الربط على الحملة:
+
+```ts
+intro_story_id?: string | null;
+intro_version?: number;   // default 1
+```
+
+السجل يحمل `intro_version int not null default 1`، والمفتاح يصبح `(user_id, campaign_id, intro_version)`.
+
+قرار العرض:
+- يوجد سجل بنفس `campaign_id` **و** نفس `intro_version` بحالة `completed`/`skipped` ⇒ دخول مباشر.
+- `intro_version` أعلى من كل سجلات اللاعب ⇒ افتتاحية جديدة، تُعرض مرة واحدة.
+- تغيير `intro_story_id` بلا رفع الإصدار ⇒ **لا** إعادة عرض (قرار مقصود).
+- رفع الإصدار = فعل إداري يدوي بحت؛ لا شيء في النظام يرفعه تلقائيًا (لا تعديل نص، ولا استبدال صورة، ولا إعادة استيراد).
+- السجلات القديمة تبقى؛ لا حذف، فالتاريخ محفوظ.
+
+## 4) Local-first للتسجيل
+
+قاعدة صارمة: **لا انتظار للشبكة قبل أي انتقال**.
+
+عند «تخطي والبدء» أو «ابدأ الحملة»:
+1. `resolvingRef` يمنع النقر المكرر (حارس متزامن قبل أي await).
+2. كتابة السجل المحلي فورًا (متزامنة، مقسّمة بالهوية عبر `physicalKey`).
+3. `navigate()` فورًا — نفس الإطار، لا Promise شبكي في الطريق.
+4. إدراج مهمة Outbox (`src/lib/offline/outbox.ts`) للمزامنة.
+5. عند عودة الاتصال: `upsert` idempotent على `(user_id, campaign_id, intro_version)`، «الأقوى يفوز» بترتيب `completed > skipped > started` حتى لا تتراجع الحالة.
+
+`last_scene_index`: كتابة محلية فورية عند كل مشهد، ومزامنة **debounced ~4s + عند الإغلاق/الخروج/إخفاء الصفحة فقط** ⇒ كتابة خادمية واحدة تقريبًا لكل افتتاحية بدل ثماني.
+
+## 5) Kill Switch خادمي حقيقي
+
+جدول `app_config` (key/value jsonb، قراءة عامة للمنشور، كتابة للأدمن فقط) هو المرجع:
+
+- `campaign_intros.enabled`, `campaign_audio_themes.enabled`.
+- يُقرأ مرة عند الإقلاع، يُخزَّن في كاش محلي مع TTL ويدخل Offline Snapshot.
+- أوفلاين / فشل القراءة ⇒ آخر قيمة معروفة، وإن لم توجد فالافتراضي `false` للميزتين الجديدتين (فشل آمن).
+- `VITE_…` يبقى Build-flag للطوارئ فقط. مفتاح localStorage يبقى **أداة تطوير محلية لا غير**، ولا يستطيع تفعيل ميزة أطفأها الخادم.
+- الإطفاء الخادمي: لا استعلام، لا قراءة سجل، لا `setCampaignTheme` ⇒ السلوك الحالي حرفيًا.
+
+## 6) جلب الافتتاحية بمعزل عن `list_stories_v3`
+
+`get_campaign_intro_story(p_story_id uuid)` — دالة SECURITY DEFINER مستقلة:
+- تُرجع القصة + مشاهدها + وسائطها **فقط** إذا `story_kind = 'campaign_intro'` و`status = 'published'`.
+- تتجاهل `unlock_spec` تمامًا (الافتتاحية ليست محتوى مقفولًا)، ولا تكتب تقدمًا ولا تمنح مكافآت.
+- تعمل للضيف والمسجَّل، ولا تسرّب أي قصة عادية (فحص النوع أولًا).
+- غير موجودة / مسودة / محذوفة ⇒ ترجع `null` ⇒ **الحملة تُفتح مباشرة** + تشخيص، بلا أي خطأ للاعب.
+
+## 7) استبعاد `campaign_intro` من كل سطح Stories
+
+ليس القوائم فقط، بل: `list_stories_v3` · البحث · عدّادات `/stories` والفلاتر · إحصائيات العوالم والقصص · Journey · Related Stories · Achievements المرتبطة بالقصص · Offline covers pack · Export العام. الاستبعاد يُطبَّق في **الدوال الخادمية نفسها** (`status='published' AND story_kind='standalone'`) لا في الواجهة، فلا يمكن نسيان سطح.
+
+زر «إعادة مشاهدة الافتتاحية» يظهر فقط عند: الميزة مفعّلة خادميًا + القصة موجودة ومنشورة من النوع الصحيح + وسائطها متاحة (محليًا أو عبر الشبكة). غير ذلك ⇒ الزر غائب تمامًا. الإعادة لا تكتب سجلًا ولا تغيّر إصدارًا ولا تمنح شيئًا.
+
+## 8) Migration واحدة
 
 ```sql
-alter table public.stories
-  add column if not exists story_kind text not null default 'standalone'
+alter table public.stories add column if not exists story_kind text not null default 'standalone'
   check (story_kind in ('standalone','campaign_intro'));
 
 create table public.campaign_intro_states (
   user_id uuid not null,
   campaign_id text not null,
+  intro_version int not null default 1,
   intro_story_id uuid not null,
   status text not null check (status in ('started','completed','skipped')),
   last_scene_index int not null default 0,
   first_started_at timestamptz not null default now(),
   resolved_at timestamptz,
-  primary key (user_id, campaign_id)
+  primary key (user_id, campaign_id, intro_version)
 );
--- GRANT SELECT,INSERT,UPDATE,DELETE ... TO authenticated;  GRANT ALL ... TO service_role;
--- RLS: user_id = auth.uid() لكل السياسات (لا anon).
+grant select, insert, update, delete on public.campaign_intro_states to authenticated;
+grant all on public.campaign_intro_states to service_role;
+alter table public.campaign_intro_states enable row level security;
+-- كل السياسات: user_id = auth.uid()  (بلا anon)
+
+create table public.app_config (
+  key text primary key,
+  value jsonb not null,
+  updated_at timestamptz not null default now()
+);
+grant select on public.app_config to anon, authenticated;
+grant all on public.app_config to service_role;
+alter table public.app_config enable row level security;
+-- select للجميع، الكتابة عبر has_role(auth.uid(),'admin') فقط
 ```
 
-ربط الحملة: `campaigns.intro_story_id uuid null` (أو حقل اختياري في JSON الحملة `intro_story_id?: string | null` لمسار الاستيراد). كلاهما اختياري تمامًا.
+`intro_story_id` / `intro_version` / `section_key` تُخزَّن داخل `admin_campaigns.data` (اختيارية، بلا Migration للحملات).
 
-الضيف: نفس الشكل في localStorage تحت مفتاح `irth.campaign.intro.v1` مقسّم بالهوية.
+## 9) الملفات
 
-## 4) خطة التوافق الخلفي
+جديدة: `src/lib/campaigns/sections.ts` · `src/lib/audio/campaignThemes.ts` · `src/lib/campaigns/intro/{types,resolve,state,sync,flags}.ts` · `src/components/campaigns/{CampaignAudioScope,CampaignIntroGate}.tsx` · `src/lib/config/appConfig.ts` · اختبارات `tests/campaigns/{intro-state,section-resolution}.test.ts`, `tests/audio/section-lifecycle.test.ts`.
 
-- كل الحقول الجديدة اختيارية وذات default ⇒ لا Migration إجباري لأي JSON قديم.
-- Import/Export v2 للقصص: يُضاف `story_kind` للمخرجات؛ غيابه في الاستيراد ⇒ `standalone`.
-- Export الحملات: يُضاف `intro_story_id` فقط عند وجوده (لا مفاتيح فارغة جديدة في Golden Templates الحالية).
-- `admin_validate_*` تقبل الحقلين ولا تشترطهما.
+معدَّلة (إضافات فقط): `src/lib/audioManager.ts` · `src/components/AudioInitializer.tsx` · `src/routes/campaigns.tsx` (تركيب الـScope) · `campaigns.imported.$id.index.tsx` · `campaigns.imported.$id.chapter.$chapter.tsx` · `src/types/campaign.ts` · `src/lib/campaigns/entities.ts` · `StoryPlayer.tsx` (وضع intro) · دوال/واجهات إدارة القصص والحملات · `src/lib/identity/reset.ts` · `src/lib/offline-snapshot.ts` · `src/lib/offline/outbox.ts`.
 
-## 5) الأوفلاين
+## 10) القبول (إضافة على قائمة Rev 1)
 
-- ملفات الأقسام الصوتية تُبنى ضمن `public/audio/sections/<section>.mp3` (mono 64kbps) local-first مثل مؤثرات التحقيقات؛ فشل التحميل ⇒ الطبقة تُعلَّم failed مرة واحدة وتستمر الحملة بصمت.
-- مشاهد الافتتاحية ووسائطها تدخل نفس Offline Snapshot ومسار أغلفة القصص. وسائط ناقصة أوفلاين ⇒ لا تشغيل تلقائي للافتتاحية؛ الحملة تُفتح مباشرة ويُسجَّل تشخيص، ولا يُكتب أي سجل مشاهدة.
-- كتابات `campaign_intro_states` تمر عبر Outbox الحالي (`src/lib/offline/outbox.ts`).
-
-## 6) عزل الهوية
-
-- المفتاح المحلي يمر عبر `physicalKey()` تلقائيًا ⇒ لا تسريب Guest/A/B.
-- `resetForIdentityChange()` يُضاف إليه مسح كاش الافتتاحيات في الذاكرة، وإيقاف الافتتاحية الجارية فورًا والعودة إلى صفحة الحملة دون كتابة أي سجل للهوية الجديدة.
-- كل كتابة تمر بـ `runOwned()` ⇒ استجابة متأخرة بعد تبديل الحساب تُهمَل.
-
-## 7) مخططات الحالات الحرجة
-
-| الحالة | السلوك |
-|---|---|
-| حملة بلا افتتاحية | دخول مباشر، صفر استعلامات إضافية |
-| أول دخول لحملة لها افتتاحية | تشغيل تلقائي، كتابة `started` قبل المشهد الأول |
-| «تخطي والبدء» من المشهد الأول | `skipped` فورًا، بلا نافذة تأكيد، انتقال للحملة |
-| إغلاق التطبيق في المنتصف | يبقى `started`؛ العودة تستأنف من `last_scene_index` مع بقاء التخطي |
-| مشاهدة كاملة | `completed` عند «ابدأ الحملة»، ثم الفصل الأول |
-| إعادة مشاهدة يدوية | `replay=1`: لا كتابة، لا مكافآت، لا تغيير للسجل |
-| حذف الافتتاحية بعد الربط | resolve يعيد null ⇒ حملة عادية + تشخيص |
-| وسائط غير متاحة أوفلاين | تخطٍّ صامت، لا سجل |
-| تعطيل Flag أثناء المشاهدة | الجلسة الحالية تُكمل (استقرار جلسة) ولا تشغيل جديد بعدها |
-| تسجيل خروج/تبديل حساب | إغلاق فوري + عدم كتابة عبر الهوية الجديدة |
-| Deep Link للحملة | نفس منطق أول دخول (يحترم السجل) |
-| ضغط سريع مكرر على «ابدأ» | حارس `resolvingRef` + كتابة Idempotent (upsert بمفتاح مركّب) |
-
-الرجوع (Android Back) أثناء الافتتاحية = إغلاق الافتتاحية والعودة لصفحة الحملة عبر Overlay Stack الحالي — **لا يُكمل الحملة ولا يغيّر أي تقدم**.
-
-## 8) نقاط التكامل الحسّاسة (تأثير مقصود = صفر)
-
-Campaign routing (نقطة قرار واحدة قبل التنقل للفصل) · شروط فتح الحملات (بلا تغيير) · Campaign progress/الاستئناف (بلا تغيير) · Story Renderer (وضع إضافي) · Story progress (لا يُكتب لـ intro) · Import/Export v2 (حقول اختيارية) · Offline Snapshot (إضافة مجموعة) · Identity Isolation (مفاتيح مقسّمة) · Android Back (Overlay) · Audio Manager (API إضافي) · مؤثرات الأنشطة (طبقة SFX منفصلة، غير متأثرة) · Memory Engine (لا مساس بالخطط) · Deep Links (بلا تغيير).
-
-## 9) الملفات التي ستتغيّر
-
-جديدة: `src/lib/audio/campaignThemes.ts` · `src/lib/campaigns/intro/{flags,resolve,state,types}.ts` · `src/components/campaigns/CampaignIntroGate.tsx` · اختبارات `tests/campaigns/intro-state.test.ts`, `tests/audio/section-themes.test.ts`.
-
-معدَّلة (إضافات فقط): `src/lib/audioManager.ts` · `src/components/AudioInitializer.tsx` · `src/types/campaign.ts` · `src/routes/campaigns.imported.$id.index.tsx` (زر ثانوي «إعادة مشاهدة الافتتاحية» + بوابة الدخول) · `src/routes/campaigns.imported.$id.chapter.$chapter.tsx` (تثبيت ثيم القسم) · `src/components/stories/player/StoryPlayer.tsx` (وضع intro) · `src/lib/stories/{summary,admin,import-v2}.ts` (تمرير `story_kind`) · `src/lib/identity/reset.ts` · `src/lib/offline-snapshot.ts` · واجهة إدارة القصص لعرض النوع والربط.
-
-Migration واحدة: عمود `story_kind`، عمود `intro_story_id`، جدول `campaign_intro_states` + GRANT + RLS.
-
-## 10) اختبارات القبول
-
-1. Flags مطفأة ⇒ لا استعلامات جديدة، لا عمود جديد مقروء، سلوك الحملات والقصص مطابق بايت-لبايت لسلوك اليوم (اختبار لقطة على مسار الدخول).
-2. الافتتاحية تظهر مرة واحدة لكل (لاعب × حملة) في الحالتين completed/skipped.
-3. إعادة المشاهدة لا تغيّر السجل ولا التقدم ولا المكافآت.
-4. `campaign_intro` لا يظهر في `/stories` ولا البحث ولا Journey ولا Related.
-5. لا XP/دنانير/مقتنيات من الافتتاحية (فحص السجلات بعد المشاهدة).
-6. تبديل الحساب أثناء الافتتاحية: لا تسريب سجل، A ≠ B ≠ Guest.
-7. الانتقال بين حملتين من نفس القسم لا يعيد تشغيل الموسيقى؛ من قسم مختلف يعمل crossfade بلا تراكب.
-8. الكتم/مستوى الصوت/الوضع الصامت يحكم الثيم كما يحكم الطبقات الحالية.
-9. قسم بلا ملف صوتي ⇒ حملة صامتة بلا أخطاء.
-10. حذف القصة المرتبطة ⇒ الحملة تعمل، تشخيص فقط، بلا Crash.
-11. Android Back ورجوع النظام أثناء الافتتاحية لا يغيّران أي تقدم.
-12. Import/Export قديم بدون الحقول الجديدة يمر Dry Run وApply بنجاح.
-
-## إثبات الرجوع الآمن
-
-`FEATURE_CAMPAIGN_INTROS` و`FEATURE_CAMPAIGN_AUDIO_THEMES` كلٌ منهما Build (`VITE_…`) + Runtime (مفتاح localStorage) على نمط `src/lib/memory/flags.ts`. عند الإطفاء: بوابة الافتتاحية تعيد `null` قبل أي استعلام أو قراءة سجل، و`CampaignAudioThemeManager` لا يستدعي شيئًا فيبقى `CAMPAIGN_AMBIENCE_SRC` الحالي هو مصدر طبقة الحملة. المسارات القديمة تبقى كما هي حرفيًا — الإضافات كلها خلف شرط الـFlag، لا استبدال لأي مسار قائم.
+13. لا يوجد أي قراءة لـ`worldSlug`/`era` في مسار حل القسم (اختبار ثابت على الاستيراد).
+14. الموسيقى تبدأ عند فتح صفحة الحملة، وتستمر بلا انقطاع ولا إعادة تشغيل عبر: الافتتاحية → الفصل → فصل آخر؛ ولا تتوقف إلا عند مغادرة سياق الحملة.
+15. رفع `intro_version` يعيد العرض مرة واحدة فقط؛ تعديل نص/صورة بلا رفع الإصدار لا يعيده.
+16. الانتقال بعد التخطي يحدث في نفس الإطار مع الشبكة مقطوعة، والسجل يُزامَن لاحقًا مرة واحدة.
+17. الافتتاحية الواحدة تنتج ≤ 2 كتابة خادمية إجمالًا.
+18. إطفاء `app_config` خادميًا يعطّل الميزة حتى لو كان مفتاح localStorage مفعّلًا.
+19. `get_campaign_intro_story` ترفض أي `story_kind='standalone'` وأي مسودة.
+20. مقارنة عدّادات `/stories` قبل/بعد إدخال افتتاحيات = صفر فرق.
