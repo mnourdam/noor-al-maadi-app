@@ -18,11 +18,18 @@
 import { useCallback, useRef, useState, type ReactNode } from "react";
 import { isCampaignIntroEnabledFor } from "@/lib/campaigns/intro/flags";
 import { introDebug } from "@/lib/campaigns/intro/debug";
+import {
+  diagnoseCampaignIntro,
+  auditCampaignIntroRuntime,
+  publishIntroDiagnostics,
+  type IntroDecisionReport,
+} from "@/lib/campaigns/intro/diagnose";
 import { resolveCampaignIntro, type IntroCarrier } from "@/lib/campaigns/intro/resolve";
 import {
   markCampaignIntroCompleted,
   markCampaignIntroSkipped,
   markCampaignIntroStarted,
+  resetCampaignIntro,
   shouldShowCampaignIntro,
 } from "@/lib/campaigns/intro/state";
 import { queueCampaignIntroSync } from "@/lib/campaigns/intro/sync";
@@ -55,23 +62,33 @@ export function CampaignIntroGate({
     // Cheapest check first: a campaign without an authored intro exits
     // here, before any storage read — no measurable start-up cost.
     const ref = resolveCampaignIntro(campaign);
-    const eligible =
-      !!ref &&
-      !!renderIntro &&
-      isCampaignIntroEnabledFor(ref.campaignId) &&
-      (forceReplay || shouldShowCampaignIntro(ref));
-    decision.current = eligible ? ref : null;
-    introDebug(eligible ? "gate:open" : "gate:pass-through", {
-      campaignId: ref?.campaignId ?? null,
-      version: ref?.version ?? null,
+    const report = diagnoseCampaignIntro(campaign, {
       forceReplay,
+      hasRenderer: !!renderIntro,
     });
+    const eligible = report.decision === "show" && !!ref && !!renderIntro;
+    decision.current = eligible ? ref : null;
+    introDebug(eligible ? "gate:open" : "gate:pass-through", report as never);
+    publishIntroDiagnostics(report, ref);
+    if (!eligible && import.meta.env?.DEV) {
+      // Never fail silently while authoring content.
+      // eslint-disable-next-line no-console
+      console.info("[campaign-intro] rejected:", report.rejectionReason, report);
+      void auditCampaignIntroRuntime(campaign, { forceReplay, hasRenderer: !!renderIntro }).then(
+        (full: IntroDecisionReport) => {
+          // eslint-disable-next-line no-console
+          console.info("[campaign-intro] runtime audit:", full);
+          publishIntroDiagnostics(full, ref);
+        },
+      );
+    }
     if (eligible && ref) {
       markCampaignIntroStarted(ref);
       // Mirror only — fire-and-forget, never awaited.
       queueCampaignIntroSync(ref, "started");
     }
   }
+
 
 
   const intro = decision.current;
@@ -103,5 +120,25 @@ export function CampaignIntroGate({
   if (intro && open && renderIntro) {
     return <>{renderIntro({ intro, onComplete, onSkip })}</>;
   }
-  return <>{children}</>;
+
+  // Dev-only replay hatch. Never rendered in a production build.
+  const authored = resolveCampaignIntro(campaign);
+  return (
+    <>
+      {children}
+      {import.meta.env?.DEV && authored ? (
+        <button
+          type="button"
+          onClick={() => {
+            resetCampaignIntro(authored);
+            window.location.reload();
+          }}
+          className="fixed bottom-24 left-3 z-50 rounded-full border border-border bg-card/90 px-3 py-1.5 text-[11px] text-muted-foreground shadow-lg backdrop-blur"
+        >
+          إعادة ضبط الافتتاحية
+        </button>
+      ) : null}
+    </>
+  );
 }
+
