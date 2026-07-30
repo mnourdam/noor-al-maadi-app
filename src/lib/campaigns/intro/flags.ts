@@ -77,12 +77,24 @@ function readCachedRollout(): string[] | null {
   return normalizeList(cache[ROLLOUT_KEY]);
 }
 
-function readBuildFlag(): boolean {
+function readBuildFlagRaw(): string | null {
   try {
-    return import.meta.env?.VITE_CAMPAIGN_INTROS === "1";
+    const v = import.meta.env?.VITE_CAMPAIGN_INTROS;
+    return typeof v === "string" ? v.trim() : null;
   } catch {
-    return false;
+    return null;
   }
+}
+
+/** Build-level opt-out: `VITE_CAMPAIGN_INTROS=0` disables the engine. */
+function buildDisabled(): boolean {
+  const v = readBuildFlagRaw();
+  return v === "0" || v === "false";
+}
+
+/** Development narrowing: `VITE_CAMPAIGN_INTROS=pilot`. */
+function pilotOnlyBuild(): boolean {
+  return readBuildFlagRaw() === "pilot";
 }
 
 function readDevOverride(): string | null {
@@ -105,8 +117,7 @@ export function areCampaignIntrosEnabled(): boolean {
   if (server === true) return true;
   const dev = readDevOverride();
   if (dev) return dev !== "0";
-  // Build default = pilot step of the ladder.
-  return readBuildFlag() || CAMPAIGN_INTRO_PILOT_CAMPAIGNS.length > 0;
+  return !buildDisabled();
 }
 
 /** The campaigns currently included in the rollout ("*" = all). */
@@ -117,8 +128,11 @@ export function readCampaignIntroRollout(): string[] {
   const dev = readDevOverride();
   if (dev && dev !== "0") return dev === "1" ? [ALL] : normalizeList(dev);
   if (dev === "0") return [];
-  return readBuildFlag() ? [ALL] : [...CAMPAIGN_INTRO_PILOT_CAMPAIGNS];
+  if (buildDisabled()) return [];
+  // Default: an authored `intro_story_id` is the only requirement.
+  return pilotOnlyBuild() ? [...CAMPAIGN_INTRO_PILOT_CAMPAIGNS] : [ALL];
 }
+
 
 
 /** Is this specific campaign inside the rollout? */
