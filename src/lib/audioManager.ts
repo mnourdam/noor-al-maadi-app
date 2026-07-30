@@ -12,6 +12,7 @@ import { deviceAllowsAudio, initAndroidSilentMode } from "./androidSilentMode";
 // ============================================================
 
 import errorSfxAsset from "@/assets/audio-error.mp3.asset.json";
+import { campaignThemeSources, type CampaignThemeId } from "./audio/campaignThemes";
 
 export type AmbienceLayer = "global" | "campaign" | "investigation";
 
@@ -169,6 +170,11 @@ const tracks: Record<AmbienceLayer, AmbienceTrack> = {
 };
 
 let activeLayer: AmbienceLayer = "global";
+/**
+ * Active campaign section theme (see `audio/campaignThemes.ts`).
+ * `null` = the default campaign ambience, i.e. today's behaviour exactly.
+ */
+let campaignTheme: CampaignThemeId | null = null;
 let fadeTimer: number | null = null;
 const FADE_MS = 1500;
 const FADE_STEP_MS = 50;
@@ -344,6 +350,30 @@ function startCrossfade(target: AmbienceLayer) {
   }, FADE_STEP_MS);
 }
 
+
+// ---------- Campaign section themes ----------
+/**
+ * Swap the campaign layer's source file. The old element is discarded and the
+ * layer is re-armed (`failed` reset) so a previously missing file can succeed
+ * for a different section. When the campaign layer is currently audible the
+ * new source fades in through the ONE existing crossfade timer — no overlap,
+ * no second scheduler.
+ */
+function swapCampaignSource(sources: string[]) {
+  const t = tracks.campaign;
+  const [url, ...rest] = sources;
+  if (!url) return;
+  if (t.el) { try { t.el.pause(); } catch {/*ignore*/} }
+  t.el = null;
+  t.failed = false;
+  t.lastPlayError = null;
+  t.url = url;
+  t.fallbacks = rest;
+  if (activeLayer === "campaign") {
+    t.gain = 0;
+    startCrossfade("campaign");
+  }
+}
 
 // ---------- First-interaction unlock ----------
 function bindFirstInteraction() {
@@ -530,12 +560,35 @@ export const audioManager = {
     return activeLayer;
   },
 
+  /**
+   * Select the campaign section ambience. Additive API — `setAmbienceLayer`
+   * is unchanged and still owns which layer is audible.
+   *
+   * - Same theme (including repeated calls while navigating campaign →
+   *   intro → chapter) ⇒ exact no-op: no reload, no restart, no gap.
+   * - `null` ⇒ back to the default campaign ambience (today's behaviour).
+   * - Missing file ⇒ handled by the existing candidate walk; the layer just
+   *   stays silent and the app keeps running.
+   */
+  setCampaignTheme(theme: CampaignThemeId | null) {
+    if (typeof window === "undefined") return;
+    if (isAndroidUltraStableMode()) return;
+    if (theme === campaignTheme) return;
+    campaignTheme = theme;
+    swapCampaignSource(campaignThemeSources(theme) ?? [CAMPAIGN_AMBIENCE_SRC]);
+  },
+
+  getCampaignTheme(): CampaignThemeId | null {
+    return campaignTheme;
+  },
+
   getDebugSnapshot() {
     const campaign = tracks.campaign;
     const investigation = tracks.investigation;
     return {
       activeLayer,
-      campaignSrc: CAMPAIGN_AMBIENCE_SRC,
+      campaignTheme,
+      campaignSrc: campaign.url,
       campaignReadyState: campaign.el?.readyState ?? 0,
       campaignPaused: campaign.el?.paused ?? true,
       campaignVolume: Number((campaign.el?.volume ?? 0).toFixed(3)),
@@ -559,6 +612,10 @@ export const audioManager = {
       t.gain = layer === "global" ? 1 : 0;
     });
     activeLayer = "global";
+    campaignTheme = null;
+    tracks.campaign.url = CAMPAIGN_AMBIENCE_SRC;
+    tracks.campaign.fallbacks = [];
+    tracks.campaign.failed = false;
   },
 };
 
