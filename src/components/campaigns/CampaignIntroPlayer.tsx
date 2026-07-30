@@ -8,6 +8,11 @@
 //    the ambience; this component never touches audioManager.
 //  * Any load failure resolves as "skip" so the campaign always
 //    opens — an intro can never block gameplay.
+//
+// Interaction (Post-Freeze pass): hold-to-pause, RTL tap zones
+// (right = previous, left = next), swipe (→ next, ← previous)
+// and a fade transition between every scene. All of it lives in
+// the pure `IntroPlaybackMachine`; this file only renders it.
 // ============================================================
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -17,9 +22,30 @@ import { SegmentedProgress } from "@/components/stories/player/SegmentedProgress
 import { sceneDwellMs } from "@/components/stories/player/timing";
 import { loadCampaignIntroBundle } from "@/lib/campaigns/intro/offline";
 import { introDebug } from "@/lib/campaigns/intro/debug";
+import {
+  FADE_IN_MS,
+  FADE_OUT_MS,
+  IntroPlaybackMachine,
+  REDUCED_FADE_MS,
+  type IntroSnapshot,
+} from "@/lib/campaigns/intro/interaction";
+import { signStoryMediaUrl } from "@/lib/stories/media/url";
 import type { CampaignIntroRef } from "@/lib/campaigns/intro/types";
 import type { StorySceneRow } from "@/lib/stories/types";
 import type { StoryMediaRow } from "@/lib/stories/media/dao";
+
+function usePrefersReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReduced(mq.matches);
+    const onChange = () => setReduced(mq.matches);
+    mq.addEventListener?.("change", onChange);
+    return () => mq.removeEventListener?.("change", onChange);
+  }, []);
+  return reduced;
+}
 
 export function CampaignIntroPlayer({
   intro,
@@ -32,8 +58,17 @@ export function CampaignIntroPlayer({
 }) {
   const [scenes, setScenes] = useState<StorySceneRow[] | null>(null);
   const [media, setMedia] = useState<StoryMediaRow[]>([]);
-  const [idx, setIdx] = useState(0);
+  const [snap, setSnap] = useState<IntroSnapshot>({
+    state: "playing",
+    index: 0,
+    opacity: 1,
+    paused: false,
+    transitioning: false,
+  });
   const resolvedRef = useRef(false);
+  const machineRef = useRef<IntroPlaybackMachine | null>(null);
+  const surfaceRef = useRef<HTMLDivElement | null>(null);
+  const reducedMotion = usePrefersReducedMotion();
 
   const finish = useCallback(
     (how: "complete" | "skip") => {
@@ -65,51 +100,117 @@ export function CampaignIntroPlayer({
     };
   }, [intro, finish]);
 
-  const scene = scenes?.[idx] ?? null;
+  // --- Playback machine ------------------------------------------
+  useEffect(() => {
+    if (!scenes || scenes.length === 0) return;
+    const machine = new IntroPlaybackMachine({
+      total: scenes.length,
+      reducedMotion,
+      dwellMsFor: (i) => (scenes[i] ? sceneDwellMs(scenes[i]) : 4000),
+      onComplete: () => finish("complete"),
+      onChange: (s) => setSnap(s),
+    });
+    machineRef.current = machine;
+    machine.start();
+    setSnap(machine.getSnapshot());
+    return () => {
+      machine.destroy();
+      machineRef.current = null;
+    };
+  }, [scenes, reducedMotion, finish]);
+
+  const scene = scenes?.[snap.index] ?? null;
   const dwellMs = useMemo(() => (scene ? sceneDwellMs(scene) : 4000), [scene]);
 
-  const advance = useCallback(() => {
-    setIdx((i) => {
-      const total = scenes?.length ?? 0;
-      if (i + 1 >= total) {
-        finish("complete");
-        return i;
-      }
-      return i + 1;
-    });
-  }, [scenes, finish]);
-
-  // --- Auto-advance ---------------------------------------------
+  // --- Preload the neighbouring scene artwork --------------------
   useEffect(() => {
-    if (!scene) return;
-    const t = window.setTimeout(advance, dwellMs);
-    return () => window.clearTimeout(t);
-  }, [scene, dwellMs, advance]);
+    if (!scenes || typeof window === "undefined") return;
+    let alive = true;
+    for (const i of [snap.index + 1, snap.index - 1]) {
+      const target = scenes[i];
+      if (!target?.primary_media_id) continue;
+      const row = media.find((m) => m.id === target.primary_media_id);
+      if (!row) continue;
+      void signStoryMediaUrl(row).then((url) => {
+        if (!alive || !url) return;
+        const img = new Image();
+        img.decoding = "async";
+        img.src = url;
+      });
+    }
+    return () => {
+      alive = false;
+    };
+  }, [scenes, media, snap.index]);
+
+  // --- Pointer handling (unified: no touch + mouse duplication) ---
+  const onPointerDown = useCallback((e: React.PointerEvent) => {
+    machineRef.current?.pointerDown(e.clientX);
+  }, []);
+  const onPointerMove = useCallback((e: React.PointerEvent) => {
+    machineRef.current?.pointerMove(e.clientX);
+  }, []);
+  const onPointerUp = useCallback((e: React.PointerEvent) => {
+    const width = surfaceRef.current?.clientWidth ?? window.innerWidth;
+    machineRef.current?.pointerUp(e.clientX, width);
+  }, []);
+  const onPointerCancel = useCallback(() => {
+    machineRef.current?.pointerCancel();
+  }, []);
 
   if (!scenes || !scene) return null;
 
+  const fadeMs = reducedMotion
+    ? REDUCED_FADE_MS
+    : snap.opacity === 0
+      ? FADE_OUT_MS
+      : FADE_IN_MS;
+
   return (
     <div className="fixed inset-0 z-[200] bg-black" dir="rtl">
-      <button
-        type="button"
-        aria-label="التالي"
-        className="absolute inset-0 z-10"
-        onClick={advance}
+      {/* Interaction surface: pause / tap / swipe. Controls sit above it. */}
+      <div
+        ref={surfaceRef}
+        role="presentation"
+        className="absolute inset-0 z-10 touch-none"
+        style={{ pointerEvents: snap.transitioning ? "none" : "auto" }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerCancel}
+        onPointerLeave={onPointerCancel}
       />
 
-      <SceneStage scene={scene} media={media} epoch={scene.id} />
+      <div
+        data-testid="intro-fade-layer"
+        className="absolute inset-0"
+        style={{
+          opacity: snap.opacity,
+          transition: `opacity ${fadeMs}ms ease-in-out`,
+        }}
+      >
+        <SceneStage
+          scene={scene}
+          media={media}
+          epoch={scene.id}
+          paused={snap.paused || snap.transitioning}
+        />
+      </div>
 
       <div className="pointer-events-none absolute inset-x-0 top-0 z-20 px-4 pt-[calc(env(safe-area-inset-top)+10px)]">
         <SegmentedProgress
           total={scenes.length}
-          activeIndex={idx}
+          activeIndex={snap.index}
           activeMs={dwellMs}
+          paused={snap.paused || snap.transitioning}
           epoch={scene.id}
         />
       </div>
 
       <button
         type="button"
+        onPointerDown={(e) => e.stopPropagation()}
+        onPointerUp={(e) => e.stopPropagation()}
         onClick={() => finish("skip")}
         className="absolute z-30 inline-flex items-center gap-1.5 rounded-full border border-gold/30 bg-black/55 px-3 py-1.5 text-[11px] font-bold text-gold backdrop-blur-sm"
         style={{
