@@ -100,13 +100,42 @@ intro_version?: number;   // default 1
 - `VITE_…` يبقى Build-flag للطوارئ فقط. مفتاح localStorage يبقى **أداة تطوير محلية لا غير**، ولا يستطيع تفعيل ميزة أطفأها الخادم.
 - الإطفاء الخادمي: لا استعلام، لا قراءة سجل، لا `setCampaignTheme` ⇒ السلوك الحالي حرفيًا.
 
-## 6) جلب الافتتاحية بمعزل عن `list_stories_v3`
+## 6) جلب الافتتاحية: محلي أولًا، بمعزل عن `list_stories_v3`
 
-`get_campaign_intro_story(p_story_id uuid)` — دالة SECURITY DEFINER مستقلة:
+ترتيب القراءة الإلزامي (Always Read Local First):
+
+```text
+الحملة → النسخة المحلية (Snapshot) → تشغيل فوري
+```
+
+الشبكة ليست في مسار التشغيل إطلاقًا. `get_campaign_intro_story(p_story_id uuid)` — دالة SECURITY DEFINER مستقلة — تُستخدم **فقط** في مسار المزامنة الخلفية (وكحل أخير لحملة جديدة لم تدخل Snapshot بعد):
 - تُرجع القصة + مشاهدها + وسائطها **فقط** إذا `story_kind = 'campaign_intro'` و`status = 'published'`.
 - تتجاهل `unlock_spec` تمامًا (الافتتاحية ليست محتوى مقفولًا)، ولا تكتب تقدمًا ولا تمنح مكافآت.
 - تعمل للضيف والمسجَّل، ولا تسرّب أي قصة عادية (فحص النوع أولًا).
-- غير موجودة / مسودة / محذوفة ⇒ ترجع `null` ⇒ **الحملة تُفتح مباشرة** + تشخيص، بلا أي خطأ للاعب.
+- غير موجودة / مسودة / محذوفة / غير متاحة محليًا وبلا شبكة ⇒ **الحملة تُفتح مباشرة** + تشخيص، بلا شاشة انتظار وبلا أي خطأ للاعب.
+
+## 6.b) Offline-first كامل للافتتاحيات (إلزامي)
+
+الافتتاحية جزء من Offline Snapshot مثل الحملات تمامًا، لا محتوى on-demand.
+
+**التعبئة**
+- Snapshot المحتوى يضم كل الافتتاحيات المنشورة: JSON (القصة + المشاهد + مراجع الوسائط) + كل الصور/الصوت المرتبط، مع `intro_version` و`checksum` لكل أصل.
+- الوسائط تُخزَّن في Cache Storage تحت مساحة اسم `campaign-intros/v<intro_version>/…`؛ الـJSON داخل Snapshot الحالي (`src/lib/offline-snapshot.ts`) كقسم جديد `campaignIntros` — إضافة فقط، بلا كسر للنسخ القديمة.
+- الحجم يبقى ضمن ميزانية APK الحالية: صور الافتتاحيات تمر بنفس خط `story-covers`/`campaign-key-art` (WebP، أبعاد محدودة)، ويُنفَّذ سكربت `scripts/build-campaign-intro-pack.mjs` قبل كل إصدار.
+
+**التشغيل**
+- `resolveIntro()` يقرأ من الطبقة المحلية بشكل متزامن؛ لا `await` شبكي، لا Spinner، لا Skeleton.
+- شرط العرض: الـJSON موجود محليًا **و** كل وسائط المشهد الأول متاحة محليًا. غير ذلك ⇒ الحملة تُفتح مباشرة (لا شاشة تحميل، لا محاولة جلب أثناء الدخول).
+
+**التحديث (Content Sync، خلفي بالكامل)**
+1. المزامنة الدورية تقارن `intro_version` + `checksum` المحلي بالخادم.
+2. عند وجود أحدث: تنزيل إلى مساحة اسم **جانبية** (`…/v<new>/`) بلا لمس النسخة العاملة.
+3. تحقق سلامة كامل (checksum لكل أصل + اكتمال كل مشاهد الـJSON).
+4. **تبديل ذرّي** للمؤشر المحلي إلى الإصدار الجديد ثم تنظيف القديم.
+5. فشل/انقطاع في أي خطوة ⇒ إسقاط المسودة الجزئية والاستمرار بالنسخة السابقة بلا انقطاع ولا تلف. لا تبديل جزئي أبدًا.
+6. لا يوجد تحديث ⇒ تُستخدم النسخة المحلية دائمًا.
+- التبديل لا يقاطع افتتاحية قيد التشغيل؛ يُطبَّق عند التشغيل التالي.
+
 
 ## 7) استبعاد `campaign_intro` من كل سطح Stories
 
@@ -151,9 +180,9 @@ alter table public.app_config enable row level security;
 
 ## 9) الملفات
 
-جديدة: `src/lib/campaigns/sections.ts` · `src/lib/audio/campaignThemes.ts` · `src/lib/campaigns/intro/{types,resolve,state,sync,flags}.ts` · `src/components/campaigns/{CampaignAudioScope,CampaignIntroGate}.tsx` · `src/lib/config/appConfig.ts` · اختبارات `tests/campaigns/{intro-state,section-resolution}.test.ts`, `tests/audio/section-lifecycle.test.ts`.
+جديدة: `src/lib/campaigns/sections.ts` · `src/lib/audio/campaignThemes.ts` · `src/lib/campaigns/intro/{types,resolve,state,sync,flags}.ts` · `src/lib/campaigns/intro/offline-pack.ts` · `scripts/build-campaign-intro-pack.mjs` · `src/components/campaigns/{CampaignAudioScope,CampaignIntroGate}.tsx` · `src/lib/config/appConfig.ts` · اختبارات `tests/campaigns/{intro-state,section-resolution,intro-offline}.test.ts`, `tests/audio/section-lifecycle.test.ts`.
 
-معدَّلة (إضافات فقط): `src/lib/audioManager.ts` · `src/components/AudioInitializer.tsx` · `src/routes/campaigns.tsx` (تركيب الـScope) · `campaigns.imported.$id.index.tsx` · `campaigns.imported.$id.chapter.$chapter.tsx` · `src/types/campaign.ts` · `src/lib/campaigns/entities.ts` · `StoryPlayer.tsx` (وضع intro) · دوال/واجهات إدارة القصص والحملات · `src/lib/identity/reset.ts` · `src/lib/offline-snapshot.ts` · `src/lib/offline/outbox.ts`.
+معدَّلة (إضافات فقط): `src/lib/audioManager.ts` · `src/components/AudioInitializer.tsx` · `src/routes/campaigns.tsx` (تركيب الـScope) · `campaigns.imported.$id.index.tsx` · `campaigns.imported.$id.chapter.$chapter.tsx` · `src/types/campaign.ts` · `src/lib/campaigns/entities.ts` · `StoryPlayer.tsx` (وضع intro) · دوال/واجهات إدارة القصص والحملات · `src/lib/identity/reset.ts` · `src/lib/offline-snapshot.ts` (قسم `campaignIntros`) · `scripts/verify-offline-snapshot.mjs` · `src/lib/offline/outbox.ts`.
 
 ## 10) القبول (إضافة على قائمة Rev 1)
 
@@ -165,3 +194,8 @@ alter table public.app_config enable row level security;
 18. إطفاء `app_config` خادميًا يعطّل الميزة حتى لو كان مفتاح localStorage مفعّلًا.
 19. `get_campaign_intro_story` ترفض أي `story_kind='standalone'` وأي مسودة.
 20. مقارنة عدّادات `/stories` قبل/بعد إدخال افتتاحيات = صفر فرق.
+21. فتح حملة في وضع Offline يعرض الافتتاحية فورًا بلا أي شاشة انتظار.
+22. **صفر طلبات شبكة** أثناء تشغيل افتتاحية موجودة محليًا (اختبار يعترض `fetch`/`XHR` ويؤكد العدد = 0).
+23. تعديل افتتاحية من لوحة الإدارة يُنزَّل في Content Sync التالي، ولا تُستبدل النسخة المحلية إلا بعد اكتمال التنزيل والتحقق.
+24. مقاطعة/فشل التنزيل ⇒ النسخة السابقة تبقى صالحة وتعمل، ولا يبقى أي أثر جزئي.
+25. `verify-offline-snapshot` يفشل إذا نقص أصل من أصول أي افتتاحية منشورة.
