@@ -22,7 +22,6 @@ import {
   adminDeleteStory,
   adminStoryDeleteImpact,
   adminSlugAvailable,
-  adminExportStories,
   adminImportStoriesPreview,
   adminImportStoriesApply,
   type AdminStorySummary,
@@ -30,6 +29,8 @@ import {
   type StoryImportPreview,
   type ImportApplyOptions,
 } from "@/lib/stories/admin";
+import { adminExportStoriesV2 } from "@/lib/stories/import-v2";
+
 import type { StoryStatus } from "@/lib/stories/types";
 import { suggestSlug, suggestStoryId } from "@/lib/stories/slug";
 
@@ -168,19 +169,22 @@ function AdminStoriesPage() {
 
   const bulkExport = async (ids: string[] | null) => {
     try {
-      const bundle = await adminExportStories(ids);
+      // Always emit the v2 envelope so every exported file (library
+      // stories AND campaign intros) is importable without hand editing.
+      const bundle = await adminExportStoriesV2(ids);
       const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `irth-stories-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `irth-stories-v2-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      notify("ok", `تم تصدير ${(bundle.stories as unknown[]).length} قصة.`);
+      notify("ok", `تم تصدير ${bundle.stories.length} قصة (Envelope v2).`);
     } catch (e) {
       notify("err", e instanceof Error ? e.message : String(e));
     }
   };
+
 
   const takenSlugs = useMemo(() => new Set((rows ?? []).map((r) => r.slug)), [rows]);
 

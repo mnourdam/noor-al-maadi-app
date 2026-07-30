@@ -25,6 +25,9 @@ import {
   type StoryImportPreviewReportV2,
   type StoryImportApplyResultV2,
 } from "@/lib/stories/import-v2";
+import { isEnvelopeV2, normalizeStoryEnvelope } from "@/lib/stories/envelope";
+import { CampaignIntroImportPanel } from "@/components/admin-stories/CampaignIntroImportPanel";
+
 
 export const Route = createFileRoute("/admin/stories/import-v2")({
   head: () => ({
@@ -88,18 +91,22 @@ function ImportV2Page() {
     if (!f) return;
     try {
       const text = await f.text();
-      const parsed = JSON.parse(text) as StoryExportEnvelopeV2;
-      if ((parsed as { envelope_version?: number }).envelope_version !== 2) {
-        throw new Error("envelope_version must be 2");
-      }
+      const raw = JSON.parse(text);
+      // v2 passes through; legacy v1 bundles are normalized client-side
+      // so any file the system ever exported can be re-imported as-is.
+      const wasV1 = !isEnvelopeV2(raw);
+      const parsed: StoryExportEnvelopeV2 = normalizeStoryEnvelope(raw);
       setPayload(parsed);
       setPreview(null);
       setApplyResult(null);
-      notify("ok", "تم تحميل الحزمة. اضغط معاينة.");
+      notify("ok", wasV1
+        ? "ملف بصيغة قديمة (v1) — تم تحويله إلى v2. اضغط معاينة."
+        : "تم تحميل الحزمة. اضغط معاينة.");
     } catch (e) {
       notify("err", e instanceof Error ? e.message : String(e));
     }
   };
+
 
   const onPreview = async () => {
     if (!payload) { notify("err", "حمّل ملف JSON أولاً."); return; }
@@ -274,6 +281,9 @@ function ImportV2Page() {
           {JSON.stringify(applyResult, null, 2)}
         </pre>
       )}
+
+      <CampaignIntroImportPanel />
     </div>
+
   );
 }
