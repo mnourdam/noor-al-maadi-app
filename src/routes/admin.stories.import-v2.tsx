@@ -281,6 +281,9 @@ function ImportV2Page() {
           {JSON.stringify(applyResult, null, 2)}
         </pre>
       )}
+
+      <CampaignIntroImportPanel />
     </div>
+
   );
 }
