@@ -97,7 +97,9 @@ export function CampaignIntroImportPanel() {
     }
     setBusy("preview");
     try {
-      setPreview(await adminImportStoriesV2Preview(envelope, {}));
+      setPreview(await adminImportStoriesV2Preview(envelope, {
+        allow_intro_replace: allowReplace,
+      }));
     } catch (e) {
       setMsg({ kind: "err", text: e instanceof Error ? e.message : String(e) });
     } finally { setBusy(null); }
@@ -107,7 +109,9 @@ export function CampaignIntroImportPanel() {
     if (!envelope || !preview?.ok) return;
     setBusy("apply");
     try {
-      const res = await adminImportStoriesV2Apply(envelope, {});
+      const res = await adminImportStoriesV2Apply(envelope, {
+        allow_intro_replace: allowReplace,
+      });
       if (res.ok) {
         setMsg({ kind: "ok", text: `تم: أُنشئت ${res.totals.created} / حُدِّثت ${res.totals.updated} / بلا تغيير ${res.totals.unchanged}.` });
       } else {
