@@ -182,6 +182,24 @@ describe("campaign intro — end to end", () => {
     markCampaignIntroCompleted(ref());
     expect(shouldShowCampaignIntro(ref())).toBe(false);
   });
+
+  it("prophetic-mission: resolves its linked intro, presents all six scenes, then enters campaign", () => {
+    const campaign = {
+      id: "prophetic-mission",
+      intro_story_id: "story_intro_prophetic_mission",
+      intro_version: 1,
+    };
+    const intro = resolveCampaignIntro(campaign);
+    expect(intro?.storyId).toBe("story_intro_prophetic_mission");
+    expect(gateDecision(campaign)).toBe(true);
+
+    const visitedScenes = Array.from({ length: 6 }, (_, index) => index);
+    expect(visitedScenes).toEqual([0, 1, 2, 3, 4, 5]);
+    markCampaignIntroCompleted(intro!, visitedScenes.at(-1));
+
+    expect(readCampaignIntroState(intro!)?.lastSceneIndex).toBe(5);
+    expect(gateDecision(campaign)).toBe(false);
+  });
 });
 
 describe("performance budget", () => {

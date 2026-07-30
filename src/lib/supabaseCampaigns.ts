@@ -166,16 +166,22 @@ export async function fetchCampaignByIdOrSlug(
   if (hit && !isDividerRow(hit as any)) {
     const c = (hit.data ?? null) as Campaign | null;
     if (c && c.status === "published") {
-      const overlay = await getCampaignKeyArtOverlay();
-      const merged = {
-        ...c,
-        id: c.id ?? (hit as any).id,
-        slug: (c as any).slug ?? (hit as any).slug,
-        key_art_path: (hit as any).key_art_path ?? c.key_art_path ?? null,
-        key_art_square_path: (hit as any).key_art_square_path ?? c.key_art_square_path ?? null,
-        key_art_credit: (hit as any).key_art_credit ?? c.key_art_credit ?? null,
-      } as Campaign & { id?: string; slug?: string };
-      return applyKeyArtOverlay(merged, overlay) as Campaign;
+      // An older bundled campaign row can predate a newly linked intro.
+      // On entry, refresh that specific row before returning the stale local
+      // copy so the intro can open on the very first visit after publication.
+      // Fully-authored local rows remain instant and offline-first.
+      if (c.intro_story_id || typeof navigator !== "undefined" && navigator.onLine === false) {
+        const overlay = await getCampaignKeyArtOverlay();
+        const merged = {
+          ...c,
+          id: c.id ?? (hit as any).id,
+          slug: (c as any).slug ?? (hit as any).slug,
+          key_art_path: (hit as any).key_art_path ?? c.key_art_path ?? null,
+          key_art_square_path: (hit as any).key_art_square_path ?? c.key_art_square_path ?? null,
+          key_art_credit: (hit as any).key_art_credit ?? c.key_art_credit ?? null,
+        } as Campaign & { id?: string; slug?: string };
+        return applyKeyArtOverlay(merged, overlay) as Campaign;
+      }
     }
   }
 

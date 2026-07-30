@@ -29,14 +29,15 @@ const ALL = "*";
 
 /**
  * Step 1 of the rollout ladder, shipped as the build default: the intro
- * engine runs for the PILOT campaign only ("فتح مكة"). Both the campaign
- * id and its slug are listed because surfaces resolve either one.
+ * engine runs only for the approved pilot campaigns. Both ids and slugs
+ * are listed because player surfaces may resolve either one.
  * A server-side config (`campaign_intros.*`) always overrides this, and a
  * server-side `enabled === false` still switches the engine off entirely.
  */
 export const CAMPAIGN_INTRO_PILOT_CAMPAIGNS = [
   "conquest-of-makkah-campaign",
   "conquest-of-makkah",
+  "prophetic-mission",
 ] as const;
 
 
