@@ -180,9 +180,9 @@ alter table public.app_config enable row level security;
 
 ## 9) الملفات
 
-جديدة: `src/lib/campaigns/sections.ts` · `src/lib/audio/campaignThemes.ts` · `src/lib/campaigns/intro/{types,resolve,state,sync,flags}.ts` · `src/components/campaigns/{CampaignAudioScope,CampaignIntroGate}.tsx` · `src/lib/config/appConfig.ts` · اختبارات `tests/campaigns/{intro-state,section-resolution}.test.ts`, `tests/audio/section-lifecycle.test.ts`.
+جديدة: `src/lib/campaigns/sections.ts` · `src/lib/audio/campaignThemes.ts` · `src/lib/campaigns/intro/{types,resolve,state,sync,flags}.ts` · `src/lib/campaigns/intro/offline-pack.ts` · `scripts/build-campaign-intro-pack.mjs` · `src/components/campaigns/{CampaignAudioScope,CampaignIntroGate}.tsx` · `src/lib/config/appConfig.ts` · اختبارات `tests/campaigns/{intro-state,section-resolution,intro-offline}.test.ts`, `tests/audio/section-lifecycle.test.ts`.
 
-معدَّلة (إضافات فقط): `src/lib/audioManager.ts` · `src/components/AudioInitializer.tsx` · `src/routes/campaigns.tsx` (تركيب الـScope) · `campaigns.imported.$id.index.tsx` · `campaigns.imported.$id.chapter.$chapter.tsx` · `src/types/campaign.ts` · `src/lib/campaigns/entities.ts` · `StoryPlayer.tsx` (وضع intro) · دوال/واجهات إدارة القصص والحملات · `src/lib/identity/reset.ts` · `src/lib/offline-snapshot.ts` · `src/lib/offline/outbox.ts`.
+معدَّلة (إضافات فقط): `src/lib/audioManager.ts` · `src/components/AudioInitializer.tsx` · `src/routes/campaigns.tsx` (تركيب الـScope) · `campaigns.imported.$id.index.tsx` · `campaigns.imported.$id.chapter.$chapter.tsx` · `src/types/campaign.ts` · `src/lib/campaigns/entities.ts` · `StoryPlayer.tsx` (وضع intro) · دوال/واجهات إدارة القصص والحملات · `src/lib/identity/reset.ts` · `src/lib/offline-snapshot.ts` (قسم `campaignIntros`) · `scripts/verify-offline-snapshot.mjs` · `src/lib/offline/outbox.ts`.
 
 ## 10) القبول (إضافة على قائمة Rev 1)
 
@@ -194,3 +194,8 @@ alter table public.app_config enable row level security;
 18. إطفاء `app_config` خادميًا يعطّل الميزة حتى لو كان مفتاح localStorage مفعّلًا.
 19. `get_campaign_intro_story` ترفض أي `story_kind='standalone'` وأي مسودة.
 20. مقارنة عدّادات `/stories` قبل/بعد إدخال افتتاحيات = صفر فرق.
+21. فتح حملة في وضع Offline يعرض الافتتاحية فورًا بلا أي شاشة انتظار.
+22. **صفر طلبات شبكة** أثناء تشغيل افتتاحية موجودة محليًا (اختبار يعترض `fetch`/`XHR` ويؤكد العدد = 0).
+23. تعديل افتتاحية من لوحة الإدارة يُنزَّل في Content Sync التالي، ولا تُستبدل النسخة المحلية إلا بعد اكتمال التنزيل والتحقق.
+24. مقاطعة/فشل التنزيل ⇒ النسخة السابقة تبقى صالحة وتعمل، ولا يبقى أي أثر جزئي.
+25. `verify-offline-snapshot` يفشل إذا نقص أصل من أصول أي افتتاحية منشورة.
