@@ -375,6 +375,35 @@ async function handleItem(item: OutboxItem): Promise<{ ok: boolean; error?: stri
         return { ok: true };
       }
 
+      // Campaign intro watch mirror. Backup only — the local record is the
+      // display authority. The RPC merge is idempotent and monotonic, so a
+      // retry after a long offline session can never resurrect an intro.
+      case "campaign_intro": {
+        const p = item.payload as {
+          campaignId?: string; introVersion?: number; storyId?: string | null;
+          status?: string; lastSceneIndex?: number;
+        };
+        if (!p?.campaignId) return { ok: false, error: "invalid_campaign_id" };
+        if (!p.status || !["started", "completed", "skipped"].includes(p.status)) {
+          return { ok: false, error: "invalid_status" };
+        }
+        const { data: res, error } = await supabase.rpc(
+          "record_campaign_intro_v1" as any,
+          {
+            p_campaign_id: p.campaignId,
+            p_intro_version: Math.max(1, Math.trunc(Number(p.introVersion) || 1)),
+            p_story_id: p.storyId ?? null,
+            p_status: p.status,
+            p_last_scene_index: Math.max(0, Math.trunc(Number(p.lastSceneIndex) || 0)),
+          },
+        );
+        if (error) return { ok: false, error: error.message };
+        const payload = (res ?? {}) as { ok?: boolean; reason?: string };
+        if (!payload.ok) return { ok: false, error: payload.reason ?? "rpc-not-ok" };
+        return { ok: true };
+      }
+
+
       default:
         return { ok: false, error: "unknown-kind" };
     }
