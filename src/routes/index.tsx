@@ -1,3 +1,4 @@
+import { WorldEmblem } from "@/components/worlds/WorldEmblem";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { markBootHealthy } from "@/lib/diagnostics/safe-boot";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
