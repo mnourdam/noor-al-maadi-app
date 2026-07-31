@@ -116,6 +116,23 @@ export interface Campaign {
   /** Registry item ids unlocked when the campaign is fully completed. */
   unlocks?: string[];
   /**
+   * Campaign Progression v1 — "special campaign" marker. Special campaigns
+   * are excluded from the era's sequential chain and use `unlock` instead.
+   */
+  special?: boolean;
+  /**
+   * Authored unlock condition for special campaigns only. Regular campaigns
+   * follow the era chain (first campaign of each era is always open).
+   */
+  unlock?: {
+    achievementId?: string;
+    level?: number;
+    storyId?: string;
+    campaignId?: string;
+    hint?: string;
+  } | null;
+
+  /**
    * Deterministic chronological position. Primary sort axis for player-facing
    * lists. Lower = earlier in history. When set, this always wins over
    * sort_year and historicalPeriod parsing.
