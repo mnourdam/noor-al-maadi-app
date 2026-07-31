@@ -4388,6 +4388,7 @@ export type Database = {
       my_unread_notification_count: { Args: never; Returns: number }
       normalize_unlock_spec_v2: { Args: { p_input: Json }; Returns: Json }
       purchase_heart: { Args: never; Returns: Json }
+      purge_user_account_data: { Args: { p_user_id: string }; Returns: Json }
       rate_feedback_issue: {
         Args: { p_issue_id: string; p_rating: number }
         Returns: undefined
