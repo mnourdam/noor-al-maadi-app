@@ -14,6 +14,13 @@ import {
   validateMuseumUnlocks,
   type UnlockValidationReport,
 } from "@/lib/games/museumUnlocks";
+import {
+  downloadJsonFile,
+  parseGamesImportPayload,
+  serializeGame,
+} from "@/lib/games/export";
+import { ExportAllGamesButton } from "@/components/admin/ExportAllGamesButton";
+
 
 interface Toast { kind: "ok" | "err"; msg: string }
 
