@@ -326,7 +326,7 @@ function AndroidStableCampaigns() {
 }
 
 
-function ImportedCampaignCard({ c }: { c: ImportedCampaign }) {
+function ImportedCampaignCard({ c, status }: { c: ImportedCampaign; status?: CampaignLockStatus }) {
   const fr = c.finalRewards;
   const firstUnlock = fr?.unlocks?.[0];
   const { resolved } = useResolvedUnlocks(firstUnlock ? [firstUnlock] : []);
@@ -342,18 +342,18 @@ function ImportedCampaignCard({ c }: { c: ImportedCampaign }) {
     c.chapters.length > 0 &&
     (progress.completed || c.chapters.every((ch) => progress.chapters[ch.id]?.completed));
 
+  const locked = !!status?.locked;
   const stashOrigin = useStashCurrentAsOrigin();
-  return (
-    <Link
-      to="/campaigns/imported/$id"
-      params={{ id: c.id }}
-      onClick={() => stashOrigin(`/campaigns/imported/${c.id}`)}
-      className={`motion-tap shadow-elegant relative block overflow-hidden rounded-3xl border bg-gradient-to-tl from-amber-900/30 via-surface to-stone-900/40 p-6 transition ${
-        isComplete
-          ? "border-emerald-400/60 ring-1 ring-emerald-400/30 shadow-[0_18px_50px_-25px_rgba(16,185,129,0.55)]"
-          : "border-gold/40 hover:border-gold/60"
-      }`}
-    >
+  const cardClass = `motion-tap shadow-elegant relative block overflow-hidden rounded-3xl border bg-gradient-to-tl from-amber-900/30 via-surface to-stone-900/40 p-6 transition ${
+    locked
+      ? "border-white/10 opacity-80 grayscale-[0.35]"
+      : isComplete
+        ? "border-emerald-400/60 ring-1 ring-emerald-400/30 shadow-[0_18px_50px_-25px_rgba(16,185,129,0.55)]"
+        : "border-gold/40 hover:border-gold/60"
+  }`;
+
+  const body = (
+
 
       <div className="absolute -left-12 -top-12 size-48 rounded-full bg-gold/20 blur-3xl" />
       {isComplete && (
