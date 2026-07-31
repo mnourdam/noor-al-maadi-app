@@ -153,8 +153,9 @@ function CampaignsHubFull() {
                 </Reveal>
                 <Stagger className="space-y-3" max={12}>
                   {section.campaigns.map((c) => (
-                    <ImportedCampaignCard key={c.id} c={c} />
+                    <ImportedCampaignCard key={c.id} c={c} status={lockMap.get(c.id)} />
                   ))}
+
                 </Stagger>
                 {section.campaigns.length === 0 && (
                   <div className="rounded-2xl border border-dashed border-gold/15 bg-surface/30 p-4 text-center text-xs text-muted-foreground">
