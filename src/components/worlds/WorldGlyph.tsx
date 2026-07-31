@@ -28,13 +28,13 @@ function Defs() {
   return (
     <defs>
       <linearGradient id={GRAD_ID} x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stopColor="oklch(0.95 0.12 92)" />
-        <stop offset="48%" stopColor="oklch(0.80 0.14 84)" />
-        <stop offset="100%" stopColor="oklch(0.55 0.11 70)" />
+        <stop offset="0%" stopColor="#FBE9B8" />
+        <stop offset="48%" stopColor="#E0B65C" />
+        <stop offset="100%" stopColor="#A97B2E" />
       </linearGradient>
       <linearGradient id={GRAD_DEEP} x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stopColor="oklch(0.30 0.03 66)" />
-        <stop offset="100%" stopColor="oklch(0.16 0.02 60)" />
+        <stop offset="0%" stopColor="#2A2117" />
+        <stop offset="100%" stopColor="#100D09" />
       </linearGradient>
     </defs>
   );
