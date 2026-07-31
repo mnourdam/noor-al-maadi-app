@@ -16,8 +16,9 @@ import { useProfile } from "@/lib/profile";
 import { levelFor } from "@/lib/progression";
 import { localCompletedIds, unionCompletedIds } from "@/lib/campaigns/completions";
 import { useAchievementViews } from "@/lib/achievements/v2/driver";
+import { asCampaignSectionKey } from "@/lib/campaigns/sections";
 import {
-  computeFeedLockMap,
+  computeLockMapByGroup,
   OPEN_STATUS,
   type CampaignLike,
   type CampaignLockStatus,
