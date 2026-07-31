@@ -50,17 +50,51 @@ export function useProgressionState(): ProgressionState {
   }, [profile.campaignsCompleted, profile.storiesRead, profile.points, serverCompleted, achievements]);
 }
 
-/** Lock map for the full campaigns feed (era sections in authored order). */
+/** Group key priority: authored campaign section → divider section/id → era. */
+function groupKeyFor(
+  campaign: CampaignLike & { section_key?: unknown; era?: unknown },
+  divider: { sectionKey?: string | null; id?: string; era?: string } | null | undefined,
+  fallbackIndex: number,
+): string {
+  const own = asCampaignSectionKey((campaign as { section_key?: unknown }).section_key);
+  if (own) return `section:${own}`;
+  const fromDivider = asCampaignSectionKey(divider?.sectionKey);
+  if (fromDivider) return `section:${fromDivider}`;
+  const era = typeof campaign.era === "string" && campaign.era.trim() ? campaign.era.trim() : null;
+  if (era) return `era:${era}`;
+  if (divider?.id) return `divider:${divider.id}`;
+  return `index:${fallbackIndex}`;
+}
+
+/** Lock map for the full campaigns feed (era groups in authored order). */
 export function useCampaignLockMap(
-  sections: readonly { campaigns: readonly CampaignLike[] }[] | undefined,
+  sections:
+    | readonly {
+        divider?: { sectionKey?: string | null; id?: string; era?: string } | null;
+        campaigns: readonly CampaignLike[];
+      }[]
+    | undefined,
 ): Map<string, CampaignLockStatus> {
   const state = useProgressionState();
-  return useMemo(() => computeFeedLockMap(sections ?? [], state), [sections, state]);
+  return useMemo(() => {
+    const entries: { campaign: CampaignLike; groupKey: string }[] = [];
+    (sections ?? []).forEach((s, i) => {
+      for (const c of s.campaigns ?? []) {
+        entries.push({ campaign: c, groupKey: groupKeyFor(c as never, s.divider, i) });
+      }
+    });
+    return computeLockMapByGroup(entries, state);
+  }, [sections, state]);
 }
 
 /** Single-campaign lock status; needs the full feed for era ordering. */
 export function useCampaignLockStatus(
-  sections: readonly { campaigns: readonly CampaignLike[] }[] | undefined,
+  sections:
+    | readonly {
+        divider?: { sectionKey?: string | null; id?: string; era?: string } | null;
+        campaigns: readonly CampaignLike[];
+      }[]
+    | undefined,
   campaignId: string | undefined,
 ): CampaignLockStatus {
   const map = useCampaignLockMap(sections);
