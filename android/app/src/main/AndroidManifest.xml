@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <application
         android:name=".IrthApp"
@@ -75,4 +76,14 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!--
+        Google Play Data Safety: Irth declares "No ads" and never reads the
+        advertising ID. No current dependency requests AD_ID, but this guard
+        strips it from the merged manifest if any future library adds it,
+        so the released AAB can never ship the advertising-ID permission.
+    -->
+    <uses-permission
+        android:name="com.google.android.gms.permission.AD_ID"
+        tools:node="remove" />
 </manifest>
