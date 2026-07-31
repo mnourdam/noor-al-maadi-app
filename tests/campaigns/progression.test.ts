@@ -3,6 +3,7 @@ import {
   computeSectionLockMap,
   computeFeedLockMap,
   isSpecialCampaign,
+  computeLockMapByGroup,
 } from "@/lib/campaigns/progression";
 
 const state = (ids: string[] = [], extra: Partial<Parameters<typeof computeSectionLockMap>[1]> = {}) => ({
@@ -57,5 +58,21 @@ describe("Campaign Progression v1", () => {
       level: 7,
     }).get("s")!;
     expect(open.locked).toBe(false);
+  });
+});
+
+describe("group-based lock map (divider-independent)", () => {
+  it("opens the first campaign of every group even without dividers", () => {
+    const entries = [
+      { campaign: { id: "u1" }, groupKey: "section:umayyad" },
+      { campaign: { id: "u2" }, groupKey: "section:umayyad" },
+      { campaign: { id: "a1" }, groupKey: "section:abbasid" },
+      { campaign: { id: "c1" }, groupKey: "section:crusades" },
+      { campaign: { id: "o1" }, groupKey: "section:ottoman" },
+    ];
+    const map = computeLockMapByGroup(entries, state());
+    for (const id of ["u1", "a1", "c1", "o1"]) expect(map.get(id)!.locked).toBe(false);
+    expect(map.get("u2")!.locked).toBe(true);
+    expect(computeLockMapByGroup(entries, state(["u1"])).get("u2")!.locked).toBe(false);
   });
 });
