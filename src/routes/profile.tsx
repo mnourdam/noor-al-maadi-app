@@ -45,6 +45,8 @@ import { DEFAULT_NOTIFICATION_PREFS, ensurePermission } from "@/lib/notification
 import { DEFAULT_AVATAR_ID } from "@/lib/avatars";
 import { useAccount } from "@/lib/account";
 import { clearLocalPlayerProgress } from "@/lib/resetProgress";
+import { DeleteAccountSection } from "@/components/DeleteAccountSection";
+
 import { ModalPortal } from "@/components/ModalPortal";
 // Phase 2 (Referrals removal): `@/lib/referrals` was deleted. Referral
 // stats, share buttons, and the standalone `/referrals` route are gone.
@@ -1387,6 +1389,9 @@ function SettingsTab({
           <LogOut className="size-4" /> تسجيل الخروج وإعادة التهيئة
         </button>
       )}
+
+      {profile.loggedIn && <DeleteAccountSection />}
+
     </ReadingScale>
 
   );
