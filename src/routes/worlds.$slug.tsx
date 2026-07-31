@@ -35,7 +35,7 @@ import { useCanonicalInvestigationProgress } from "@/lib/investigations/progress
 import { getCampaignProgress } from "@/lib/importedCampaignProgress";
 import { sortCampaignsChronological } from "@/lib/campaignChronology";
 import type { Campaign as ImportedCampaign } from "@/types/campaign";
-import { WorldGlyph } from "@/components/worlds/WorldGlyph";
+import { WorldEmblem } from "@/components/worlds/WorldEmblem";
 import { WorldStoriesSection } from "@/components/stories/WorldStoriesSection";
 import { CampaignArtwork } from "@/lib/campaignArtwork";
 
@@ -257,7 +257,7 @@ function WorldDetailPage() {
             {PUBLIC_WORLD_HUBS.map((h) => (
               <Link key={h.slug} to="/worlds/$slug" params={{ slug: h.slug }}
                 className="rounded-2xl border border-gold/20 bg-black/30 p-3 text-right">
-                <span className="mb-1 block size-8"><WorldGlyph slug={h.slug} /></span>
+                <span className="mb-1 block size-8"><WorldEmblem slug={h.slug} /></span>
                 <p className="font-display text-[13px] font-bold">{titleBySlug.get(h.slug) ?? "—"}</p>
               </Link>
             ))}
@@ -301,7 +301,7 @@ function WorldDetailPage() {
         <div className="mt-3 overflow-hidden rounded-3xl border border-gold/25 bg-gradient-to-br from-gold/15 via-black/40 to-transparent p-5">
           <div className="flex items-start gap-3">
             <span className="grid size-16 place-items-center rounded-2xl bg-black/50 p-1.5 ring-1 ring-white/10">
-              <WorldGlyph slug={hub.slug} />
+              <WorldEmblem slug={hub.slug} />
             </span>
             <div className="min-w-0 flex-1">
               <p className="text-[11px] tracking-[0.3em] text-gold/80 inline-flex items-center gap-1">
@@ -389,7 +389,7 @@ function WorldDetailPage() {
                     className="group flex items-center gap-3 rounded-2xl border border-gold/20 bg-black/30 p-3 transition hover:border-gold/55"
                   >
                     <span className="grid size-10 place-items-center rounded-xl bg-black/50 p-1 ring-1 ring-white/10">
-                      <WorldGlyph slug={w.slug} />
+                      <WorldEmblem slug={w.slug} />
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] text-gold/80">عالم مرتبط</p>
@@ -977,7 +977,7 @@ function WorldNavCard({
         aria-hidden="true"
         className="grid size-11 shrink-0 place-items-center rounded-xl bg-black/50 p-1 ring-1 ring-white/10"
       >
-        <WorldGlyph slug={hub.slug} />
+        <WorldEmblem slug={hub.slug} />
       </span>
       <div className={`min-w-0 flex-1 ${isPrev ? "text-right" : "text-left"}`}>
         <p className="text-[10px] tracking-[0.2em] text-muted-foreground">
