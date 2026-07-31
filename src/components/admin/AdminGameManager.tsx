@@ -247,6 +247,12 @@ export function AdminGameManager({ mode }: { mode: GameMode }) {
             <button onClick={downloadExample} className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 px-3 py-1.5 text-xs text-amber-200 hover:bg-amber-500/10">
               <Download className="h-3.5 w-3.5" /> تنزيل نموذج JSON
             </button>
+            <ExportAllGamesButton
+              mode={mode}
+              knownCount={rows?.length}
+              onResult={(kind, msg) => notify(kind, msg)}
+            />
+
             {mode === "crossword" && (
               <Link to="/admin/games/crossword-generator"
                 className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-amber-400">
