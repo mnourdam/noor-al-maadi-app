@@ -37,6 +37,53 @@ export interface CampaignLike {
   special?: boolean;
   /** Authored unlock condition (special campaigns only). */
   unlock?: CampaignUnlockRule | null;
+  /** Publication status. Anything other than published/active is out of the chain. */
+  status?: string | null;
+  /** Explicit archive flag (some payloads use this instead of `status`). */
+  archived?: boolean | null;
+  /** Authored, open-set group key (era/section). Never inferred from titles. */
+  section_key?: unknown;
+  sectionKey?: unknown;
+  era?: unknown;
+}
+
+/**
+ * A campaign counts toward the chain only when it is live. Archived or
+ * unpublished campaigns can never be "the first campaign of a group" and
+ * never block the campaign after them.
+ */
+export function isActiveCampaign(c: CampaignLike | null | undefined): boolean {
+  if (!c) return false;
+  if (c.archived === true) return false;
+  const st = typeof c.status === "string" ? c.status.trim().toLowerCase() : "";
+  if (!st) return true; // feeds that only ever carry published rows
+  return st === "published" || st === "active" || st === "live";
+}
+
+/**
+ * DYNAMIC group key. There is NO hard-coded list of eras here: the key is
+ * read off the campaign itself, then off the divider that opens its run,
+ * then off `era`. Adding a new group from the admin panel therefore needs
+ * zero code changes; renaming/removing a visual divider changes nothing.
+ */
+export function deriveCampaignGroupKey(
+  campaign: CampaignLike,
+  divider?: { rawSectionKey?: string | null; sectionKey?: string | null; id?: string; era?: string } | null,
+  fallbackIndex = 0,
+): string {
+  const norm = (v: unknown): string | null => {
+    if (typeof v !== "string") return null;
+    const t = v.trim().toLowerCase();
+    return t ? t : null;
+  };
+  const own = norm(campaign.section_key) ?? norm(campaign.sectionKey);
+  if (own) return `section:${own}`;
+  const fromDivider = norm(divider?.rawSectionKey) ?? norm(divider?.sectionKey);
+  if (fromDivider) return `section:${fromDivider}`;
+  const era = norm(campaign.era) ?? norm(divider?.era);
+  if (era) return `era:${era}`;
+  if (divider?.id) return `divider:${divider.id}`;
+  return `index:${fallbackIndex}`;
 }
 
 export interface ProgressionState {
@@ -123,6 +170,15 @@ export function computeSectionLockMap(
   let previousRegular: CampaignLike | null = null;
 
   for (const c of campaigns) {
+    if (!isActiveCampaign(c)) {
+      // Out of the chain entirely: neither a start candidate nor a blocker.
+      out.set(c.id, {
+        locked: true,
+        kind: "sequential",
+        reason: "هذه الحملة غير متاحة حاليًا.",
+      });
+      continue;
+    }
     if (isSpecialCampaign(c)) {
       out.set(c.id, completedCampaign(state, c)
         ? { locked: false, kind: "special", reason: null }
