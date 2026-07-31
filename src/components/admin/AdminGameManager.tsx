@@ -60,56 +60,17 @@ export function AdminGameManager({ mode }: { mode: GameMode }) {
   };
 
   const exportGame = (g: GameRow) => {
-    const meta = { ...(g.metadata ?? {}) } as Record<string, unknown>;
-    const museum = Array.isArray(meta.museum_unlocks)
-      ? (meta.museum_unlocks as string[])
-      : [];
-    // Don't double-encode museum unlocks: surface them under rewards and
-    // drop the metadata copy so re-imported envelopes stay canonical.
-    delete meta.museum_unlocks;
-    const envelope: Record<string, unknown> = {
-      slug: g.slug,
-      mode: g.mode,
-      title: g.title,
-      description: g.description ?? undefined,
-      difficulty: g.difficulty,
-      estimated_time: g.estimated_time,
-      hearts_penalty: g.hearts_penalty,
-      related_entities: g.related_entities ?? [],
-      metadata: meta,
-      stages: g.stages ?? [],
-      rewards: {
-        xp: g.xp_reward,
-        coins: g.coin_reward,
-        ...(museum.length ? { museum_unlocks: museum } : {}),
-      },
-    };
-    const blob = new Blob([JSON.stringify(envelope, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${g.slug}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadJsonFile(`${g.slug}.json`, serializeGame(g));
   };
 
-  const importJson = async () => {
-    setValidationReport([]);
-    setUnlockReport(null);
-    let parsed: unknown;
-    try { parsed = JSON.parse(importText); }
-    catch (e) {
-      setValidationReport([`JSON غير صالح: ${(e as Error).message}`]);
-      return;
-    }
-    console.info("[crossword.trace] save.json-parsed", {
-      mode,
-      slug: (parsed as { slug?: unknown })?.slug,
-    });
+  /** Import a single already-parsed envelope. Returns per-item outcome. */
+  const importOne = async (
+    parsed: unknown,
+  ): Promise<{ ok: boolean; title: string; lines: string[] }> => {
     const result = validateGameJson(mode, parsed);
     if (!result.ok) {
-      setValidationReport(result.errors);
-      return;
+      const label = (parsed as { slug?: string })?.slug ?? "(بدون معرف)";
+      return { ok: false, title: label, lines: result.errors.map((e) => `${label} — ${e}`) };
     }
     const v = result.value;
     // Merge unified rewards block — rewards.* overrides top-level.
@@ -123,11 +84,14 @@ export function AdminGameManager({ mode }: { mode: GameMode }) {
       unlockReportLocal = await validateMuseumUnlocks(museumUnlocks);
       setUnlockReport(unlockReportLocal);
       if (unlockReportLocal.missing.length) {
-        setValidationReport([
-          `لا يمكن الاستيراد: ${unlockReportLocal.missing.length} مقتنى غير موجود في الموسوعة.`,
-          ...unlockReportLocal.missing.map((m) => `• ${m.raw}`),
-        ]);
-        return;
+        return {
+          ok: false,
+          title: v.slug,
+          lines: [
+            `${v.slug} — لا يمكن الاستيراد: ${unlockReportLocal.missing.length} مقتنى غير موجود في الموسوعة.`,
+            ...unlockReportLocal.missing.map((m) => `• ${m.raw}`),
+          ],
+        };
       }
     }
 
@@ -150,49 +114,74 @@ export function AdminGameManager({ mode }: { mode: GameMode }) {
       stages: v.stages,
       status: "draft" as GameStatus,
     };
-    console.info("[crossword.trace] save.before-insert", {
-      jsonSlug: v.slug,
-      payloadSlug: payload.slug,
-      mode: payload.mode,
-      title: payload.title,
-      identical: v.slug === payload.slug,
-    });
-    console.info("[games.import] INSERT", { slug: payload.slug, mode: payload.mode, title: payload.title });
     const { data: inserted, error } = await supabase
       .from("games")
       .insert(payload as any)
       .select("id, slug")
       .single();
     if (error) {
-      if ((error as any).code === "23505" || /duplicate|unique/i.test(error.message)) {
-        notify("err", `المعرف "${payload.slug}" مستخدم بالفعل. غيّر slug ثم أعد المحاولة.`);
-        return;
-      }
-      notify("err", error.message);
-      return;
+      const dup = (error as any).code === "23505" || /duplicate|unique/i.test(error.message);
+      return {
+        ok: false,
+        title: v.slug,
+        lines: [
+          dup
+            ? `${v.slug} — المعرف مستخدم بالفعل. غيّر slug ثم أعد المحاولة.`
+            : `${v.slug} — ${error.message}`,
+        ],
+      };
     }
-    console.info("[crossword.trace] save.db-returned", {
-      jsonSlug: v.slug,
-      payloadSlug: payload.slug,
-      dbSlug: inserted?.slug,
-      id: inserted?.id,
-      allIdentical: v.slug === payload.slug && payload.slug === inserted?.slug,
-    });
     console.info("[games.import] inserted", inserted);
 
-    const warnings: string[] = [`✓ تم استيراد "${v.title}" كمسودة.`];
+    const lines = [`✓ تم استيراد "${v.title}" كمسودة.`];
     if (unlockReportLocal?.duplicates.length) {
-      warnings.push(`⚠ مقتنيات مكررة تم توحيدها: ${unlockReportLocal.duplicates.join("، ")}`);
+      lines.push(`⚠ مقتنيات مكررة تم توحيدها: ${unlockReportLocal.duplicates.join("، ")}`);
     }
     if (unlockReportLocal?.resolved.length) {
-      warnings.push(`✓ سيتم فتح ${unlockReportLocal.resolved.length} مقتنى عند أول إكمال.`);
+      lines.push(`✓ سيتم فتح ${unlockReportLocal.resolved.length} مقتنى عند أول إكمال.`);
     }
-    setValidationReport(warnings);
-    setImportText("");
-    notify("ok", "تم الاستيراد بنجاح كمسودة.");
-    void refresh();
-
+    return { ok: true, title: v.title, lines };
   };
+
+  const importJson = async () => {
+    setValidationReport([]);
+    setUnlockReport(null);
+    let parsed: unknown;
+    try { parsed = JSON.parse(importText); }
+    catch (e) {
+      setValidationReport([`JSON غير صالح: ${(e as Error).message}`]);
+      return;
+    }
+    // Accepts a single game object, a bare array, or a bulk export bundle.
+    const payload = parseGamesImportPayload(parsed);
+    if (!payload.ok) {
+      setValidationReport([payload.error]);
+      return;
+    }
+
+    const lines: string[] = [];
+    let okCount = 0;
+    for (const item of payload.items) {
+      const r = await importOne(item);
+      if (r.ok) okCount += 1;
+      lines.push(...r.lines);
+    }
+
+    if (payload.bulk) {
+      lines.unshift(
+        `${okCount === payload.items.length ? "✓" : "⚠"} تم استيراد ${okCount} من ${payload.items.length} لعبة.`,
+      );
+    }
+    setValidationReport(lines);
+    if (okCount > 0) {
+      setImportText("");
+      notify("ok", `تم استيراد ${okCount} لعبة كمسودة.`);
+      void refresh();
+    } else {
+      notify("err", "فشل الاستيراد — راجع التقرير.");
+    }
+  };
+
 
   const setStatus = async (g: GameRow, status: GameStatus) => {
     const patch: Record<string, unknown> = { status };
