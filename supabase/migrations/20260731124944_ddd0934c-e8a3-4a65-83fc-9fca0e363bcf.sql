@@ -1,0 +1,1 @@
+update public.admin_campaigns set status='published', updated_at=now() where id='div_mqz2eoss' and status <> 'published';
