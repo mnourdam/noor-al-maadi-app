@@ -4,6 +4,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
+import { publicEraLabel, publicEraSortIndex, toPublicEra } from "@/lib/eras-public";
 import { supabase } from "@/integrations/supabase/client";
 
 export type WorldEntityType =
@@ -59,8 +60,11 @@ const ERA_AR: Record<string, string> = {
   "modern": "العصر الحديث",
 };
 
+// Player-facing era labels come from the unified public taxonomy
+// (`src/lib/eras-public.ts`). The legacy ERA_AR map is kept only as a
+// last-resort label for admin/debug values that never reach a filter.
 export function eraLabel(era: string): string {
-  return ERA_AR[era] ?? era;
+  return publicEraLabel(era) || ERA_AR[era] || era;
 }
 
 export type MapCoords = { x: number; y: number };
@@ -126,7 +130,8 @@ export function useWorldMapDerived(
 
     for (const e of all) {
       byType[e.entity_type] = (byType[e.entity_type] ?? 0) + 1;
-      const era = extractEra(e.metadata);
+      // Only officially approved, non-hidden eras may appear as a filter.
+      const era = toPublicEra(extractEra(e.metadata));
       if (era) eraCounts.set(era, (eraCounts.get(era) ?? 0) + 1);
     }
 
@@ -134,14 +139,14 @@ export function useWorldMapDerived(
       .filter((t) => byType[t] > 0);
 
     const eras = Array.from(eraCounts.entries())
-      .map(([id, count]) => ({ id, label: eraLabel(id), count }))
-      .sort((a, b) => b.count - a.count);
+      .map(([id, count]) => ({ id, label: publicEraLabel(id), count }))
+      .sort((a, b) => publicEraSortIndex(a.id) - publicEraSortIndex(b.id));
 
     // Apply filters for mappable / needs-location lists
     const filtered = all.filter((e) => {
       if (filters.type && e.entity_type !== filters.type) return false;
       if (filters.era) {
-        const era = extractEra(e.metadata);
+        const era = toPublicEra(extractEra(e.metadata));
         if (era !== filters.era) return false;
       }
       return true;

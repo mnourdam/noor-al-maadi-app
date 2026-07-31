@@ -11,7 +11,7 @@ import {
   useEncyclopediaIndex,
   type EncyclopediaBrowseSort,
 } from "@/lib/encyclopedia/index-store";
-import { canonicalEraLabel } from "@/lib/era-canonical";
+import { publicEraLabel as canonicalEraLabel } from "@/lib/eras-public";
 
 const SECTION_LABELS: Record<string, string> = {
   state: "الدول",

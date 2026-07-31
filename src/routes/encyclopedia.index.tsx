@@ -30,7 +30,7 @@ import { AndroidPlainTextInput } from "@/components/AndroidPlainTextInput";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
 import { type SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
 import { exactTopMatchTarget, normalizeArabicSearch } from "@/lib/encyclopedia-search";
-import { canonicalEraLabel } from "@/lib/era-canonical";
+import { publicEraLabel as canonicalEraLabel } from "@/lib/eras-public";
 import {
   browseEncyclopedia,
   primeEncyclopediaIndex,

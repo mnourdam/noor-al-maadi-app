@@ -39,14 +39,14 @@ import {
   scoreHaystack,
   type EntityHaystack,
 } from "@/lib/encyclopedia-search";
-import { eraSortIndex, toCanonicalEra } from "@/lib/era-canonical";
+import { publicEraSortIndex, toPublicEra } from "@/lib/eras-public";
 
 /**
  * Query key root. The full key always carries the snapshot data version, so a
  * cache entry built from an older snapshot is a *different* entry and can
  * never be served after the real snapshot lands.
  */
-export const ENCYCLOPEDIA_INDEX_QUERY_KEY = ["encyclopedia", "index", "v4"] as const;
+export const ENCYCLOPEDIA_INDEX_QUERY_KEY = ["encyclopedia", "index", "v5"] as const;
 
 
 export type IndexedEntity = {
@@ -99,7 +99,7 @@ export function buildEncyclopediaIndex(
   const indexed: IndexedEntity[] = rows.map((e) => ({
     e,
     hay: buildEntityHaystack(e),
-    era: toCanonicalEra(metaEra(e)) ?? "",
+    era: toPublicEra(metaEra(e)) ?? "",
   }));
 
   const byType: Record<string, IndexedEntity[]> = {};
@@ -127,8 +127,8 @@ export function buildEncyclopediaIndex(
   const erasByType: Record<string, [string, number][]> = {};
   for (const [key, counter] of Object.entries(eraCounters)) {
     erasByType[key] = Array.from(counter.entries()).sort((a, b) => {
-      const ai = eraSortIndex(a[0]);
-      const bi = eraSortIndex(b[0]);
+      const ai = publicEraSortIndex(a[0]);
+      const bi = publicEraSortIndex(b[0]);
       if (ai !== bi) return ai - bi;
       return b[1] - a[1];
     });
