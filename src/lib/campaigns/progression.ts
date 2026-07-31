@@ -161,4 +161,26 @@ export function computeFeedLockMap(
   return out;
 }
 
+/**
+ * Lock map computed from the campaign's OWN group key (era/section), not from
+ * the rendered divider list. A missing or hidden divider can therefore never
+ * lock the first campaign of a group again.
+ */
+export function computeLockMapByGroup(
+  entries: readonly { campaign: CampaignLike; groupKey: string }[],
+  state: ProgressionState,
+): Map<string, CampaignLockStatus> {
+  const groups = new Map<string, CampaignLike[]>();
+  for (const e of entries) {
+    const list = groups.get(e.groupKey);
+    if (list) list.push(e.campaign);
+    else groups.set(e.groupKey, [e.campaign]);
+  }
+  const out = new Map<string, CampaignLockStatus>();
+  for (const list of groups.values()) {
+    for (const [k, v] of computeSectionLockMap(list, state)) out.set(k, v);
+  }
+  return out;
+}
+
 export const OPEN_STATUS: CampaignLockStatus = { locked: false, kind: "open", reason: null };
