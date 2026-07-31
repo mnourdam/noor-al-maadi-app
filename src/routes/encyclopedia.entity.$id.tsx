@@ -37,7 +37,7 @@ import {
   groupRelatedByReason,
 } from "@/lib/relationship-graph";
 import { iconForType } from "@/lib/encyclopedia-icons";
-import { canonicalEraLabel, toCanonicalEra } from "@/lib/era-canonical";
+import { publicEraLabel as canonicalEraLabel, toPublicEra as toCanonicalEra } from "@/lib/eras-public";
 import { localAtlasEntities } from "@/lib/local-first-store";
 import { EncyclopediaHero } from "@/components/encyclopedia/EncyclopediaHero";
 import { Istazadtu } from "@/components/social/Istazadtu";

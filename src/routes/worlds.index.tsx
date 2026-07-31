@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Globe2, ChevronLeft, Sparkles, Compass, MapPin } from "lucide-react";
+import { WorldGlyph } from "@/components/worlds/WorldGlyph";
 import { AppShell } from "@/components/AppShell";
 import { fetchWorldsIndex } from "@/lib/worlds";
 import { isPublicWorld } from "@/lib/worlds-constants";
@@ -92,8 +93,8 @@ function WorldsIndex() {
                   <div className="absolute -left-10 -top-10 size-32 rounded-full bg-gold/15 blur-3xl" />
                   <div className="relative">
                     <div className="flex items-start gap-3">
-                      <span className="grid size-14 place-items-center rounded-2xl bg-black/50 text-3xl ring-1 ring-white/10">
-                        {w.hub.glyph}
+                      <span className="grid size-14 place-items-center rounded-2xl bg-black/50 p-1.5 ring-1 ring-white/10">
+                        <WorldGlyph slug={w.hub.slug} />
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="text-[10px] tracking-[0.3em] text-gold/80">عالم #{w.hub.order}</p>

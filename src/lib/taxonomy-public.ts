@@ -12,12 +12,14 @@ import type { SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
 // Approved canonical STATES (14). Legacy / geographic / stub
 // state entities are hidden from public lists.
 // ------------------------------------------------------------
+// NOTE: `buyid`, `fatimid` and `safavid` are intentionally absent — they must
+// never appear as a state card, category, filter or world. Their figures,
+// cities, battles, events and artifacts remain fully visible.
 export const APPROVED_STATE_SLUGS = [
   "prophetic",
   "rashidun",
   "umayyad",
   "abbasid",
-  "fatimid",
   "andalus",
   "seljuk",
   "zengid",
@@ -26,7 +28,6 @@ export const APPROVED_STATE_SLUGS = [
   "ottoman",
   "mongols",
   "timurid",
-  "safavid",
 ] as const;
 
 // Alias variants → canonical state slug. Extend here if the database stores
@@ -91,8 +92,6 @@ export const APPROVED_WORLD_SLUGS = [
   "ottoman",
   "mongols",
   "timurid",
-  "fatimid",
-  "safavid",
 ] as const;
 
 const APPROVED_WORLD_SET = new Set<string>(APPROVED_WORLD_SLUGS);

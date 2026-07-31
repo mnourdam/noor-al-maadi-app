@@ -7,7 +7,7 @@ import { memo } from "react";
 import type { AtlasEntityRow } from "@/lib/atlas-entities";
 import { apsToViewBox, ATLAS_VIEWBOX, APS_UNIT_SCALE } from "@/lib/atlas/aps";
 import { KIND_COLOR } from "@/lib/atlas/atlas-visual";
-import { AtlasKindGlyph } from "./AtlasGlyphs";
+import { AtlasGlyphDefs, AtlasKindGlyph } from "./AtlasGlyphs";
 
 const VB_W = ATLAS_VIEWBOX.width;
 const VB_H = ATLAS_VIEWBOX.height;
@@ -83,24 +83,40 @@ export function AtlasEntityPinsLayer({
     if (labelTier >= (LABEL_TIER[e.kind] ?? 99)) labelEligible++;
   }
   const labelCap = labelEligible > 28;
+  // ── Focus mode ──────────────────────────────────────────────
+  // With a selection active, every other marker fades to ~20% so the
+  // chosen city / region / battle — and its label — own the surface.
+  // The selected marker is rendered last so it always sits on top.
+  const focused = selectedId != null;
+  const selected = focused ? entities.find((e) => e.id === selectedId) ?? null : null;
+  const rest = focused ? entities.filter((e) => e.id !== selectedId) : entities;
+  const pin = (e: AtlasEntityRow, active: boolean) => (
+    <AtlasPin
+      key={e.id}
+      entity={e}
+      inv={inv}
+      labelTier={labelTier}
+      active={active}
+      onSelect={onSelect}
+      cullBounds={cullBounds}
+      disableGlow={disableGlow}
+      labelCap={labelCap}
+    />
+  );
   return (
     <g className="layer-atlas-entities">
-      {entities.map((e) => (
-        <AtlasPin
-          key={e.id}
-          entity={e}
-          inv={inv}
-          labelTier={labelTier}
-          active={selectedId === e.id}
-          onSelect={onSelect}
-          cullBounds={cullBounds}
-          disableGlow={disableGlow}
-          labelCap={labelCap}
-        />
-      ))}
+      <AtlasGlyphDefs />
+      <g
+        opacity={focused ? 0.2 : 1}
+        style={{ transition: "opacity 220ms cubic-bezier(0.22, 1, 0.36, 1)" }}
+      >
+        {rest.map((e) => pin(e, false))}
+      </g>
+      {selected && <g className="layer-atlas-focus">{pin(selected, true)}</g>}
     </g>
   );
 }
+
 
 
 const AtlasPin = memo(function AtlasPin({

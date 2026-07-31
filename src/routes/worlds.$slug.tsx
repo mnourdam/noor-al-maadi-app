@@ -18,6 +18,7 @@ import {
   type WorldSectionKey,
 } from "@/lib/worlds";
 import type { RelatedNode } from "@/lib/relationship-graph";
+import { gregorianYearLabel, selectWorldTimeline, worldSpan } from "@/lib/worlds-timeline";
 import {
   useWorldProgress,
   useStableSectionOrder,
@@ -34,6 +35,7 @@ import { useCanonicalInvestigationProgress } from "@/lib/investigations/progress
 import { getCampaignProgress } from "@/lib/importedCampaignProgress";
 import { sortCampaignsChronological } from "@/lib/campaignChronology";
 import type { Campaign as ImportedCampaign } from "@/types/campaign";
+import { WorldGlyph } from "@/components/worlds/WorldGlyph";
 import { WorldStoriesSection } from "@/components/stories/WorldStoriesSection";
 import { CampaignArtwork } from "@/lib/campaignArtwork";
 
@@ -255,7 +257,7 @@ function WorldDetailPage() {
             {PUBLIC_WORLD_HUBS.map((h) => (
               <Link key={h.slug} to="/worlds/$slug" params={{ slug: h.slug }}
                 className="rounded-2xl border border-gold/20 bg-black/30 p-3 text-right">
-                <p className="text-lg">{h.glyph}</p>
+                <span className="mb-1 block size-8"><WorldGlyph slug={h.slug} /></span>
                 <p className="font-display text-[13px] font-bold">{titleBySlug.get(h.slug) ?? "—"}</p>
               </Link>
             ))}
@@ -298,8 +300,8 @@ function WorldDetailPage() {
         {/* Hero */}
         <div className="mt-3 overflow-hidden rounded-3xl border border-gold/25 bg-gradient-to-br from-gold/15 via-black/40 to-transparent p-5">
           <div className="flex items-start gap-3">
-            <span className="grid size-16 place-items-center rounded-2xl bg-black/50 text-4xl ring-1 ring-white/10">
-              {hub.glyph}
+            <span className="grid size-16 place-items-center rounded-2xl bg-black/50 p-1.5 ring-1 ring-white/10">
+              <WorldGlyph slug={hub.slug} />
             </span>
             <div className="min-w-0 flex-1">
               <p className="text-[11px] tracking-[0.3em] text-gold/80 inline-flex items-center gap-1">
@@ -364,7 +366,10 @@ function WorldDetailPage() {
         {/* Mini timeline — derived only from real dated Event entities in
             this world. Hidden when fewer than 3 dated events exist. No
             fabricated milestones. */}
-        <MiniTimeline events={data.sections.event} worldSlug={slug} />
+        <MiniTimeline
+          events={[...data.sections.event, ...data.sections.battle]}
+          worldSlug={slug}
+        />
 
         {/* Stories of this world (P4.1). Informational only. */}
         <WorldStoriesSection worldSlug={slug} />
@@ -383,8 +388,8 @@ function WorldDetailPage() {
                     params={{ slug: w.slug }}
                     className="group flex items-center gap-3 rounded-2xl border border-gold/20 bg-black/30 p-3 transition hover:border-gold/55"
                   >
-                    <span className="grid size-10 place-items-center rounded-xl bg-black/50 text-xl ring-1 ring-white/10">
-                      {h?.glyph ?? "🌍"}
+                    <span className="grid size-10 place-items-center rounded-xl bg-black/50 p-1 ring-1 ring-white/10">
+                      <WorldGlyph slug={w.slug} />
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] text-gold/80">عالم مرتبط</p>
@@ -900,40 +905,30 @@ function ContentSection({
  *  Never fabricated. */
 function MiniTimeline({ events, worldSlug }: { events: RelatedNode[]; worldSlug: string }) {
   const { stashEntity } = useWorldOrigins(worldSlug);
-  const dated = events
-    .map((n) => {
-      const y = n.entity.timeline_year ?? n.entity.timeline_start_year ?? null;
-      return typeof y === "number" && Number.isFinite(y) ? { n, y } : null;
-    })
-    .filter((x): x is { n: RelatedNode; y: number } => x !== null)
-    .sort((a, b) => a.y - b.y);
+  const span = worldSpan(worldSlug);
+  const picks = selectWorldTimeline(
+    events,
+    worldSlug,
+    (n) => n.entity.timeline_year ?? n.entity.timeline_start_year ?? null,
+    6,
+  );
 
-  if (dated.length < 3) return null;
-
-  // Prefer up to 6 evenly-distributed points across the span (first, last,
-  // and interior samples). Preserves chronological arc without cherry-picking.
-  const MAX = 6;
-  const picks: { n: RelatedNode; y: number }[] = [];
-  if (dated.length <= MAX) {
-    picks.push(...dated);
-  } else {
-    for (let i = 0; i < MAX; i++) {
-      const idx = Math.round((i * (dated.length - 1)) / (MAX - 1));
-      picks.push(dated[idx]);
-    }
-  }
-
-  const label = (y: number): string => (y > 622 ? `${y}م` : `${y}هـ`);
+  if (picks.length < 3) return null;
 
   return (
     <section className="mt-6" aria-label="خط زمني موجز">
       <div className="mb-2 flex items-center gap-2">
         <Clock className="size-3.5 text-gold" />
         <h2 className="font-display text-[13px] font-bold">خط زمني موجز</h2>
+        {span && (
+          <span className="rounded-full border border-gold/25 bg-gold/5 px-2 py-0.5 text-[10px] tabular-nums text-gold/80">
+            {span.start}م – {span.end}م
+          </span>
+        )}
       </div>
       <div className="relative overflow-x-auto">
         <ol className="flex min-w-full items-stretch gap-3 pb-2">
-          {picks.map(({ n, y }, i) => (
+          {picks.map(({ node: n, year }, i) => (
             <li key={n.entity.id} className="flex min-w-[140px] flex-col">
               <Link
                 to="/encyclopedia/entity/$id"
@@ -942,7 +937,7 @@ function MiniTimeline({ events, worldSlug }: { events: RelatedNode[]; worldSlug:
                 className="group flex h-full flex-col rounded-2xl border border-gold/25 bg-black/30 p-2.5 transition hover:border-gold/55"
               >
                 <span className="inline-flex w-fit items-center gap-1 rounded-full border border-gold/30 bg-gold/10 px-2 py-0.5 text-[10px] font-bold tabular-nums text-gold">
-                  {label(y)}
+                  {gregorianYearLabel(year)}
                 </span>
                 <p className="font-display mt-1.5 line-clamp-2 text-[12px] font-bold text-white/90 group-hover:text-gold">
                   {n.entity.title}
@@ -980,9 +975,9 @@ function WorldNavCard({
       {isPrev && <ArrowRight className="size-4 shrink-0 text-gold/70" />}
       <span
         aria-hidden="true"
-        className="grid size-11 shrink-0 place-items-center rounded-xl bg-black/50 text-2xl ring-1 ring-white/10"
+        className="grid size-11 shrink-0 place-items-center rounded-xl bg-black/50 p-1 ring-1 ring-white/10"
       >
-        {hub.glyph}
+        <WorldGlyph slug={hub.slug} />
       </span>
       <div className={`min-w-0 flex-1 ${isPrev ? "text-right" : "text-left"}`}>
         <p className="text-[10px] tracking-[0.2em] text-muted-foreground">

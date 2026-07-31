@@ -7,6 +7,7 @@
 import type { AtlasEntityKind, AtlasEntityRow } from "@/lib/atlas-entities";
 import { ERA_TO_WORLD } from "@/lib/worlds-progress";
 import { WORLD_HUBS } from "@/lib/worlds";
+import { isHiddenTaxonomySlug } from "@/lib/eras-public";
 
 export { ERA_TO_WORLD };
 
@@ -32,7 +33,9 @@ export function worldFacets(entities: AtlasEntityRow[]) {
   const counts = new Map<string, number>();
   for (const e of entities) {
     const w = worldForEntity(e);
-    if (!w) continue;
+    // Hidden classifications (buyid / fatimid / safavid) never surface as a
+    // facet, world chip or grouping — their entities still render on the map.
+    if (!w || isHiddenTaxonomySlug(w)) continue;
     counts.set(w, (counts.get(w) ?? 0) + 1);
   }
   const orderIndex = new Map(WORLD_HUBS.map((h, i) => [h.slug, i]));

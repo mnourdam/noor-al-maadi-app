@@ -1,15 +1,42 @@
-// Premium per-kind SVG glyphs for Atlas markers.
-// Engraved-on-parchment aesthetic: each glyph is a single metallic fill with
-// a darker rim stroke (derived from the fill, never harsh black) so it reads
-// as part of the manuscript rather than a sticker.
+// Premium per-kind SVG markers for the Atlas.
 //
-// All glyphs are designed in a centered ~3.2x3.2 unit box; the `size` prop
-// controls visual half-extent. Pure paths — no SVG filters, no JS animation —
-// to keep the Android perf budget intact.
+// Redesigned as struck museum medallions: a gilded rim, a recessed dark
+// field with a top sheen and a bottom inner shadow (3D depth), and a
+// metallic kind symbol struck into the face. Pure paths + three shared
+// gradients — no SVG filters, no JS animation — so the Android perf
+// budget is untouched while the markers read at any zoom level.
 import type { AtlasEntityKind } from "@/lib/atlas-entities";
 
 const PARCHMENT = "oklch(0.92 0.04 82)";
 
+/** Shared gradients. Must be rendered ONCE inside the atlas SVG. */
+export function AtlasGlyphDefs() {
+  return (
+    <defs>
+      <radialGradient id="atlasMedalFace" cx="50%" cy="32%" r="72%">
+        <stop offset="0%" stopColor="oklch(0.34 0.03 68)" />
+        <stop offset="62%" stopColor="oklch(0.22 0.03 62)" />
+        <stop offset="100%" stopColor="oklch(0.14 0.02 60)" />
+      </radialGradient>
+      <linearGradient id="atlasMedalRim" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="oklch(0.92 0.13 88)" />
+        <stop offset="45%" stopColor="oklch(0.74 0.13 82)" />
+        <stop offset="100%" stopColor="oklch(0.46 0.09 70)" />
+      </linearGradient>
+      <linearGradient id="atlasMedalSheen" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="oklch(0.98 0.05 90)" stopOpacity="0.4" />
+        <stop offset="55%" stopColor="oklch(0.98 0.05 90)" stopOpacity="0.06" />
+        <stop offset="100%" stopColor="oklch(0.98 0.05 90)" stopOpacity="0" />
+      </linearGradient>
+    </defs>
+  );
+}
+
+/**
+ * Full marker = medallion (rim + recessed face + sheen) with the kind
+ * symbol struck into it. `fill` keeps encoding the entity kind so the
+ * legend, panel and pins stay colour-synchronised.
+ */
 export function AtlasKindGlyph({
   kind,
   size,
@@ -17,11 +44,43 @@ export function AtlasKindGlyph({
   stroke,
 }: {
   kind: AtlasEntityKind;
-  /** Half-extent in user units (≈ marker radius). */
   size: number;
-  /** Primary metallic fill (per-kind palette). */
   fill: string;
-  /** Rim stroke — pass a darker shade of the fill for an engraved feel. */
+  stroke: string;
+}) {
+  const r = size * 1.42;
+  return (
+    <g>
+      {/* recessed face */}
+      <circle r={r} fill="url(#atlasMedalFace)" />
+      {/* gilded rim — double ring for a struck-metal edge */}
+      <circle r={r} fill="none" stroke="url(#atlasMedalRim)" strokeWidth={size * 0.24} />
+      <circle
+        r={r - size * 0.24}
+        fill="none"
+        stroke="oklch(0.16 0.02 60)"
+        strokeWidth={size * 0.07}
+        opacity={0.7}
+      />
+      {/* top sheen — the 3D cue */}
+      <circle r={r - size * 0.12} fill="url(#atlasMedalSheen)" />
+      {/* struck symbol */}
+      <g transform={`scale(${0.74})`}>
+        <AtlasKindSymbol kind={kind} size={size} fill={fill} stroke={stroke} />
+      </g>
+    </g>
+  );
+}
+
+function AtlasKindSymbol({
+  kind,
+  size,
+  fill,
+  stroke,
+}: {
+  kind: AtlasEntityKind;
+  size: number;
+  fill: string;
   stroke: string;
 }) {
   const sw = size * 0.11; // refined rim — never heavy
