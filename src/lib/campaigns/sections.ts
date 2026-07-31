@@ -87,3 +87,27 @@ export function resolveCampaignSection(
 ): CampaignSectionKey | null {
   return readSectionKey(campaign) ?? readSectionKey(divider) ?? null;
 }
+
+// ------------------------------------------------------------
+// Progression grouping keys — OPEN set (deliberately not the eight)
+// ------------------------------------------------------------
+// Ambience uses the CLOSED canonical key set above. Campaign UNLOCK
+// grouping must stay open-ended: a brand-new era authored tomorrow from
+// the admin panel must group (and unlock) with no code change. So the
+// grouping key accepts ANY authored non-empty key, canonical or not.
+
+/** Lenient grouping key: any authored non-empty string, normalised. */
+export function asCampaignGroupKey(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const v = value.trim().toLowerCase();
+  return v ? v : null;
+}
+
+/** Read a grouping key off a campaign or divider (open set). */
+export function readGroupKey(value: SectionKeyCarrier | null | undefined): string | null {
+  if (!value) return null;
+  return (
+    asCampaignGroupKey((value as SectionKeyCarrier).section_key) ??
+    asCampaignGroupKey((value as SectionKeyCarrier).sectionKey)
+  );
+}

@@ -23,7 +23,7 @@
 // ============================================================
 
 import type { Campaign } from "@/types/campaign";
-import { asCampaignSectionKey, type CampaignSectionKey } from "./sections";
+import { asCampaignGroupKey, asCampaignSectionKey, type CampaignSectionKey } from "./sections";
 
 /** Discriminator persisted inside `admin_campaigns.data`. */
 export const DIVIDER_KIND = "divider" as const;
@@ -54,6 +54,12 @@ export interface CampaignSectionDivider {
    * `null` ⇒ the section uses the default campaign ambience.
    */
   sectionKey: CampaignSectionKey | null;
+  /**
+   * Authored key exactly as stored, WITHOUT the canonical-eight filter.
+   * Progression grouping reads this so a newly authored era groups and
+   * unlocks with zero code changes. Ambience still uses `sectionKey`.
+   */
+  rawSectionKey: string | null;
   /** Shared ordering axis with campaigns. */
   order: number | null;
 }
@@ -138,6 +144,7 @@ export function toDivider(row: RawCampaignRow): CampaignSectionDivider {
     subtitle: typeof d.subtitle === "string" && d.subtitle.trim() ? d.subtitle : undefined,
     era: typeof d.era === "string" && d.era.trim() ? d.era : undefined,
     sectionKey: asCampaignSectionKey(d.section_key) ?? asCampaignSectionKey(d.sectionKey),
+    rawSectionKey: asCampaignGroupKey(d.section_key) ?? asCampaignGroupKey(d.sectionKey),
     order,
   };
 }
