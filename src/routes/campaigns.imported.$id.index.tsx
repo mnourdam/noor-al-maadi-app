@@ -92,6 +92,10 @@ function ImportedCampaignOverview() {
     [campaign, tick],
   );
   const percent = campaign ? campaignCompletionPercent(campaign) : 0;
+  // Era-scoped progression gate (Campaign Progression v1).
+  const { data: feed } = useQuery({ queryKey: ["campaigns", "feed"], queryFn: fetchPublishedFeed });
+  const lockStatus = useCampaignLockStatus(feed?.sections, campaign?.id);
+
 
   if (isLoading) {
     return <AppShell><div className="px-5 pt-20 text-center text-muted-foreground">جاري التحميل…</div></AppShell>;
