@@ -12,7 +12,7 @@ import type { GameMode } from "@/lib/games/types";
 function row(mode: GameMode, i: number, stages: unknown[], extra: Partial<GameRow> = {}): GameRow {
   return {
     id: `id-${mode}-${i}`,
-    slug: `${mode}-game-${i}`,
+    slug: `${mode.replace(/_/g, "-")}-game-${i}`,
     mode,
     title: `لعبة ${i}`,
     description: "وصف",
