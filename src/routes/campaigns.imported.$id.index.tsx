@@ -98,6 +98,28 @@ function ImportedCampaignOverview() {
   }
   if (!campaign) throw notFound();
 
+  if (mode === "published" && lockStatus.locked) {
+    return (
+      <AppShell>
+        <div className="px-5 pt-16 pb-10">
+          <div className="mx-auto max-w-md rounded-3xl border border-white/15 bg-surface/70 p-7 text-center">
+            <div className="mx-auto grid size-14 place-items-center rounded-full border border-white/20 bg-black/40">
+              <Lock className="size-6 text-amber-200/90" />
+            </div>
+            <h1 className="font-display mt-4 text-2xl font-bold text-amber-100">{campaign.title}</h1>
+            <p className="mt-3 text-sm leading-7 text-muted-foreground">
+              {lockStatus.reason ?? "هذه الحملة مقفلة حاليًا."}
+            </p>
+            <Link to="/campaigns" className="motion-tap mt-6 inline-block rounded-full border border-gold/40 bg-gold/10 px-5 py-2 text-xs font-bold text-gold">
+              عودة للحملات
+            </Link>
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
+
+
   const chapters = [...campaign.chapters].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   const completedCount = progress
     ? chapters.filter(ch => progress.chapters[ch.id]?.completed).length
