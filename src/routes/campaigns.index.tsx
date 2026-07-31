@@ -3,7 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
-import { ArrowLeft, Sparkles, BookOpen, Trophy, Award, Zap, Coins, Swords, CheckCircle2, ScrollText, Globe2, Search, X, SearchX } from "lucide-react";
+import { ArrowLeft, Sparkles, BookOpen, Trophy, Award, Zap, Coins, Swords, CheckCircle2, ScrollText, Globe2, Search, X, SearchX, Lock } from "lucide-react";
+import { useCampaignLockMap } from "@/lib/campaigns/useCampaignProgression";
+import type { CampaignLockStatus } from "@/lib/campaigns/progression";
 import { normalizeArabicSearch } from "@/lib/encyclopedia-search";
 
 import { AppShell, Screen } from "@/components/AppShell";
@@ -103,6 +105,10 @@ function CampaignsHubFull() {
   );
   const isSearching = nq.length > 0;
 
+  // Lock map is computed from the FULL authored feed, never from the
+  // search/world-filtered view — filtering must not change era order.
+  const lockMap = useCampaignLockMap(data?.sections);
+
 
   return (
     <AppShell>
@@ -147,8 +153,9 @@ function CampaignsHubFull() {
                 </Reveal>
                 <Stagger className="space-y-3" max={12}>
                   {section.campaigns.map((c) => (
-                    <ImportedCampaignCard key={c.id} c={c} />
+                    <ImportedCampaignCard key={c.id} c={c} status={lockMap.get(c.id)} />
                   ))}
+
                 </Stagger>
                 {section.campaigns.length === 0 && (
                   <div className="rounded-2xl border border-dashed border-gold/15 bg-surface/30 p-4 text-center text-xs text-muted-foreground">
@@ -326,7 +333,7 @@ function AndroidStableCampaigns() {
 }
 
 
-function ImportedCampaignCard({ c }: { c: ImportedCampaign }) {
+function ImportedCampaignCard({ c, status }: { c: ImportedCampaign; status?: CampaignLockStatus }) {
   const fr = c.finalRewards;
   const firstUnlock = fr?.unlocks?.[0];
   const { resolved } = useResolvedUnlocks(firstUnlock ? [firstUnlock] : []);
@@ -342,20 +349,20 @@ function ImportedCampaignCard({ c }: { c: ImportedCampaign }) {
     c.chapters.length > 0 &&
     (progress.completed || c.chapters.every((ch) => progress.chapters[ch.id]?.completed));
 
+  const locked = !!status?.locked;
   const stashOrigin = useStashCurrentAsOrigin();
-  return (
-    <Link
-      to="/campaigns/imported/$id"
-      params={{ id: c.id }}
-      onClick={() => stashOrigin(`/campaigns/imported/${c.id}`)}
-      className={`motion-tap shadow-elegant relative block overflow-hidden rounded-3xl border bg-gradient-to-tl from-amber-900/30 via-surface to-stone-900/40 p-6 transition ${
-        isComplete
-          ? "border-emerald-400/60 ring-1 ring-emerald-400/30 shadow-[0_18px_50px_-25px_rgba(16,185,129,0.55)]"
-          : "border-gold/40 hover:border-gold/60"
-      }`}
-    >
+  const cardClass = `motion-tap shadow-elegant relative block overflow-hidden rounded-3xl border bg-gradient-to-tl from-amber-900/30 via-surface to-stone-900/40 p-6 transition ${
+    locked
+      ? "border-white/10 opacity-80 grayscale-[0.35]"
+      : isComplete
+        ? "border-emerald-400/60 ring-1 ring-emerald-400/30 shadow-[0_18px_50px_-25px_rgba(16,185,129,0.55)]"
+        : "border-gold/40 hover:border-gold/60"
+  }`;
 
+  const body = (
+    <>
       <div className="absolute -left-12 -top-12 size-48 rounded-full bg-gold/20 blur-3xl" />
+
       {isComplete && (
         <>
           {/* corner ribbon */}
@@ -415,12 +422,44 @@ function ImportedCampaignCard({ c }: { c: ImportedCampaign }) {
           <span className="text-muted-foreground inline-flex items-center gap-1">
             <BookOpen className="size-3" /> {c.chapters.length.toLocaleString("en-US")} فصلًا
           </span>
-          <span className="flex items-center gap-1 text-gold">
-            {c.chapters.length === 0 ? "اعرض" : "ابدأ"} <ArrowLeft className="size-3.5" />
-          </span>
+          {!locked && (
+            <span className="flex items-center gap-1 text-gold">
+              {c.chapters.length === 0 ? "اعرض" : "ابدأ"} <ArrowLeft className="size-3.5" />
+            </span>
+          )}
         </div>
+
+        {locked && (
+          <div className="mt-4 flex items-start gap-2 rounded-2xl border border-white/15 bg-black/40 px-3 py-2.5 text-[11px] leading-6 text-amber-100/90">
+            <Lock className="mt-0.5 size-3.5 shrink-0 text-amber-200/80" />
+            <span>{status?.reason ?? "هذه الحملة مقفلة حاليًا."}</span>
+          </div>
+        )}
       </div>
+    </>
+  );
+
+  if (locked) {
+    return (
+      <div className={cardClass} aria-disabled="true">
+        <div className="pointer-events-none absolute left-4 top-4 z-10 grid size-9 place-items-center rounded-full border border-white/20 bg-black/50">
+          <Lock className="size-4 text-amber-200/90" />
+        </div>
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <Link
+      to="/campaigns/imported/$id"
+      params={{ id: c.id }}
+      onClick={() => stashOrigin(`/campaigns/imported/${c.id}`)}
+      className={cardClass}
+    >
+      {body}
     </Link>
   );
 }
+
 
