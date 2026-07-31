@@ -35,6 +35,7 @@ import { Route as CampaignsRouteImport } from './routes/campaigns'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdventureRouteImport } from './routes/adventure'
 import { Route as AchievementsRouteImport } from './routes/achievements'
+import { Route as AccountDeletionRouteImport } from './routes/account-deletion'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WorldsIndexRouteImport } from './routes/worlds.index'
@@ -276,6 +277,11 @@ const AdventureRoute = AdventureRouteImport.update({
 const AchievementsRoute = AchievementsRouteImport.update({
   id: '/achievements',
   path: '/achievements',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountDeletionRoute = AccountDeletionRouteImport.update({
+  id: '/account-deletion',
+  path: '/account-deletion',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AboutRoute = AboutRouteImport.update({
@@ -869,6 +875,7 @@ const CampaignsImportedIdChapterChapterRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/account-deletion': typeof AccountDeletionRoute
   '/achievements': typeof AchievementsRoute
   '/adventure': typeof AdventureRoute
   '/auth': typeof AuthRouteWithChildren
@@ -1009,6 +1016,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/account-deletion': typeof AccountDeletionRoute
   '/achievements': typeof AchievementsRoute
   '/adventure': typeof AdventureRoute
   '/auth': typeof AuthRouteWithChildren
@@ -1145,6 +1153,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/account-deletion': typeof AccountDeletionRoute
   '/achievements': typeof AchievementsRoute
   '/adventure': typeof AdventureRoute
   '/auth': typeof AuthRouteWithChildren
@@ -1287,6 +1296,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about'
+    | '/account-deletion'
     | '/achievements'
     | '/adventure'
     | '/auth'
@@ -1427,6 +1437,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/about'
+    | '/account-deletion'
     | '/achievements'
     | '/adventure'
     | '/auth'
@@ -1562,6 +1573,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/about'
+    | '/account-deletion'
     | '/achievements'
     | '/adventure'
     | '/auth'
@@ -1703,6 +1715,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  AccountDeletionRoute: typeof AccountDeletionRoute
   AchievementsRoute: typeof AchievementsRoute
   AdventureRoute: typeof AdventureRoute
   AuthRoute: typeof AuthRouteWithChildren
@@ -2002,6 +2015,13 @@ declare module '@tanstack/react-router' {
       path: '/achievements'
       fullPath: '/achievements'
       preLoaderRoute: typeof AchievementsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account-deletion': {
+      id: '/account-deletion'
+      path: '/account-deletion'
+      fullPath: '/account-deletion'
+      preLoaderRoute: typeof AccountDeletionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/about': {
@@ -2909,6 +2929,7 @@ const AdminInvestigationsRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
+  AccountDeletionRoute: AccountDeletionRoute,
   AchievementsRoute: AchievementsRoute,
   AdventureRoute: AdventureRoute,
   AuthRoute: AuthRouteWithChildren,
