@@ -1,3 +1,4 @@
+import { WorldEmblem } from "@/components/worlds/WorldEmblem";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { markBootHealthy } from "@/lib/diagnostics/safe-boot";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -1127,7 +1128,10 @@ function WorldsHomepageSection() {
             <div className="absolute -left-6 -top-6 size-32 rounded-full bg-gold/15 blur-3xl" />
             <div className="arabesque-layer opacity-30" />
             <div className="relative p-5">
-              <div className="text-4xl">{w.hub.glyph}</div>
+              <span className="grid size-14 place-items-center rounded-2xl bg-black/50 p-1.5 ring-1 ring-white/10">
+                <WorldEmblem slug={w.hub.slug} />
+              </span>
+
               <p className="mt-3 text-[10px] tracking-[0.2em] text-gold">عالم #{w.hub.order}</p>
               <p className="font-display mt-0.5 text-base font-bold leading-tight line-clamp-1">{w.entity.title}</p>
               <p className="mt-1 text-[10px] text-white/55">{w.relatedCount} كيان · {w.campaignsCount} حملة</p>
