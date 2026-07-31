@@ -27,14 +27,14 @@ const GRAD_DEEP = "irthWorldDeep";
 function Defs() {
   return (
     <defs>
-      <linearGradient id={GRAD_ID} x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stopColor="#FBE9B8" />
-        <stop offset="48%" stopColor="#E0B65C" />
-        <stop offset="100%" stopColor="#A97B2E" />
+      <linearGradient id={GRAD_ID} gradientUnits="userSpaceOnUse" x1="0" y1="4" x2="0" y2="44">
+        <stop offset="0%" stopColor="#FFF2CE" />
+        <stop offset="48%" stopColor="#F0CB78" />
+        <stop offset="100%" stopColor="#C89241" />
       </linearGradient>
-      <linearGradient id={GRAD_DEEP} x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stopColor="#2A2117" />
-        <stop offset="100%" stopColor="#100D09" />
+      <linearGradient id={GRAD_DEEP} gradientUnits="userSpaceOnUse" x1="0" y1="2" x2="0" y2="46">
+        <stop offset="0%" stopColor="#2F2418" />
+        <stop offset="100%" stopColor="#15100A" />
       </linearGradient>
     </defs>
   );
