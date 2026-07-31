@@ -415,12 +415,44 @@ function ImportedCampaignCard({ c, status }: { c: ImportedCampaign; status?: Cam
           <span className="text-muted-foreground inline-flex items-center gap-1">
             <BookOpen className="size-3" /> {c.chapters.length.toLocaleString("en-US")} فصلًا
           </span>
-          <span className="flex items-center gap-1 text-gold">
-            {c.chapters.length === 0 ? "اعرض" : "ابدأ"} <ArrowLeft className="size-3.5" />
-          </span>
+          {!locked && (
+            <span className="flex items-center gap-1 text-gold">
+              {c.chapters.length === 0 ? "اعرض" : "ابدأ"} <ArrowLeft className="size-3.5" />
+            </span>
+          )}
         </div>
+
+        {locked && (
+          <div className="mt-4 flex items-start gap-2 rounded-2xl border border-white/15 bg-black/40 px-3 py-2.5 text-[11px] leading-6 text-amber-100/90">
+            <Lock className="mt-0.5 size-3.5 shrink-0 text-amber-200/80" />
+            <span>{status?.reason ?? "هذه الحملة مقفلة حاليًا."}</span>
+          </div>
+        )}
       </div>
+    </>
+  );
+
+  if (locked) {
+    return (
+      <div className={cardClass} aria-disabled="true">
+        <div className="pointer-events-none absolute left-4 top-4 z-10 grid size-9 place-items-center rounded-full border border-white/20 bg-black/50">
+          <Lock className="size-4 text-amber-200/90" />
+        </div>
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <Link
+      to="/campaigns/imported/$id"
+      params={{ id: c.id }}
+      onClick={() => stashOrigin(`/campaigns/imported/${c.id}`)}
+      className={cardClass}
+    >
+      {body}
     </Link>
   );
 }
+
 
