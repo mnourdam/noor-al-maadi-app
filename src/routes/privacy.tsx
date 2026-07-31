@@ -365,7 +365,7 @@ const EN: PolicySection[] = [
       { p: "d) Notifications:" },
       {
         ul: [
-          "Device push token (FCM), platform and device language when notifications are enabled.",
+          "Device push token (FCM), platform (Android), notification-enabled state and last-seen timestamp.",
           "Notification preferences and a log of notifications delivered to you.",
         ],
       },
