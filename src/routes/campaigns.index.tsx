@@ -353,9 +353,9 @@ function ImportedCampaignCard({ c, status }: { c: ImportedCampaign; status?: Cam
   }`;
 
   const body = (
-
-
+    <>
       <div className="absolute -left-12 -top-12 size-48 rounded-full bg-gold/20 blur-3xl" />
+
       {isComplete && (
         <>
           {/* corner ribbon */}
