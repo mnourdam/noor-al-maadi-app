@@ -105,6 +105,10 @@ function CampaignsHubFull() {
   );
   const isSearching = nq.length > 0;
 
+  // Lock map is computed from the FULL authored feed, never from the
+  // search/world-filtered view — filtering must not change era order.
+  const lockMap = useCampaignLockMap(data?.sections);
+
 
   return (
     <AppShell>
