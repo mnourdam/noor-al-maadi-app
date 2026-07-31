@@ -45,7 +45,7 @@ export function useProgressionState(): ProgressionState {
       completedCampaignIds: completed,
       completedStoryIds: new Set<string>(profile.storiesRead),
       unlockedAchievementIds,
-      level: levelFor(profile.points).current.level,
+      level: levelFor(profile.points).level,
     };
   }, [profile.campaignsCompleted, profile.storiesRead, profile.points, serverCompleted, achievements]);
 }
