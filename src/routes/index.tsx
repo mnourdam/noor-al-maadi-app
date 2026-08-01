@@ -605,7 +605,7 @@ function HomeFull() {
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
           onTouchCancel={onTouchEnd}
-          className="relative h-[78vh] min-h-[560px] w-full overflow-hidden touch-pan-y select-none"
+          className="relative h-[78vh] min-h-[560px] w-full overflow-hidden touch-pan-y select-none md:max-h-[720px] md:landscape:h-[62vh] md:landscape:min-h-[400px] md:landscape:max-h-[560px]"
         >
           {slides.map((s, i) => {
             // Perf-lite: render ONLY the visible slide image. Stacking 3

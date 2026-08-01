@@ -151,7 +151,7 @@ function CampaignsHubFull() {
                     <UncategorizedHeader count={section.campaigns.length} />
                   )}
                 </Reveal>
-                <Stagger className="space-y-3" max={12}>
+                <Stagger className="space-y-3 md:grid md:grid-cols-[repeat(auto-fill,minmax(22rem,1fr))] md:items-start md:gap-3 md:space-y-0" max={12}>
                   {section.campaigns.map((c) => (
                     <ImportedCampaignCard key={c.id} c={c} status={lockMap.get(c.id)} />
                   ))}

@@ -60,7 +60,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <AppShellNestingContext.Provider value={true}>
       <div
-        className="mx-auto flex min-h-screen w-full max-w-md md:max-w-xl lg:max-w-2xl flex-col"
+        className="mx-auto flex min-h-screen w-full max-w-md md:max-w-3xl xl:max-w-5xl flex-col"
         style={{ paddingBottom: "calc(6rem + env(safe-area-inset-bottom))" }}
       >
         <HUD />
@@ -73,10 +73,10 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div key={pathname} className="motion-page">{children}</div>
         </div>
         <nav
-          className="fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-md md:max-w-xl lg:max-w-2xl px-3"
+          className="fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-md md:max-w-2xl lg:max-w-3xl px-3"
           style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
         >
-          <div className="glass shadow-elegant grid grid-cols-6 items-center gap-1 rounded-2xl border border-white/10 p-1.5">
+          <div className="glass shadow-elegant grid grid-cols-6 items-center gap-1 rounded-2xl border border-white/10 p-1.5 md:gap-2 md:p-2">
             {tabs.map(({ to, label, icon: Icon, tutorialTargetId }) => {
               const active = to === "/" ? pathname === "/" : pathname.startsWith(to);
               return (
