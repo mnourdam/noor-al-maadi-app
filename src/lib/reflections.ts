@@ -53,6 +53,13 @@ export interface ReflectionRecord {
   kind?: "campaign" | "story";
   /** For `story` kind, the story id (also mirrored to campaign_id for uniqueness). */
   sourceId?: string;
+  /**
+   * The player explicitly skipped this reflective moment. Local-only marker:
+   * it never syncs to the server and never appears in the reflections journal,
+   * it only lets the activity render as "skipped" on revisit.
+   */
+  skipped?: boolean;
+
 }
 
 export type ReflectionKey = `${string}:${string}`;
@@ -104,8 +111,32 @@ export function getReflection(campaignId: string, activityId: string): Reflectio
 }
 
 /**
+ * Local-only "the player skipped this reflective moment" marker.
+ *
+ * A skip is NOT an answer: nothing is written to the reflections journal and
+ * nothing is mirrored to the server. It exists purely so revisiting the
+ * activity renders it as skipped instead of demanding text again.
+ */
+export function markReflectionSkipped(
+  campaignId: string,
+  activityId: string,
+  mode: ReflectionMode,
+): ReflectionRecord {
+  const store = readAll();
+  const k = keyOf(campaignId, activityId);
+  const prev = store[k];
+  // Never clobber a real written reflection with a skip marker.
+  if (prev && !prev.skipped && (prev.text?.trim() || prev.choiceValue)) return prev;
+  const next: ReflectionRecord = { mode, skipped: true, at: new Date().toISOString() };
+  store[k] = next;
+  writeAll(store);
+  return next;
+}
+
+/**
  * Chronological journal feed. Descending by last-edit timestamp so the
  * "My Reflections" view opens on the most recent entry.
+ * Skipped moments are not journal entries and never appear here.
  */
 export function listAllReflections(): ReflectionEntry[] {
   const store = readAll();
@@ -113,11 +144,13 @@ export function listAllReflections(): ReflectionEntry[] {
   for (const [k, rec] of Object.entries(store)) {
     const parsed = parseKey(k);
     if (!parsed) continue;
+    if (rec?.skipped) continue;
     out.push({ ...rec, campaignId: parsed.campaignId, activityId: parsed.activityId });
   }
   out.sort((a, b) => (b.at || "").localeCompare(a.at || ""));
   return out;
 }
+
 
 // ------------------------------------------------------------
 // Durability layer (Stabilization P2)

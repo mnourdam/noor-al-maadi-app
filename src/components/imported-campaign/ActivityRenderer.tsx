@@ -41,7 +41,15 @@ import { CSS } from "@dnd-kit/utilities";
 export interface ResolveMeta {
   /** True when the answer was revealed after 2 wrong attempts (learning path). */
   viaReveal?: boolean;
+  /**
+   * True when the player explicitly skipped an optional activity (reflective
+   * moments). The activity completes and progression continues, but no
+   * answer-linked reward is granted and no acknowledgement step is required —
+   * the chapter advances on its own.
+   */
+  skipped?: boolean;
 }
+
 
 export interface RendererProps {
   activity: CampaignActivity;
@@ -840,7 +848,9 @@ function FallbackRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
 //   renderer owns the *auxiliary* view state — the chosen option and the
 //   personal note — through `saveReflection` / `getReflection`. Free-text
 //   never leaves the device.
-import { getReflection, saveReflection, resolveReflectionMode, reflectionChoices } from "@/lib/reflections";
+import { getReflection, saveReflection, markReflectionSkipped, resolveReflectionMode, reflectionChoices } from "@/lib/reflections";
+import { reflectionAction } from "@/lib/campaigns/reflectionAction";
+
 
 interface ReflectiveMomentRendererProps extends RendererProps {
   campaignId: string;
@@ -903,13 +913,25 @@ function ReflectiveMomentRenderer({ activity, onResolve, onAdvance, alreadyDone,
 
   const advance = () => { onAdvance?.(); };
 
-  // Single-button contract:
-  //   no note        → "تخطي والمتابعة"  (persist + complete + advance)
-  //   note written   → "حفظ"             (persist + complete, stays)
-  //   after saving   → "التالي"          (advance only)
+  // ---------------------------------------------------------------
+  // Two clearly separated paths. SAVE and SKIP never share a handler:
+  //
+  //   SAVE  — requires written text (or an authored choice). Persists the
+  //           reflection, completes the activity, then the player taps
+  //           "التالي" to move on.
+  //   SKIP  — requires NOTHING. No validation, no empty reflection is
+  //           written, no answer-linked reward. The activity is recorded as
+  //           skipped and the chapter advances by itself, because the parent
+  //           does not queue an acknowledgement for a skipped resolve.
+  //
+  // The old bug: skip reused `submit()`, which called `onResolve(true)` and
+  // then synchronously called `advance()`. The parent's advance guard reads
+  // the acknowledgement state from the *previous* render, so it always saw
+  // "not acknowledged yet" and silently did nothing — the button looked dead.
+  // ---------------------------------------------------------------
   const submit = () => {
     if (submitLockRef.current) return;
-    if (!canSubmit) return;
+    if (!canSubmit || !hasText) return;
     submitLockRef.current = true;
     setTimeout(() => { submitLockRef.current = false; }, 400);
     persist();
@@ -921,11 +943,40 @@ function ReflectiveMomentRenderer({ activity, onResolve, onAdvance, alreadyDone,
     }
     setResolved(true);
     onResolve(true);
-    if (!hasText) advance();
   };
 
-  const showNextOnly = saved && resolved && hasText && !(isReplay && editing);
-  const submitLabel = hasText ? "حفظ" : "تخطي والمتابعة";
+  const skip = () => {
+    // One lock for BOTH paths: a rapid double tap can never resolve twice,
+    // and can never skip the following activity either.
+    if (submitLockRef.current) return;
+    submitLockRef.current = true;
+    setTimeout(() => { submitLockRef.current = false; }, 600);
+    if (resolved) {
+      // Already completed (replay / re-tap after a refresh) — just move on.
+      setEditing(false);
+      advance();
+      return;
+    }
+    // Local-only "skipped" marker: never an empty reflection entry.
+    markReflectionSkipped(campaignId, activity.id, mode);
+    setResolved(true);
+    // `skipped` tells the chapter player: complete it, grant no
+    // reflection reward, and advance without an acknowledgement tap.
+    onResolve(true, { skipped: true });
+  };
+
+  // Single source of truth for which button is shown (pure + unit-tested).
+  const action = reflectionAction({
+    text: hasText ? "x" : "",
+    resolved,
+    saved,
+    isReplay,
+    editing,
+  });
+  const showNextOnly = action === "next";
+  const wasSkipped = !!prior?.skipped;
+
+
 
 
   return (
@@ -992,17 +1043,23 @@ function ReflectiveMomentRenderer({ activity, onResolve, onAdvance, alreadyDone,
           </ul>
         )}
 
-        {/* Replay read-only: show saved note (if any) without the textarea. */}
+        {/* Replay read-only: saved note, or a "skipped" state. Never a demand
+            to write — the moment is already completed either way. */}
         {isReplay && !editing && (
           <div className="mt-4 rounded-xl border border-emerald-400/25 bg-emerald-500/[0.06] px-3 py-3 text-right text-[12px] leading-relaxed text-emerald-100/95">
-            <p className="mb-1 font-display text-[11px] font-bold text-emerald-200/90">تأمّلك المحفوظ</p>
+            <p className="mb-1 font-display text-[11px] font-bold text-emerald-200/90">
+              {wasSkipped ? "لحظة متخطّاة" : "تأمّلك المحفوظ"}
+            </p>
             {prior?.text ? (
               <p className="whitespace-pre-wrap">{prior.text}</p>
+            ) : wasSkipped ? (
+              <p className="text-emerald-100/70">تخطّيت هذه اللحظة — يمكنك كتابة تأملك الآن إن أردت.</p>
             ) : (
               <p className="text-emerald-100/70">لم تكتب تأملاً في هذه اللحظة.</p>
             )}
           </div>
         )}
+
 
         {/* Universal optional personal note */}
         {showTextarea && (
@@ -1051,30 +1108,40 @@ function ReflectiveMomentRenderer({ activity, onResolve, onAdvance, alreadyDone,
         )}
       </div>
 
-      {/* Actions — exactly one button at a time. */}
-      {isReplay && !editing ? (
+      {/* Actions — exactly one button at a time, chosen by `reflectionAction`. */}
+      {action === "edit" ? (
         <button
           onClick={() => setEditing(true)}
           className="motion-tap mt-5 w-full rounded-2xl border border-gold/40 py-3 text-sm font-bold text-gold"
         >
           تعديل التأمل
         </button>
-      ) : showNextOnly ? (
+      ) : action === "next" ? (
         <button
           onClick={advance}
           className="motion-tap mt-5 w-full rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground shadow-gold"
         >
           التالي ←
         </button>
-      ) : (
+      ) : action === "save" ? (
+
         <button
           onClick={submit}
           disabled={!canSubmit}
           className="motion-tap mt-5 w-full rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground shadow-gold disabled:opacity-50"
         >
-          {submitLabel} {hasText ? "" : "←"}
+          حفظ
+        </button>
+      ) : (
+        // Skip is ALWAYS enabled: a reflective moment never requires input.
+        <button
+          onClick={skip}
+          className="motion-tap mt-5 w-full rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground shadow-gold"
+        >
+          تخطي والمتابعة ←
         </button>
       )}
+
       {saved && showNextOnly && (
         <p className="mt-3 text-center text-[11px] text-emerald-300/80">تم الحفظ ✓</p>
       )}
