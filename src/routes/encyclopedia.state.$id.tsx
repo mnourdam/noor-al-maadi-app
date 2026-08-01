@@ -222,6 +222,7 @@ function StatePage() {
 
   return (
     <AppShell>
+      <ReadingProgress />
       <div className="px-5 pt-8">
         <Link
           to="/encyclopedia/type/$type"
