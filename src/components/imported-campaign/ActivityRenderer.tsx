@@ -1106,15 +1106,24 @@ function ReflectiveMomentRenderer({ activity, onResolve, onAdvance, alreadyDone,
         >
           التالي ←
         </button>
-      ) : (
+      ) : hasText ? (
         <button
           onClick={submit}
           disabled={!canSubmit}
           className="motion-tap mt-5 w-full rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground shadow-gold disabled:opacity-50"
         >
-          {submitLabel} {hasText ? "" : "←"}
+          حفظ
+        </button>
+      ) : (
+        // Skip is ALWAYS enabled: a reflective moment never requires input.
+        <button
+          onClick={skip}
+          className="motion-tap mt-5 w-full rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground shadow-gold"
+        >
+          تخطي والمتابعة ←
         </button>
       )}
+
       {saved && showNextOnly && (
         <p className="mt-3 text-center text-[11px] text-emerald-300/80">تم الحفظ ✓</p>
       )}
