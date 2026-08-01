@@ -41,7 +41,15 @@ import { CSS } from "@dnd-kit/utilities";
 export interface ResolveMeta {
   /** True when the answer was revealed after 2 wrong attempts (learning path). */
   viaReveal?: boolean;
+  /**
+   * True when the player explicitly skipped an optional activity (reflective
+   * moments). The activity completes and progression continues, but no
+   * answer-linked reward is granted and no acknowledgement step is required —
+   * the chapter advances on its own.
+   */
+  skipped?: boolean;
 }
+
 
 export interface RendererProps {
   activity: CampaignActivity;
