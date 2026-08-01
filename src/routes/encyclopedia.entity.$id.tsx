@@ -268,6 +268,7 @@ function EntityPage() {
 
   return (
     <AppShell>
+      <ReadingProgress />
       <ReadingScale>
       {/* Atmospheric museum stage — one continuous warm scene */}
       <div className="relative min-h-screen overflow-hidden">
