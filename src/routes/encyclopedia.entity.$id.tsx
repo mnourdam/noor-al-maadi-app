@@ -17,6 +17,7 @@ import { useEntityReadCompletion } from "@/hooks/useEntityReadCompletion";
 import { useAccount } from "@/lib/account";
 import { AppShell } from "@/components/AppShell";
 import { ReadingScale } from "@/components/ReadingScale";
+import { ReadingProgress } from "@/components/ReadingProgress";
 
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
@@ -268,6 +269,7 @@ function EntityPage() {
 
   return (
     <AppShell>
+      <ReadingProgress />
       <ReadingScale>
       {/* Atmospheric museum stage — one continuous warm scene */}
       <div className="relative min-h-screen overflow-hidden">

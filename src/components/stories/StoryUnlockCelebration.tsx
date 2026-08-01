@@ -17,7 +17,7 @@
 // No rewards, no economy mutation — presentation only.
 // ============================================================
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { BookOpenText, Sparkles, X } from "lucide-react";
@@ -85,22 +85,67 @@ function detectTransitions(scope: string, rows: StorySummary[]): Unlocked[] {
 export function StoryUnlockCelebration() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const [scope, setScope] = useState<string>("guest");
+  const [scope, setScope] = useState<string | null>(null);
   const [queue, setQueue] = useState<Unlocked[]>([]);
+  const userIdRef = useRef<string | null>(null);
 
   // Player scope: auth uid when signed in, otherwise the guest bucket.
+  // Nothing is scanned before the identity is known, so a celebration
+  // can never be attributed to the wrong player.
   useEffect(() => {
     let alive = true;
     void supabase.auth.getSession().then(({ data }) => {
-      if (alive) setScope(data.session?.user?.id ?? "guest");
+      if (alive) {
+        userIdRef.current = data.session?.user?.id ?? null;
+        setScope(data.session?.user?.id ?? "guest");
+      }
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      userIdRef.current = session?.user?.id ?? null;
       setScope(session?.user?.id ?? "guest");
+      setQueue([]);
     });
     return () => { alive = false; sub.subscription.unsubscribe(); };
   }, []);
 
+  // Durable ledger: merge the server-side "already announced" set into the
+  // local seen map before any scanning happens for a signed-in player.
+  const [ledgerReady, setLedgerReady] = useState(false);
   useEffect(() => {
+    if (!scope) return;
+    let alive = true;
+    setLedgerReady(false);
+    (async () => {
+      const uid = userIdRef.current;
+      if (uid) {
+        try {
+          const { fetchSeenUnlockNotices } = await import("@/lib/stories/unlock-notices");
+          const ids = await fetchSeenUnlockNotices(uid);
+          if (ids.length > 0) {
+            const seenKey = `${SEEN_PREFIX}${scope}`;
+            const seen = readMap(seenKey);
+            for (const id of ids) seen[id] = true;
+            writeMap(seenKey, seen);
+          }
+        } catch { /* offline: local ledger still applies */ }
+      }
+      if (alive) setLedgerReady(true);
+    })();
+    return () => { alive = false; };
+  }, [scope]);
+
+  // Persist "announced" durably the moment a celebration is shown, so it
+  // survives reload, sign-out/sign-in and device changes.
+  const persistSeen = useMemo(() => (ids: string[]) => {
+    const uid = userIdRef.current;
+    if (!uid || ids.length === 0) return;
+    void import("@/lib/stories/unlock-notices")
+      .then((m) => m.markUnlockNoticesSeen(uid, ids))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!scope || !ledgerReady) return;
     const scan = () => {
       try {
         const caches = queryClient.getQueryCache().findAll({ queryKey: ["stories-summary"] });
@@ -117,6 +162,7 @@ export function StoryUnlockCelebration() {
         }
         const fresh = detectTransitions(scope, rows);
         if (fresh.length > 0) {
+          persistSeen(fresh.map((f) => f.id));
           setQueue((q) => [...q, ...fresh.filter((f) => !q.some((x) => x.id === f.id))]);
         }
       } catch { /* celebration must never break the app */ }
@@ -127,10 +173,18 @@ export function StoryUnlockCelebration() {
       if (ev.type === "updated" && ev.query.queryKey?.[0] === "stories-summary") scan();
     });
     return () => unsub();
-  }, [queryClient, scope]);
+  }, [queryClient, scope, ledgerReady, persistSeen]);
 
   const current = queue[0] ?? null;
-  const dismiss = useMemo(() => () => setQueue((q) => q.slice(1)), []);
+  // Any interaction (open now / later / close) permanently retires the notice.
+  const dismiss = useMemo(() => () => {
+    setQueue((q) => {
+      const head = q[0];
+      if (head) persistSeen([head.id]);
+      return q.slice(1);
+    });
+  }, [persistSeen]);
+
 
   if (!current) return null;
 

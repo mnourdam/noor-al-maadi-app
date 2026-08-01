@@ -1,3 +1,4 @@
+import { ReadingProgress } from "@/components/ReadingProgress";
 import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { useMemo, useRef } from "react";
 import { useEntityReadCompletion } from "@/hooks/useEntityReadCompletion";
@@ -222,6 +223,7 @@ function StatePage() {
 
   return (
     <AppShell>
+      <ReadingProgress />
       <div className="px-5 pt-8">
         <Link
           to="/encyclopedia/type/$type"
