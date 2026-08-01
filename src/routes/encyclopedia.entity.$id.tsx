@@ -17,6 +17,7 @@ import { useEntityReadCompletion } from "@/hooks/useEntityReadCompletion";
 import { useAccount } from "@/lib/account";
 import { AppShell } from "@/components/AppShell";
 import { ReadingScale } from "@/components/ReadingScale";
+import { ReadingProgress } from "@/components/ReadingProgress";
 
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { EncyclopediaCard } from "@/components/EncyclopediaCard";
