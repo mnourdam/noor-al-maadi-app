@@ -34,11 +34,15 @@ export function worldEmblemId(slug: string | null | undefined): string {
   return (slug && WORLD_EMBLEM_ID[slug]) || DEFAULT_WORLD_EMBLEM_ID;
 }
 
-/** Atlas entity kinds — closest existing emblem, never a new drawing. */
+/**
+ * Atlas entity kinds — dedicated Premium emblems for region / city / battle
+ * (rendered in the same museum style as the Profile Emblems), and existing
+ * library emblems for the remaining kinds. Never a new drawing in code.
+ */
 export const ATLAS_KIND_EMBLEM_ID: Record<string, string> = {
-  region: "province_map",
-  place: "minaret_tower",
-  battle: "scimitar",
+  region: "atlas_region",
+  place: "atlas_city",
+  battle: "atlas_battle",
   event: "royal_firman",
   figure_marker: "scholar",
   artifact_site: "incense_burner",
@@ -48,3 +52,4 @@ export const ATLAS_KIND_EMBLEM_ID: Record<string, string> = {
 export function atlasKindEmblemId(kind: string): string {
   return ATLAS_KIND_EMBLEM_ID[kind] ?? DEFAULT_WORLD_EMBLEM_ID;
 }
+
