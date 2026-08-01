@@ -214,8 +214,9 @@ function ImportedChapterPlayer() {
   const currentAck = activity ? pendingAck[activity.id] : undefined;
   const wrongAttempts = activity ? (wrongFlash[activity.id] ?? 0) : 0;
 
-  const onResolve = async (correct: boolean, meta?: { viaReveal?: boolean }) => {
+  const onResolve = async (correct: boolean, meta?: { viaReveal?: boolean; skipped?: boolean }) => {
     if (!activity) return;
+
     // PR1: hard guard against rapid duplicate submissions.
     if (resolveLockRef.current) return;
     resolveLockRef.current = true;
