@@ -1,3 +1,4 @@
+import { ReadingProgress } from "@/components/ReadingProgress";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronRight, Compass, ArrowDown } from "lucide-react";
@@ -98,6 +99,7 @@ function PathPage() {
 
   return (
     <AppShell>
+      <ReadingProgress />
       <div className="px-5 pt-8">
         <Link to="/encyclopedia" className="inline-flex items-center gap-1 text-[11px] text-gold/80 hover:text-gold">
           <ChevronRight className="size-3.5" /> الموسوعة
