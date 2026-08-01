@@ -1,3 +1,4 @@
+import { ReadingProgress } from "@/components/ReadingProgress";
 import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { useMemo, useRef } from "react";
 import { useEntityReadCompletion } from "@/hooks/useEntityReadCompletion";
