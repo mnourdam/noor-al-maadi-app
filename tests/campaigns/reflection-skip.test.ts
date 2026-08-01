@@ -45,8 +45,19 @@ describe("reflective moment — skip vs save separation", () => {
 
 describe("skip persistence", () => {
   beforeEach(() => {
-    try { localStorage.clear(); } catch { /* noop */ }
+    // Minimal browser storage stub — reflections are a local-first store.
+    const mem = new Map<string, string>();
+    (globalThis as any).window = {
+      localStorage: {
+        getItem: (k: string) => mem.get(k) ?? null,
+        setItem: (k: string, v: string) => void mem.set(k, v),
+        removeItem: (k: string) => void mem.delete(k),
+      },
+      dispatchEvent: () => true,
+    };
+    (globalThis as any).CustomEvent = class { constructor(public type: string) {} };
   });
+
 
   it("records a skip without writing an empty reflection to the journal", () => {
     markReflectionSkipped("camp-1", "act-1", "write");
