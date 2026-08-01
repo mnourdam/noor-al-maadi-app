@@ -222,6 +222,32 @@ async function runDailyFact(admin: any, baseUrl: string, serviceKey: string, dry
     return { job: jobKey, skipped: "already_ran" };
   }
 
+  // ---- Priority rule: "في مثل هذا اليوم" wins the day ----
+  // If today's (UTC month/day — the same clock `src/lib/today-in-history.ts`
+  // and the TIH job use) has ANY enabled Today-in-History event, the daily
+  // fact is suppressed entirely so the user gets one daily card, not two.
+  // Only these two job types interact; stories/achievements/personal
+  // notifications are untouched.
+  {
+    const now = new Date();
+    const { count, error: tihErr } = await admin
+      .from("today_in_history_events")
+      .select("id", { count: "exact", head: true })
+      .eq("enabled", true)
+      .eq("month", now.getUTCMonth() + 1)
+      .eq("day", now.getUTCDate());
+    if (tihErr) {
+      // Fail closed: never risk a double daily card on a read error.
+      if (!dryRun) await releaseRun(admin, jobKey, runDate);
+      return { job: jobKey, skipped: "tih_check_failed", error: tihErr.message };
+    }
+    if ((count ?? 0) > 0) {
+      if (!dryRun) await releaseRun(admin, jobKey, runDate);
+      return { job: jobKey, skipped: "suppressed_by_today_in_history", tih_events: count };
+    }
+  }
+
+
   // Pick the least-recently-sent enabled fact.
   const { data: facts, error } = await admin
     .from("daily_facts")
