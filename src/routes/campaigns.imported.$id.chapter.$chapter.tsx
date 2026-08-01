@@ -261,7 +261,11 @@ function ImportedChapterPlayer() {
 
     // PR3 local-first reward ledger: only grants once, across refreshes /
     // offline / reopen. Returns {granted:false, xp:0, coins:0} on replays.
-    const actDelta = claimActivityReward(campaign!, chapter!, activity);
+    // A SKIPPED activity (optional reflective moment) claims nothing: the
+    // reward stays unclaimed in the ledger and progression continues anyway.
+    const actDelta = meta?.skipped
+      ? { granted: false, xp: 0, coins: 0 }
+      : claimActivityReward(campaign!, chapter!, activity);
     if (actDelta.granted) {
       let xpGrant = actDelta.xp;
       let coinGrant = actDelta.coins;
@@ -279,11 +283,18 @@ function ImportedChapterPlayer() {
       audioManager.playSfx("success", { dedupeKey: `act:${activity.id}` });
     }
 
-    setPendingAck(prev => ({ ...prev, [activity.id]: "correct" }));
+    // A skip needs no acknowledgement tap: leaving it out of `pendingAck`
+    // means the derived current step moves to the next activity as soon as
+    // the completion is recorded below. Queuing an ack here is exactly what
+    // made the skip button appear dead.
+    if (!meta?.skipped) {
+      setPendingAck(prev => ({ ...prev, [activity.id]: "correct" }));
+    }
 
     const wasChapterComplete  = chProgress?.completed ?? false;
     const wasCampaignComplete = camProgress?.completed ?? false;
     const nextProgress = recordActivity(campaign!, chapter!, activity, true);
+
     const nextChapter   = nextProgress.chapters[chapter!.id];
     const newlyChapter  = !wasChapterComplete  && Boolean(nextChapter?.completed);
     const newlyCampaign = !wasCampaignComplete && nextProgress.completed;
