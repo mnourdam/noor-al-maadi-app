@@ -4,7 +4,6 @@ import { createContext, useContext, useEffect, type ReactNode } from "react";
 import { HUD } from "./HUD";
 import { FriendNotificationsPoller } from "./FriendNotificationsPoller";
 
-import { AudioInitializer } from "./AudioInitializer";
 import { androidMark, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 import { isSectionEnabled } from "@/lib/androidQuietMode";
 
@@ -64,7 +63,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         style={{ paddingBottom: "calc(6rem + env(safe-area-inset-bottom))" }}
       >
         <HUD />
-        {!androidStable && isSectionEnabled("audio") && <AudioInitializer />}
         {!androidStable && isSectionEnabled("friendPoller") && <FriendNotificationsPoller />}
         {/* Legacy BackNavigationGuard removed — hardware Back is owned by
             the Navigation Engine (single Capacitor listener). Web back uses

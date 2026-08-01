@@ -20,6 +20,7 @@ import { AccountProvider } from "../lib/account";
 import { FirstLaunchGate } from "../components/FirstLaunchGate";
 import { CinematicOpening } from "../components/cinematic/CinematicOpening";
 import { Toaster } from "../components/ui/sonner";
+import { AudioInitializer } from "../components/AudioInitializer";
 import { AchievementWatcher } from "../components/AchievementWatcher";
 import { AchievementEngineBoot } from "../lib/achievements/v2/driver";
 import { InvestigationLegacyBackfill } from "../components/InvestigationLegacyBackfill";
