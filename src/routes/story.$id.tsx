@@ -8,6 +8,8 @@
 // ============================================================
 
 import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
+import { useEffect } from "react";
+
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, BookOpen, Lock, Loader2 } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
