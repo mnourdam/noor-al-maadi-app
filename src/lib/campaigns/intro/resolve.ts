@@ -6,7 +6,9 @@
 // worldSlug, era, key art or story catalogues.
 // ============================================================
 
+import { getSyncedIntroLink } from "./content-store";
 import type { CampaignIntroRef } from "./types";
+
 
 /** Minimal structural shape — keeps this module import-light. */
 export interface IntroCarrier {
