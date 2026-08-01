@@ -1032,17 +1032,23 @@ function ReflectiveMomentRenderer({ activity, onResolve, onAdvance, alreadyDone,
           </ul>
         )}
 
-        {/* Replay read-only: show saved note (if any) without the textarea. */}
+        {/* Replay read-only: saved note, or a "skipped" state. Never a demand
+            to write — the moment is already completed either way. */}
         {isReplay && !editing && (
           <div className="mt-4 rounded-xl border border-emerald-400/25 bg-emerald-500/[0.06] px-3 py-3 text-right text-[12px] leading-relaxed text-emerald-100/95">
-            <p className="mb-1 font-display text-[11px] font-bold text-emerald-200/90">تأمّلك المحفوظ</p>
+            <p className="mb-1 font-display text-[11px] font-bold text-emerald-200/90">
+              {wasSkipped ? "لحظة متخطّاة" : "تأمّلك المحفوظ"}
+            </p>
             {prior?.text ? (
               <p className="whitespace-pre-wrap">{prior.text}</p>
+            ) : wasSkipped ? (
+              <p className="text-emerald-100/70">تخطّيت هذه اللحظة — يمكنك كتابة تأملك الآن إن أردت.</p>
             ) : (
               <p className="text-emerald-100/70">لم تكتب تأملاً في هذه اللحظة.</p>
             )}
           </div>
         )}
+
 
         {/* Universal optional personal note */}
         {showTextarea && (
