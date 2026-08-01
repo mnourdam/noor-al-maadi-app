@@ -35,8 +35,19 @@ describe("planIntroSync", () => {
 
 describe("resolveCampaignIntro with synced links", () => {
   beforeEach(() => {
-    localStorage.clear();
+    const store = new Map<string, string>();
+    (globalThis as Record<string, unknown>).localStorage = {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => void store.set(k, String(v)),
+      removeItem: (k: string) => void store.delete(k),
+      clear: () => store.clear(),
+      key: (i: number) => Array.from(store.keys())[i] ?? null,
+      get length() {
+        return store.size;
+      },
+    };
   });
+
 
   it("prefers the authored link on the campaign row", async () => {
     localStorage.setItem(
