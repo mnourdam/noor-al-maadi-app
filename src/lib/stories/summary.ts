@@ -103,7 +103,8 @@ export async function listStoriesSummary(
     // Normalise the editorial taxonomy so filters never see undefined/null
     // shapes coming from either the authoritative or the guest RPC.
     const rows = ((data ?? []) as StorySummary[])
-      .filter((r) => !isCampaignIntroStory(r.tags))
+      .filter((r) => !isCampaignIntroRow(r as never))
+
       .map((r) => ({
         ...r,
         category: r.category ?? null,
