@@ -53,6 +53,13 @@ export interface ReflectionRecord {
   kind?: "campaign" | "story";
   /** For `story` kind, the story id (also mirrored to campaign_id for uniqueness). */
   sourceId?: string;
+  /**
+   * The player explicitly skipped this reflective moment. Local-only marker:
+   * it never syncs to the server and never appears in the reflections journal,
+   * it only lets the activity render as "skipped" on revisit.
+   */
+  skipped?: boolean;
+
 }
 
 export type ReflectionKey = `${string}:${string}`;
