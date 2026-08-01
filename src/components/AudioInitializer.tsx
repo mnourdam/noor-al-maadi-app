@@ -59,17 +59,22 @@ export function AudioInitializer() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [debug, setDebug] = useState(() => audioManager.getDebugSnapshot());
   const [debugEnabled, setDebugEnabled] = useState(false);
+  // Gates that used to live in AppShell. Kept here so the ambience owner can
+  // be mounted once at the app root, above every full-screen surface.
+  const enabled = !isAndroidUltraStableMode() && isSectionEnabled("audio");
 
   useEffect(() => {
+    if (!enabled) return;
     audioManager.init();
     bindSfxHooks();
     // Read the opt-in flag on the client only to avoid SSR hydration drift.
     setDebugEnabled(isAudioDebugEnabled());
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
+    if (!enabled) return;
     audioManager.setAmbienceLayer(layerForRoute(pathname));
-  }, [pathname]);
+  }, [pathname, enabled]);
 
   useEffect(() => {
     if (!debugEnabled) return;
