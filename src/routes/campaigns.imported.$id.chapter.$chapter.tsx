@@ -223,10 +223,13 @@ function ImportedChapterPlayer() {
     setTimeout(() => { resolveLockRef.current = false; }, 350);
 
     // PR2 hard hearts gate — at 0 hearts, no answer is accepted (right or wrong).
-    if (heartsDepleted) {
+    // Skipping an optional reflective moment is not an answer and costs no
+    // heart, so it is never blocked by this gate.
+    if (heartsDepleted && !meta?.skipped) {
       setOutOfHeartsOpen(true);
       return;
     }
+
 
     const hearts = activity.heartsPenalty ?? ACTIVITY_DEFAULTS.heartsPenalty;
 
