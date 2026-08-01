@@ -1,19 +1,17 @@
 // ============================================================
-// Campaign route → authored section key (ambience only)
+// Campaign route → ambience section key
 // ------------------------------------------------------------
-// Resolves the section for whichever campaign the current URL is
-// inside, using ONLY authored values:
-//   1. the campaign's own `section_key`
-//   2. the `sectionKey` of the divider that opens its section
-//   3. null → default campaign ambience
-// Never inferred from era / worldSlug / tags / titles.
+// Uses ONLY the campaign the URL points at, resolved through the
+// explicit era → music table (`src/lib/audio/eraMusicMap.ts`).
+// Never derived from divider position, feed order, or titles, so a
+// campaign can never inherit a neighbouring era's music.
 // ============================================================
 
 import { useMemo } from "react";
 import { useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { fetchPublishedFeed } from "@/lib/supabaseCampaigns";
-import { sectionKeysFromFeed } from "@/lib/campaignDividers";
+import { resolveAmbienceSection } from "@/lib/audio/campaignAmbienceResolver";
 import type { CampaignSectionKey } from "@/lib/campaigns/sections";
 
 /** `/campaigns/imported/<idOrSlug>/...` → `<idOrSlug>`, else null. */
@@ -35,10 +33,10 @@ export function useCampaignRouteSection(): CampaignSectionKey | null {
 
   return useMemo(() => {
     if (!routeKey || !feed) return null;
-    const byId = sectionKeysFromFeed(feed.items);
-    if (byId.has(routeKey)) return byId.get(routeKey) ?? null;
-    // The URL may carry a slug instead of the row id.
-    const match = feed.campaigns.find((c) => c.slug === routeKey);
-    return match ? (byId.get(match.id) ?? null) : null;
+    const match =
+      feed.campaigns.find((c) => c.id === routeKey) ??
+      feed.campaigns.find((c) => c.slug === routeKey) ??
+      null;
+    return resolveAmbienceSection(match as never);
   }, [routeKey, feed]);
 }
