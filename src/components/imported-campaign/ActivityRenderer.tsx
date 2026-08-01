@@ -1108,22 +1108,23 @@ function ReflectiveMomentRenderer({ activity, onResolve, onAdvance, alreadyDone,
         )}
       </div>
 
-      {/* Actions — exactly one button at a time. */}
-      {isReplay && !editing ? (
+      {/* Actions — exactly one button at a time, chosen by `reflectionAction`. */}
+      {action === "edit" ? (
         <button
           onClick={() => setEditing(true)}
           className="motion-tap mt-5 w-full rounded-2xl border border-gold/40 py-3 text-sm font-bold text-gold"
         >
           تعديل التأمل
         </button>
-      ) : showNextOnly ? (
+      ) : action === "next" ? (
         <button
           onClick={advance}
           className="motion-tap mt-5 w-full rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground shadow-gold"
         >
           التالي ←
         </button>
-      ) : hasText ? (
+      ) : action === "save" ? (
+
         <button
           onClick={submit}
           disabled={!canSubmit}
