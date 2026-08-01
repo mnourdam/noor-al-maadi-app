@@ -17,7 +17,7 @@
 // No rewards, no economy mutation — presentation only.
 // ============================================================
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { BookOpenText, Sparkles, X } from "lucide-react";
