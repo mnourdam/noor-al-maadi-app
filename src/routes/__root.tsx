@@ -217,7 +217,14 @@ function RootComponent() {
       import("../lib/encyclopedia/index-store")
         .then((m) => m.prefetchEncyclopediaIndex(queryClient))
         .catch(() => {});
+      // Campaign opening stories are dynamic content: the bundled snapshot
+      // is only a seed. This lightweight delta sync picks up intros published
+      // after the APK was built, without a new release.
+      import("../lib/campaigns/intro/content-sync")
+        .then((m) => m.startCampaignIntroContentSync())
+        .catch(() => {});
     };
+
 
     const idle = (window as unknown as {
       requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number;

@@ -62,6 +62,15 @@ export function CampaignIntroGate({
     // Cheapest check first: a campaign without an authored intro exits
     // here, before any storage read — no measurable start-up cost.
     const ref = resolveCampaignIntro(campaign);
+    if (!ref) {
+      // This campaign has no intro locally. It may have been authored after
+      // this build shipped — nudge the background delta sync (throttled) so a
+      // later visit can play it. Never awaited; never blocks the campaign.
+      void import("@/lib/campaigns/intro/content-sync")
+        .then((m) => m.syncCampaignIntroContent({}))
+        .catch(() => {});
+    }
+
     const report = diagnoseCampaignIntro(campaign, {
       forceReplay,
       hasRenderer: !!renderIntro,

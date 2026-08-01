@@ -6,7 +6,9 @@
 // worldSlug, era, key art or story catalogues.
 // ============================================================
 
+import { getSyncedIntroLink } from "./content-store";
 import type { CampaignIntroRef } from "./types";
+
 
 /** Minimal structural shape — keeps this module import-light. */
 export interface IntroCarrier {
@@ -47,7 +49,13 @@ export function normalizeIntroVersion(value: unknown): number {
 
 /**
  * The single sanctioned way to resolve a campaign's intro.
- * Returns `null` when the campaign authors no intro story.
+ *
+ * Authored data on the campaign row wins. When the local campaign row
+ * predates the intro (an intro published after the APK was built), the
+ * synced link mirror supplies it — still an authored link, just fetched
+ * in the background rather than baked into the snapshot.
+ *
+ * Returns `null` when no intro is authored anywhere.
  */
 export function resolveCampaignIntro(
   campaign: IntroCarrier | null | undefined,
@@ -56,7 +64,16 @@ export function resolveCampaignIntro(
   const campaignId = readString(campaign.id, campaign.slug);
   if (!campaignId) return null;
   const storyId = readString(campaign.intro_story_id, campaign.introStoryId);
-  if (!storyId) return null;
+  if (!storyId) {
+    const synced =
+      getSyncedIntroLink(campaign.id) ?? getSyncedIntroLink(campaign.slug);
+    if (!synced) return null;
+    return {
+      campaignId,
+      storyId: synced.storyId,
+      version: normalizeIntroVersion(synced.version),
+    };
+  }
   return {
     campaignId,
     storyId,
@@ -65,3 +82,4 @@ export function resolveCampaignIntro(
     ),
   };
 }
+

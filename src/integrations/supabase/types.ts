@@ -3943,6 +3943,10 @@ export type Database = {
         Args: { p_story_id: string }
         Returns: string
       }
+      campaign_intros_sync_v1: {
+        Args: { p_since?: string; p_story_ids?: string[] }
+        Returns: Json
+      }
       claim_achievement_rewards: {
         Args: { _ids: string[] }
         Returns: {
