@@ -849,6 +849,8 @@ function FallbackRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
 //   personal note — through `saveReflection` / `getReflection`. Free-text
 //   never leaves the device.
 import { getReflection, saveReflection, markReflectionSkipped, resolveReflectionMode, reflectionChoices } from "@/lib/reflections";
+import { reflectionAction } from "@/lib/campaigns/reflectionAction";
+
 
 interface ReflectiveMomentRendererProps extends RendererProps {
   campaignId: string;
