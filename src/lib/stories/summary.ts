@@ -148,6 +148,7 @@ export async function listStoriesSummary(
       ensureLocalSnapshotLoaded,
       localStoriesAll,
       localStoryScenes,
+      localPublishedCampaigns,
     } = await import("@/lib/local-first-store");
     await ensureLocalSnapshotLoaded();
     const { loadUnlockedIds } = await import("./unlock-cache");
@@ -155,10 +156,14 @@ export async function listStoriesSummary(
     // Guest: the device is the authority, so offline unlocks are evaluated
     // locally against the same evidence the online guest RPC receives.
     const guestState = uid ? null : guestUnlockState();
+    // The snapshot intentionally ships campaign intro rows (the intro player
+    // reads them offline), so the library feed filters them out here.
+    const introIds = introStoryIdsFromCampaigns(localPublishedCampaigns());
     const all = localStoriesAll()
       .filter((s: any) => !worldSlug || s.world_slug === worldSlug)
-      .filter((s: any) => !isCampaignIntroStory(s.tags))
+      .filter((s: any) => !isCampaignIntroRow(s, introIds))
       .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0));
+
     return all.map((s: any) => {
       const alwaysOn = isAlwaysUnlockSpec(s.unlock_spec);
       const guestUnlocked = guestState
