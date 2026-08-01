@@ -963,8 +963,17 @@ function ReflectiveMomentRenderer({ activity, onResolve, onAdvance, alreadyDone,
     onResolve(true, { skipped: true });
   };
 
-  const showNextOnly = saved && resolved && hasText && !(isReplay && editing);
+  // Single source of truth for which button is shown (pure + unit-tested).
+  const action = reflectionAction({
+    text: hasText ? "x" : "",
+    resolved,
+    saved,
+    isReplay,
+    editing,
+  });
+  const showNextOnly = action === "next";
   const wasSkipped = !!prior?.skipped;
+
 
 
 
