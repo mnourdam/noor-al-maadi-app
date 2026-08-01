@@ -3111,6 +3111,24 @@ export type Database = {
           },
         ]
       }
+      user_story_unlock_notices: {
+        Row: {
+          seen_at: string
+          story_id: string
+          user_id: string
+        }
+        Insert: {
+          seen_at?: string
+          story_id: string
+          user_id: string
+        }
+        Update: {
+          seen_at?: string
+          story_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_streak_reward_claims: {
         Row: {
           artifact_id: string | null
