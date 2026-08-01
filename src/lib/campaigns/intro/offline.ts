@@ -75,31 +75,36 @@ export async function loadCampaignIntroBundle(
 
     const storyRows = asRows(stories);
     const story = storyRows.find((s) => String(s.id ?? "") === ref.storyId) ?? null;
-    if (!story) return null;
 
-    const audit = auditCampaignIntroAssets({
-      campaigns: [
-        { id: ref.campaignId, intro_story_id: ref.storyId, intro_version: ref.version },
-      ],
-      stories: storyRows,
-      story_scenes: asRows(scenes),
-      story_media: asRows(media),
-    });
-    const entry = audit.entries[0];
-    if (!entry || !entry.ready) return null;
+    if (story) {
+      const audit = auditCampaignIntroAssets({
+        campaigns: [
+          { id: ref.campaignId, intro_story_id: ref.storyId, intro_version: ref.version },
+        ],
+        stories: storyRows,
+        story_scenes: asRows(scenes),
+        story_media: asRows(media),
+      });
+      const entry = audit.entries[0];
+      if (entry?.ready) {
+        const storyScenes = asRows(scenes)
+          .filter((s) => String(s.story_id ?? "") === ref.storyId)
+          .sort((a, b) => Number(a.scene_index ?? 0) - Number(b.scene_index ?? 0));
+        const storyMedia = asRows(media).filter(
+          (m) => String(m.story_id ?? "") === ref.storyId,
+        );
+        return { ref, story, scenes: storyScenes, media: storyMedia };
+      }
+    }
 
-    const storyScenes = asRows(scenes)
-      .filter((s) => String(s.story_id ?? "") === ref.storyId)
-      .sort((a, b) => Number(a.scene_index ?? 0) - Number(b.scene_index ?? 0));
-    const storyMedia = asRows(media).filter(
-      (m) => String(m.story_id ?? "") === ref.storyId,
-    );
-
-    return { ref, story, scenes: storyScenes, media: storyMedia };
+    // 3) Neither source has it — pull it on demand, then re-read locally.
+    await ensureCampaignIntroContent(ref.storyId);
+    return bundleFromSynced(ref, await readSyncedIntroBundle(ref.storyId));
   } catch {
     return null;
   }
 }
+
 
 /** Cheap readiness probe used by the gate before opening the intro. */
 export async function isCampaignIntroPlayableOffline(
