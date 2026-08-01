@@ -363,7 +363,14 @@ function swapCampaignSource(sources: string[]) {
   const t = tracks.campaign;
   const [url, ...rest] = sources;
   if (!url) return;
-  if (t.el) { try { t.el.pause(); } catch {/*ignore*/} }
+  // Hard-stop and fully release the previous era's element so its audio can
+  // never keep playing (or be resumed) underneath the new one.
+  if (t.el) {
+    const old = t.el;
+    try { old.pause(); } catch {/*ignore*/}
+    try { old.volume = 0; } catch {/*ignore*/}
+    try { old.removeAttribute("src"); old.load(); } catch {/*ignore*/}
+  }
   t.el = null;
   t.failed = false;
   t.lastPlayError = null;
@@ -374,6 +381,7 @@ function swapCampaignSource(sources: string[]) {
     startCrossfade("campaign");
   }
 }
+
 
 // ---------- First-interaction unlock ----------
 function bindFirstInteraction() {
