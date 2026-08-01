@@ -848,7 +848,7 @@ function FallbackRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
 //   renderer owns the *auxiliary* view state — the chosen option and the
 //   personal note — through `saveReflection` / `getReflection`. Free-text
 //   never leaves the device.
-import { getReflection, saveReflection, resolveReflectionMode, reflectionChoices } from "@/lib/reflections";
+import { getReflection, saveReflection, markReflectionSkipped, resolveReflectionMode, reflectionChoices } from "@/lib/reflections";
 
 interface ReflectiveMomentRendererProps extends RendererProps {
   campaignId: string;
