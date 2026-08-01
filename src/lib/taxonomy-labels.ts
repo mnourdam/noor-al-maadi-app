@@ -114,6 +114,8 @@ const ERA_ALIAS: Record<string, ApprovedEra> = {
   mamluks: "mamluk",
   mamluki: "mamluk",
   "mamluk-era": "mamluk",
+  "mamluk-sultanate": "mamluk",
+
   timurids: "timurid",
   "timurid-era": "timurid",
   timur: "timurid",
