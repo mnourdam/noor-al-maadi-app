@@ -1,8 +1,8 @@
 {
   "version": 6,
   "generated_at": "2026-07-25T07:20:45Z",
-  "emblem_count": 136,
-  "asset_count": 408,
+  "emblem_count": 139,
+  "asset_count": 417,
   "assets": [
     {
       "id": "alembic",
@@ -123,6 +123,78 @@
       "file": "astronomer_kit_512.webp",
       "bytes": 83496,
       "sha256": "3e5294c3f947af6b767587c38e1264226566ccddcfeb538220e03d5719cb5343"
+    },
+    {
+      "id": "atlas_battle",
+      "size": 128,
+      "format": "webp",
+      "file": "atlas_battle_128.webp",
+      "bytes": 7072,
+      "sha256": "7171b3216066bde7da9d76b6a3d07f7f8e6bc8702922ba873ef4b03b04bb43d9"
+    },
+    {
+      "id": "atlas_battle",
+      "size": 256,
+      "format": "webp",
+      "file": "atlas_battle_256.webp",
+      "bytes": 19130,
+      "sha256": "4ae1383bc77f8cc73dac59fcd0f2c4d17bf502e2bcdb249e44848f1aead97425"
+    },
+    {
+      "id": "atlas_battle",
+      "size": 512,
+      "format": "webp",
+      "file": "atlas_battle_512.webp",
+      "bytes": 60046,
+      "sha256": "c79716fbceba207ff08366a2c48f07cc905e9329695a55552212b6c83868b8e7"
+    },
+    {
+      "id": "atlas_city",
+      "size": 128,
+      "format": "webp",
+      "file": "atlas_city_128.webp",
+      "bytes": 7662,
+      "sha256": "e6a4258267e21778b7f098eb1916f2988daf6419b5c379266d6101655f706f8f"
+    },
+    {
+      "id": "atlas_city",
+      "size": 256,
+      "format": "webp",
+      "file": "atlas_city_256.webp",
+      "bytes": 23294,
+      "sha256": "0a4079b6234d65da6c7a9315a218ec17d1f4314690d1d449b8906b1c9f1de1c8"
+    },
+    {
+      "id": "atlas_city",
+      "size": 512,
+      "format": "webp",
+      "file": "atlas_city_512.webp",
+      "bytes": 75570,
+      "sha256": "cbb35e5ac2abf7d5e2c9c638d6c87f0b2f517626154e9ea0034d4a7d3d81982b"
+    },
+    {
+      "id": "atlas_region",
+      "size": 128,
+      "format": "webp",
+      "file": "atlas_region_128.webp",
+      "bytes": 5606,
+      "sha256": "ec4a65e2310910add358cd956566d6072235cd57e47a71252588bb28d383a928"
+    },
+    {
+      "id": "atlas_region",
+      "size": 256,
+      "format": "webp",
+      "file": "atlas_region_256.webp",
+      "bytes": 16952,
+      "sha256": "1b5b49090c2c6461068d6eba65dcd9942d539e35222a4cb93f83674f4aaad11b"
+    },
+    {
+      "id": "atlas_region",
+      "size": 512,
+      "format": "webp",
+      "file": "atlas_region_512.webp",
+      "bytes": 56488,
+      "sha256": "ca57bb7b557e57385e63ff3586c8823eceed1601eb2ff2c07cc4f047cf1efc9c"
     },
     {
       "id": "ayyubid_eagle",
