@@ -117,3 +117,26 @@ describe("era transitions swap the track immediately", () => {
     expect(audioManager.getCampaignTheme()).toBeNull();
   });
 });
+
+// ------------------------------------------------------------
+// Integrity over the real authored content pack
+// ------------------------------------------------------------
+describe("authored campaign content ↔ era music integrity", () => {
+  it("every published campaign resolves to a known era with a track", async () => {
+    const fs = await import("node:fs");
+    const snap = JSON.parse(fs.readFileSync("public/offline-snapshot.json", "utf8"));
+    const rows: any[] = snap.collections.admin_campaigns ?? [];
+    const campaigns = rows.filter((r) => !String(r.id).startsWith("div_"));
+    const unknown: string[] = [];
+    const noTrack: string[] = [];
+    for (const r of campaigns) {
+      const data = r.data ?? {};
+      const section = resolveAmbienceSection(data);
+      if (!data.era) { unknown.push(`${r.id}: missing era`); continue; }
+      if (!sectionForEra(data.era) && !data.section_key) unknown.push(`${r.id}: era=${data.era}`);
+      if (!section) noTrack.push(`${r.id}: era=${data.era}`);
+    }
+    expect(unknown).toEqual([]);
+    expect(noTrack).toEqual([]);
+  });
+});
