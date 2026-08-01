@@ -8,6 +8,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import { evaluateStoryUnlock, isAlwaysUnlockSpec } from "./unlock/local";
 import { buildGuestEvidence, guestUnlockState } from "./unlock/guest-evidence";
+import { isCampaignIntroRow, introStoryIdsFromCampaigns } from "./library-filter";
+
 
 export type StoryPrereqKind =
   | "campaign_completed"
