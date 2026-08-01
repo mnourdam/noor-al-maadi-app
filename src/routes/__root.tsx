@@ -350,6 +350,10 @@ function RootComponent() {
           <NavigationProvider>
             <TutorialProvider>
               <Outlet />
+              {/* Ambience owner lives at the root so full-screen surfaces
+                  (campaign intro, cinematic opening) can never orphan the
+                  audio layer and let a previous era's track keep playing. */}
+              <AudioInitializer />
               <CinematicOpening />
               <FirstLaunchGate />
               <AchievementEngineBoot />
