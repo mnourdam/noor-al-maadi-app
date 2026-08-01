@@ -1,16 +1,18 @@
 // ============================================================
-// Campaign Intros — offline reader (Stage 5)
+// Campaign Intros — offline reader (Stage 5 + delta sync)
 // ------------------------------------------------------------
-// The intro plays from the OFFLINE SNAPSHOT only. There is no
-// network call in the playback path: if the assets are not in the
-// snapshot the intro is skipped and the campaign starts normally.
-// The APK build gate (`scripts/verify-campaign-intro-assets.mjs`)
-// guarantees that a shipped build can never reach that state for
-// an authored intro.
+// Read order (newest wins, playback never waits on the network):
+//   1. locally synced bundle (background delta sync)
+//   2. bundled offline snapshot (APK seed)
+//   3. on-demand server fetch (only when neither has the intro
+//      AND the device is online) — the result is cached locally
+//      for later offline playback.
 // ============================================================
 
 import { getCollection } from "@/lib/offline-snapshot";
 import { auditCampaignIntroAssets, INTRO_ENGINE_VERSION } from "./audit";
+import { readSyncedIntroBundle } from "./content-store";
+import { ensureCampaignIntroContent } from "./content-sync";
 import type { CampaignIntroRef } from "./types";
 
 export { INTRO_ENGINE_VERSION };
@@ -28,16 +30,43 @@ function asRows(value: unknown): Record<string, unknown>[] {
     : [];
 }
 
+function bundleFromSynced(
+  ref: CampaignIntroRef,
+  synced: Awaited<ReturnType<typeof readSyncedIntroBundle>>,
+): CampaignIntroBundle | null {
+  if (!synced?.story || !Array.isArray(synced.scenes) || synced.scenes.length === 0) return null;
+  const audit = auditCampaignIntroAssets({
+    campaigns: [
+      { id: ref.campaignId, intro_story_id: ref.storyId, intro_version: ref.version },
+    ],
+    stories: [synced.story],
+    story_scenes: synced.scenes,
+    story_media: synced.media ?? [],
+  });
+  const entry = audit.entries[0];
+  if (!entry || !entry.ready) return null;
+  return {
+    ref,
+    story: synced.story,
+    scenes: synced.scenes,
+    media: synced.media ?? [],
+  };
+}
+
 /**
- * Loads an authored intro's story + scenes + media from the local
- * snapshot. Returns `null` when anything required is missing — the
- * caller then renders the campaign directly.
+ * Loads an authored intro's story + scenes + media.
+ * Returns `null` when nothing playable is available — the caller then
+ * renders the campaign directly.
  */
 export async function loadCampaignIntroBundle(
   ref: CampaignIntroRef | null | undefined,
 ): Promise<CampaignIntroBundle | null> {
   if (!ref?.storyId) return null;
   try {
+    // 1) Locally synced content wins over the bundled seed.
+    const synced = bundleFromSynced(ref, await readSyncedIntroBundle(ref.storyId));
+    if (synced) return synced;
+
     const [stories, scenes, media] = await Promise.all([
       getCollection("stories" as never),
       getCollection("story_scenes" as never),
