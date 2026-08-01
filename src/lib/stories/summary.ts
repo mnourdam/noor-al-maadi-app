@@ -64,12 +64,11 @@ export interface StorySummary {
 
 // Campaign cinematic intros are authored as stories so they can reuse the
 // story renderer, but they are NOT library content — they only ever play at
-// the start of their campaign. One tag, one exclusion point.
-export const CAMPAIGN_INTRO_TAG = "campaign-intro";
+// the start of their campaign. Server truth: `story_is_campaign_intro(...)`
+// already removes them from `list_stories_v3` / `list_stories_guest_v3`.
+// The client predicate below is the offline mirror of that rule.
+export { CAMPAIGN_INTRO_TAG } from "./library-filter";
 
-function isCampaignIntroStory(tags: unknown): boolean {
-  return Array.isArray(tags) && tags.includes(CAMPAIGN_INTRO_TAG);
-}
 
 
 
