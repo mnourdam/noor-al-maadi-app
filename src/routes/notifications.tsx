@@ -232,18 +232,21 @@ function Row({
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <div className="flex items-center justify-between gap-2">
-              <p className="truncate font-display text-sm font-bold text-foreground">{n.title}</p>
-              {unread && <span className="size-2 shrink-0 rounded-full bg-gradient-gold" aria-label="غير مقروء" />}
+            <div className="flex items-start justify-between gap-2">
+              <p className="min-w-0 flex-1 font-display text-sm font-bold leading-relaxed text-foreground">{n.title}</p>
+              {unread && <span className="mt-1.5 size-2 shrink-0 rounded-full bg-gradient-gold" aria-label="غير مقروء" />}
             </div>
-            <p className="mt-1 line-clamp-2 text-[12px] leading-relaxed text-muted-foreground">{n.body}</p>
-            <div className="mt-1.5 flex items-center justify-between gap-2 text-[10px] text-muted-foreground">
+            {/* Full body — never clamped/truncated. Long Arabic text wraps
+                naturally and the card grows with it. */}
+            <p className="mt-1 whitespace-pre-wrap break-words text-[12px] leading-relaxed text-muted-foreground">{n.body}</p>
+            <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-[10px] text-muted-foreground">
               <span className={`inline-flex items-center gap-1 ${cat.accent}`}>
                 <Icon className="size-3" /> {cat.label}
               </span>
-              <span>{relativeTime(n.created_at)}</span>
+              <span className="shrink-0">{relativeTime(n.created_at)}</span>
             </div>
           </div>
+
         </button>
         <button
           onClick={() => onRemove(n.id)}
