@@ -911,13 +911,25 @@ function ReflectiveMomentRenderer({ activity, onResolve, onAdvance, alreadyDone,
 
   const advance = () => { onAdvance?.(); };
 
-  // Single-button contract:
-  //   no note        → "تخطي والمتابعة"  (persist + complete + advance)
-  //   note written   → "حفظ"             (persist + complete, stays)
-  //   after saving   → "التالي"          (advance only)
+  // ---------------------------------------------------------------
+  // Two clearly separated paths. SAVE and SKIP never share a handler:
+  //
+  //   SAVE  — requires written text (or an authored choice). Persists the
+  //           reflection, completes the activity, then the player taps
+  //           "التالي" to move on.
+  //   SKIP  — requires NOTHING. No validation, no empty reflection is
+  //           written, no answer-linked reward. The activity is recorded as
+  //           skipped and the chapter advances by itself, because the parent
+  //           does not queue an acknowledgement for a skipped resolve.
+  //
+  // The old bug: skip reused `submit()`, which called `onResolve(true)` and
+  // then synchronously called `advance()`. The parent's advance guard reads
+  // the acknowledgement state from the *previous* render, so it always saw
+  // "not acknowledged yet" and silently did nothing — the button looked dead.
+  // ---------------------------------------------------------------
   const submit = () => {
     if (submitLockRef.current) return;
-    if (!canSubmit) return;
+    if (!canSubmit || !hasText) return;
     submitLockRef.current = true;
     setTimeout(() => { submitLockRef.current = false; }, 400);
     persist();
@@ -929,11 +941,31 @@ function ReflectiveMomentRenderer({ activity, onResolve, onAdvance, alreadyDone,
     }
     setResolved(true);
     onResolve(true);
-    if (!hasText) advance();
+  };
+
+  const skip = () => {
+    // One lock for BOTH paths: a rapid double tap can never resolve twice,
+    // and can never skip the following activity either.
+    if (submitLockRef.current) return;
+    submitLockRef.current = true;
+    setTimeout(() => { submitLockRef.current = false; }, 600);
+    if (resolved) {
+      // Already completed (replay / re-tap after a refresh) — just move on.
+      setEditing(false);
+      advance();
+      return;
+    }
+    // Local-only "skipped" marker: never an empty reflection entry.
+    markReflectionSkipped(campaignId, activity.id, mode);
+    setResolved(true);
+    // `skipped` tells the chapter player: complete it, grant no
+    // reflection reward, and advance without an acknowledgement tap.
+    onResolve(true, { skipped: true });
   };
 
   const showNextOnly = saved && resolved && hasText && !(isReplay && editing);
-  const submitLabel = hasText ? "حفظ" : "تخطي والمتابعة";
+  const wasSkipped = !!prior?.skipped;
+
 
 
   return (
