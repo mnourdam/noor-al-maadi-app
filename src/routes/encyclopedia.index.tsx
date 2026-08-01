@@ -493,7 +493,7 @@ function EncyclopediaHubFull() {
                   <h2 className="font-display text-base font-bold">استكشف حسب النوع</h2>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-2 gap-2.5 md:grid-cols-[repeat(auto-fill,minmax(13rem,1fr))]">
                 {CATEGORIES.filter((c) => (counts[c.key] ?? 0) > 0).map((c) => {
                   const n = counts[c.key] ?? 0;
                   const Icon = c.icon;
@@ -569,7 +569,7 @@ function EncyclopediaHubFull() {
                   <Clock className="size-4 text-gold" />
                   <h2 className="font-display text-sm font-bold">تابع القراءة</h2>
                 </div>
-                <div className="grid grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-2 gap-2.5 md:grid-cols-[repeat(auto-fill,minmax(13rem,1fr))]">
                   {recentlyViewed.map((e) => <EncyclopediaCard key={e.id} entity={e} />)}
                 </div>
               </section>
@@ -623,7 +623,7 @@ function EncyclopediaHubFull() {
                   <TrendingUp className="size-4 text-gold" />
                   <h2 className="font-display text-sm font-bold">الأكثر تداولًا</h2>
                 </div>
-                <div className="grid grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-2 gap-2.5 md:grid-cols-[repeat(auto-fill,minmax(13rem,1fr))]">
                   {recentlyUpdated.map((e) => <EncyclopediaCard key={e.id} entity={e} />)}
                 </div>
               </section>
@@ -636,7 +636,7 @@ function EncyclopediaHubFull() {
                   <Shuffle className="size-4 text-gold" />
                   <h2 className="font-display text-sm font-bold">اكتشاف عشوائي</h2>
                 </div>
-                <div className="grid grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-2 gap-2.5 md:grid-cols-[repeat(auto-fill,minmax(13rem,1fr))]">
                   {discovery.map((e) => <EncyclopediaCard key={e.id} entity={e} />)}
                 </div>
               </section>
@@ -649,7 +649,7 @@ function EncyclopediaHubFull() {
                   <Sparkles className="size-4 text-gold" />
                   <h2 className="font-display text-sm font-bold">أُضيف حديثاً</h2>
                 </div>
-                <div className="grid grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-2 gap-2.5 md:grid-cols-[repeat(auto-fill,minmax(13rem,1fr))]">
                   {recentlyAdded.map((e) => <EncyclopediaCard key={e.id} entity={e} />)}
                 </div>
               </section>

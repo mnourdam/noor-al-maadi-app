@@ -1139,6 +1139,20 @@ html.perf-lite .motion-shake { animation-duration: 220ms !important; }
 .irth-reading li,
 .irth-reading blockquote { line-height: 1.85; }
 
+/* Tablet+ reading measure: cap the line length of long-form prose only.
+   Tables, grids, media and centered/compact UI keep their full width. */
+@media (min-width: 768px) {
+  .irth-reading :is(p, li, blockquote):not(.text-center):not(.no-reading-scale):not(.no-reading-measure) {
+    max-width: 68ch;
+  }
+  .irth-reading .text-center :is(p, li, blockquote),
+  .irth-reading .no-reading-scale :is(p, li, blockquote),
+  .irth-reading table :is(p, li),
+  .irth-reading [class*="grid-cols"] :is(p, li, blockquote) {
+    max-width: none;
+  }
+}
+
 .irth-reading[data-reading-size="md"] :is(
   p, li, blockquote,
   .text-base, .text-\[15px\], .text-\[14px\]
@@ -1304,3 +1318,24 @@ body[data-app-scope="player"] [data-allow-select="true"] * {
   .dq-shimmer, .dq-pop, .dq-float, .dq-spark { animation: none !important; }
 }
 
+
+/* ============================================================
+   Admin (non-player scope) — tablet container calibration.
+   Admin pages already use wide `max-w-*` containers; below the
+   desktop breakpoint their wide data tables must scroll inside
+   the page instead of stretching the viewport.
+   ============================================================ */
+@media (min-width: 600px) and (max-width: 1279px) {
+  body:not([data-app-scope="player"]) table {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  body:not([data-app-scope="player"]) table > :is(thead, tbody, tfoot) {
+    display: table;
+    width: 100%;
+    min-width: max-content;
+  }
+}

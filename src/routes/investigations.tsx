@@ -407,7 +407,7 @@ function InvestigationsIndex() {
           </div>
         )}
 
-        <div className="case-board space-y-3 rounded-3xl border border-white/10 p-3">
+        <div className="case-board space-y-3 rounded-3xl border border-white/10 p-3 md:grid md:grid-cols-[repeat(auto-fill,minmax(22rem,1fr))] md:items-start md:gap-3 md:space-y-0">
           {filtered.map((item) => {
             const caseNumber = caseNumberLabel(itemSlug(item));
             if (item.kind === "supabase") {

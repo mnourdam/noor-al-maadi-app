@@ -168,7 +168,7 @@ export function WorldAtlasCanvas({
           ref={svgRef}
           viewBox="0 0 100 60"
           preserveAspectRatio="xMidYMid meet"
-          className="block w-full h-[420px]"
+          className="block w-full h-[420px] md:h-[clamp(420px,58svh,680px)]"
         >
           <defs>
             <AtlasBaseDefs />

@@ -65,7 +65,7 @@ function WorldsIndex() {
             <p className="text-[12px] text-muted-foreground">لا توجد عوالم متاحة بعد.</p>
           </div>
         ) : (
-          <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fill,minmax(21rem,1fr))]">
             {data.map((w) => {
               const prog = byWorld.get(w.hub.slug);
               const overall = prog?.progress.overallPct ?? 0;

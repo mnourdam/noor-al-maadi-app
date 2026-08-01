@@ -94,7 +94,7 @@ export function HUD() {
 
   return (
     <div
-      className="sticky top-0 z-40 mx-auto w-full max-w-md md:max-w-xl lg:max-w-2xl px-3 pt-2"
+      className="sticky top-0 z-40 mx-auto w-full max-w-md md:max-w-2xl lg:max-w-3xl px-3 pt-2"
       style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top))" }}
     >
       <div className="glass flex items-center justify-between gap-2 rounded-2xl border border-white/10 bg-background/70 px-3 py-1.5 backdrop-blur-md">

@@ -765,7 +765,7 @@ function CollectionPage() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-[repeat(auto-fill,minmax(13rem,1fr))]">
             {currentEntities.map(({ e, open }) => {
               const rarity = rarityFromMetadata(e.metadata, defaultRarity(current.type));
               const GlyphIcon = current.glyphIcon;
@@ -896,7 +896,7 @@ function RecentUnlocks() {
           لا توجد مقتنيات بعد — ابدأ حملةً ليبدأ متحفك في النمو.
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-2.5">
+        <div className="grid grid-cols-1 gap-2.5 md:grid-cols-[repeat(auto-fill,minmax(20rem,1fr))]">
           {recents.map((r) => {
             const Icon = iconFor(r.type);
             const meta = RARITY_META[r.rarity];
