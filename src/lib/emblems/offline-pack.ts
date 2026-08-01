@@ -59,7 +59,10 @@ export const OFFLINE_EMBLEM_IDS: ReadonlySet<string> = new Set([
   "barid_horn", "postal_satchel",
   "vizier_khilaa", "tiraz_textile",
   "hajj_mahmal", "minbar_panel", "mosque_lamp", "fresco_fragment",
+  // Atlas set · region / city / battle markers (Premium Style v1)
+  "atlas_region", "atlas_city", "atlas_battle",
 ]);
+
 
 
 /**

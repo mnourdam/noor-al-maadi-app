@@ -8,6 +8,7 @@
 import type { AtlasEntityKind } from "@/lib/atlas-entities";
 import { getEmblemRecord } from "@/lib/emblems/registry";
 import { emblemSourceCandidates } from "@/lib/emblems/asset-manifest";
+import { localEmblemPath } from "@/lib/emblems/offline-pack";
 import { resolveProfileEmblem } from "@/lib/emblems/resolver";
 import { atlasKindEmblemId } from "@/lib/emblems/identity-map";
 
@@ -18,9 +19,15 @@ export function AtlasGlyphDefs() {
 
 function emblemHref(kind: AtlasEntityKind): string | null {
   const id = atlasKindEmblemId(kind);
+  // Atlas-only emblems (region/city/battle) ship in the offline pack but are
+  // not player-selectable, so they have no registry record — resolve them
+  // straight from the bundled pack before falling back to the registry.
+  const local = localEmblemPath(id, 128);
+  if (local) return local;
   const record = getEmblemRecord(id) ?? resolveProfileEmblem(id).record;
   return emblemSourceCandidates(record, 128)[0] ?? null;
 }
+
 
 /**
  * Full marker = the official emblem for the kind. `fill` still encodes the
