@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useRouterState } from "@tanstack/react-router";
 import { audioManager, type AmbienceLayer } from "@/lib/audioManager";
 import { bindSfxHooks } from "@/lib/sfxHooks";
+import { isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
+import { isSectionEnabled } from "@/lib/androidQuietMode";
 
 /** Routes that switch the ambience to the campaign layer. */
 function isCampaignRoute(pathname: string): boolean {
