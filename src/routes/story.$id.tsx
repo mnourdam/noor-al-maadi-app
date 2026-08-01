@@ -8,6 +8,8 @@
 // ============================================================
 
 import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
+import { useEffect } from "react";
+
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, BookOpen, Lock, Loader2 } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
@@ -64,6 +66,24 @@ function StoryRoute() {
     staleTime: 60_000,
   });
   const summary = summariesQ.data?.find((s) => s.id === id) ?? null;
+
+  // Campaign intro stories are NOT library content. A direct library URL
+  // hands the player back to the owning campaign (which applies its own
+  // progression lock) instead of playing the intro out of context.
+  const introCampaignId =
+    data?.bundle?.reason === "campaign_intro"
+      ? ((data.bundle as { campaign_id?: string | null }).campaign_id ?? null)
+      : null;
+  useEffect(() => {
+    if (data?.bundle?.reason !== "campaign_intro") return;
+    void navigate(
+      introCampaignId
+        ? { to: "/campaigns/imported/$id", params: { id: introCampaignId }, replace: true }
+        : { to: "/campaigns", replace: true },
+    );
+  }, [data?.bundle?.reason, introCampaignId, navigate]);
+
+
 
   if (isLoading || summariesQ.isLoading) {
     return (
@@ -135,11 +155,16 @@ function LockedState({
   const label =
     reason === "locked"
       ? "هذه القصة مقفلة"
-      : "لم يتم العثور على القصة";
+      : reason === "campaign_intro"
+        ? "هذه افتتاحية حملة"
+        : "لم يتم العثور على القصة";
   const hint =
     reason === "locked"
       ? "أنجز الحملات أو التحقيقات المطلوبة لفتحها."
-      : "قد تكون أُزيلت أو أن الرابط غير صحيح.";
+      : reason === "campaign_intro"
+        ? "تُعرض الافتتاحية داخل حملتها فقط. جارٍ تحويلك…"
+        : "قد تكون أُزيلت أو أن الرابط غير صحيح.";
+
   return (
     <div
       dir="rtl"

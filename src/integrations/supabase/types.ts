@@ -3939,6 +3939,10 @@ export type Database = {
         Args: { p_legacy_keys: string[] }
         Returns: Json
       }
+      campaign_id_for_intro_story: {
+        Args: { p_story_id: string }
+        Returns: string
+      }
       claim_achievement_rewards: {
         Args: { _ids: string[] }
         Returns: {
@@ -4511,6 +4515,10 @@ export type Database = {
       stories_snapshot_manifest_v2: {
         Args: { p_include_on_demand?: boolean }
         Returns: Json
+      }
+      story_is_campaign_intro: {
+        Args: { p_metadata: Json; p_story_id: string; p_tags: string[] }
+        Returns: boolean
       }
       story_media_reference_count: {
         Args: { p_media_id: string }

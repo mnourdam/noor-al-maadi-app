@@ -100,6 +100,16 @@ export async function fetchStoryAccess(storyId: string): Promise<StoryAccessBund
     await ensureLocalSnapshotLoaded();
     const story = localStoryById(storyId);
     if (!story) return { ok: false, reason: "offline_and_not_cached" };
+    // Campaign intros are never readable through the library reader, even
+    // offline: they only play inside their campaign's intro flow.
+    {
+      const { isCampaignIntroRow, introStoryIdsFromCampaigns } = await import("./library-filter");
+      const { localPublishedCampaigns } = await import("@/lib/local-first-store");
+      if (isCampaignIntroRow(story as never, introStoryIdsFromCampaigns(localPublishedCampaigns()))) {
+        return { ok: false, reason: "campaign_intro" } as StoryAccessBundle;
+      }
+    }
+
     const { isAlwaysUnlockSpec, evaluateStoryUnlock } = await import("./unlock/local");
     const alwaysOn = isAlwaysUnlockSpec((story as any).unlock_spec);
     const uid = authUid;

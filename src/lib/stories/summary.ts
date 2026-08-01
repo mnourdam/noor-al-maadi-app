@@ -8,6 +8,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import { evaluateStoryUnlock, isAlwaysUnlockSpec } from "./unlock/local";
 import { buildGuestEvidence, guestUnlockState } from "./unlock/guest-evidence";
+import { isCampaignIntroRow, introStoryIdsFromCampaigns } from "./library-filter";
+
 
 export type StoryPrereqKind =
   | "campaign_completed"
@@ -64,12 +66,11 @@ export interface StorySummary {
 
 // Campaign cinematic intros are authored as stories so they can reuse the
 // story renderer, but they are NOT library content — they only ever play at
-// the start of their campaign. One tag, one exclusion point.
-export const CAMPAIGN_INTRO_TAG = "campaign-intro";
+// the start of their campaign. Server truth: `story_is_campaign_intro(...)`
+// already removes them from `list_stories_v3` / `list_stories_guest_v3`.
+// The client predicate below is the offline mirror of that rule.
+export { CAMPAIGN_INTRO_TAG } from "./library-filter";
 
-function isCampaignIntroStory(tags: unknown): boolean {
-  return Array.isArray(tags) && tags.includes(CAMPAIGN_INTRO_TAG);
-}
 
 
 
@@ -104,7 +105,8 @@ export async function listStoriesSummary(
     // Normalise the editorial taxonomy so filters never see undefined/null
     // shapes coming from either the authoritative or the guest RPC.
     const rows = ((data ?? []) as StorySummary[])
-      .filter((r) => !isCampaignIntroStory(r.tags))
+      .filter((r) => !isCampaignIntroRow(r as never))
+
       .map((r) => ({
         ...r,
         category: r.category ?? null,
@@ -146,6 +148,7 @@ export async function listStoriesSummary(
       ensureLocalSnapshotLoaded,
       localStoriesAll,
       localStoryScenes,
+      localPublishedCampaigns,
     } = await import("@/lib/local-first-store");
     await ensureLocalSnapshotLoaded();
     const { loadUnlockedIds } = await import("./unlock-cache");
@@ -153,10 +156,14 @@ export async function listStoriesSummary(
     // Guest: the device is the authority, so offline unlocks are evaluated
     // locally against the same evidence the online guest RPC receives.
     const guestState = uid ? null : guestUnlockState();
+    // The snapshot intentionally ships campaign intro rows (the intro player
+    // reads them offline), so the library feed filters them out here.
+    const introIds = introStoryIdsFromCampaigns(localPublishedCampaigns());
     const all = localStoriesAll()
       .filter((s: any) => !worldSlug || s.world_slug === worldSlug)
-      .filter((s: any) => !isCampaignIntroStory(s.tags))
+      .filter((s: any) => !isCampaignIntroRow(s, introIds))
       .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0));
+
     return all.map((s: any) => {
       const alwaysOn = isAlwaysUnlockSpec(s.unlock_spec);
       const guestUnlocked = guestState
