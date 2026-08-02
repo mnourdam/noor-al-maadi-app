@@ -118,11 +118,18 @@ try {
   check("A reads own profile row", Array.isArray(own.body) && own.body.length === 1, JSON.stringify(own.body));
 
   // 2. Owner cannot read B's row from the base table.
+  // Denial may surface either as an empty RLS-filtered result or as an outright
+  // permission error (column-level grants also restrict `select=*`). Both are pass.
   const other = await asUser(A.token, `/rest/v1/profiles?id=eq.${B.id}&select=*`);
+  const otherDenied =
+    other.status >= 400 || (Array.isArray(other.body) && other.body.length === 0);
+  check("A reads 0 rows of B from base profiles", otherDenied, JSON.stringify(other.body));
+
+  const otherSafe = await asUser(A.token, `/rest/v1/profiles?id=eq.${B.id}&select=id,username`);
   check(
-    "A reads 0 rows of B from base profiles",
-    Array.isArray(other.body) && other.body.length === 0,
-    JSON.stringify(other.body),
+    "A reads 0 rows of B even on safe columns",
+    otherSafe.status >= 400 || (Array.isArray(otherSafe.body) && otherSafe.body.length === 0),
+    JSON.stringify(otherSafe.body),
   );
 
   // 3. Unfiltered scan leaks nothing.
