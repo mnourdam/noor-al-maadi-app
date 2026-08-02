@@ -9,279 +9,149 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
-import { Route as TimelineRouteImport } from './routes/timeline'
-import { Route as TermsRouteImport } from './routes/terms'
-import { Route as ShareCardRouteImport } from './routes/share-card'
-import { Route as SecurityRouteImport } from './routes/security'
-import { Route as SeasonsRouteImport } from './routes/seasons'
-import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as ReflectionsRouteImport } from './routes/reflections'
-import { Route as ReferralsRouteImport } from './routes/referrals'
-import { Route as ProfileRouteImport } from './routes/profile'
-import { Route as PrivacyRouteImport } from './routes/privacy'
-import { Route as OnThisDayRouteImport } from './routes/on-this-day'
-import { Route as NotificationsRouteImport } from './routes/notifications'
-import { Route as MapRouteImport } from './routes/map'
-import { Route as JourneyRouteImport } from './routes/journey'
-import { Route as InvestigationsRouteImport } from './routes/investigations'
-import { Route as InboxRouteImport } from './routes/inbox'
-import { Route as HistoryCalendarRouteImport } from './routes/history-calendar'
-import { Route as FriendsRouteImport } from './routes/friends'
-import { Route as EncyclopediaRouteImport } from './routes/encyclopedia'
-import { Route as ContentAuditRouteImport } from './routes/content-audit'
-import { Route as CollectionRouteImport } from './routes/collection'
-import { Route as CampaignsRouteImport } from './routes/campaigns'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AdventureRouteImport } from './routes/adventure'
-import { Route as AchievementsRouteImport } from './routes/achievements'
-import { Route as AccountDeletionRouteImport } from './routes/account-deletion'
-import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as WorldsIndexRouteImport } from './routes/worlds.index'
-import { Route as StoriesIndexRouteImport } from './routes/stories.index'
-import { Route as GamesIndexRouteImport } from './routes/games.index'
-import { Route as FeedbackIndexRouteImport } from './routes/feedback.index'
-import { Route as EncyclopediaIndexRouteImport } from './routes/encyclopedia.index'
-import { Route as CampaignsIndexRouteImport } from './routes/campaigns.index'
+import { Route as AboutRouteImport } from './routes/about'
+import { Route as AccountDeletionRouteImport } from './routes/account-deletion'
+import { Route as AchievementsRouteImport } from './routes/achievements'
+import { Route as AdventureRouteImport } from './routes/adventure'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as CampaignsRouteImport } from './routes/campaigns'
+import { Route as CollectionRouteImport } from './routes/collection'
+import { Route as ContentAuditRouteImport } from './routes/content-audit'
+import { Route as EncyclopediaRouteImport } from './routes/encyclopedia'
+import { Route as FriendsRouteImport } from './routes/friends'
+import { Route as HistoryCalendarRouteImport } from './routes/history-calendar'
+import { Route as InboxRouteImport } from './routes/inbox'
+import { Route as InvestigationsRouteImport } from './routes/investigations'
+import { Route as JourneyRouteImport } from './routes/journey'
+import { Route as MapRouteImport } from './routes/map'
+import { Route as NotificationsRouteImport } from './routes/notifications'
+import { Route as OnThisDayRouteImport } from './routes/on-this-day'
+import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as ReferralsRouteImport } from './routes/referrals'
+import { Route as ReflectionsRouteImport } from './routes/reflections'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as SeasonsRouteImport } from './routes/seasons'
+import { Route as SecurityRouteImport } from './routes/security'
+import { Route as ShareCardRouteImport } from './routes/share-card'
+import { Route as TermsRouteImport } from './routes/terms'
+import { Route as TimelineRouteImport } from './routes/timeline'
+import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
-import { Route as WorldsSlugRouteImport } from './routes/worlds.$slug'
-import { Route as UUsernameRouteImport } from './routes/u.$username'
-import { Route as StoryIdRouteImport } from './routes/story.$id'
-import { Route as PlayTimelineRouteImport } from './routes/play.timeline'
-import { Route as PlayInvestigateRouteImport } from './routes/play.investigate'
-import { Route as PlayDecisionsRouteImport } from './routes/play.decisions'
-import { Route as PlayChapterRouteImport } from './routes/play.chapter'
-import { Route as InvestigationIdRouteImport } from './routes/investigation.$id'
-import { Route as FigureIdRouteImport } from './routes/figure.$id'
-import { Route as FeedbackNewRouteImport } from './routes/feedback.new'
-import { Route as FeedbackIdRouteImport } from './routes/feedback.$id'
-import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
-import { Route as CompareIdRouteImport } from './routes/compare.$id'
-import { Route as CityIdRouteImport } from './routes/city.$id'
-import { Route as BattleIdRouteImport } from './routes/battle.$id'
-import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
-import { Route as AdminWorldMembershipReviewRouteImport } from './routes/admin.world-membership-review'
-import { Route as AdminUsersRouteImport } from './routes/admin.users'
-import { Route as AdminUnlockIntegrityRouteImport } from './routes/admin.unlock-integrity'
-import { Route as AdminTaxonomyRouteImport } from './routes/admin.taxonomy'
-import { Route as AdminRelatedStoriesRouteImport } from './routes/admin.related-stories'
-import { Route as AdminPersistenceDiagnosticsRouteImport } from './routes/admin.persistence-diagnostics'
-import { Route as AdminOfflineDiagnosticsRouteImport } from './routes/admin.offline-diagnostics'
-import { Route as AdminOfflineRouteImport } from './routes/admin.offline'
-import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
-import { Route as AdminNewsletterRouteImport } from './routes/admin.newsletter'
-import { Route as AdminNativeAuthDiagnosticsRouteImport } from './routes/admin.native-auth-diagnostics'
-import { Route as AdminMuseumProvenanceRouteImport } from './routes/admin.museum-provenance'
-import { Route as AdminModerationRouteImport } from './routes/admin.moderation'
-import { Route as AdminMigrationRouteImport } from './routes/admin.migration'
-import { Route as AdminMapRouteImport } from './routes/admin.map'
-import { Route as AdminInvestigationsRouteImport } from './routes/admin.investigations'
-import { Route as AdminInvestigationRewardsRouteImport } from './routes/admin.investigation-rewards'
-import { Route as AdminImportHistoryRouteImport } from './routes/admin.import-history'
-import { Route as AdminImportRouteImport } from './routes/admin.import'
-import { Route as AdminHubBuilderRouteImport } from './routes/admin.hub-builder'
-import { Route as AdminHistoricalHubsAuditRouteImport } from './routes/admin.historical-hubs-audit'
-import { Route as AdminGamesRouteImport } from './routes/admin.games'
-import { Route as AdminExplorationPathRepairRouteImport } from './routes/admin.exploration-path-repair'
-import { Route as AdminEraNormalizationRouteImport } from './routes/admin.era-normalization'
-import { Route as AdminEraAssignmentRouteImport } from './routes/admin.era-assignment'
-import { Route as AdminEncyclopediaReportRouteImport } from './routes/admin.encyclopedia-report'
-import { Route as AdminEncyclopediaCleanupRouteImport } from './routes/admin.encyclopedia-cleanup'
-import { Route as AdminEncyclopediaAuditRouteImport } from './routes/admin.encyclopedia-audit'
-import { Route as AdminEncyclopediaRouteImport } from './routes/admin.encyclopedia'
-import { Route as AdminEmblemsRouteImport } from './routes/admin.emblems'
-import { Route as AdminCrossHubLinksRouteImport } from './routes/admin.cross-hub-links'
-import { Route as AdminCrashDiagnosticsRouteImport } from './routes/admin.crash-diagnostics'
-import { Route as AdminContributionsRouteImport } from './routes/admin.contributions'
-import { Route as AdminContentInventoryRouteImport } from './routes/admin.content-inventory'
-import { Route as AdminContentIntegrityRepairRouteImport } from './routes/admin.content-integrity-repair'
-import { Route as AdminContentIntegrityRouteImport } from './routes/admin.content-integrity'
-import { Route as AdminContentFoundationRouteImport } from './routes/admin.content-foundation'
-import { Route as AdminContentCleanupRouteImport } from './routes/admin.content-cleanup'
-import { Route as AdminContentAutoHealRouteImport } from './routes/admin.content-auto-heal'
-import { Route as AdminContentRouteImport } from './routes/admin.content'
-import { Route as AdminCommunityRouteImport } from './routes/admin.community'
-import { Route as AdminCanonicalDuplicatesRouteImport } from './routes/admin.canonical-duplicates'
-import { Route as AdminCampaignRelationshipsRouteImport } from './routes/admin.campaign-relationships'
-import { Route as AdminCampaignOrderRouteImport } from './routes/admin.campaign-order'
-import { Route as AdminAtlasReviewRouteImport } from './routes/admin.atlas-review'
-import { Route as AdminAtlasRepairRouteImport } from './routes/admin.atlas-repair'
-import { Route as AdminAtlasImportRouteImport } from './routes/admin.atlas-import'
-import { Route as AdminAtlasEntitiesRouteImport } from './routes/admin.atlas-entities'
-import { Route as AdminAtlasCalibrationRouteImport } from './routes/admin.atlas-calibration'
-import { Route as AdminArtifactsRouteImport } from './routes/admin.artifacts'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
-import { Route as AdminStoriesIndexRouteImport } from './routes/admin.stories.index'
-import { Route as AdminInvestigationsIndexRouteImport } from './routes/admin.investigations.index'
-import { Route as AdminGamesIndexRouteImport } from './routes/admin.games.index'
-import { Route as AdminEncyclopediaCleanupIndexRouteImport } from './routes/admin.encyclopedia-cleanup.index'
+import { Route as AdminArtifactsRouteImport } from './routes/admin.artifacts'
+import { Route as AdminAtlasCalibrationRouteImport } from './routes/admin.atlas-calibration'
+import { Route as AdminAtlasEntitiesRouteImport } from './routes/admin.atlas-entities'
+import { Route as AdminAtlasImportRouteImport } from './routes/admin.atlas-import'
+import { Route as AdminAtlasRepairRouteImport } from './routes/admin.atlas-repair'
+import { Route as AdminAtlasReviewRouteImport } from './routes/admin.atlas-review'
+import { Route as AdminCampaignOrderRouteImport } from './routes/admin.campaign-order'
+import { Route as AdminCampaignRelationshipsRouteImport } from './routes/admin.campaign-relationships'
+import { Route as AdminCanonicalDuplicatesRouteImport } from './routes/admin.canonical-duplicates'
+import { Route as AdminCommunityRouteImport } from './routes/admin.community'
+import { Route as AdminContentRouteImport } from './routes/admin.content'
+import { Route as AdminContentAutoHealRouteImport } from './routes/admin.content-auto-heal'
+import { Route as AdminContentCleanupRouteImport } from './routes/admin.content-cleanup'
+import { Route as AdminContentFoundationRouteImport } from './routes/admin.content-foundation'
+import { Route as AdminContentIntegrityRouteImport } from './routes/admin.content-integrity'
+import { Route as AdminContentIntegrityRepairRouteImport } from './routes/admin.content-integrity-repair'
+import { Route as AdminContentInventoryRouteImport } from './routes/admin.content-inventory'
+import { Route as AdminContributionsRouteImport } from './routes/admin.contributions'
+import { Route as AdminCrashDiagnosticsRouteImport } from './routes/admin.crash-diagnostics'
+import { Route as AdminCrossHubLinksRouteImport } from './routes/admin.cross-hub-links'
+import { Route as AdminEmblemsRouteImport } from './routes/admin.emblems'
+import { Route as AdminEncyclopediaRouteImport } from './routes/admin.encyclopedia'
+import { Route as AdminEncyclopediaAuditRouteImport } from './routes/admin.encyclopedia-audit'
+import { Route as AdminEncyclopediaCleanupRouteImport } from './routes/admin.encyclopedia-cleanup'
+import { Route as AdminEncyclopediaReportRouteImport } from './routes/admin.encyclopedia-report'
+import { Route as AdminEraAssignmentRouteImport } from './routes/admin.era-assignment'
+import { Route as AdminEraNormalizationRouteImport } from './routes/admin.era-normalization'
+import { Route as AdminExplorationPathRepairRouteImport } from './routes/admin.exploration-path-repair'
+import { Route as AdminGamesRouteImport } from './routes/admin.games'
+import { Route as AdminHistoricalHubsAuditRouteImport } from './routes/admin.historical-hubs-audit'
+import { Route as AdminHubBuilderRouteImport } from './routes/admin.hub-builder'
+import { Route as AdminImportRouteImport } from './routes/admin.import'
+import { Route as AdminImportHistoryRouteImport } from './routes/admin.import-history'
+import { Route as AdminInvestigationRewardsRouteImport } from './routes/admin.investigation-rewards'
+import { Route as AdminInvestigationsRouteImport } from './routes/admin.investigations'
+import { Route as AdminMapRouteImport } from './routes/admin.map'
+import { Route as AdminMigrationRouteImport } from './routes/admin.migration'
+import { Route as AdminModerationRouteImport } from './routes/admin.moderation'
+import { Route as AdminMuseumProvenanceRouteImport } from './routes/admin.museum-provenance'
+import { Route as AdminNativeAuthDiagnosticsRouteImport } from './routes/admin.native-auth-diagnostics'
+import { Route as AdminNewsletterRouteImport } from './routes/admin.newsletter'
+import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
+import { Route as AdminOfflineRouteImport } from './routes/admin.offline'
+import { Route as AdminOfflineDiagnosticsRouteImport } from './routes/admin.offline-diagnostics'
+import { Route as AdminPersistenceDiagnosticsRouteImport } from './routes/admin.persistence-diagnostics'
+import { Route as AdminRelatedStoriesRouteImport } from './routes/admin.related-stories'
+import { Route as AdminTaxonomyRouteImport } from './routes/admin.taxonomy'
+import { Route as AdminUnlockIntegrityRouteImport } from './routes/admin.unlock-integrity'
+import { Route as AdminUsersRouteImport } from './routes/admin.users'
+import { Route as AdminWorldMembershipReviewRouteImport } from './routes/admin.world-membership-review'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
+import { Route as BattleIdRouteImport } from './routes/battle.$id'
+import { Route as CampaignsIndexRouteImport } from './routes/campaigns.index'
+import { Route as CityIdRouteImport } from './routes/city.$id'
+import { Route as CompareIdRouteImport } from './routes/compare.$id'
+import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
+import { Route as EncyclopediaIndexRouteImport } from './routes/encyclopedia.index'
+import { Route as FeedbackIndexRouteImport } from './routes/feedback.index'
+import { Route as FeedbackIdRouteImport } from './routes/feedback.$id'
+import { Route as FeedbackNewRouteImport } from './routes/feedback.new'
+import { Route as FigureIdRouteImport } from './routes/figure.$id'
+import { Route as GamesIndexRouteImport } from './routes/games.index'
+import { Route as InvestigationIdRouteImport } from './routes/investigation.$id'
+import { Route as PlayChapterRouteImport } from './routes/play.chapter'
+import { Route as PlayDecisionsRouteImport } from './routes/play.decisions'
+import { Route as PlayInvestigateRouteImport } from './routes/play.investigate'
+import { Route as PlayTimelineRouteImport } from './routes/play.timeline'
+import { Route as StoriesIndexRouteImport } from './routes/stories.index'
+import { Route as StoryIdRouteImport } from './routes/story.$id'
+import { Route as UUsernameRouteImport } from './routes/u.$username'
+import { Route as WorldsIndexRouteImport } from './routes/worlds.index'
+import { Route as WorldsSlugRouteImport } from './routes/worlds.$slug'
 import { Route as AdminCampaignsIndexRouteImport } from './routes/admin.campaigns.index'
-import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
-import { Route as GamesModeSlugRouteImport } from './routes/games.$mode.$slug'
-import { Route as EncyclopediaTypeTypeRouteImport } from './routes/encyclopedia.type.$type'
-import { Route as EncyclopediaStateIdRouteImport } from './routes/encyclopedia.state.$id'
-import { Route as EncyclopediaPathIdRouteImport } from './routes/encyclopedia.path.$id'
-import { Route as EncyclopediaEntityIdRouteImport } from './routes/encyclopedia.entity.$id'
-import { Route as ApiPublicNativeAuthBounceRouteImport } from './routes/api/public/native-auth-bounce'
-import { Route as AdminStoriesImportV2RouteImport } from './routes/admin.stories.import-v2'
-import { Route as AdminStoriesExportV2RouteImport } from './routes/admin.stories.export-v2'
-import { Route as AdminImportHistoryIdRouteImport } from './routes/admin.import-history.$id'
-import { Route as AdminGamesCrosswordGeneratorRouteImport } from './routes/admin.games.crossword-generator'
-import { Route as AdminGamesModeRouteImport } from './routes/admin.games.$mode'
-import { Route as AdminEncyclopediaCleanupReviewRouteImport } from './routes/admin.encyclopedia-cleanup.review'
-import { Route as AdminEncyclopediaCleanupRedirectsRouteImport } from './routes/admin.encyclopedia-cleanup.redirects'
-import { Route as AdminEncyclopediaCleanupIntegrityRouteImport } from './routes/admin.encyclopedia-cleanup.integrity'
-import { Route as AdminEncyclopediaCleanupImportPreviewRouteImport } from './routes/admin.encyclopedia-cleanup.import-preview'
+import { Route as AdminEncyclopediaCleanupIndexRouteImport } from './routes/admin.encyclopedia-cleanup.index'
 import { Route as AdminEncyclopediaCleanupDataHygieneRouteImport } from './routes/admin.encyclopedia-cleanup.data-hygiene'
-import { Route as CampaignsImportedIdIndexRouteImport } from './routes/campaigns.imported.$id.index'
-import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
-import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
-import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
-import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
-import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
-import { Route as LovableEmailAuthCustomVerifyReauthRouteImport } from './routes/lovable/email/auth-custom/verify-reauth'
-import { Route as LovableEmailAuthCustomDispatchRouteImport } from './routes/lovable/email/auth-custom/dispatch'
-import { Route as ApiPublicWebhooksResendRouteImport } from './routes/api/public/webhooks/resend'
-import { Route as AdminStoriesV2IdRouteImport } from './routes/admin.stories.v2.$id'
-import { Route as AdminStoriesIdEditRouteImport } from './routes/admin.stories.$id.edit'
-import { Route as AdminInvestigationsIdEditRouteImport } from './routes/admin.investigations.$id.edit'
+import { Route as AdminEncyclopediaCleanupImportPreviewRouteImport } from './routes/admin.encyclopedia-cleanup.import-preview'
+import { Route as AdminEncyclopediaCleanupIntegrityRouteImport } from './routes/admin.encyclopedia-cleanup.integrity'
+import { Route as AdminEncyclopediaCleanupRedirectsRouteImport } from './routes/admin.encyclopedia-cleanup.redirects'
+import { Route as AdminEncyclopediaCleanupReviewRouteImport } from './routes/admin.encyclopedia-cleanup.review'
+import { Route as AdminGamesIndexRouteImport } from './routes/admin.games.index'
+import { Route as AdminGamesModeRouteImport } from './routes/admin.games.$mode'
+import { Route as AdminGamesCrosswordGeneratorRouteImport } from './routes/admin.games.crossword-generator'
+import { Route as AdminImportHistoryIdRouteImport } from './routes/admin.import-history.$id'
+import { Route as AdminInvestigationsIndexRouteImport } from './routes/admin.investigations.index'
+import { Route as AdminStoriesIndexRouteImport } from './routes/admin.stories.index'
+import { Route as AdminStoriesExportV2RouteImport } from './routes/admin.stories.export-v2'
+import { Route as AdminStoriesImportV2RouteImport } from './routes/admin.stories.import-v2'
+import { Route as ApiPublicNativeAuthBounceRouteImport } from './routes/api/public/native-auth-bounce'
+import { Route as EncyclopediaEntityIdRouteImport } from './routes/encyclopedia.entity.$id'
+import { Route as EncyclopediaPathIdRouteImport } from './routes/encyclopedia.path.$id'
+import { Route as EncyclopediaStateIdRouteImport } from './routes/encyclopedia.state.$id'
+import { Route as EncyclopediaTypeTypeRouteImport } from './routes/encyclopedia.type.$type'
+import { Route as GamesModeSlugRouteImport } from './routes/games.$mode.$slug'
+import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as AdminCampaignsIdEditRouteImport } from './routes/admin.campaigns.$id.edit'
+import { Route as AdminInvestigationsIdEditRouteImport } from './routes/admin.investigations.$id.edit'
+import { Route as AdminStoriesIdEditRouteImport } from './routes/admin.stories.$id.edit'
+import { Route as AdminStoriesV2IdRouteImport } from './routes/admin.stories.v2.$id'
+import { Route as ApiPublicWebhooksResendRouteImport } from './routes/api/public/webhooks/resend'
+import { Route as CampaignsImportedIdIndexRouteImport } from './routes/campaigns.imported.$id.index'
+import { Route as LovableEmailAuthCustomDispatchRouteImport } from './routes/lovable/email/auth-custom/dispatch'
+import { Route as LovableEmailAuthCustomVerifyReauthRouteImport } from './routes/lovable/email/auth-custom/verify-reauth'
+import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
+import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
+import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
+import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
+import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 import { Route as CampaignsImportedIdChapterChapterRouteImport } from './routes/campaigns.imported.$id.chapter.$chapter'
 
-const UnsubscribeRoute = UnsubscribeRouteImport.update({
-  id: '/unsubscribe',
-  path: '/unsubscribe',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TimelineRoute = TimelineRouteImport.update({
-  id: '/timeline',
-  path: '/timeline',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TermsRoute = TermsRouteImport.update({
-  id: '/terms',
-  path: '/terms',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ShareCardRoute = ShareCardRouteImport.update({
-  id: '/share-card',
-  path: '/share-card',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SecurityRoute = SecurityRouteImport.update({
-  id: '/security',
-  path: '/security',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SeasonsRoute = SeasonsRouteImport.update({
-  id: '/seasons',
-  path: '/seasons',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ReflectionsRoute = ReflectionsRouteImport.update({
-  id: '/reflections',
-  path: '/reflections',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ReferralsRoute = ReferralsRouteImport.update({
-  id: '/referrals',
-  path: '/referrals',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProfileRoute = ProfileRouteImport.update({
-  id: '/profile',
-  path: '/profile',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PrivacyRoute = PrivacyRouteImport.update({
-  id: '/privacy',
-  path: '/privacy',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OnThisDayRoute = OnThisDayRouteImport.update({
-  id: '/on-this-day',
-  path: '/on-this-day',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const NotificationsRoute = NotificationsRouteImport.update({
-  id: '/notifications',
-  path: '/notifications',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MapRoute = MapRouteImport.update({
-  id: '/map',
-  path: '/map',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const JourneyRoute = JourneyRouteImport.update({
-  id: '/journey',
-  path: '/journey',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const InvestigationsRoute = InvestigationsRouteImport.update({
-  id: '/investigations',
-  path: '/investigations',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const InboxRoute = InboxRouteImport.update({
-  id: '/inbox',
-  path: '/inbox',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HistoryCalendarRoute = HistoryCalendarRouteImport.update({
-  id: '/history-calendar',
-  path: '/history-calendar',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FriendsRoute = FriendsRouteImport.update({
-  id: '/friends',
-  path: '/friends',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EncyclopediaRoute = EncyclopediaRouteImport.update({
-  id: '/encyclopedia',
-  path: '/encyclopedia',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ContentAuditRoute = ContentAuditRouteImport.update({
-  id: '/content-audit',
-  path: '/content-audit',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CollectionRoute = CollectionRouteImport.update({
-  id: '/collection',
-  path: '/collection',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CampaignsRoute = CampaignsRouteImport.update({
-  id: '/campaigns',
-  path: '/campaigns',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdventureRoute = AdventureRouteImport.update({
-  id: '/adventure',
-  path: '/adventure',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AchievementsRoute = AchievementsRouteImport.update({
-  id: '/achievements',
-  path: '/achievements',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AccountDeletionRoute = AccountDeletionRouteImport.update({
-  id: '/account-deletion',
-  path: '/account-deletion',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AboutRoute = AboutRouteImport.update({
@@ -289,301 +159,226 @@ const AboutRoute = AboutRouteImport.update({
   path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AccountDeletionRoute = AccountDeletionRouteImport.update({
+  id: '/account-deletion',
+  path: '/account-deletion',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WorldsIndexRoute = WorldsIndexRouteImport.update({
-  id: '/worlds/',
-  path: '/worlds/',
+const AchievementsRoute = AchievementsRouteImport.update({
+  id: '/achievements',
+  path: '/achievements',
   getParentRoute: () => rootRouteImport,
 } as any)
-const StoriesIndexRoute = StoriesIndexRouteImport.update({
-  id: '/stories/',
-  path: '/stories/',
+const AdventureRoute = AdventureRouteImport.update({
+  id: '/adventure',
+  path: '/adventure',
   getParentRoute: () => rootRouteImport,
 } as any)
-const GamesIndexRoute = GamesIndexRouteImport.update({
-  id: '/games/',
-  path: '/games/',
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const FeedbackIndexRoute = FeedbackIndexRouteImport.update({
-  id: '/feedback/',
-  path: '/feedback/',
+const CampaignsRoute = CampaignsRouteImport.update({
+  id: '/campaigns',
+  path: '/campaigns',
   getParentRoute: () => rootRouteImport,
 } as any)
-const EncyclopediaIndexRoute = EncyclopediaIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => EncyclopediaRoute,
+const CollectionRoute = CollectionRouteImport.update({
+  id: '/collection',
+  path: '/collection',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const CampaignsIndexRoute = CampaignsIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => CampaignsRoute,
+const ContentAuditRoute = ContentAuditRouteImport.update({
+  id: '/content-audit',
+  path: '/content-audit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EncyclopediaRoute = EncyclopediaRouteImport.update({
+  id: '/encyclopedia',
+  path: '/encyclopedia',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FriendsRoute = FriendsRouteImport.update({
+  id: '/friends',
+  path: '/friends',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HistoryCalendarRoute = HistoryCalendarRouteImport.update({
+  id: '/history-calendar',
+  path: '/history-calendar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InboxRoute = InboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InvestigationsRoute = InvestigationsRouteImport.update({
+  id: '/investigations',
+  path: '/investigations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JourneyRoute = JourneyRouteImport.update({
+  id: '/journey',
+  path: '/journey',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MapRoute = MapRouteImport.update({
+  id: '/map',
+  path: '/map',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificationsRoute = NotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnThisDayRoute = OnThisDayRouteImport.update({
+  id: '/on-this-day',
+  path: '/on-this-day',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReferralsRoute = ReferralsRouteImport.update({
+  id: '/referrals',
+  path: '/referrals',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReflectionsRoute = ReflectionsRouteImport.update({
+  id: '/reflections',
+  path: '/reflections',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SeasonsRoute = SeasonsRouteImport.update({
+  id: '/seasons',
+  path: '/seasons',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SecurityRoute = SecurityRouteImport.update({
+  id: '/security',
+  path: '/security',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShareCardRoute = ShareCardRouteImport.update({
+  id: '/share-card',
+  path: '/share-card',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TimelineRoute = TimelineRouteImport.update({
+  id: '/timeline',
+  path: '/timeline',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UnsubscribeRoute = UnsubscribeRouteImport.update({
+  id: '/unsubscribe',
+  path: '/unsubscribe',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/admin/',
   path: '/admin/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WorldsSlugRoute = WorldsSlugRouteImport.update({
-  id: '/worlds/$slug',
-  path: '/worlds/$slug',
+const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
+  id: '/admin/analytics',
+  path: '/admin/analytics',
   getParentRoute: () => rootRouteImport,
 } as any)
-const UUsernameRoute = UUsernameRouteImport.update({
-  id: '/u/$username',
-  path: '/u/$username',
+const AdminArtifactsRoute = AdminArtifactsRouteImport.update({
+  id: '/admin/artifacts',
+  path: '/admin/artifacts',
   getParentRoute: () => rootRouteImport,
 } as any)
-const StoryIdRoute = StoryIdRouteImport.update({
-  id: '/story/$id',
-  path: '/story/$id',
+const AdminAtlasCalibrationRoute = AdminAtlasCalibrationRouteImport.update({
+  id: '/admin/atlas-calibration',
+  path: '/admin/atlas-calibration',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PlayTimelineRoute = PlayTimelineRouteImport.update({
-  id: '/play/timeline',
-  path: '/play/timeline',
+const AdminAtlasEntitiesRoute = AdminAtlasEntitiesRouteImport.update({
+  id: '/admin/atlas-entities',
+  path: '/admin/atlas-entities',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PlayInvestigateRoute = PlayInvestigateRouteImport.update({
-  id: '/play/investigate',
-  path: '/play/investigate',
+const AdminAtlasImportRoute = AdminAtlasImportRouteImport.update({
+  id: '/admin/atlas-import',
+  path: '/admin/atlas-import',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PlayDecisionsRoute = PlayDecisionsRouteImport.update({
-  id: '/play/decisions',
-  path: '/play/decisions',
+const AdminAtlasRepairRoute = AdminAtlasRepairRouteImport.update({
+  id: '/admin/atlas-repair',
+  path: '/admin/atlas-repair',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PlayChapterRoute = PlayChapterRouteImport.update({
-  id: '/play/chapter',
-  path: '/play/chapter',
+const AdminAtlasReviewRoute = AdminAtlasReviewRouteImport.update({
+  id: '/admin/atlas-review',
+  path: '/admin/atlas-review',
   getParentRoute: () => rootRouteImport,
 } as any)
-const InvestigationIdRoute = InvestigationIdRouteImport.update({
-  id: '/investigation/$id',
-  path: '/investigation/$id',
+const AdminCampaignOrderRoute = AdminCampaignOrderRouteImport.update({
+  id: '/admin/campaign-order',
+  path: '/admin/campaign-order',
   getParentRoute: () => rootRouteImport,
 } as any)
-const FigureIdRoute = FigureIdRouteImport.update({
-  id: '/figure/$id',
-  path: '/figure/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FeedbackNewRoute = FeedbackNewRouteImport.update({
-  id: '/feedback/new',
-  path: '/feedback/new',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FeedbackIdRoute = FeedbackIdRouteImport.update({
-  id: '/feedback/$id',
-  path: '/feedback/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
-  id: '/email/unsubscribe',
-  path: '/email/unsubscribe',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CompareIdRoute = CompareIdRouteImport.update({
-  id: '/compare/$id',
-  path: '/compare/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CityIdRoute = CityIdRouteImport.update({
-  id: '/city/$id',
-  path: '/city/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BattleIdRoute = BattleIdRouteImport.update({
-  id: '/battle/$id',
-  path: '/battle/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthCallbackRoute = AuthCallbackRouteImport.update({
-  id: '/callback',
-  path: '/callback',
-  getParentRoute: () => AuthRoute,
-} as any)
-const AdminWorldMembershipReviewRoute =
-  AdminWorldMembershipReviewRouteImport.update({
-    id: '/admin/world-membership-review',
-    path: '/admin/world-membership-review',
+const AdminCampaignRelationshipsRoute =
+  AdminCampaignRelationshipsRouteImport.update({
+    id: '/admin/campaign-relationships',
+    path: '/admin/campaign-relationships',
     getParentRoute: () => rootRouteImport,
   } as any)
-const AdminUsersRoute = AdminUsersRouteImport.update({
-  id: '/admin/users',
-  path: '/admin/users',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminUnlockIntegrityRoute = AdminUnlockIntegrityRouteImport.update({
-  id: '/admin/unlock-integrity',
-  path: '/admin/unlock-integrity',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminTaxonomyRoute = AdminTaxonomyRouteImport.update({
-  id: '/admin/taxonomy',
-  path: '/admin/taxonomy',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminRelatedStoriesRoute = AdminRelatedStoriesRouteImport.update({
-  id: '/admin/related-stories',
-  path: '/admin/related-stories',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminPersistenceDiagnosticsRoute =
-  AdminPersistenceDiagnosticsRouteImport.update({
-    id: '/admin/persistence-diagnostics',
-    path: '/admin/persistence-diagnostics',
+const AdminCanonicalDuplicatesRoute =
+  AdminCanonicalDuplicatesRouteImport.update({
+    id: '/admin/canonical-duplicates',
+    path: '/admin/canonical-duplicates',
     getParentRoute: () => rootRouteImport,
   } as any)
-const AdminOfflineDiagnosticsRoute = AdminOfflineDiagnosticsRouteImport.update({
-  id: '/admin/offline-diagnostics',
-  path: '/admin/offline-diagnostics',
+const AdminCommunityRoute = AdminCommunityRouteImport.update({
+  id: '/admin/community',
+  path: '/admin/community',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminOfflineRoute = AdminOfflineRouteImport.update({
-  id: '/admin/offline',
-  path: '/admin/offline',
+const AdminContentRoute = AdminContentRouteImport.update({
+  id: '/admin/content',
+  path: '/admin/content',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminNotificationsRoute = AdminNotificationsRouteImport.update({
-  id: '/admin/notifications',
-  path: '/admin/notifications',
+const AdminContentAutoHealRoute = AdminContentAutoHealRouteImport.update({
+  id: '/admin/content-auto-heal',
+  path: '/admin/content-auto-heal',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminNewsletterRoute = AdminNewsletterRouteImport.update({
-  id: '/admin/newsletter',
-  path: '/admin/newsletter',
+const AdminContentCleanupRoute = AdminContentCleanupRouteImport.update({
+  id: '/admin/content-cleanup',
+  path: '/admin/content-cleanup',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminNativeAuthDiagnosticsRoute =
-  AdminNativeAuthDiagnosticsRouteImport.update({
-    id: '/admin/native-auth-diagnostics',
-    path: '/admin/native-auth-diagnostics',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const AdminMuseumProvenanceRoute = AdminMuseumProvenanceRouteImport.update({
-  id: '/admin/museum-provenance',
-  path: '/admin/museum-provenance',
+const AdminContentFoundationRoute = AdminContentFoundationRouteImport.update({
+  id: '/admin/content-foundation',
+  path: '/admin/content-foundation',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminModerationRoute = AdminModerationRouteImport.update({
-  id: '/admin/moderation',
-  path: '/admin/moderation',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminMigrationRoute = AdminMigrationRouteImport.update({
-  id: '/admin/migration',
-  path: '/admin/migration',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminMapRoute = AdminMapRouteImport.update({
-  id: '/admin/map',
-  path: '/admin/map',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminInvestigationsRoute = AdminInvestigationsRouteImport.update({
-  id: '/admin/investigations',
-  path: '/admin/investigations',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminInvestigationRewardsRoute =
-  AdminInvestigationRewardsRouteImport.update({
-    id: '/admin/investigation-rewards',
-    path: '/admin/investigation-rewards',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const AdminImportHistoryRoute = AdminImportHistoryRouteImport.update({
-  id: '/admin/import-history',
-  path: '/admin/import-history',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminImportRoute = AdminImportRouteImport.update({
-  id: '/admin/import',
-  path: '/admin/import',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminHubBuilderRoute = AdminHubBuilderRouteImport.update({
-  id: '/admin/hub-builder',
-  path: '/admin/hub-builder',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminHistoricalHubsAuditRoute =
-  AdminHistoricalHubsAuditRouteImport.update({
-    id: '/admin/historical-hubs-audit',
-    path: '/admin/historical-hubs-audit',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const AdminGamesRoute = AdminGamesRouteImport.update({
-  id: '/admin/games',
-  path: '/admin/games',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminExplorationPathRepairRoute =
-  AdminExplorationPathRepairRouteImport.update({
-    id: '/admin/exploration-path-repair',
-    path: '/admin/exploration-path-repair',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const AdminEraNormalizationRoute = AdminEraNormalizationRouteImport.update({
-  id: '/admin/era-normalization',
-  path: '/admin/era-normalization',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminEraAssignmentRoute = AdminEraAssignmentRouteImport.update({
-  id: '/admin/era-assignment',
-  path: '/admin/era-assignment',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminEncyclopediaReportRoute = AdminEncyclopediaReportRouteImport.update({
-  id: '/admin/encyclopedia-report',
-  path: '/admin/encyclopedia-report',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminEncyclopediaCleanupRoute =
-  AdminEncyclopediaCleanupRouteImport.update({
-    id: '/admin/encyclopedia-cleanup',
-    path: '/admin/encyclopedia-cleanup',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const AdminEncyclopediaAuditRoute = AdminEncyclopediaAuditRouteImport.update({
-  id: '/admin/encyclopedia-audit',
-  path: '/admin/encyclopedia-audit',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminEncyclopediaRoute = AdminEncyclopediaRouteImport.update({
-  id: '/admin/encyclopedia',
-  path: '/admin/encyclopedia',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminEmblemsRoute = AdminEmblemsRouteImport.update({
-  id: '/admin/emblems',
-  path: '/admin/emblems',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminCrossHubLinksRoute = AdminCrossHubLinksRouteImport.update({
-  id: '/admin/cross-hub-links',
-  path: '/admin/cross-hub-links',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminCrashDiagnosticsRoute = AdminCrashDiagnosticsRouteImport.update({
-  id: '/admin/crash-diagnostics',
-  path: '/admin/crash-diagnostics',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminContributionsRoute = AdminContributionsRouteImport.update({
-  id: '/admin/contributions',
-  path: '/admin/contributions',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminContentInventoryRoute = AdminContentInventoryRouteImport.update({
-  id: '/admin/content-inventory',
-  path: '/admin/content-inventory',
+const AdminContentIntegrityRoute = AdminContentIntegrityRouteImport.update({
+  id: '/admin/content-integrity',
+  path: '/admin/content-integrity',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminContentIntegrityRepairRoute =
@@ -592,199 +387,302 @@ const AdminContentIntegrityRepairRoute =
     path: '/admin/content-integrity-repair',
     getParentRoute: () => rootRouteImport,
   } as any)
-const AdminContentIntegrityRoute = AdminContentIntegrityRouteImport.update({
-  id: '/admin/content-integrity',
-  path: '/admin/content-integrity',
+const AdminContentInventoryRoute = AdminContentInventoryRouteImport.update({
+  id: '/admin/content-inventory',
+  path: '/admin/content-inventory',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminContentFoundationRoute = AdminContentFoundationRouteImport.update({
-  id: '/admin/content-foundation',
-  path: '/admin/content-foundation',
+const AdminContributionsRoute = AdminContributionsRouteImport.update({
+  id: '/admin/contributions',
+  path: '/admin/contributions',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminContentCleanupRoute = AdminContentCleanupRouteImport.update({
-  id: '/admin/content-cleanup',
-  path: '/admin/content-cleanup',
+const AdminCrashDiagnosticsRoute = AdminCrashDiagnosticsRouteImport.update({
+  id: '/admin/crash-diagnostics',
+  path: '/admin/crash-diagnostics',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminContentAutoHealRoute = AdminContentAutoHealRouteImport.update({
-  id: '/admin/content-auto-heal',
-  path: '/admin/content-auto-heal',
+const AdminCrossHubLinksRoute = AdminCrossHubLinksRouteImport.update({
+  id: '/admin/cross-hub-links',
+  path: '/admin/cross-hub-links',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminContentRoute = AdminContentRouteImport.update({
-  id: '/admin/content',
-  path: '/admin/content',
+const AdminEmblemsRoute = AdminEmblemsRouteImport.update({
+  id: '/admin/emblems',
+  path: '/admin/emblems',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminCommunityRoute = AdminCommunityRouteImport.update({
-  id: '/admin/community',
-  path: '/admin/community',
+const AdminEncyclopediaRoute = AdminEncyclopediaRouteImport.update({
+  id: '/admin/encyclopedia',
+  path: '/admin/encyclopedia',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminCanonicalDuplicatesRoute =
-  AdminCanonicalDuplicatesRouteImport.update({
-    id: '/admin/canonical-duplicates',
-    path: '/admin/canonical-duplicates',
+const AdminEncyclopediaAuditRoute = AdminEncyclopediaAuditRouteImport.update({
+  id: '/admin/encyclopedia-audit',
+  path: '/admin/encyclopedia-audit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminEncyclopediaCleanupRoute =
+  AdminEncyclopediaCleanupRouteImport.update({
+    id: '/admin/encyclopedia-cleanup',
+    path: '/admin/encyclopedia-cleanup',
     getParentRoute: () => rootRouteImport,
   } as any)
-const AdminCampaignRelationshipsRoute =
-  AdminCampaignRelationshipsRouteImport.update({
-    id: '/admin/campaign-relationships',
-    path: '/admin/campaign-relationships',
+const AdminEncyclopediaReportRoute = AdminEncyclopediaReportRouteImport.update({
+  id: '/admin/encyclopedia-report',
+  path: '/admin/encyclopedia-report',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminEraAssignmentRoute = AdminEraAssignmentRouteImport.update({
+  id: '/admin/era-assignment',
+  path: '/admin/era-assignment',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminEraNormalizationRoute = AdminEraNormalizationRouteImport.update({
+  id: '/admin/era-normalization',
+  path: '/admin/era-normalization',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminExplorationPathRepairRoute =
+  AdminExplorationPathRepairRouteImport.update({
+    id: '/admin/exploration-path-repair',
+    path: '/admin/exploration-path-repair',
     getParentRoute: () => rootRouteImport,
   } as any)
-const AdminCampaignOrderRoute = AdminCampaignOrderRouteImport.update({
-  id: '/admin/campaign-order',
-  path: '/admin/campaign-order',
+const AdminGamesRoute = AdminGamesRouteImport.update({
+  id: '/admin/games',
+  path: '/admin/games',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminAtlasReviewRoute = AdminAtlasReviewRouteImport.update({
-  id: '/admin/atlas-review',
-  path: '/admin/atlas-review',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminAtlasRepairRoute = AdminAtlasRepairRouteImport.update({
-  id: '/admin/atlas-repair',
-  path: '/admin/atlas-repair',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminAtlasImportRoute = AdminAtlasImportRouteImport.update({
-  id: '/admin/atlas-import',
-  path: '/admin/atlas-import',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminAtlasEntitiesRoute = AdminAtlasEntitiesRouteImport.update({
-  id: '/admin/atlas-entities',
-  path: '/admin/atlas-entities',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminAtlasCalibrationRoute = AdminAtlasCalibrationRouteImport.update({
-  id: '/admin/atlas-calibration',
-  path: '/admin/atlas-calibration',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminArtifactsRoute = AdminArtifactsRouteImport.update({
-  id: '/admin/artifacts',
-  path: '/admin/artifacts',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
-  id: '/admin/analytics',
-  path: '/admin/analytics',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminStoriesIndexRoute = AdminStoriesIndexRouteImport.update({
-  id: '/admin/stories/',
-  path: '/admin/stories/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminInvestigationsIndexRoute =
-  AdminInvestigationsIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => AdminInvestigationsRoute,
+const AdminHistoricalHubsAuditRoute =
+  AdminHistoricalHubsAuditRouteImport.update({
+    id: '/admin/historical-hubs-audit',
+    path: '/admin/historical-hubs-audit',
+    getParentRoute: () => rootRouteImport,
   } as any)
-const AdminGamesIndexRoute = AdminGamesIndexRouteImport.update({
+const AdminHubBuilderRoute = AdminHubBuilderRouteImport.update({
+  id: '/admin/hub-builder',
+  path: '/admin/hub-builder',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminImportRoute = AdminImportRouteImport.update({
+  id: '/admin/import',
+  path: '/admin/import',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminImportHistoryRoute = AdminImportHistoryRouteImport.update({
+  id: '/admin/import-history',
+  path: '/admin/import-history',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminInvestigationRewardsRoute =
+  AdminInvestigationRewardsRouteImport.update({
+    id: '/admin/investigation-rewards',
+    path: '/admin/investigation-rewards',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AdminInvestigationsRoute = AdminInvestigationsRouteImport.update({
+  id: '/admin/investigations',
+  path: '/admin/investigations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminMapRoute = AdminMapRouteImport.update({
+  id: '/admin/map',
+  path: '/admin/map',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminMigrationRoute = AdminMigrationRouteImport.update({
+  id: '/admin/migration',
+  path: '/admin/migration',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminModerationRoute = AdminModerationRouteImport.update({
+  id: '/admin/moderation',
+  path: '/admin/moderation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminMuseumProvenanceRoute = AdminMuseumProvenanceRouteImport.update({
+  id: '/admin/museum-provenance',
+  path: '/admin/museum-provenance',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminNativeAuthDiagnosticsRoute =
+  AdminNativeAuthDiagnosticsRouteImport.update({
+    id: '/admin/native-auth-diagnostics',
+    path: '/admin/native-auth-diagnostics',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AdminNewsletterRoute = AdminNewsletterRouteImport.update({
+  id: '/admin/newsletter',
+  path: '/admin/newsletter',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminNotificationsRoute = AdminNotificationsRouteImport.update({
+  id: '/admin/notifications',
+  path: '/admin/notifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminOfflineRoute = AdminOfflineRouteImport.update({
+  id: '/admin/offline',
+  path: '/admin/offline',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminOfflineDiagnosticsRoute = AdminOfflineDiagnosticsRouteImport.update({
+  id: '/admin/offline-diagnostics',
+  path: '/admin/offline-diagnostics',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminPersistenceDiagnosticsRoute =
+  AdminPersistenceDiagnosticsRouteImport.update({
+    id: '/admin/persistence-diagnostics',
+    path: '/admin/persistence-diagnostics',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AdminRelatedStoriesRoute = AdminRelatedStoriesRouteImport.update({
+  id: '/admin/related-stories',
+  path: '/admin/related-stories',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminTaxonomyRoute = AdminTaxonomyRouteImport.update({
+  id: '/admin/taxonomy',
+  path: '/admin/taxonomy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminUnlockIntegrityRoute = AdminUnlockIntegrityRouteImport.update({
+  id: '/admin/unlock-integrity',
+  path: '/admin/unlock-integrity',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: '/admin/users',
+  path: '/admin/users',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminWorldMembershipReviewRoute =
+  AdminWorldMembershipReviewRouteImport.update({
+    id: '/admin/world-membership-review',
+    path: '/admin/world-membership-review',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/callback',
+  path: '/callback',
+  getParentRoute: () => AuthRoute,
+} as any)
+const BattleIdRoute = BattleIdRouteImport.update({
+  id: '/battle/$id',
+  path: '/battle/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CampaignsIndexRoute = CampaignsIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => AdminGamesRoute,
+  getParentRoute: () => CampaignsRoute,
 } as any)
-const AdminEncyclopediaCleanupIndexRoute =
-  AdminEncyclopediaCleanupIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => AdminEncyclopediaCleanupRoute,
-  } as any)
+const CityIdRoute = CityIdRouteImport.update({
+  id: '/city/$id',
+  path: '/city/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareIdRoute = CompareIdRouteImport.update({
+  id: '/compare/$id',
+  path: '/compare/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
+  id: '/email/unsubscribe',
+  path: '/email/unsubscribe',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EncyclopediaIndexRoute = EncyclopediaIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => EncyclopediaRoute,
+} as any)
+const FeedbackIndexRoute = FeedbackIndexRouteImport.update({
+  id: '/feedback/',
+  path: '/feedback/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeedbackIdRoute = FeedbackIdRouteImport.update({
+  id: '/feedback/$id',
+  path: '/feedback/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeedbackNewRoute = FeedbackNewRouteImport.update({
+  id: '/feedback/new',
+  path: '/feedback/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FigureIdRoute = FigureIdRouteImport.update({
+  id: '/figure/$id',
+  path: '/figure/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GamesIndexRoute = GamesIndexRouteImport.update({
+  id: '/games/',
+  path: '/games/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InvestigationIdRoute = InvestigationIdRouteImport.update({
+  id: '/investigation/$id',
+  path: '/investigation/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlayChapterRoute = PlayChapterRouteImport.update({
+  id: '/play/chapter',
+  path: '/play/chapter',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlayDecisionsRoute = PlayDecisionsRouteImport.update({
+  id: '/play/decisions',
+  path: '/play/decisions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlayInvestigateRoute = PlayInvestigateRouteImport.update({
+  id: '/play/investigate',
+  path: '/play/investigate',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlayTimelineRoute = PlayTimelineRouteImport.update({
+  id: '/play/timeline',
+  path: '/play/timeline',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StoriesIndexRoute = StoriesIndexRouteImport.update({
+  id: '/stories/',
+  path: '/stories/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StoryIdRoute = StoryIdRouteImport.update({
+  id: '/story/$id',
+  path: '/story/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UUsernameRoute = UUsernameRouteImport.update({
+  id: '/u/$username',
+  path: '/u/$username',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorldsIndexRoute = WorldsIndexRouteImport.update({
+  id: '/worlds/',
+  path: '/worlds/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorldsSlugRoute = WorldsSlugRouteImport.update({
+  id: '/worlds/$slug',
+  path: '/worlds/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminCampaignsIndexRoute = AdminCampaignsIndexRouteImport.update({
   id: '/admin/campaigns/',
   path: '/admin/campaigns/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
-  id: '/lovable/email/suppression',
-  path: '/lovable/email/suppression',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const GamesModeSlugRoute = GamesModeSlugRouteImport.update({
-  id: '/games/$mode/$slug',
-  path: '/games/$mode/$slug',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EncyclopediaTypeTypeRoute = EncyclopediaTypeTypeRouteImport.update({
-  id: '/type/$type',
-  path: '/type/$type',
-  getParentRoute: () => EncyclopediaRoute,
-} as any)
-const EncyclopediaStateIdRoute = EncyclopediaStateIdRouteImport.update({
-  id: '/state/$id',
-  path: '/state/$id',
-  getParentRoute: () => EncyclopediaRoute,
-} as any)
-const EncyclopediaPathIdRoute = EncyclopediaPathIdRouteImport.update({
-  id: '/path/$id',
-  path: '/path/$id',
-  getParentRoute: () => EncyclopediaRoute,
-} as any)
-const EncyclopediaEntityIdRoute = EncyclopediaEntityIdRouteImport.update({
-  id: '/entity/$id',
-  path: '/entity/$id',
-  getParentRoute: () => EncyclopediaRoute,
-} as any)
-const ApiPublicNativeAuthBounceRoute =
-  ApiPublicNativeAuthBounceRouteImport.update({
-    id: '/api/public/native-auth-bounce',
-    path: '/api/public/native-auth-bounce',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const AdminStoriesImportV2Route = AdminStoriesImportV2RouteImport.update({
-  id: '/admin/stories/import-v2',
-  path: '/admin/stories/import-v2',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminStoriesExportV2Route = AdminStoriesExportV2RouteImport.update({
-  id: '/admin/stories/export-v2',
-  path: '/admin/stories/export-v2',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminImportHistoryIdRoute = AdminImportHistoryIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => AdminImportHistoryRoute,
-} as any)
-const AdminGamesCrosswordGeneratorRoute =
-  AdminGamesCrosswordGeneratorRouteImport.update({
-    id: '/crossword-generator',
-    path: '/crossword-generator',
-    getParentRoute: () => AdminGamesRoute,
-  } as any)
-const AdminGamesModeRoute = AdminGamesModeRouteImport.update({
-  id: '/$mode',
-  path: '/$mode',
-  getParentRoute: () => AdminGamesRoute,
-} as any)
-const AdminEncyclopediaCleanupReviewRoute =
-  AdminEncyclopediaCleanupReviewRouteImport.update({
-    id: '/review',
-    path: '/review',
-    getParentRoute: () => AdminEncyclopediaCleanupRoute,
-  } as any)
-const AdminEncyclopediaCleanupRedirectsRoute =
-  AdminEncyclopediaCleanupRedirectsRouteImport.update({
-    id: '/redirects',
-    path: '/redirects',
-    getParentRoute: () => AdminEncyclopediaCleanupRoute,
-  } as any)
-const AdminEncyclopediaCleanupIntegrityRoute =
-  AdminEncyclopediaCleanupIntegrityRouteImport.update({
-    id: '/integrity',
-    path: '/integrity',
-    getParentRoute: () => AdminEncyclopediaCleanupRoute,
-  } as any)
-const AdminEncyclopediaCleanupImportPreviewRoute =
-  AdminEncyclopediaCleanupImportPreviewRouteImport.update({
-    id: '/import-preview',
-    path: '/import-preview',
+const AdminEncyclopediaCleanupIndexRoute =
+  AdminEncyclopediaCleanupIndexRouteImport.update({
+    id: '/',
+    path: '/',
     getParentRoute: () => AdminEncyclopediaCleanupRoute,
   } as any)
 const AdminEncyclopediaCleanupDataHygieneRoute =
@@ -793,65 +691,111 @@ const AdminEncyclopediaCleanupDataHygieneRoute =
     path: '/data-hygiene',
     getParentRoute: () => AdminEncyclopediaCleanupRoute,
   } as any)
-const CampaignsImportedIdIndexRoute =
-  CampaignsImportedIdIndexRouteImport.update({
-    id: '/imported/$id/',
-    path: '/imported/$id/',
-    getParentRoute: () => CampaignsRoute,
+const AdminEncyclopediaCleanupImportPreviewRoute =
+  AdminEncyclopediaCleanupImportPreviewRouteImport.update({
+    id: '/import-preview',
+    path: '/import-preview',
+    getParentRoute: () => AdminEncyclopediaCleanupRoute,
   } as any)
-const LovableEmailTransactionalSendRoute =
-  LovableEmailTransactionalSendRouteImport.update({
-    id: '/lovable/email/transactional/send',
-    path: '/lovable/email/transactional/send',
-    getParentRoute: () => rootRouteImport,
+const AdminEncyclopediaCleanupIntegrityRoute =
+  AdminEncyclopediaCleanupIntegrityRouteImport.update({
+    id: '/integrity',
+    path: '/integrity',
+    getParentRoute: () => AdminEncyclopediaCleanupRoute,
   } as any)
-const LovableEmailTransactionalPreviewRoute =
-  LovableEmailTransactionalPreviewRouteImport.update({
-    id: '/lovable/email/transactional/preview',
-    path: '/lovable/email/transactional/preview',
-    getParentRoute: () => rootRouteImport,
+const AdminEncyclopediaCleanupRedirectsRoute =
+  AdminEncyclopediaCleanupRedirectsRouteImport.update({
+    id: '/redirects',
+    path: '/redirects',
+    getParentRoute: () => AdminEncyclopediaCleanupRoute,
   } as any)
-const LovableEmailQueueProcessRoute =
-  LovableEmailQueueProcessRouteImport.update({
-    id: '/lovable/email/queue/process',
-    path: '/lovable/email/queue/process',
-    getParentRoute: () => rootRouteImport,
+const AdminEncyclopediaCleanupReviewRoute =
+  AdminEncyclopediaCleanupReviewRouteImport.update({
+    id: '/review',
+    path: '/review',
+    getParentRoute: () => AdminEncyclopediaCleanupRoute,
   } as any)
-const LovableEmailAuthWebhookRoute = LovableEmailAuthWebhookRouteImport.update({
-  id: '/lovable/email/auth/webhook',
-  path: '/lovable/email/auth/webhook',
+const AdminGamesIndexRoute = AdminGamesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminGamesRoute,
+} as any)
+const AdminGamesModeRoute = AdminGamesModeRouteImport.update({
+  id: '/$mode',
+  path: '/$mode',
+  getParentRoute: () => AdminGamesRoute,
+} as any)
+const AdminGamesCrosswordGeneratorRoute =
+  AdminGamesCrosswordGeneratorRouteImport.update({
+    id: '/crossword-generator',
+    path: '/crossword-generator',
+    getParentRoute: () => AdminGamesRoute,
+  } as any)
+const AdminImportHistoryIdRoute = AdminImportHistoryIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AdminImportHistoryRoute,
+} as any)
+const AdminInvestigationsIndexRoute =
+  AdminInvestigationsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AdminInvestigationsRoute,
+  } as any)
+const AdminStoriesIndexRoute = AdminStoriesIndexRouteImport.update({
+  id: '/admin/stories/',
+  path: '/admin/stories/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
-  id: '/lovable/email/auth/preview',
-  path: '/lovable/email/auth/preview',
+const AdminStoriesExportV2Route = AdminStoriesExportV2RouteImport.update({
+  id: '/admin/stories/export-v2',
+  path: '/admin/stories/export-v2',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LovableEmailAuthCustomVerifyReauthRoute =
-  LovableEmailAuthCustomVerifyReauthRouteImport.update({
-    id: '/lovable/email/auth-custom/verify-reauth',
-    path: '/lovable/email/auth-custom/verify-reauth',
+const AdminStoriesImportV2Route = AdminStoriesImportV2RouteImport.update({
+  id: '/admin/stories/import-v2',
+  path: '/admin/stories/import-v2',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicNativeAuthBounceRoute =
+  ApiPublicNativeAuthBounceRouteImport.update({
+    id: '/api/public/native-auth-bounce',
+    path: '/api/public/native-auth-bounce',
     getParentRoute: () => rootRouteImport,
   } as any)
-const LovableEmailAuthCustomDispatchRoute =
-  LovableEmailAuthCustomDispatchRouteImport.update({
-    id: '/lovable/email/auth-custom/dispatch',
-    path: '/lovable/email/auth-custom/dispatch',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicWebhooksResendRoute = ApiPublicWebhooksResendRouteImport.update({
-  id: '/api/public/webhooks/resend',
-  path: '/api/public/webhooks/resend',
+const EncyclopediaEntityIdRoute = EncyclopediaEntityIdRouteImport.update({
+  id: '/entity/$id',
+  path: '/entity/$id',
+  getParentRoute: () => EncyclopediaRoute,
+} as any)
+const EncyclopediaPathIdRoute = EncyclopediaPathIdRouteImport.update({
+  id: '/path/$id',
+  path: '/path/$id',
+  getParentRoute: () => EncyclopediaRoute,
+} as any)
+const EncyclopediaStateIdRoute = EncyclopediaStateIdRouteImport.update({
+  id: '/state/$id',
+  path: '/state/$id',
+  getParentRoute: () => EncyclopediaRoute,
+} as any)
+const EncyclopediaTypeTypeRoute = EncyclopediaTypeTypeRouteImport.update({
+  id: '/type/$type',
+  path: '/type/$type',
+  getParentRoute: () => EncyclopediaRoute,
+} as any)
+const GamesModeSlugRoute = GamesModeSlugRouteImport.update({
+  id: '/games/$mode/$slug',
+  path: '/games/$mode/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminStoriesV2IdRoute = AdminStoriesV2IdRouteImport.update({
-  id: '/admin/stories/v2/$id',
-  path: '/admin/stories/v2/$id',
+const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
+  id: '/lovable/email/suppression',
+  path: '/lovable/email/suppression',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminStoriesIdEditRoute = AdminStoriesIdEditRouteImport.update({
-  id: '/admin/stories/$id/edit',
-  path: '/admin/stories/$id/edit',
+const AdminCampaignsIdEditRoute = AdminCampaignsIdEditRouteImport.update({
+  id: '/admin/campaigns/$id/edit',
+  path: '/admin/campaigns/$id/edit',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminInvestigationsIdEditRoute =
@@ -860,11 +804,67 @@ const AdminInvestigationsIdEditRoute =
     path: '/$id/edit',
     getParentRoute: () => AdminInvestigationsRoute,
   } as any)
-const AdminCampaignsIdEditRoute = AdminCampaignsIdEditRouteImport.update({
-  id: '/admin/campaigns/$id/edit',
-  path: '/admin/campaigns/$id/edit',
+const AdminStoriesIdEditRoute = AdminStoriesIdEditRouteImport.update({
+  id: '/admin/stories/$id/edit',
+  path: '/admin/stories/$id/edit',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminStoriesV2IdRoute = AdminStoriesV2IdRouteImport.update({
+  id: '/admin/stories/v2/$id',
+  path: '/admin/stories/v2/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicWebhooksResendRoute = ApiPublicWebhooksResendRouteImport.update({
+  id: '/api/public/webhooks/resend',
+  path: '/api/public/webhooks/resend',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CampaignsImportedIdIndexRoute =
+  CampaignsImportedIdIndexRouteImport.update({
+    id: '/imported/$id/',
+    path: '/imported/$id/',
+    getParentRoute: () => CampaignsRoute,
+  } as any)
+const LovableEmailAuthCustomDispatchRoute =
+  LovableEmailAuthCustomDispatchRouteImport.update({
+    id: '/lovable/email/auth-custom/dispatch',
+    path: '/lovable/email/auth-custom/dispatch',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const LovableEmailAuthCustomVerifyReauthRoute =
+  LovableEmailAuthCustomVerifyReauthRouteImport.update({
+    id: '/lovable/email/auth-custom/verify-reauth',
+    path: '/lovable/email/auth-custom/verify-reauth',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
+  id: '/lovable/email/auth/preview',
+  path: '/lovable/email/auth/preview',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LovableEmailAuthWebhookRoute = LovableEmailAuthWebhookRouteImport.update({
+  id: '/lovable/email/auth/webhook',
+  path: '/lovable/email/auth/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LovableEmailQueueProcessRoute =
+  LovableEmailQueueProcessRouteImport.update({
+    id: '/lovable/email/queue/process',
+    path: '/lovable/email/queue/process',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const LovableEmailTransactionalPreviewRoute =
+  LovableEmailTransactionalPreviewRouteImport.update({
+    id: '/lovable/email/transactional/preview',
+    path: '/lovable/email/transactional/preview',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const LovableEmailTransactionalSendRoute =
+  LovableEmailTransactionalSendRouteImport.update({
+    id: '/lovable/email/transactional/send',
+    path: '/lovable/email/transactional/send',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const CampaignsImportedIdChapterChapterRoute =
   CampaignsImportedIdChapterChapterRouteImport.update({
     id: '/imported/$id/chapter/$chapter',
@@ -1835,193 +1835,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/unsubscribe': {
-      id: '/unsubscribe'
-      path: '/unsubscribe'
-      fullPath: '/unsubscribe'
-      preLoaderRoute: typeof UnsubscribeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/timeline': {
-      id: '/timeline'
-      path: '/timeline'
-      fullPath: '/timeline'
-      preLoaderRoute: typeof TimelineRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/terms': {
-      id: '/terms'
-      path: '/terms'
-      fullPath: '/terms'
-      preLoaderRoute: typeof TermsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/share-card': {
-      id: '/share-card'
-      path: '/share-card'
-      fullPath: '/share-card'
-      preLoaderRoute: typeof ShareCardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/security': {
-      id: '/security'
-      path: '/security'
-      fullPath: '/security'
-      preLoaderRoute: typeof SecurityRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/seasons': {
-      id: '/seasons'
-      path: '/seasons'
-      fullPath: '/seasons'
-      preLoaderRoute: typeof SeasonsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reflections': {
-      id: '/reflections'
-      path: '/reflections'
-      fullPath: '/reflections'
-      preLoaderRoute: typeof ReflectionsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/referrals': {
-      id: '/referrals'
-      path: '/referrals'
-      fullPath: '/referrals'
-      preLoaderRoute: typeof ReferralsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/profile': {
-      id: '/profile'
-      path: '/profile'
-      fullPath: '/profile'
-      preLoaderRoute: typeof ProfileRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/privacy': {
-      id: '/privacy'
-      path: '/privacy'
-      fullPath: '/privacy'
-      preLoaderRoute: typeof PrivacyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/on-this-day': {
-      id: '/on-this-day'
-      path: '/on-this-day'
-      fullPath: '/on-this-day'
-      preLoaderRoute: typeof OnThisDayRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/notifications': {
-      id: '/notifications'
-      path: '/notifications'
-      fullPath: '/notifications'
-      preLoaderRoute: typeof NotificationsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/map': {
-      id: '/map'
-      path: '/map'
-      fullPath: '/map'
-      preLoaderRoute: typeof MapRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/journey': {
-      id: '/journey'
-      path: '/journey'
-      fullPath: '/journey'
-      preLoaderRoute: typeof JourneyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/investigations': {
-      id: '/investigations'
-      path: '/investigations'
-      fullPath: '/investigations'
-      preLoaderRoute: typeof InvestigationsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/inbox': {
-      id: '/inbox'
-      path: '/inbox'
-      fullPath: '/inbox'
-      preLoaderRoute: typeof InboxRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/history-calendar': {
-      id: '/history-calendar'
-      path: '/history-calendar'
-      fullPath: '/history-calendar'
-      preLoaderRoute: typeof HistoryCalendarRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/friends': {
-      id: '/friends'
-      path: '/friends'
-      fullPath: '/friends'
-      preLoaderRoute: typeof FriendsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/encyclopedia': {
-      id: '/encyclopedia'
-      path: '/encyclopedia'
-      fullPath: '/encyclopedia'
-      preLoaderRoute: typeof EncyclopediaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/content-audit': {
-      id: '/content-audit'
-      path: '/content-audit'
-      fullPath: '/content-audit'
-      preLoaderRoute: typeof ContentAuditRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/collection': {
-      id: '/collection'
-      path: '/collection'
-      fullPath: '/collection'
-      preLoaderRoute: typeof CollectionRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/campaigns': {
-      id: '/campaigns'
-      path: '/campaigns'
-      fullPath: '/campaigns'
-      preLoaderRoute: typeof CampaignsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/adventure': {
-      id: '/adventure'
-      path: '/adventure'
-      fullPath: '/adventure'
-      preLoaderRoute: typeof AdventureRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/achievements': {
-      id: '/achievements'
-      path: '/achievements'
-      fullPath: '/achievements'
-      preLoaderRoute: typeof AchievementsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/account-deletion': {
-      id: '/account-deletion'
-      path: '/account-deletion'
-      fullPath: '/account-deletion'
-      preLoaderRoute: typeof AccountDeletionRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/about': {
@@ -2031,522 +1849,200 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/account-deletion': {
+      id: '/account-deletion'
+      path: '/account-deletion'
+      fullPath: '/account-deletion'
+      preLoaderRoute: typeof AccountDeletionRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/worlds/': {
-      id: '/worlds/'
-      path: '/worlds'
-      fullPath: '/worlds/'
-      preLoaderRoute: typeof WorldsIndexRouteImport
+    '/achievements': {
+      id: '/achievements'
+      path: '/achievements'
+      fullPath: '/achievements'
+      preLoaderRoute: typeof AchievementsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/stories/': {
-      id: '/stories/'
-      path: '/stories'
-      fullPath: '/stories/'
-      preLoaderRoute: typeof StoriesIndexRouteImport
+    '/adventure': {
+      id: '/adventure'
+      path: '/adventure'
+      fullPath: '/adventure'
+      preLoaderRoute: typeof AdventureRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/games/': {
-      id: '/games/'
-      path: '/games'
-      fullPath: '/games/'
-      preLoaderRoute: typeof GamesIndexRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/feedback/': {
-      id: '/feedback/'
-      path: '/feedback'
-      fullPath: '/feedback/'
-      preLoaderRoute: typeof FeedbackIndexRouteImport
+    '/campaigns': {
+      id: '/campaigns'
+      path: '/campaigns'
+      fullPath: '/campaigns'
+      preLoaderRoute: typeof CampaignsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/encyclopedia/': {
-      id: '/encyclopedia/'
-      path: '/'
-      fullPath: '/encyclopedia/'
-      preLoaderRoute: typeof EncyclopediaIndexRouteImport
-      parentRoute: typeof EncyclopediaRoute
+    '/collection': {
+      id: '/collection'
+      path: '/collection'
+      fullPath: '/collection'
+      preLoaderRoute: typeof CollectionRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/campaigns/': {
-      id: '/campaigns/'
-      path: '/'
-      fullPath: '/campaigns/'
-      preLoaderRoute: typeof CampaignsIndexRouteImport
-      parentRoute: typeof CampaignsRoute
+    '/content-audit': {
+      id: '/content-audit'
+      path: '/content-audit'
+      fullPath: '/content-audit'
+      preLoaderRoute: typeof ContentAuditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/encyclopedia': {
+      id: '/encyclopedia'
+      path: '/encyclopedia'
+      fullPath: '/encyclopedia'
+      preLoaderRoute: typeof EncyclopediaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/friends': {
+      id: '/friends'
+      path: '/friends'
+      fullPath: '/friends'
+      preLoaderRoute: typeof FriendsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/history-calendar': {
+      id: '/history-calendar'
+      path: '/history-calendar'
+      fullPath: '/history-calendar'
+      preLoaderRoute: typeof HistoryCalendarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inbox': {
+      id: '/inbox'
+      path: '/inbox'
+      fullPath: '/inbox'
+      preLoaderRoute: typeof InboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/investigations': {
+      id: '/investigations'
+      path: '/investigations'
+      fullPath: '/investigations'
+      preLoaderRoute: typeof InvestigationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/journey': {
+      id: '/journey'
+      path: '/journey'
+      fullPath: '/journey'
+      preLoaderRoute: typeof JourneyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/map': {
+      id: '/map'
+      path: '/map'
+      fullPath: '/map'
+      preLoaderRoute: typeof MapRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notifications': {
+      id: '/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof NotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/on-this-day': {
+      id: '/on-this-day'
+      path: '/on-this-day'
+      fullPath: '/on-this-day'
+      preLoaderRoute: typeof OnThisDayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/referrals': {
+      id: '/referrals'
+      path: '/referrals'
+      fullPath: '/referrals'
+      preLoaderRoute: typeof ReferralsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reflections': {
+      id: '/reflections'
+      path: '/reflections'
+      fullPath: '/reflections'
+      preLoaderRoute: typeof ReflectionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/seasons': {
+      id: '/seasons'
+      path: '/seasons'
+      fullPath: '/seasons'
+      preLoaderRoute: typeof SeasonsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/security': {
+      id: '/security'
+      path: '/security'
+      fullPath: '/security'
+      preLoaderRoute: typeof SecurityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/share-card': {
+      id: '/share-card'
+      path: '/share-card'
+      fullPath: '/share-card'
+      preLoaderRoute: typeof ShareCardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/timeline': {
+      id: '/timeline'
+      path: '/timeline'
+      fullPath: '/timeline'
+      preLoaderRoute: typeof TimelineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/unsubscribe': {
+      id: '/unsubscribe'
+      path: '/unsubscribe'
+      fullPath: '/unsubscribe'
+      preLoaderRoute: typeof UnsubscribeRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/admin/': {
       id: '/admin/'
       path: '/admin'
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/worlds/$slug': {
-      id: '/worlds/$slug'
-      path: '/worlds/$slug'
-      fullPath: '/worlds/$slug'
-      preLoaderRoute: typeof WorldsSlugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/u/$username': {
-      id: '/u/$username'
-      path: '/u/$username'
-      fullPath: '/u/$username'
-      preLoaderRoute: typeof UUsernameRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/story/$id': {
-      id: '/story/$id'
-      path: '/story/$id'
-      fullPath: '/story/$id'
-      preLoaderRoute: typeof StoryIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/play/timeline': {
-      id: '/play/timeline'
-      path: '/play/timeline'
-      fullPath: '/play/timeline'
-      preLoaderRoute: typeof PlayTimelineRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/play/investigate': {
-      id: '/play/investigate'
-      path: '/play/investigate'
-      fullPath: '/play/investigate'
-      preLoaderRoute: typeof PlayInvestigateRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/play/decisions': {
-      id: '/play/decisions'
-      path: '/play/decisions'
-      fullPath: '/play/decisions'
-      preLoaderRoute: typeof PlayDecisionsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/play/chapter': {
-      id: '/play/chapter'
-      path: '/play/chapter'
-      fullPath: '/play/chapter'
-      preLoaderRoute: typeof PlayChapterRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/investigation/$id': {
-      id: '/investigation/$id'
-      path: '/investigation/$id'
-      fullPath: '/investigation/$id'
-      preLoaderRoute: typeof InvestigationIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/figure/$id': {
-      id: '/figure/$id'
-      path: '/figure/$id'
-      fullPath: '/figure/$id'
-      preLoaderRoute: typeof FigureIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/feedback/new': {
-      id: '/feedback/new'
-      path: '/feedback/new'
-      fullPath: '/feedback/new'
-      preLoaderRoute: typeof FeedbackNewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/feedback/$id': {
-      id: '/feedback/$id'
-      path: '/feedback/$id'
-      fullPath: '/feedback/$id'
-      preLoaderRoute: typeof FeedbackIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/email/unsubscribe': {
-      id: '/email/unsubscribe'
-      path: '/email/unsubscribe'
-      fullPath: '/email/unsubscribe'
-      preLoaderRoute: typeof EmailUnsubscribeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/compare/$id': {
-      id: '/compare/$id'
-      path: '/compare/$id'
-      fullPath: '/compare/$id'
-      preLoaderRoute: typeof CompareIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/city/$id': {
-      id: '/city/$id'
-      path: '/city/$id'
-      fullPath: '/city/$id'
-      preLoaderRoute: typeof CityIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/battle/$id': {
-      id: '/battle/$id'
-      path: '/battle/$id'
-      fullPath: '/battle/$id'
-      preLoaderRoute: typeof BattleIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth/callback': {
-      id: '/auth/callback'
-      path: '/callback'
-      fullPath: '/auth/callback'
-      preLoaderRoute: typeof AuthCallbackRouteImport
-      parentRoute: typeof AuthRoute
-    }
-    '/admin/world-membership-review': {
-      id: '/admin/world-membership-review'
-      path: '/admin/world-membership-review'
-      fullPath: '/admin/world-membership-review'
-      preLoaderRoute: typeof AdminWorldMembershipReviewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/users': {
-      id: '/admin/users'
-      path: '/admin/users'
-      fullPath: '/admin/users'
-      preLoaderRoute: typeof AdminUsersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/unlock-integrity': {
-      id: '/admin/unlock-integrity'
-      path: '/admin/unlock-integrity'
-      fullPath: '/admin/unlock-integrity'
-      preLoaderRoute: typeof AdminUnlockIntegrityRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/taxonomy': {
-      id: '/admin/taxonomy'
-      path: '/admin/taxonomy'
-      fullPath: '/admin/taxonomy'
-      preLoaderRoute: typeof AdminTaxonomyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/related-stories': {
-      id: '/admin/related-stories'
-      path: '/admin/related-stories'
-      fullPath: '/admin/related-stories'
-      preLoaderRoute: typeof AdminRelatedStoriesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/persistence-diagnostics': {
-      id: '/admin/persistence-diagnostics'
-      path: '/admin/persistence-diagnostics'
-      fullPath: '/admin/persistence-diagnostics'
-      preLoaderRoute: typeof AdminPersistenceDiagnosticsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/offline-diagnostics': {
-      id: '/admin/offline-diagnostics'
-      path: '/admin/offline-diagnostics'
-      fullPath: '/admin/offline-diagnostics'
-      preLoaderRoute: typeof AdminOfflineDiagnosticsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/offline': {
-      id: '/admin/offline'
-      path: '/admin/offline'
-      fullPath: '/admin/offline'
-      preLoaderRoute: typeof AdminOfflineRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/notifications': {
-      id: '/admin/notifications'
-      path: '/admin/notifications'
-      fullPath: '/admin/notifications'
-      preLoaderRoute: typeof AdminNotificationsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/newsletter': {
-      id: '/admin/newsletter'
-      path: '/admin/newsletter'
-      fullPath: '/admin/newsletter'
-      preLoaderRoute: typeof AdminNewsletterRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/native-auth-diagnostics': {
-      id: '/admin/native-auth-diagnostics'
-      path: '/admin/native-auth-diagnostics'
-      fullPath: '/admin/native-auth-diagnostics'
-      preLoaderRoute: typeof AdminNativeAuthDiagnosticsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/museum-provenance': {
-      id: '/admin/museum-provenance'
-      path: '/admin/museum-provenance'
-      fullPath: '/admin/museum-provenance'
-      preLoaderRoute: typeof AdminMuseumProvenanceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/moderation': {
-      id: '/admin/moderation'
-      path: '/admin/moderation'
-      fullPath: '/admin/moderation'
-      preLoaderRoute: typeof AdminModerationRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/migration': {
-      id: '/admin/migration'
-      path: '/admin/migration'
-      fullPath: '/admin/migration'
-      preLoaderRoute: typeof AdminMigrationRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/map': {
-      id: '/admin/map'
-      path: '/admin/map'
-      fullPath: '/admin/map'
-      preLoaderRoute: typeof AdminMapRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/investigations': {
-      id: '/admin/investigations'
-      path: '/admin/investigations'
-      fullPath: '/admin/investigations'
-      preLoaderRoute: typeof AdminInvestigationsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/investigation-rewards': {
-      id: '/admin/investigation-rewards'
-      path: '/admin/investigation-rewards'
-      fullPath: '/admin/investigation-rewards'
-      preLoaderRoute: typeof AdminInvestigationRewardsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/import-history': {
-      id: '/admin/import-history'
-      path: '/admin/import-history'
-      fullPath: '/admin/import-history'
-      preLoaderRoute: typeof AdminImportHistoryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/import': {
-      id: '/admin/import'
-      path: '/admin/import'
-      fullPath: '/admin/import'
-      preLoaderRoute: typeof AdminImportRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/hub-builder': {
-      id: '/admin/hub-builder'
-      path: '/admin/hub-builder'
-      fullPath: '/admin/hub-builder'
-      preLoaderRoute: typeof AdminHubBuilderRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/historical-hubs-audit': {
-      id: '/admin/historical-hubs-audit'
-      path: '/admin/historical-hubs-audit'
-      fullPath: '/admin/historical-hubs-audit'
-      preLoaderRoute: typeof AdminHistoricalHubsAuditRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/games': {
-      id: '/admin/games'
-      path: '/admin/games'
-      fullPath: '/admin/games'
-      preLoaderRoute: typeof AdminGamesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/exploration-path-repair': {
-      id: '/admin/exploration-path-repair'
-      path: '/admin/exploration-path-repair'
-      fullPath: '/admin/exploration-path-repair'
-      preLoaderRoute: typeof AdminExplorationPathRepairRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/era-normalization': {
-      id: '/admin/era-normalization'
-      path: '/admin/era-normalization'
-      fullPath: '/admin/era-normalization'
-      preLoaderRoute: typeof AdminEraNormalizationRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/era-assignment': {
-      id: '/admin/era-assignment'
-      path: '/admin/era-assignment'
-      fullPath: '/admin/era-assignment'
-      preLoaderRoute: typeof AdminEraAssignmentRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/encyclopedia-report': {
-      id: '/admin/encyclopedia-report'
-      path: '/admin/encyclopedia-report'
-      fullPath: '/admin/encyclopedia-report'
-      preLoaderRoute: typeof AdminEncyclopediaReportRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/encyclopedia-cleanup': {
-      id: '/admin/encyclopedia-cleanup'
-      path: '/admin/encyclopedia-cleanup'
-      fullPath: '/admin/encyclopedia-cleanup'
-      preLoaderRoute: typeof AdminEncyclopediaCleanupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/encyclopedia-audit': {
-      id: '/admin/encyclopedia-audit'
-      path: '/admin/encyclopedia-audit'
-      fullPath: '/admin/encyclopedia-audit'
-      preLoaderRoute: typeof AdminEncyclopediaAuditRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/encyclopedia': {
-      id: '/admin/encyclopedia'
-      path: '/admin/encyclopedia'
-      fullPath: '/admin/encyclopedia'
-      preLoaderRoute: typeof AdminEncyclopediaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/emblems': {
-      id: '/admin/emblems'
-      path: '/admin/emblems'
-      fullPath: '/admin/emblems'
-      preLoaderRoute: typeof AdminEmblemsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/cross-hub-links': {
-      id: '/admin/cross-hub-links'
-      path: '/admin/cross-hub-links'
-      fullPath: '/admin/cross-hub-links'
-      preLoaderRoute: typeof AdminCrossHubLinksRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/crash-diagnostics': {
-      id: '/admin/crash-diagnostics'
-      path: '/admin/crash-diagnostics'
-      fullPath: '/admin/crash-diagnostics'
-      preLoaderRoute: typeof AdminCrashDiagnosticsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/contributions': {
-      id: '/admin/contributions'
-      path: '/admin/contributions'
-      fullPath: '/admin/contributions'
-      preLoaderRoute: typeof AdminContributionsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/content-inventory': {
-      id: '/admin/content-inventory'
-      path: '/admin/content-inventory'
-      fullPath: '/admin/content-inventory'
-      preLoaderRoute: typeof AdminContentInventoryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/content-integrity-repair': {
-      id: '/admin/content-integrity-repair'
-      path: '/admin/content-integrity-repair'
-      fullPath: '/admin/content-integrity-repair'
-      preLoaderRoute: typeof AdminContentIntegrityRepairRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/content-integrity': {
-      id: '/admin/content-integrity'
-      path: '/admin/content-integrity'
-      fullPath: '/admin/content-integrity'
-      preLoaderRoute: typeof AdminContentIntegrityRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/content-foundation': {
-      id: '/admin/content-foundation'
-      path: '/admin/content-foundation'
-      fullPath: '/admin/content-foundation'
-      preLoaderRoute: typeof AdminContentFoundationRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/content-cleanup': {
-      id: '/admin/content-cleanup'
-      path: '/admin/content-cleanup'
-      fullPath: '/admin/content-cleanup'
-      preLoaderRoute: typeof AdminContentCleanupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/content-auto-heal': {
-      id: '/admin/content-auto-heal'
-      path: '/admin/content-auto-heal'
-      fullPath: '/admin/content-auto-heal'
-      preLoaderRoute: typeof AdminContentAutoHealRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/content': {
-      id: '/admin/content'
-      path: '/admin/content'
-      fullPath: '/admin/content'
-      preLoaderRoute: typeof AdminContentRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/community': {
-      id: '/admin/community'
-      path: '/admin/community'
-      fullPath: '/admin/community'
-      preLoaderRoute: typeof AdminCommunityRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/canonical-duplicates': {
-      id: '/admin/canonical-duplicates'
-      path: '/admin/canonical-duplicates'
-      fullPath: '/admin/canonical-duplicates'
-      preLoaderRoute: typeof AdminCanonicalDuplicatesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/campaign-relationships': {
-      id: '/admin/campaign-relationships'
-      path: '/admin/campaign-relationships'
-      fullPath: '/admin/campaign-relationships'
-      preLoaderRoute: typeof AdminCampaignRelationshipsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/campaign-order': {
-      id: '/admin/campaign-order'
-      path: '/admin/campaign-order'
-      fullPath: '/admin/campaign-order'
-      preLoaderRoute: typeof AdminCampaignOrderRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/atlas-review': {
-      id: '/admin/atlas-review'
-      path: '/admin/atlas-review'
-      fullPath: '/admin/atlas-review'
-      preLoaderRoute: typeof AdminAtlasReviewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/atlas-repair': {
-      id: '/admin/atlas-repair'
-      path: '/admin/atlas-repair'
-      fullPath: '/admin/atlas-repair'
-      preLoaderRoute: typeof AdminAtlasRepairRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/atlas-import': {
-      id: '/admin/atlas-import'
-      path: '/admin/atlas-import'
-      fullPath: '/admin/atlas-import'
-      preLoaderRoute: typeof AdminAtlasImportRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/atlas-entities': {
-      id: '/admin/atlas-entities'
-      path: '/admin/atlas-entities'
-      fullPath: '/admin/atlas-entities'
-      preLoaderRoute: typeof AdminAtlasEntitiesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/atlas-calibration': {
-      id: '/admin/atlas-calibration'
-      path: '/admin/atlas-calibration'
-      fullPath: '/admin/atlas-calibration'
-      preLoaderRoute: typeof AdminAtlasCalibrationRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/artifacts': {
-      id: '/admin/artifacts'
-      path: '/admin/artifacts'
-      fullPath: '/admin/artifacts'
-      preLoaderRoute: typeof AdminArtifactsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/analytics': {
@@ -2556,33 +2052,509 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAnalyticsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/stories/': {
-      id: '/admin/stories/'
-      path: '/admin/stories'
-      fullPath: '/admin/stories/'
-      preLoaderRoute: typeof AdminStoriesIndexRouteImport
+    '/admin/artifacts': {
+      id: '/admin/artifacts'
+      path: '/admin/artifacts'
+      fullPath: '/admin/artifacts'
+      preLoaderRoute: typeof AdminArtifactsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/investigations/': {
-      id: '/admin/investigations/'
-      path: '/'
-      fullPath: '/admin/investigations/'
-      preLoaderRoute: typeof AdminInvestigationsIndexRouteImport
-      parentRoute: typeof AdminInvestigationsRoute
+    '/admin/atlas-calibration': {
+      id: '/admin/atlas-calibration'
+      path: '/admin/atlas-calibration'
+      fullPath: '/admin/atlas-calibration'
+      preLoaderRoute: typeof AdminAtlasCalibrationRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/admin/games/': {
-      id: '/admin/games/'
-      path: '/'
-      fullPath: '/admin/games/'
-      preLoaderRoute: typeof AdminGamesIndexRouteImport
-      parentRoute: typeof AdminGamesRoute
+    '/admin/atlas-entities': {
+      id: '/admin/atlas-entities'
+      path: '/admin/atlas-entities'
+      fullPath: '/admin/atlas-entities'
+      preLoaderRoute: typeof AdminAtlasEntitiesRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/admin/encyclopedia-cleanup/': {
-      id: '/admin/encyclopedia-cleanup/'
+    '/admin/atlas-import': {
+      id: '/admin/atlas-import'
+      path: '/admin/atlas-import'
+      fullPath: '/admin/atlas-import'
+      preLoaderRoute: typeof AdminAtlasImportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/atlas-repair': {
+      id: '/admin/atlas-repair'
+      path: '/admin/atlas-repair'
+      fullPath: '/admin/atlas-repair'
+      preLoaderRoute: typeof AdminAtlasRepairRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/atlas-review': {
+      id: '/admin/atlas-review'
+      path: '/admin/atlas-review'
+      fullPath: '/admin/atlas-review'
+      preLoaderRoute: typeof AdminAtlasReviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/campaign-order': {
+      id: '/admin/campaign-order'
+      path: '/admin/campaign-order'
+      fullPath: '/admin/campaign-order'
+      preLoaderRoute: typeof AdminCampaignOrderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/campaign-relationships': {
+      id: '/admin/campaign-relationships'
+      path: '/admin/campaign-relationships'
+      fullPath: '/admin/campaign-relationships'
+      preLoaderRoute: typeof AdminCampaignRelationshipsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/canonical-duplicates': {
+      id: '/admin/canonical-duplicates'
+      path: '/admin/canonical-duplicates'
+      fullPath: '/admin/canonical-duplicates'
+      preLoaderRoute: typeof AdminCanonicalDuplicatesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/community': {
+      id: '/admin/community'
+      path: '/admin/community'
+      fullPath: '/admin/community'
+      preLoaderRoute: typeof AdminCommunityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/content': {
+      id: '/admin/content'
+      path: '/admin/content'
+      fullPath: '/admin/content'
+      preLoaderRoute: typeof AdminContentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/content-auto-heal': {
+      id: '/admin/content-auto-heal'
+      path: '/admin/content-auto-heal'
+      fullPath: '/admin/content-auto-heal'
+      preLoaderRoute: typeof AdminContentAutoHealRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/content-cleanup': {
+      id: '/admin/content-cleanup'
+      path: '/admin/content-cleanup'
+      fullPath: '/admin/content-cleanup'
+      preLoaderRoute: typeof AdminContentCleanupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/content-foundation': {
+      id: '/admin/content-foundation'
+      path: '/admin/content-foundation'
+      fullPath: '/admin/content-foundation'
+      preLoaderRoute: typeof AdminContentFoundationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/content-integrity': {
+      id: '/admin/content-integrity'
+      path: '/admin/content-integrity'
+      fullPath: '/admin/content-integrity'
+      preLoaderRoute: typeof AdminContentIntegrityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/content-integrity-repair': {
+      id: '/admin/content-integrity-repair'
+      path: '/admin/content-integrity-repair'
+      fullPath: '/admin/content-integrity-repair'
+      preLoaderRoute: typeof AdminContentIntegrityRepairRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/content-inventory': {
+      id: '/admin/content-inventory'
+      path: '/admin/content-inventory'
+      fullPath: '/admin/content-inventory'
+      preLoaderRoute: typeof AdminContentInventoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/contributions': {
+      id: '/admin/contributions'
+      path: '/admin/contributions'
+      fullPath: '/admin/contributions'
+      preLoaderRoute: typeof AdminContributionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/crash-diagnostics': {
+      id: '/admin/crash-diagnostics'
+      path: '/admin/crash-diagnostics'
+      fullPath: '/admin/crash-diagnostics'
+      preLoaderRoute: typeof AdminCrashDiagnosticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/cross-hub-links': {
+      id: '/admin/cross-hub-links'
+      path: '/admin/cross-hub-links'
+      fullPath: '/admin/cross-hub-links'
+      preLoaderRoute: typeof AdminCrossHubLinksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/emblems': {
+      id: '/admin/emblems'
+      path: '/admin/emblems'
+      fullPath: '/admin/emblems'
+      preLoaderRoute: typeof AdminEmblemsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/encyclopedia': {
+      id: '/admin/encyclopedia'
+      path: '/admin/encyclopedia'
+      fullPath: '/admin/encyclopedia'
+      preLoaderRoute: typeof AdminEncyclopediaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/encyclopedia-audit': {
+      id: '/admin/encyclopedia-audit'
+      path: '/admin/encyclopedia-audit'
+      fullPath: '/admin/encyclopedia-audit'
+      preLoaderRoute: typeof AdminEncyclopediaAuditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/encyclopedia-cleanup': {
+      id: '/admin/encyclopedia-cleanup'
+      path: '/admin/encyclopedia-cleanup'
+      fullPath: '/admin/encyclopedia-cleanup'
+      preLoaderRoute: typeof AdminEncyclopediaCleanupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/encyclopedia-report': {
+      id: '/admin/encyclopedia-report'
+      path: '/admin/encyclopedia-report'
+      fullPath: '/admin/encyclopedia-report'
+      preLoaderRoute: typeof AdminEncyclopediaReportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/era-assignment': {
+      id: '/admin/era-assignment'
+      path: '/admin/era-assignment'
+      fullPath: '/admin/era-assignment'
+      preLoaderRoute: typeof AdminEraAssignmentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/era-normalization': {
+      id: '/admin/era-normalization'
+      path: '/admin/era-normalization'
+      fullPath: '/admin/era-normalization'
+      preLoaderRoute: typeof AdminEraNormalizationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/exploration-path-repair': {
+      id: '/admin/exploration-path-repair'
+      path: '/admin/exploration-path-repair'
+      fullPath: '/admin/exploration-path-repair'
+      preLoaderRoute: typeof AdminExplorationPathRepairRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/games': {
+      id: '/admin/games'
+      path: '/admin/games'
+      fullPath: '/admin/games'
+      preLoaderRoute: typeof AdminGamesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/historical-hubs-audit': {
+      id: '/admin/historical-hubs-audit'
+      path: '/admin/historical-hubs-audit'
+      fullPath: '/admin/historical-hubs-audit'
+      preLoaderRoute: typeof AdminHistoricalHubsAuditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/hub-builder': {
+      id: '/admin/hub-builder'
+      path: '/admin/hub-builder'
+      fullPath: '/admin/hub-builder'
+      preLoaderRoute: typeof AdminHubBuilderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/import': {
+      id: '/admin/import'
+      path: '/admin/import'
+      fullPath: '/admin/import'
+      preLoaderRoute: typeof AdminImportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/import-history': {
+      id: '/admin/import-history'
+      path: '/admin/import-history'
+      fullPath: '/admin/import-history'
+      preLoaderRoute: typeof AdminImportHistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/investigation-rewards': {
+      id: '/admin/investigation-rewards'
+      path: '/admin/investigation-rewards'
+      fullPath: '/admin/investigation-rewards'
+      preLoaderRoute: typeof AdminInvestigationRewardsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/investigations': {
+      id: '/admin/investigations'
+      path: '/admin/investigations'
+      fullPath: '/admin/investigations'
+      preLoaderRoute: typeof AdminInvestigationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/map': {
+      id: '/admin/map'
+      path: '/admin/map'
+      fullPath: '/admin/map'
+      preLoaderRoute: typeof AdminMapRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/migration': {
+      id: '/admin/migration'
+      path: '/admin/migration'
+      fullPath: '/admin/migration'
+      preLoaderRoute: typeof AdminMigrationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/moderation': {
+      id: '/admin/moderation'
+      path: '/admin/moderation'
+      fullPath: '/admin/moderation'
+      preLoaderRoute: typeof AdminModerationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/museum-provenance': {
+      id: '/admin/museum-provenance'
+      path: '/admin/museum-provenance'
+      fullPath: '/admin/museum-provenance'
+      preLoaderRoute: typeof AdminMuseumProvenanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/native-auth-diagnostics': {
+      id: '/admin/native-auth-diagnostics'
+      path: '/admin/native-auth-diagnostics'
+      fullPath: '/admin/native-auth-diagnostics'
+      preLoaderRoute: typeof AdminNativeAuthDiagnosticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/newsletter': {
+      id: '/admin/newsletter'
+      path: '/admin/newsletter'
+      fullPath: '/admin/newsletter'
+      preLoaderRoute: typeof AdminNewsletterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/notifications': {
+      id: '/admin/notifications'
+      path: '/admin/notifications'
+      fullPath: '/admin/notifications'
+      preLoaderRoute: typeof AdminNotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/offline': {
+      id: '/admin/offline'
+      path: '/admin/offline'
+      fullPath: '/admin/offline'
+      preLoaderRoute: typeof AdminOfflineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/offline-diagnostics': {
+      id: '/admin/offline-diagnostics'
+      path: '/admin/offline-diagnostics'
+      fullPath: '/admin/offline-diagnostics'
+      preLoaderRoute: typeof AdminOfflineDiagnosticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/persistence-diagnostics': {
+      id: '/admin/persistence-diagnostics'
+      path: '/admin/persistence-diagnostics'
+      fullPath: '/admin/persistence-diagnostics'
+      preLoaderRoute: typeof AdminPersistenceDiagnosticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/related-stories': {
+      id: '/admin/related-stories'
+      path: '/admin/related-stories'
+      fullPath: '/admin/related-stories'
+      preLoaderRoute: typeof AdminRelatedStoriesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/taxonomy': {
+      id: '/admin/taxonomy'
+      path: '/admin/taxonomy'
+      fullPath: '/admin/taxonomy'
+      preLoaderRoute: typeof AdminTaxonomyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/unlock-integrity': {
+      id: '/admin/unlock-integrity'
+      path: '/admin/unlock-integrity'
+      fullPath: '/admin/unlock-integrity'
+      preLoaderRoute: typeof AdminUnlockIntegrityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/admin/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/world-membership-review': {
+      id: '/admin/world-membership-review'
+      path: '/admin/world-membership-review'
+      fullPath: '/admin/world-membership-review'
+      preLoaderRoute: typeof AdminWorldMembershipReviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/battle/$id': {
+      id: '/battle/$id'
+      path: '/battle/$id'
+      fullPath: '/battle/$id'
+      preLoaderRoute: typeof BattleIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/campaigns/': {
+      id: '/campaigns/'
       path: '/'
-      fullPath: '/admin/encyclopedia-cleanup/'
-      preLoaderRoute: typeof AdminEncyclopediaCleanupIndexRouteImport
-      parentRoute: typeof AdminEncyclopediaCleanupRoute
+      fullPath: '/campaigns/'
+      preLoaderRoute: typeof CampaignsIndexRouteImport
+      parentRoute: typeof CampaignsRoute
+    }
+    '/city/$id': {
+      id: '/city/$id'
+      path: '/city/$id'
+      fullPath: '/city/$id'
+      preLoaderRoute: typeof CityIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/$id': {
+      id: '/compare/$id'
+      path: '/compare/$id'
+      fullPath: '/compare/$id'
+      preLoaderRoute: typeof CompareIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/email/unsubscribe': {
+      id: '/email/unsubscribe'
+      path: '/email/unsubscribe'
+      fullPath: '/email/unsubscribe'
+      preLoaderRoute: typeof EmailUnsubscribeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/encyclopedia/': {
+      id: '/encyclopedia/'
+      path: '/'
+      fullPath: '/encyclopedia/'
+      preLoaderRoute: typeof EncyclopediaIndexRouteImport
+      parentRoute: typeof EncyclopediaRoute
+    }
+    '/feedback/': {
+      id: '/feedback/'
+      path: '/feedback'
+      fullPath: '/feedback/'
+      preLoaderRoute: typeof FeedbackIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/feedback/$id': {
+      id: '/feedback/$id'
+      path: '/feedback/$id'
+      fullPath: '/feedback/$id'
+      preLoaderRoute: typeof FeedbackIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/feedback/new': {
+      id: '/feedback/new'
+      path: '/feedback/new'
+      fullPath: '/feedback/new'
+      preLoaderRoute: typeof FeedbackNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/figure/$id': {
+      id: '/figure/$id'
+      path: '/figure/$id'
+      fullPath: '/figure/$id'
+      preLoaderRoute: typeof FigureIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/games/': {
+      id: '/games/'
+      path: '/games'
+      fullPath: '/games/'
+      preLoaderRoute: typeof GamesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/investigation/$id': {
+      id: '/investigation/$id'
+      path: '/investigation/$id'
+      fullPath: '/investigation/$id'
+      preLoaderRoute: typeof InvestigationIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/play/chapter': {
+      id: '/play/chapter'
+      path: '/play/chapter'
+      fullPath: '/play/chapter'
+      preLoaderRoute: typeof PlayChapterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/play/decisions': {
+      id: '/play/decisions'
+      path: '/play/decisions'
+      fullPath: '/play/decisions'
+      preLoaderRoute: typeof PlayDecisionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/play/investigate': {
+      id: '/play/investigate'
+      path: '/play/investigate'
+      fullPath: '/play/investigate'
+      preLoaderRoute: typeof PlayInvestigateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/play/timeline': {
+      id: '/play/timeline'
+      path: '/play/timeline'
+      fullPath: '/play/timeline'
+      preLoaderRoute: typeof PlayTimelineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stories/': {
+      id: '/stories/'
+      path: '/stories'
+      fullPath: '/stories/'
+      preLoaderRoute: typeof StoriesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/story/$id': {
+      id: '/story/$id'
+      path: '/story/$id'
+      fullPath: '/story/$id'
+      preLoaderRoute: typeof StoryIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/u/$username': {
+      id: '/u/$username'
+      path: '/u/$username'
+      fullPath: '/u/$username'
+      preLoaderRoute: typeof UUsernameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/worlds/': {
+      id: '/worlds/'
+      path: '/worlds'
+      fullPath: '/worlds/'
+      preLoaderRoute: typeof WorldsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/worlds/$slug': {
+      id: '/worlds/$slug'
+      path: '/worlds/$slug'
+      fullPath: '/worlds/$slug'
+      preLoaderRoute: typeof WorldsSlugRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/admin/campaigns/': {
       id: '/admin/campaigns/'
@@ -2591,116 +2563,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCampaignsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/lovable/email/suppression': {
-      id: '/lovable/email/suppression'
-      path: '/lovable/email/suppression'
-      fullPath: '/lovable/email/suppression'
-      preLoaderRoute: typeof LovableEmailSuppressionRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/games/$mode/$slug': {
-      id: '/games/$mode/$slug'
-      path: '/games/$mode/$slug'
-      fullPath: '/games/$mode/$slug'
-      preLoaderRoute: typeof GamesModeSlugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/encyclopedia/type/$type': {
-      id: '/encyclopedia/type/$type'
-      path: '/type/$type'
-      fullPath: '/encyclopedia/type/$type'
-      preLoaderRoute: typeof EncyclopediaTypeTypeRouteImport
-      parentRoute: typeof EncyclopediaRoute
-    }
-    '/encyclopedia/state/$id': {
-      id: '/encyclopedia/state/$id'
-      path: '/state/$id'
-      fullPath: '/encyclopedia/state/$id'
-      preLoaderRoute: typeof EncyclopediaStateIdRouteImport
-      parentRoute: typeof EncyclopediaRoute
-    }
-    '/encyclopedia/path/$id': {
-      id: '/encyclopedia/path/$id'
-      path: '/path/$id'
-      fullPath: '/encyclopedia/path/$id'
-      preLoaderRoute: typeof EncyclopediaPathIdRouteImport
-      parentRoute: typeof EncyclopediaRoute
-    }
-    '/encyclopedia/entity/$id': {
-      id: '/encyclopedia/entity/$id'
-      path: '/entity/$id'
-      fullPath: '/encyclopedia/entity/$id'
-      preLoaderRoute: typeof EncyclopediaEntityIdRouteImport
-      parentRoute: typeof EncyclopediaRoute
-    }
-    '/api/public/native-auth-bounce': {
-      id: '/api/public/native-auth-bounce'
-      path: '/api/public/native-auth-bounce'
-      fullPath: '/api/public/native-auth-bounce'
-      preLoaderRoute: typeof ApiPublicNativeAuthBounceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/stories/import-v2': {
-      id: '/admin/stories/import-v2'
-      path: '/admin/stories/import-v2'
-      fullPath: '/admin/stories/import-v2'
-      preLoaderRoute: typeof AdminStoriesImportV2RouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/stories/export-v2': {
-      id: '/admin/stories/export-v2'
-      path: '/admin/stories/export-v2'
-      fullPath: '/admin/stories/export-v2'
-      preLoaderRoute: typeof AdminStoriesExportV2RouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/import-history/$id': {
-      id: '/admin/import-history/$id'
-      path: '/$id'
-      fullPath: '/admin/import-history/$id'
-      preLoaderRoute: typeof AdminImportHistoryIdRouteImport
-      parentRoute: typeof AdminImportHistoryRoute
-    }
-    '/admin/games/crossword-generator': {
-      id: '/admin/games/crossword-generator'
-      path: '/crossword-generator'
-      fullPath: '/admin/games/crossword-generator'
-      preLoaderRoute: typeof AdminGamesCrosswordGeneratorRouteImport
-      parentRoute: typeof AdminGamesRoute
-    }
-    '/admin/games/$mode': {
-      id: '/admin/games/$mode'
-      path: '/$mode'
-      fullPath: '/admin/games/$mode'
-      preLoaderRoute: typeof AdminGamesModeRouteImport
-      parentRoute: typeof AdminGamesRoute
-    }
-    '/admin/encyclopedia-cleanup/review': {
-      id: '/admin/encyclopedia-cleanup/review'
-      path: '/review'
-      fullPath: '/admin/encyclopedia-cleanup/review'
-      preLoaderRoute: typeof AdminEncyclopediaCleanupReviewRouteImport
-      parentRoute: typeof AdminEncyclopediaCleanupRoute
-    }
-    '/admin/encyclopedia-cleanup/redirects': {
-      id: '/admin/encyclopedia-cleanup/redirects'
-      path: '/redirects'
-      fullPath: '/admin/encyclopedia-cleanup/redirects'
-      preLoaderRoute: typeof AdminEncyclopediaCleanupRedirectsRouteImport
-      parentRoute: typeof AdminEncyclopediaCleanupRoute
-    }
-    '/admin/encyclopedia-cleanup/integrity': {
-      id: '/admin/encyclopedia-cleanup/integrity'
-      path: '/integrity'
-      fullPath: '/admin/encyclopedia-cleanup/integrity'
-      preLoaderRoute: typeof AdminEncyclopediaCleanupIntegrityRouteImport
-      parentRoute: typeof AdminEncyclopediaCleanupRoute
-    }
-    '/admin/encyclopedia-cleanup/import-preview': {
-      id: '/admin/encyclopedia-cleanup/import-preview'
-      path: '/import-preview'
-      fullPath: '/admin/encyclopedia-cleanup/import-preview'
-      preLoaderRoute: typeof AdminEncyclopediaCleanupImportPreviewRouteImport
+    '/admin/encyclopedia-cleanup/': {
+      id: '/admin/encyclopedia-cleanup/'
+      path: '/'
+      fullPath: '/admin/encyclopedia-cleanup/'
+      preLoaderRoute: typeof AdminEncyclopediaCleanupIndexRouteImport
       parentRoute: typeof AdminEncyclopediaCleanupRoute
     }
     '/admin/encyclopedia-cleanup/data-hygiene': {
@@ -2710,81 +2577,144 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminEncyclopediaCleanupDataHygieneRouteImport
       parentRoute: typeof AdminEncyclopediaCleanupRoute
     }
-    '/campaigns/imported/$id/': {
-      id: '/campaigns/imported/$id/'
-      path: '/imported/$id'
-      fullPath: '/campaigns/imported/$id/'
-      preLoaderRoute: typeof CampaignsImportedIdIndexRouteImport
-      parentRoute: typeof CampaignsRoute
+    '/admin/encyclopedia-cleanup/import-preview': {
+      id: '/admin/encyclopedia-cleanup/import-preview'
+      path: '/import-preview'
+      fullPath: '/admin/encyclopedia-cleanup/import-preview'
+      preLoaderRoute: typeof AdminEncyclopediaCleanupImportPreviewRouteImport
+      parentRoute: typeof AdminEncyclopediaCleanupRoute
     }
-    '/lovable/email/transactional/send': {
-      id: '/lovable/email/transactional/send'
-      path: '/lovable/email/transactional/send'
-      fullPath: '/lovable/email/transactional/send'
-      preLoaderRoute: typeof LovableEmailTransactionalSendRouteImport
+    '/admin/encyclopedia-cleanup/integrity': {
+      id: '/admin/encyclopedia-cleanup/integrity'
+      path: '/integrity'
+      fullPath: '/admin/encyclopedia-cleanup/integrity'
+      preLoaderRoute: typeof AdminEncyclopediaCleanupIntegrityRouteImport
+      parentRoute: typeof AdminEncyclopediaCleanupRoute
+    }
+    '/admin/encyclopedia-cleanup/redirects': {
+      id: '/admin/encyclopedia-cleanup/redirects'
+      path: '/redirects'
+      fullPath: '/admin/encyclopedia-cleanup/redirects'
+      preLoaderRoute: typeof AdminEncyclopediaCleanupRedirectsRouteImport
+      parentRoute: typeof AdminEncyclopediaCleanupRoute
+    }
+    '/admin/encyclopedia-cleanup/review': {
+      id: '/admin/encyclopedia-cleanup/review'
+      path: '/review'
+      fullPath: '/admin/encyclopedia-cleanup/review'
+      preLoaderRoute: typeof AdminEncyclopediaCleanupReviewRouteImport
+      parentRoute: typeof AdminEncyclopediaCleanupRoute
+    }
+    '/admin/games/': {
+      id: '/admin/games/'
+      path: '/'
+      fullPath: '/admin/games/'
+      preLoaderRoute: typeof AdminGamesIndexRouteImport
+      parentRoute: typeof AdminGamesRoute
+    }
+    '/admin/games/$mode': {
+      id: '/admin/games/$mode'
+      path: '/$mode'
+      fullPath: '/admin/games/$mode'
+      preLoaderRoute: typeof AdminGamesModeRouteImport
+      parentRoute: typeof AdminGamesRoute
+    }
+    '/admin/games/crossword-generator': {
+      id: '/admin/games/crossword-generator'
+      path: '/crossword-generator'
+      fullPath: '/admin/games/crossword-generator'
+      preLoaderRoute: typeof AdminGamesCrosswordGeneratorRouteImport
+      parentRoute: typeof AdminGamesRoute
+    }
+    '/admin/import-history/$id': {
+      id: '/admin/import-history/$id'
+      path: '/$id'
+      fullPath: '/admin/import-history/$id'
+      preLoaderRoute: typeof AdminImportHistoryIdRouteImport
+      parentRoute: typeof AdminImportHistoryRoute
+    }
+    '/admin/investigations/': {
+      id: '/admin/investigations/'
+      path: '/'
+      fullPath: '/admin/investigations/'
+      preLoaderRoute: typeof AdminInvestigationsIndexRouteImport
+      parentRoute: typeof AdminInvestigationsRoute
+    }
+    '/admin/stories/': {
+      id: '/admin/stories/'
+      path: '/admin/stories'
+      fullPath: '/admin/stories/'
+      preLoaderRoute: typeof AdminStoriesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/lovable/email/transactional/preview': {
-      id: '/lovable/email/transactional/preview'
-      path: '/lovable/email/transactional/preview'
-      fullPath: '/lovable/email/transactional/preview'
-      preLoaderRoute: typeof LovableEmailTransactionalPreviewRouteImport
+    '/admin/stories/export-v2': {
+      id: '/admin/stories/export-v2'
+      path: '/admin/stories/export-v2'
+      fullPath: '/admin/stories/export-v2'
+      preLoaderRoute: typeof AdminStoriesExportV2RouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/lovable/email/queue/process': {
-      id: '/lovable/email/queue/process'
-      path: '/lovable/email/queue/process'
-      fullPath: '/lovable/email/queue/process'
-      preLoaderRoute: typeof LovableEmailQueueProcessRouteImport
+    '/admin/stories/import-v2': {
+      id: '/admin/stories/import-v2'
+      path: '/admin/stories/import-v2'
+      fullPath: '/admin/stories/import-v2'
+      preLoaderRoute: typeof AdminStoriesImportV2RouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/lovable/email/auth/webhook': {
-      id: '/lovable/email/auth/webhook'
-      path: '/lovable/email/auth/webhook'
-      fullPath: '/lovable/email/auth/webhook'
-      preLoaderRoute: typeof LovableEmailAuthWebhookRouteImport
+    '/api/public/native-auth-bounce': {
+      id: '/api/public/native-auth-bounce'
+      path: '/api/public/native-auth-bounce'
+      fullPath: '/api/public/native-auth-bounce'
+      preLoaderRoute: typeof ApiPublicNativeAuthBounceRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/lovable/email/auth/preview': {
-      id: '/lovable/email/auth/preview'
-      path: '/lovable/email/auth/preview'
-      fullPath: '/lovable/email/auth/preview'
-      preLoaderRoute: typeof LovableEmailAuthPreviewRouteImport
+    '/encyclopedia/entity/$id': {
+      id: '/encyclopedia/entity/$id'
+      path: '/entity/$id'
+      fullPath: '/encyclopedia/entity/$id'
+      preLoaderRoute: typeof EncyclopediaEntityIdRouteImport
+      parentRoute: typeof EncyclopediaRoute
+    }
+    '/encyclopedia/path/$id': {
+      id: '/encyclopedia/path/$id'
+      path: '/path/$id'
+      fullPath: '/encyclopedia/path/$id'
+      preLoaderRoute: typeof EncyclopediaPathIdRouteImport
+      parentRoute: typeof EncyclopediaRoute
+    }
+    '/encyclopedia/state/$id': {
+      id: '/encyclopedia/state/$id'
+      path: '/state/$id'
+      fullPath: '/encyclopedia/state/$id'
+      preLoaderRoute: typeof EncyclopediaStateIdRouteImport
+      parentRoute: typeof EncyclopediaRoute
+    }
+    '/encyclopedia/type/$type': {
+      id: '/encyclopedia/type/$type'
+      path: '/type/$type'
+      fullPath: '/encyclopedia/type/$type'
+      preLoaderRoute: typeof EncyclopediaTypeTypeRouteImport
+      parentRoute: typeof EncyclopediaRoute
+    }
+    '/games/$mode/$slug': {
+      id: '/games/$mode/$slug'
+      path: '/games/$mode/$slug'
+      fullPath: '/games/$mode/$slug'
+      preLoaderRoute: typeof GamesModeSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/lovable/email/auth-custom/verify-reauth': {
-      id: '/lovable/email/auth-custom/verify-reauth'
-      path: '/lovable/email/auth-custom/verify-reauth'
-      fullPath: '/lovable/email/auth-custom/verify-reauth'
-      preLoaderRoute: typeof LovableEmailAuthCustomVerifyReauthRouteImport
+    '/lovable/email/suppression': {
+      id: '/lovable/email/suppression'
+      path: '/lovable/email/suppression'
+      fullPath: '/lovable/email/suppression'
+      preLoaderRoute: typeof LovableEmailSuppressionRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/lovable/email/auth-custom/dispatch': {
-      id: '/lovable/email/auth-custom/dispatch'
-      path: '/lovable/email/auth-custom/dispatch'
-      fullPath: '/lovable/email/auth-custom/dispatch'
-      preLoaderRoute: typeof LovableEmailAuthCustomDispatchRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/webhooks/resend': {
-      id: '/api/public/webhooks/resend'
-      path: '/api/public/webhooks/resend'
-      fullPath: '/api/public/webhooks/resend'
-      preLoaderRoute: typeof ApiPublicWebhooksResendRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/stories/v2/$id': {
-      id: '/admin/stories/v2/$id'
-      path: '/admin/stories/v2/$id'
-      fullPath: '/admin/stories/v2/$id'
-      preLoaderRoute: typeof AdminStoriesV2IdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/stories/$id/edit': {
-      id: '/admin/stories/$id/edit'
-      path: '/admin/stories/$id/edit'
-      fullPath: '/admin/stories/$id/edit'
-      preLoaderRoute: typeof AdminStoriesIdEditRouteImport
+    '/admin/campaigns/$id/edit': {
+      id: '/admin/campaigns/$id/edit'
+      path: '/admin/campaigns/$id/edit'
+      fullPath: '/admin/campaigns/$id/edit'
+      preLoaderRoute: typeof AdminCampaignsIdEditRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/investigations/$id/edit': {
@@ -2794,11 +2724,81 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminInvestigationsIdEditRouteImport
       parentRoute: typeof AdminInvestigationsRoute
     }
-    '/admin/campaigns/$id/edit': {
-      id: '/admin/campaigns/$id/edit'
-      path: '/admin/campaigns/$id/edit'
-      fullPath: '/admin/campaigns/$id/edit'
-      preLoaderRoute: typeof AdminCampaignsIdEditRouteImport
+    '/admin/stories/$id/edit': {
+      id: '/admin/stories/$id/edit'
+      path: '/admin/stories/$id/edit'
+      fullPath: '/admin/stories/$id/edit'
+      preLoaderRoute: typeof AdminStoriesIdEditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/stories/v2/$id': {
+      id: '/admin/stories/v2/$id'
+      path: '/admin/stories/v2/$id'
+      fullPath: '/admin/stories/v2/$id'
+      preLoaderRoute: typeof AdminStoriesV2IdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/webhooks/resend': {
+      id: '/api/public/webhooks/resend'
+      path: '/api/public/webhooks/resend'
+      fullPath: '/api/public/webhooks/resend'
+      preLoaderRoute: typeof ApiPublicWebhooksResendRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/campaigns/imported/$id/': {
+      id: '/campaigns/imported/$id/'
+      path: '/imported/$id'
+      fullPath: '/campaigns/imported/$id/'
+      preLoaderRoute: typeof CampaignsImportedIdIndexRouteImport
+      parentRoute: typeof CampaignsRoute
+    }
+    '/lovable/email/auth-custom/dispatch': {
+      id: '/lovable/email/auth-custom/dispatch'
+      path: '/lovable/email/auth-custom/dispatch'
+      fullPath: '/lovable/email/auth-custom/dispatch'
+      preLoaderRoute: typeof LovableEmailAuthCustomDispatchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/auth-custom/verify-reauth': {
+      id: '/lovable/email/auth-custom/verify-reauth'
+      path: '/lovable/email/auth-custom/verify-reauth'
+      fullPath: '/lovable/email/auth-custom/verify-reauth'
+      preLoaderRoute: typeof LovableEmailAuthCustomVerifyReauthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/auth/preview': {
+      id: '/lovable/email/auth/preview'
+      path: '/lovable/email/auth/preview'
+      fullPath: '/lovable/email/auth/preview'
+      preLoaderRoute: typeof LovableEmailAuthPreviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/auth/webhook': {
+      id: '/lovable/email/auth/webhook'
+      path: '/lovable/email/auth/webhook'
+      fullPath: '/lovable/email/auth/webhook'
+      preLoaderRoute: typeof LovableEmailAuthWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/queue/process': {
+      id: '/lovable/email/queue/process'
+      path: '/lovable/email/queue/process'
+      fullPath: '/lovable/email/queue/process'
+      preLoaderRoute: typeof LovableEmailQueueProcessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/transactional/preview': {
+      id: '/lovable/email/transactional/preview'
+      path: '/lovable/email/transactional/preview'
+      fullPath: '/lovable/email/transactional/preview'
+      preLoaderRoute: typeof LovableEmailTransactionalPreviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/transactional/send': {
+      id: '/lovable/email/transactional/send'
+      path: '/lovable/email/transactional/send'
+      fullPath: '/lovable/email/transactional/send'
+      preLoaderRoute: typeof LovableEmailTransactionalSendRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/campaigns/imported/$id/chapter/$chapter': {
@@ -3050,3 +3050,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
