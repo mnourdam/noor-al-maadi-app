@@ -41,25 +41,48 @@ export interface PublicProfile {
 }
 
 
-// Only safe, intentionally public columns. Backed by the `public_profiles`
-// view (security_invoker=on) — never read from the base `profiles` table
-// for non-owner queries.
+// Only safe, intentionally public columns. Backed by the
+// `list_public_profiles` SECURITY DEFINER RPC (authenticated-only, curated
+// column list) — never read from the base `profiles` table for non-owner
+// queries, and never through a view that could widen the column set.
 const PUBLIC_COLS =
   "id, username, display_name, bio, title, level, xp, campaigns_completed, artifacts_collected, discovery_pct, favorite_state_id, favorite_figure_id, avatar_id";
 
+/** Allow-list of columns the public surface may ever expose. */
+export const PUBLIC_PROFILE_COLUMNS = PUBLIC_COLS.split(",").map((c) => c.trim());
 
-const PUBLIC_VIEW = "public_profiles";
+async function listPublicProfiles(args: {
+  ids?: string[];
+  username?: string;
+  search?: string;
+  excludeId?: string;
+  limit?: number;
+}): Promise<PublicProfile[]> {
+  const { data, error } = await db.rpc("list_public_profiles", {
+    p_ids: args.ids ?? null,
+    p_username: args.username ?? null,
+    p_search: args.search ?? null,
+    p_exclude_id: args.excludeId ?? null,
+    p_limit: args.limit ?? 20,
+  });
+  if (error) {
+    console.error("[social] listPublicProfiles", error);
+    return [];
+  }
+  return (data as PublicProfile[]) ?? [];
+}
 
 // =========== Public profile reads ===========
 export async function fetchPublicProfileById(id: string): Promise<PublicProfile | null> {
-  const { data } = await db.from(PUBLIC_VIEW).select(PUBLIC_COLS).eq("id", id).maybeSingle();
-  return (data as PublicProfile) ?? null;
+  const rows = await listPublicProfiles({ ids: [id], limit: 1 });
+  return rows[0] ?? null;
 }
 
 export async function fetchPublicProfileByUsername(username: string): Promise<PublicProfile | null> {
-  const { data } = await db.from(PUBLIC_VIEW).select(PUBLIC_COLS).ilike("username", username).maybeSingle();
-  return (data as PublicProfile) ?? null;
+  const rows = await listPublicProfiles({ username, limit: 1 });
+  return rows[0] ?? null;
 }
+
 
 /**
  * Friendship-gated profile fetchers. Returns the full public profile only
@@ -94,18 +117,9 @@ export async function searchPlayers(q: string, excludeId?: string): Promise<Publ
     if (!one || (excludeId && one.id === excludeId)) return [];
     return [one];
   }
-  // Escape PostgREST .or() special chars (, and ) inside the pattern.
-  const safe = term.replace(/[,()]/g, " ");
-  const pattern = `%${safe}%`;
-  let query = db
-    .from(PUBLIC_VIEW)
-    .select(PUBLIC_COLS)
+  const pattern = `%${term}%`;
+  const rows = await listPublicProfiles({ search: pattern, excludeId, limit: 20 });
 
-    .or(`username.ilike.${pattern},display_name.ilike.${pattern}`)
-    .limit(20);
-  if (excludeId) query = query.neq("id", excludeId);
-  const { data } = await query;
-  const rows = (data as PublicProfile[]) ?? [];
   const seen = new Set<string>();
   const out: PublicProfile[] = [];
   for (const p of rows) {
@@ -188,7 +202,7 @@ export async function listFriendships(userId: string): Promise<FriendEntry[]> {
   const list = (rows as FriendshipRow[]) ?? [];
   if (!list.length) return [];
   const otherIds = list.map((r) => (r.user_a === userId ? r.user_b : r.user_a));
-  const { data: profiles } = await db.from(PUBLIC_VIEW).select(PUBLIC_COLS).in("id", otherIds);
+  const profiles = await listPublicProfiles({ ids: otherIds, limit: 100 });
   const byId: Record<string, PublicProfile> = {};
   for (const p of (profiles as PublicProfile[]) ?? []) byId[p.id] = p;
   return list
