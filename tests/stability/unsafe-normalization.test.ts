@@ -8,7 +8,7 @@
  * were normalized with a direct `.toLowerCase()`. Because the bad row lived in
  * localStorage it survived force-close, so every launch re-crashed on Home.
  */
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { optionalText, safeCompare, safeKey, safeText } from "@/lib/text/safe-text";
 
 describe("safe-text normalization", () => {
@@ -44,8 +44,14 @@ describe("safe-text normalization", () => {
 });
 
 describe("content registry sanitization", () => {
+  // `vi.unstubAllGlobals` is not implemented by the bun test runner's vitest
+  // shim, so globals are saved and restored by hand here.
+  const g = globalThis as Record<string, unknown>;
+  const saved = { window: g.window, localStorage: g.localStorage };
+
   afterEach(() => {
-    vi.unstubAllGlobals();
+    g.window = saved.window;
+    g.localStorage = saved.localStorage;
   });
 
   it("drops rows without a usable id (the row that survived force-close)", async () => {
@@ -65,8 +71,8 @@ describe("content registry sanitization", () => {
       clear: () => {},
       length: 0,
     };
-    vi.stubGlobal("window", { localStorage: store });
-    vi.stubGlobal("localStorage", store);
+    g.window = { localStorage: store };
+    g.localStorage = store;
 
     const { listRegistry } = await import("@/lib/contentRegistryStorage");
     const items = listRegistry();

@@ -57,12 +57,18 @@ mock.module("@/integrations/supabase/client", () => ({
 }));
 
 mock.module("@/lib/offline/outbox", () => ({
+  enqueue: async () => ({ id: "noop" }),
   enqueueWithId: async (uid: string, id: string, _kind: string, payload: any) => {
     if (!state.enqueueOk) throw new Error("quota");
     state.enqueued = state.enqueued.filter((e) => e.id !== id);
     state.enqueued.push({ uid, id, payload });
     return { id };
   },
+  remove: async () => {},
+  peekAll: async () => [],
+  countAll: async () => 0,
+  bumpAttempt: async () => {},
+  stats: async () => ({ pending: 0, failed: 0 }),
 }));
 
 mock.module("@/lib/offline/flush", () => ({
