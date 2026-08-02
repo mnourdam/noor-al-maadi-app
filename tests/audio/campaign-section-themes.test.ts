@@ -4,6 +4,7 @@ import {
   asCampaignSectionKey,
 } from "@/lib/campaigns/sections";
 import { CAMPAIGN_THEME_SOURCES, campaignThemeSources } from "@/lib/audio/campaignThemes";
+import { SECTION_THEME_FILE } from "@/lib/audio/campaignThemes";
 
 // ------------------------------------------------------------
 // Stage 1 acceptance: section key set + theme source map +
@@ -30,7 +31,7 @@ describe("campaign theme sources", () => {
   it("maps every section to a bundled local-first source", () => {
     for (const key of CAMPAIGN_SECTION_KEYS) {
       const sources = CAMPAIGN_THEME_SOURCES[key];
-      expect(sources[0]).toBe(`/audio/sections/${key}.mp3`);
+      expect(sources[0]).toBe(`/audio/sections/${SECTION_THEME_FILE[key]}.mp3`);
     }
   });
 

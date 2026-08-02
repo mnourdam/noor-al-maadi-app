@@ -23,8 +23,8 @@ describe("era → music binding", () => {
     expect(trackForSection(sectionForEra("andalus"))).toBe("/audio/sections/andalus.mp3");
     expect(trackForSection(sectionForEra("zengid"))).toBe("/audio/sections/crusades.mp3");
     expect(trackForSection(sectionForEra("ayyubid"))).toBe("/audio/sections/crusades.mp3");
-    expect(trackForSection(sectionForEra("mongols"))).toBe("/audio/sections/mongols_mamluks.mp3");
-    expect(trackForSection(sectionForEra("mamluk"))).toBe("/audio/sections/mongols_mamluks.mp3");
+    expect(trackForSection(sectionForEra("mongols"))).toBe("/audio/sections/crusades.mp3");
+    expect(trackForSection(sectionForEra("mamluk"))).toBe("/audio/sections/crusades.mp3");
     expect(trackForSection(sectionForEra("ottoman"))).toBe("/audio/sections/ottoman.mp3");
   });
 
@@ -36,7 +36,7 @@ describe("era → music binding", () => {
 
   it("resolves ambience from the campaign's own era, not its neighbours", () => {
     expect(resolveAmbienceSection({ era: "prophetic" })).toBe("prophetic");
-    expect(resolveAmbienceSection({ era: "mongols" })).toBe("mongols_mamluks");
+    expect(resolveAmbienceSection({ era: "mongols" })).toBe("crusades");
     // authored override wins, arabic titles never do
     expect(resolveAmbienceSection({ era: "mongols", section_key: "prophetic" })).toBe("prophetic");
     expect(resolveAmbienceSection({ era: "prophetic", section_key: "غير" })).toBe("prophetic");
@@ -96,7 +96,7 @@ describe("era transitions swap the track immediately", () => {
     expect(enterEra("rashidun")).toBe("/audio/sections/rashidun.mp3");
     expect(enterEra("umayyad")).toBe("/audio/sections/umayyad.mp3");
     expect(enterEra("abbasid")).toBe("/audio/sections/abbasid.mp3");
-    expect(enterEra("mongols")).toBe("/audio/sections/mongols_mamluks.mp3");
+    expect(enterEra("mongols")).toBe("/audio/sections/crusades.mp3");
     expect(enterEra("ottoman")).toBe("/audio/sections/ottoman.mp3");
     // back to the prophetic era — must NOT inherit the previous track
     expect(enterEra("prophetic")).toBe("/audio/sections/prophetic.mp3");

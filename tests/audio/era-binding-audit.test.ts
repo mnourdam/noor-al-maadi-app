@@ -17,6 +17,7 @@ import { join } from "node:path";
 import { resolveAmbienceSection } from "@/lib/audio/campaignAmbienceResolver";
 import { trackForSection, ERA_SECTION_MUSIC } from "@/lib/audio/eraMusicMap";
 import { CAMPAIGN_SECTION_KEYS } from "@/lib/campaigns/sections";
+import { SECTION_THEME_FILE } from "@/lib/audio/campaignThemes";
 
 const ROOT = process.cwd();
 
@@ -30,8 +31,9 @@ const OFFICIAL: Record<string, string> = {
   zengid: "crusades",
   ayyubid: "crusades",
   seljuk: "crusades",
-  mongols: "mongols_mamluks",
-  mamluk: "mongols_mamluks",
+  // Approved v1: Mongols + Mamluks share the crusader ambience.
+  mongols: "crusades",
+  mamluk: "crusades",
   ottoman: "ottoman",
 };
 
@@ -98,21 +100,29 @@ describe("campaign ambience — every published campaign", () => {
 describe("ambience files", () => {
   const files = CAMPAIGN_SECTION_KEYS.map((k) => ({
     key: k,
-    path: join(ROOT, "public/audio/sections", `${k}.mp3`),
+    path: join(ROOT, "public/audio/sections", `${SECTION_THEME_FILE[k]}.mp3`),
   }));
 
   it("every section has a bundled file", () => {
     expect(files.filter((f) => !existsSync(f.path)).map((f) => f.key)).toEqual([]);
   });
 
-  it("no two eras share the same recording", () => {
+  it("no two distinct recordings collide", () => {
     const byHash = new Map<string, string[]>();
+    const seen = new Set<string>();
     for (const f of files) {
+      if (seen.has(f.path)) continue;
+      seen.add(f.path);
       if (!existsSync(f.path)) continue;
       const h = createHash("sha256").update(readFileSync(f.path)).digest("hex");
-      byHash.set(h, [...(byHash.get(h) ?? []), f.key]);
+      byHash.set(h, [...(byHash.get(h) ?? []), f.path]);
     }
-    const shared = [...byHash.values()].filter((v) => v.length > 1).map((v) => v.join(" == "));
-    expect(shared).toEqual([]);
+    const collisions = [...byHash.values()].filter((v) => v.length > 1).map((v) => v.join(" == "));
+    expect(collisions).toEqual([]);
+  });
+
+  it("ships exactly the seven approved recordings", () => {
+    const distinct = new Set(files.map((f) => f.path));
+    expect(distinct.size).toBe(7);
   });
 });
