@@ -20,7 +20,7 @@ import {
   CAMPAIGN_SECTION_KEYS,
   type CampaignSectionKey,
 } from "@/lib/campaigns/sections";
-import { CAMPAIGN_THEME_SOURCES } from "@/lib/audio/campaignThemes";
+import { CAMPAIGN_THEME_SOURCES, SHARED_THEME_SECTIONS } from "@/lib/audio/campaignThemes";
 
 /**
  * Explicit, exhaustive map: every approved era key → its music section.
