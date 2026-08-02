@@ -474,6 +474,10 @@ export const audioManager = {
     bindFirstInteraction();
     bindLifecycle();
     initAndroidSilentMode();
+    // One-shot migration: evict retired / unversioned ambience responses so a
+    // removed recording can never be replayed from an installed build's cache.
+    void purgeLegacyAudioCaches();
+
     if (import.meta.env.DEV) {
       (window as typeof window & { __IRTH_AUDIO_DEBUG__?: () => unknown }).__IRTH_AUDIO_DEBUG__ = () => audioManager.getDebugSnapshot();
     }
