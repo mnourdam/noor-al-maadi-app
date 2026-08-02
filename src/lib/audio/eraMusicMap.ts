@@ -32,6 +32,7 @@ export const ERA_SECTION_MUSIC: Record<ApprovedEra, CampaignSectionKey | null> =
   umayyad: "umayyad",
   abbasid: "abbasid",
   andalus: "andalus",
+  seljuk: "crusades",
   zengid: "crusades",
   ayyubid: "crusades",
   mamluk: "mongols_mamluks",
@@ -39,7 +40,6 @@ export const ERA_SECTION_MUSIC: Record<ApprovedEra, CampaignSectionKey | null> =
   ottoman: "ottoman",
   // No dedicated track authored yet — generic ambience, never a neighbour's.
   fatimid: null,
-  seljuk: null,
   timurid: null,
   safavid: null,
 };
