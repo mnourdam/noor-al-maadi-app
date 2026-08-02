@@ -166,25 +166,27 @@ export function CampaignIntroPlayer({
       ? FADE_OUT_MS
       : FADE_IN_MS;
 
-  return (
-    <div className="fixed inset-0 z-[200] bg-black" dir="rtl">
-      {/* Interaction surface: pause / tap / swipe. Controls sit above it. */}
-      <div
-        ref={surfaceRef}
-        role="presentation"
-        className="absolute inset-0 z-10 touch-none"
-        style={{ pointerEvents: snap.transitioning ? "none" : "auto" }}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerCancel}
-        onPointerLeave={onPointerCancel}
-      />
+  const noSelect: React.CSSProperties = {
+    userSelect: "none",
+    WebkitUserSelect: "none",
+    // @ts-expect-error vendor property, not in React's CSS typings
+    WebkitTouchCallout: "none",
+    WebkitTapHighlightColor: "transparent",
+  };
 
+  return (
+    <div
+      className="fixed inset-0 z-[200] select-none bg-black"
+      dir="rtl"
+      style={noSelect}
+      onContextMenu={(e) => e.preventDefault()}
+      onDragStart={(e) => e.preventDefault()}
+    >
       <div
         data-testid="intro-fade-layer"
-        className="absolute inset-0"
+        className="pointer-events-none absolute inset-0 select-none"
         style={{
+          ...noSelect,
           opacity: snap.opacity,
           transition: `opacity ${fadeMs}ms ease-in-out`,
         }}
@@ -196,6 +198,24 @@ export function CampaignIntroPlayer({
           paused={snap.paused || snap.transitioning}
         />
       </div>
+
+      {/* Interaction surface: sits ABOVE every scene layer so a long
+          press anywhere — artwork, scrim, text box, reveal slide — is a
+          pause gesture and never a text selection. */}
+      <div
+        ref={surfaceRef}
+        data-testid="intro-interaction-surface"
+        role="presentation"
+        className="absolute inset-0 z-20 touch-none select-none"
+        style={{ ...noSelect, pointerEvents: snap.transitioning ? "none" : "auto" }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerCancel}
+        onPointerLeave={onPointerCancel}
+        onContextMenu={(e) => e.preventDefault()}
+      />
+
 
       <div className="pointer-events-none absolute inset-x-0 top-0 z-20 px-4 pt-[calc(env(safe-area-inset-top)+10px)]">
         <SegmentedProgress
