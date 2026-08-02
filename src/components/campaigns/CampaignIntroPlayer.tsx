@@ -169,7 +169,6 @@ export function CampaignIntroPlayer({
   const noSelect: React.CSSProperties = {
     userSelect: "none",
     WebkitUserSelect: "none",
-    // @ts-expect-error vendor property, not in React's CSS typings
     WebkitTouchCallout: "none",
     WebkitTapHighlightColor: "transparent",
   };
