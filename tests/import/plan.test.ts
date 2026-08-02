@@ -59,18 +59,18 @@ describe("stableHash", () => {
 });
 
 describe("isTransactionalContentType", () => {
-  it("accepts all 5 supported types", () => {
+  it("accepts all 6 supported types", () => {
     for (const t of [
       "encyclopedia", "daily_facts", "today_in_history_events",
-      "notifications", "investigations",
+      "notifications", "investigations", "campaigns",
     ]) {
       expect(isTransactionalContentType(t)).toBe(true);
     }
   });
 
-  it("rejects campaigns and unknown types", () => {
-    expect(isTransactionalContentType("campaigns")).toBe(false);
+  it("rejects unknown types", () => {
     expect(isTransactionalContentType("other")).toBe(false);
+    expect(isTransactionalContentType("")).toBe(false);
   });
 });
 

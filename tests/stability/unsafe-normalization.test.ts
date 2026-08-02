@@ -71,8 +71,8 @@ describe("content registry sanitization", () => {
       clear: () => {},
       length: 0,
     };
-    vi.stubGlobal("window", { localStorage: store });
-    vi.stubGlobal("localStorage", store);
+    g.window = { localStorage: store };
+    g.localStorage = store;
 
     const { listRegistry } = await import("@/lib/contentRegistryStorage");
     const items = listRegistry();

@@ -12,7 +12,15 @@ vi.mock("@/integrations/supabase/client", () => ({
   },
 }));
 
-vi.mock("@/lib/offline/outbox", () => ({ enqueueWithId: vi.fn(), remove: vi.fn() }));
+vi.mock("@/lib/offline/outbox", () => ({
+  enqueue: vi.fn(),
+  enqueueWithId: vi.fn(),
+  remove: vi.fn(),
+  peekAll: vi.fn(async () => []),
+  countAll: vi.fn(async () => 0),
+  bumpAttempt: vi.fn(),
+  stats: vi.fn(async () => ({ pending: 0, failed: 0 })),
+}));
 vi.mock("@/lib/offline/flush", () => ({ flushOutbox: vi.fn() }));
 vi.mock("@/lib/diag-trace", () => ({ recordTrace: vi.fn() }));
 
