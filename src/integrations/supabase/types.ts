@@ -1061,29 +1061,8 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "friendships_requester_fkey"
-            columns: ["requester"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "friendships_user_a_fkey"
             columns: ["user_a"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "friendships_user_a_fkey"
-            columns: ["user_a"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "friendships_user_b_fkey"
-            columns: ["user_b"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -1092,7 +1071,7 @@ export type Database = {
             foreignKeyName: "friendships_user_b_fkey"
             columns: ["user_b"]
             isOneToOne: false
-            referencedRelation: "public_profiles"
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1722,13 +1701,6 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "profiles_referred_by_fkey"
-            columns: ["referred_by"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
-            referencedColumns: ["id"]
-          },
         ]
       }
       reauth_challenges: {
@@ -1820,24 +1792,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "referral_rewards_referred_id_fkey"
-            columns: ["referred_id"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "referral_rewards_referrer_id_fkey"
             columns: ["referrer_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "referral_rewards_referrer_id_fkey"
-            columns: ["referrer_id"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1900,24 +1858,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "referrals_referred_id_fkey"
-            columns: ["referred_id"]
-            isOneToOne: true
-            referencedRelation: "public_profiles"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "referrals_referrer_id_fkey"
             columns: ["referrer_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "referrals_referrer_id_fkey"
-            columns: ["referrer_id"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -3293,54 +3237,6 @@ export type Database = {
         }
         Relationships: []
       }
-      public_profiles: {
-        Row: {
-          artifacts_collected: number | null
-          avatar_id: string | null
-          bio: string | null
-          campaigns_completed: number | null
-          discovery_pct: number | null
-          display_name: string | null
-          favorite_figure_id: string | null
-          favorite_state_id: string | null
-          id: string | null
-          level: number | null
-          title: string | null
-          username: string | null
-          xp: number | null
-        }
-        Insert: {
-          artifacts_collected?: number | null
-          avatar_id?: string | null
-          bio?: string | null
-          campaigns_completed?: number | null
-          discovery_pct?: number | null
-          display_name?: string | null
-          favorite_figure_id?: string | null
-          favorite_state_id?: string | null
-          id?: string | null
-          level?: number | null
-          title?: string | null
-          username?: string | null
-          xp?: number | null
-        }
-        Update: {
-          artifacts_collected?: number | null
-          avatar_id?: string | null
-          bio?: string | null
-          campaigns_completed?: number | null
-          discovery_pct?: number | null
-          display_name?: string | null
-          favorite_figure_id?: string | null
-          favorite_state_id?: string | null
-          id?: string | null
-          level?: number | null
-          title?: string | null
-          username?: string | null
-          xp?: number | null
-        }
-        Relationships: []
-      }
       reflections_unified_v1: {
         Row: {
           anchor_id: string | null
@@ -4303,6 +4199,30 @@ export type Database = {
           p_anchor_type: Database["public"]["Enums"]["social_anchor_type"]
         }
         Returns: Json
+      }
+      list_public_profiles: {
+        Args: {
+          p_exclude_id?: string
+          p_ids?: string[]
+          p_limit?: number
+          p_search?: string
+          p_username?: string
+        }
+        Returns: {
+          artifacts_collected: number
+          avatar_id: string
+          bio: string
+          campaigns_completed: number
+          discovery_pct: number
+          display_name: string
+          favorite_figure_id: string
+          favorite_state_id: string
+          id: string
+          level: number
+          title: string
+          username: string
+          xp: number
+        }[]
       }
       list_published_stories: {
         Args: never
