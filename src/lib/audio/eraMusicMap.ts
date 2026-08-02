@@ -35,8 +35,10 @@ export const ERA_SECTION_MUSIC: Record<ApprovedEra, CampaignSectionKey | null> =
   seljuk: "crusades",
   zengid: "crusades",
   ayyubid: "crusades",
-  mamluk: "mongols_mamluks",
-  mongols: "mongols_mamluks",
+  // Approved v1 decision: no dedicated Mongol recording in this release —
+  // the Mongols + Mamluks era uses the crusader ambience.
+  mamluk: "crusades",
+  mongols: "crusades",
   ottoman: "ottoman",
   // No dedicated track authored yet — generic ambience, never a neighbour's.
   fatimid: null,
