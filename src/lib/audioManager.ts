@@ -207,7 +207,7 @@ function ensureTrack(layer: AmbienceLayer) {
   const t = tracks[layer];
   if (t.el || t.failed || typeof window === "undefined") return;
   try {
-    const a = new Audio(t.url);
+    const a = new Audio(withAudioVersion(t.url));
     a.loop = true;
     a.preload = "auto";
     a.volume = 0;
