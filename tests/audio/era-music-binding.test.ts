@@ -29,7 +29,7 @@ describe("era → music binding", () => {
   });
 
   it("never borrows another era's track when none is authored", () => {
-    for (const era of ["fatimid", "seljuk", "timurid", "safavid", "made-up-era"]) {
+    for (const era of ["fatimid", "timurid", "safavid", "made-up-era"]) {
       expect(sectionForEra(era)).toBeNull();
     }
   });
@@ -47,14 +47,14 @@ describe("era → music binding", () => {
   it("integrity audit reports no unknown key / unused / duplicate track", () => {
     const issues = auditEraMusicIntegrity([
       "prophetic", "rashidun", "umayyad", "abbasid", "andalus",
-      "zengid", "ayyubid", "mamluk", "mongols", "ottoman",
+      "seljuk", "zengid", "ayyubid", "mamluk", "mongols", "ottoman",
     ]);
     expect(issues.filter((i) => i.code === "unknown_era_key")).toEqual([]);
     expect(issues.filter((i) => i.code === "unused_track")).toEqual([]);
     expect(issues.filter((i) => i.code === "duplicate_track")).toEqual([]);
     // only the four eras with no authored track
     expect(issues.filter((i) => i.code === "era_without_track").map((i) => i.detail).sort())
-      .toEqual(["fatimid", "safavid", "seljuk", "timurid"]);
+      .toEqual(["fatimid", "safavid", "timurid"]);
   });
 });
 
