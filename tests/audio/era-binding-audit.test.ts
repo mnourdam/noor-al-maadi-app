@@ -13,7 +13,7 @@
 import { describe, it, expect } from "bun:test";
 import { readFileSync, existsSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { join } from "node:path";
+import { join, basename } from "node:path";
 import { resolveAmbienceSection } from "@/lib/audio/campaignAmbienceResolver";
 import { trackForSection, ERA_SECTION_MUSIC } from "@/lib/audio/eraMusicMap";
 import { CAMPAIGN_SECTION_KEYS } from "@/lib/campaigns/sections";
