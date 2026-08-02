@@ -9,7 +9,7 @@
 // ============================================================
 
 /** Bump when an ambience recording is replaced or removed. */
-export const AUDIO_ASSET_VERSION = 2;
+export const AUDIO_ASSET_VERSION = 3;
 
 /** Legacy filenames that must never be served again, from any layer. */
 export const RETIRED_AUDIO_FILES: readonly string[] = ["mongols_mamluks"];
