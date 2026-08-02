@@ -1,64 +1,37 @@
 #!/usr/bin/env node
 /**
- * Two-account RLS isolation proof for `public.profiles`.
+ * End-to-end two-account isolation proof for `public.profiles`.
  *
- * Impersonates the `authenticated` role with user A's JWT claims and asserts:
- *   1. A can read A's own profile row (all columns).
- *   2. A can read ZERO rows of B's profile from the base table.
- *   3. A can read B through `list_public_profiles`, but ONLY the curated
- *      public columns — no email / hearts / referral_code / marketing_opt_in.
- *   4. `anon` can read nothing at all (base table or RPC).
+ * Creates two throwaway accounts, signs both in to get real user JWTs, then
+ * exercises the Data API exactly like the app does:
+ *
+ *   1. A can read A's own profile row.
+ *   2. A reads ZERO rows of B's profile from the base `profiles` table.
+ *   3. A's unfiltered scan of `profiles` returns only A's own row.
+ *   4. A can read B through `list_public_profiles`, and the payload contains
+ *      ONLY curated public columns — no email / hearts / referral_code /
+ *      marketing_opt_in.
+ *   5. An anonymous caller can read neither the table nor the RPC.
+ *   6. No permissive `USING (true)` SELECT policy exists on `profiles`.
+ *
+ * Both accounts are deleted afterwards, pass or fail.
  *
  * Usage: node scripts/test-profile-isolation.mjs
- * Requires managed PG* env vars.
+ * Requires SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (+ PGHOST for check 6).
  */
 import { execSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
 
-if (!process.env.PGHOST) {
-  console.error("Skipping: PGHOST not set (no managed DB access).");
+const URL_BASE = process.env.SUPABASE_URL;
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const ANON_KEY = process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+if (!URL_BASE || !SERVICE_KEY || !ANON_KEY) {
+  console.error("Skipping: SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY / publishable key not set.");
   process.exit(0);
 }
 
-const q = (sql) =>
-  execSync(`psql -tA -c ${JSON.stringify(sql.replace(/\s+/g, " ").trim())}`, {
-    encoding: "utf8",
-  }).trim();
-
-const tryQ = (sql) => {
-  try {
-    return { ok: true, out: q(sql) };
-  } catch (err) {
-    return { ok: false, out: String(err.stderr ?? err.message) };
-  }
-};
-
 const PRIVATE_COLUMNS = ["email", "referral_code", "marketing_opt_in", "hearts"];
-
-const [A, B] = q(`select id from public.profiles order by created_at limit 2`)
-  .split("\n")
-  .map((s) => s.trim())
-  .filter(Boolean);
-
-if (!A || !B) {
-  console.error("Need at least two profiles in the database to run this test.");
-  process.exit(1);
-}
-
-const as = (uid, sql) => `
-  begin;
-  set local role authenticated;
-  set local request.jwt.claims = '{"sub":"${uid}","role":"authenticated"}';
-  ${sql};
-  rollback;
-`;
-
-const asAnon = (sql) => `
-  begin;
-  set local role anon;
-  set local request.jwt.claims = '{"role":"anon"}';
-  ${sql};
-  rollback;
-`;
 
 let failed = 0;
 const check = (label, pass, detail = "") => {
@@ -66,51 +39,141 @@ const check = (label, pass, detail = "") => {
   if (!pass) failed++;
 };
 
-// 1. Owner can read own row.
-const own = tryQ(as(A, `select count(*) from public.profiles where id = '${A}'`));
-check("A reads own profile row", own.ok && own.out.includes("1"), own.out);
+const admin = (path, init = {}) =>
+  fetch(`${URL_BASE}${path}`, {
+    ...init,
+    headers: {
+      apikey: SERVICE_KEY,
+      Authorization: `Bearer ${SERVICE_KEY}`,
+      "Content-Type": "application/json",
+      ...(init.headers ?? {}),
+    },
+  });
 
-// 2. Owner cannot read another user's row from the base table.
-const other = tryQ(as(A, `select count(*) from public.profiles where id = '${B}'`));
-check("A reads 0 rows of B from base profiles", other.ok && other.out.includes("0"), other.out);
+/** Data API call as a specific end user (or anonymous when token is null). */
+const asUser = async (token, path, init = {}) => {
+  const res = await fetch(`${URL_BASE}${path}`, {
+    ...init,
+    headers: {
+      apikey: ANON_KEY,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      "Content-Type": "application/json",
+      ...(init.headers ?? {}),
+    },
+  });
+  let body;
+  try {
+    body = await res.json();
+  } catch {
+    body = null;
+  }
+  return { status: res.status, body };
+};
 
-// 2b. Broad scan returns only the caller's own row.
-const scan = tryQ(as(A, `select count(*) from public.profiles`));
-check("A's full scan of profiles returns exactly 1 row", scan.ok && scan.out.includes("1"), scan.out);
+async function createAccount(tag) {
+  const email = `rls-isolation-${tag}-${randomUUID()}@example.test`;
+  const password = `Pw-${randomUUID()}`;
+  const created = await admin("/auth/v1/admin/users", {
+    method: "POST",
+    body: JSON.stringify({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { username: `rlstest_${tag}_${Date.now()}` },
+    }),
+  });
+  const user = await created.json();
+  if (!user?.id) throw new Error(`could not create user: ${JSON.stringify(user)}`);
 
-// 3. Public RPC exposes B, but only curated columns.
-const pub = tryQ(
-  as(A, `select count(*) from public.list_public_profiles(array['${B}']::uuid[])`),
-);
-check("A reads B through list_public_profiles", pub.ok && pub.out.includes("1"), pub.out);
+  const signIn = await fetch(`${URL_BASE}/auth/v1/token?grant_type=password`, {
+    method: "POST",
+    headers: { apikey: ANON_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  const session = await signIn.json();
+  if (!session?.access_token) throw new Error(`could not sign in: ${JSON.stringify(session)}`);
 
-const cols = q(`
-  select string_agg(p.name, ',' order by p.name)
-  from pg_proc f
-  cross join lateral unnest(f.proallargtypes, f.proargnames) with ordinality as p(t, name, ord)
-  join unnest(f.proargmodes) with ordinality as m(mode, ord2) on m.ord2 = p.ord
-  where f.proname = 'list_public_profiles' and m.mode = 't'
-`);
-const leaked = PRIVATE_COLUMNS.filter((c) => cols.split(",").includes(c));
-check("list_public_profiles exposes no private columns", leaked.length === 0, `returns: ${cols}`);
+  return { id: user.id, token: session.access_token };
+}
 
-// 4. anon has no access at all.
-const anonBase = tryQ(asAnon(`select count(*) from public.profiles`));
-check("anon cannot read profiles", !anonBase.ok, anonBase.ok ? `got ${anonBase.out}` : "permission denied");
+const cleanup = async (ids) => {
+  for (const id of ids) {
+    try {
+      await admin(`/auth/v1/admin/users/${id}`, { method: "DELETE" });
+    } catch {
+      /* best effort */
+    }
+  }
+};
 
-const anonRpc = tryQ(asAnon(`select count(*) from public.list_public_profiles(null)`));
-check("anon cannot execute list_public_profiles", !anonRpc.ok, anonRpc.ok ? `got ${anonRpc.out}` : "permission denied");
+const created = [];
+try {
+  const A = await createAccount("a");
+  created.push(A.id);
+  const B = await createAccount("b");
+  created.push(B.id);
 
-// 5. The removed permissive policy must not come back.
-const policies = q(`
-  select coalesce(string_agg(policyname || ' :: ' || coalesce(qual, ''), ' | '), '')
-  from pg_policies where schemaname = 'public' and tablename = 'profiles' and cmd = 'SELECT'
-`);
-check(
-  "no permissive USING (true) SELECT policy on profiles",
-  !/:: true/.test(policies),
-  policies,
-);
+  // 1. Owner reads own row.
+  const own = await asUser(A.token, `/rest/v1/profiles?id=eq.${A.id}&select=id`);
+  check("A reads own profile row", Array.isArray(own.body) && own.body.length === 1, JSON.stringify(own.body));
+
+  // 2. Owner cannot read B's row from the base table.
+  const other = await asUser(A.token, `/rest/v1/profiles?id=eq.${B.id}&select=*`);
+  check(
+    "A reads 0 rows of B from base profiles",
+    Array.isArray(other.body) && other.body.length === 0,
+    JSON.stringify(other.body),
+  );
+
+  // 3. Unfiltered scan leaks nothing.
+  const scan = await asUser(A.token, `/rest/v1/profiles?select=id`);
+  const scanIds = Array.isArray(scan.body) ? scan.body.map((r) => r.id) : [];
+  check(
+    "A's full scan of profiles returns only A's own row",
+    scanIds.length === 1 && scanIds[0] === A.id,
+    `rows=${scanIds.length}`,
+  );
+
+  // 4. Public RPC returns B, curated columns only.
+  const pub = await asUser(A.token, `/rest/v1/rpc/list_public_profiles`, {
+    method: "POST",
+    body: JSON.stringify({ p_ids: [B.id] }),
+  });
+  const row = Array.isArray(pub.body) ? pub.body[0] : null;
+  check("A reads B through list_public_profiles", !!row && row.id === B.id, JSON.stringify(pub.body));
+  const leaked = row ? PRIVATE_COLUMNS.filter((c) => c in row) : [];
+  check(
+    "public payload exposes no private columns",
+    !!row && leaked.length === 0,
+    row ? `keys: ${Object.keys(row).sort().join(",")}` : "no row",
+  );
+
+  // 5. Anonymous access is fully denied.
+  const anonBase = await asUser(null, `/rest/v1/profiles?select=id`);
+  check(
+    "anon cannot read profiles",
+    anonBase.status >= 400 || (Array.isArray(anonBase.body) && anonBase.body.length === 0),
+    `status=${anonBase.status}`,
+  );
+  const anonRpc = await asUser(null, `/rest/v1/rpc/list_public_profiles`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+  check("anon cannot execute list_public_profiles", anonRpc.status >= 400, `status=${anonRpc.status}`);
+
+  // 6. The permissive policy must not come back.
+  if (process.env.PGHOST) {
+    const policies = execSync(
+      `psql -tA -c ${JSON.stringify(
+        "select coalesce(string_agg(policyname || ' :: ' || coalesce(qual,''), ' | '), '') from pg_policies where schemaname='public' and tablename='profiles' and cmd='SELECT'",
+      )}`,
+      { encoding: "utf8" },
+    ).trim();
+    check("no permissive USING (true) SELECT policy on profiles", !/:: true/.test(policies), policies);
+  }
+} finally {
+  await cleanup(created);
+}
 
 if (failed) {
   console.error(`\nProfile isolation FAILED (${failed} check${failed > 1 ? "s" : ""}).`);
