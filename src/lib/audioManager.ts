@@ -13,6 +13,7 @@ import { deviceAllowsAudio, initAndroidSilentMode } from "./androidSilentMode";
 
 import errorSfxAsset from "@/assets/audio-error.mp3.asset.json";
 import { campaignThemeSources, type CampaignThemeId } from "./audio/campaignThemes";
+import { withAudioVersion, purgeLegacyAudioCaches } from "./audio/assetVersion";
 
 export type AmbienceLayer = "global" | "campaign" | "investigation";
 
@@ -207,7 +208,7 @@ function ensureTrack(layer: AmbienceLayer) {
   const t = tracks[layer];
   if (t.el || t.failed || typeof window === "undefined") return;
   try {
-    const a = new Audio(t.url);
+    const a = new Audio(withAudioVersion(t.url));
     a.loop = true;
     a.preload = "auto";
     a.volume = 0;
@@ -473,6 +474,10 @@ export const audioManager = {
     bindFirstInteraction();
     bindLifecycle();
     initAndroidSilentMode();
+    // One-shot migration: evict retired / unversioned ambience responses so a
+    // removed recording can never be replayed from an installed build's cache.
+    void purgeLegacyAudioCaches();
+
     if (import.meta.env.DEV) {
       (window as typeof window & { __IRTH_AUDIO_DEBUG__?: () => unknown }).__IRTH_AUDIO_DEBUG__ = () => audioManager.getDebugSnapshot();
     }
