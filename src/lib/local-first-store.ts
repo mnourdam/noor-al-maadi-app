@@ -241,6 +241,27 @@ export function applyLocalSnapshot(snap: OfflineSnapshot | null) {
   for (const cb of Array.from(_listeners)) { try { cb(); } catch { /* ignore */ } }
 }
 
+/**
+ * Replace the campaign/divider collection with authoritative server rows.
+ *
+ * The bundled snapshot is a SEED, not the truth: once an editor reorders the
+ * timeline in the admin workshop, every `chronological_order` in the shipped
+ * snapshot becomes stale, which silently moves campaigns across era dividers.
+ * This merges the live `campaigns_public` rows into the in-memory store (and
+ * persists them) so player ordering always matches the admin ordering.
+ */
+export function mergeLocalCampaignRows(rows: Row[] | null | undefined): boolean {
+  if (!Array.isArray(rows) || rows.length === 0) return false;
+  indexCampaigns(rows);
+  if (_snapshot?.collections) {
+    _snapshot.collections.admin_campaigns = rows;
+    void saveSnapshot(_snapshot).catch(() => {});
+  }
+  _dataVersion += 1;
+  for (const cb of Array.from(_listeners)) { try { cb(); } catch { /* ignore */ } }
+  return true;
+}
+
 
 /**
  * Ensure the in-memory store is populated. Reads IndexedDB first, then
