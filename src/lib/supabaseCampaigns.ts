@@ -69,30 +69,46 @@ function toCampaigns(
   return sortCampaignsChronological(withBackfilledChronologyAll(all));
 }
 
+// -------------------- Timeline freshness --------------------
+// The bundled snapshot only SEEDS the timeline. Ordering (and therefore which
+// era section a campaign belongs to) is edited in the admin workshop, so a
+// shipped snapshot goes stale the moment the timeline is reordered. This
+// refresh replaces the local campaign rows with the authoritative
+// `campaigns_public` rows once per session while online.
+
+let _timelineRefresh: Promise<boolean> | null = null;
+
+/** Pull authoritative campaign + divider rows into the local store. */
+export async function refreshCampaignRows(force = false): Promise<boolean> {
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return false;
+  if (force) _timelineRefresh = null;
+  if (!_timelineRefresh) {
+    _timelineRefresh = (async () => {
+      try {
+        const { data, error } = await supabase
+          .from("campaigns_public" as any)
+          .select("id, slug, data, key_art_path, key_art_square_path, key_art_credit");
+        if (error || !Array.isArray(data) || data.length === 0) return false;
+        const { mergeLocalCampaignRows } = await import("./local-first-store");
+        return mergeLocalCampaignRows(data as any[]);
+      } catch {
+        return false;
+      }
+    })();
+    // A failed attempt must not poison the session.
+    _timelineRefresh = _timelineRefresh.then((ok) => {
+      if (!ok) _timelineRefresh = null;
+      return ok;
+    });
+  }
+  return _timelineRefresh;
+}
 
 /** All published campaigns, ordered chronologically. Local-first. */
 export async function fetchPublishedCampaigns(): Promise<Campaign[]> {
   await ensureLocalSnapshotLoaded();
+  await refreshCampaignRows();
   const local = localPublishedCampaigns() as { id: string; slug: string; data: any }[];
-
-  // Kick off a background refresh when online so subsequent calls see
-  // newly published campaigns without blocking the current read.
-  if (typeof navigator === "undefined" || navigator.onLine !== false) {
-    void supabase
-      .from("campaigns_public" as any)
-      .select("id, slug, data, key_art_path, key_art_square_path, key_art_credit")
-      .then(({ data, error }) => {
-        if (error || !data) return;
-        try {
-          // Update the in-memory store so the very next call reflects fresh data.
-          import("./local-first-store").then(({ applyLocalSnapshot }) => {
-            // No-op: the snapshot regenerator owns persistence. Background
-            // sync via bootstrapOfflineSync covers IndexedDB updates.
-            void applyLocalSnapshot;
-          });
-        } catch { /* ignore */ }
-      });
-  }
 
   if (local.length > 0) {
     // Snapshot rows carry no `key_art_*` columns — merge the artwork
@@ -273,6 +289,9 @@ export async function fetchPublishedFeed(): Promise<{
   campaigns: Campaign[];
 }> {
   await ensureLocalSnapshotLoaded();
+  // Ordering is authored in the admin workshop; refresh before grouping so a
+  // stale snapshot can never move a campaign into the wrong era section.
+  await refreshCampaignRows();
   let campaignRows = localPublishedCampaigns() as { id: string; slug: string; data: any }[];
   let dividerRows = localCampaignDividerRows() as { id: string; slug: string; data: any }[];
   if (campaignRows.length === 0) {
