@@ -104,16 +104,21 @@ export function auditEraMusicIntegrity(
   }
 
   // 3. Sections never used by any era = unused track file.
+  //    Sections that intentionally share another section's recording are
+  //    excluded: they are aliases, not unused or duplicate bindings.
+  const shared = new Set<CampaignSectionKey>(SHARED_THEME_SECTIONS);
   const used = new Set(Object.values(ERA_SECTION_MUSIC).filter(Boolean) as CampaignSectionKey[]);
   for (const section of CAMPAIGN_SECTION_KEYS) {
+    if (shared.has(section)) continue;
     if (!used.has(section)) {
       issues.push({ code: "unused_track", detail: `${section} → ${trackForSection(section)}` });
     }
   }
 
-  // 4. One file must not be bound to two sections.
+  // 4. One file must not be bound to two sections (aliases excluded).
   const byFile = new Map<string, CampaignSectionKey[]>();
   for (const section of CAMPAIGN_SECTION_KEYS) {
+    if (shared.has(section)) continue;
     const file = trackForSection(section);
     if (!file) continue;
     byFile.set(file, [...(byFile.get(file) ?? []), section]);
