@@ -202,7 +202,7 @@ export async function listFriendships(userId: string): Promise<FriendEntry[]> {
   const list = (rows as FriendshipRow[]) ?? [];
   if (!list.length) return [];
   const otherIds = list.map((r) => (r.user_a === userId ? r.user_b : r.user_a));
-  const { data: profiles } = await db.from(PUBLIC_VIEW).select(PUBLIC_COLS).in("id", otherIds);
+  const profiles = await listPublicProfiles({ ids: otherIds, limit: 100 });
   const byId: Record<string, PublicProfile> = {};
   for (const p of (profiles as PublicProfile[]) ?? []) byId[p.id] = p;
   return list
