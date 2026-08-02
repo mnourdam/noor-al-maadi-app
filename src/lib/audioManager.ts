@@ -13,6 +13,7 @@ import { deviceAllowsAudio, initAndroidSilentMode } from "./androidSilentMode";
 
 import errorSfxAsset from "@/assets/audio-error.mp3.asset.json";
 import { campaignThemeSources, type CampaignThemeId } from "./audio/campaignThemes";
+import { withAudioVersion, purgeLegacyAudioCaches } from "./audio/assetVersion";
 
 export type AmbienceLayer = "global" | "campaign" | "investigation";
 
