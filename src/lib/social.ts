@@ -117,18 +117,9 @@ export async function searchPlayers(q: string, excludeId?: string): Promise<Publ
     if (!one || (excludeId && one.id === excludeId)) return [];
     return [one];
   }
-  // Escape PostgREST .or() special chars (, and ) inside the pattern.
-  const safe = term.replace(/[,()]/g, " ");
-  const pattern = `%${safe}%`;
-  let query = db
-    .from(PUBLIC_VIEW)
-    .select(PUBLIC_COLS)
+  const pattern = `%${term}%`;
+  const rows = await listPublicProfiles({ search: pattern, excludeId, limit: 20 });
 
-    .or(`username.ilike.${pattern},display_name.ilike.${pattern}`)
-    .limit(20);
-  if (excludeId) query = query.neq("id", excludeId);
-  const { data } = await query;
-  const rows = (data as PublicProfile[]) ?? [];
   const seen = new Set<string>();
   const out: PublicProfile[] = [];
   for (const p of rows) {
