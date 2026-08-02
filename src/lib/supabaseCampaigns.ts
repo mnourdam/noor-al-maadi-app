@@ -289,6 +289,9 @@ export async function fetchPublishedFeed(): Promise<{
   campaigns: Campaign[];
 }> {
   await ensureLocalSnapshotLoaded();
+  // Ordering is authored in the admin workshop; refresh before grouping so a
+  // stale snapshot can never move a campaign into the wrong era section.
+  await refreshCampaignRows();
   let campaignRows = localPublishedCampaigns() as { id: string; slug: string; data: any }[];
   let dividerRows = localCampaignDividerRows() as { id: string; slug: string; data: any }[];
   if (campaignRows.length === 0) {
