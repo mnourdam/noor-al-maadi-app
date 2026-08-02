@@ -109,7 +109,10 @@ describe("ambience files", () => {
 
   it("no two distinct recordings collide", () => {
     const byHash = new Map<string, string[]>();
+    const seen = new Set<string>();
     for (const f of files) {
+      if (seen.has(f.path)) continue;
+      seen.add(f.path);
       if (!existsSync(f.path)) continue;
       const h = createHash("sha256").update(readFileSync(f.path)).digest("hex");
       byHash.set(h, [...(byHash.get(h) ?? []), f.path]);
