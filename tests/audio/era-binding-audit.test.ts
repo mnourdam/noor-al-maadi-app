@@ -107,6 +107,10 @@ describe("ambience files", () => {
     expect(files.filter((f) => !existsSync(f.path)).map((f) => f.key)).toEqual([]);
   });
 
+  // Approved decision: the Rashidun and Andalus eras intentionally share one
+  // approved recording. Any OTHER byte-identical pair is still a bug.
+  const APPROVED_SHARED_RECORDINGS: readonly string[][] = [["rashidun", "andalus"]];
+
   it("no two distinct recordings collide", () => {
     const byHash = new Map<string, string[]>();
     const seen = new Set<string>();
@@ -115,11 +119,19 @@ describe("ambience files", () => {
       seen.add(f.path);
       if (!existsSync(f.path)) continue;
       const h = createHash("sha256").update(readFileSync(f.path)).digest("hex");
-      byHash.set(h, [...(byHash.get(h) ?? []), f.path]);
+      byHash.set(h, [...(byHash.get(h) ?? []), basename(f.path, ".mp3")]);
     }
-    const collisions = [...byHash.values()].filter((v) => v.length > 1).map((v) => v.join(" == "));
+    const isApproved = (group: string[]) =>
+      APPROVED_SHARED_RECORDINGS.some(
+        (allowed) =>
+          group.length === allowed.length && group.every((n) => allowed.includes(n)),
+      );
+    const collisions = [...byHash.values()]
+      .filter((v) => v.length > 1 && !isApproved(v))
+      .map((v) => v.join(" == "));
     expect(collisions).toEqual([]);
   });
+
 
   it("ships exactly the seven approved recordings", () => {
     const distinct = new Set(files.map((f) => f.path));
