@@ -111,7 +111,9 @@ try {
   const byId = await rpc(A.client, { ids: [B.id], limit: 1 });
   const bRow = (byId.data ?? [])[0] ?? null;
   check("open B's profile by id", !!bRow && bRow.id === B.id, byId.error?.message ?? "");
-  const PRIVATE = ["email", "referral_code", "marketing_opt_in", "hearts", "dinars", "streak"];
+  // `streak` / `longest_streak` are public progression stats (comparison
+  // surface). Truly private economy + contact columns stay out.
+  const PRIVATE = ["email", "referral_code", "marketing_opt_in", "hearts", "dinars", "locale", "account_status"];
   const leaked = bRow ? PRIVATE.filter((c) => c in bRow) : [];
   check("public payload leaks no private columns", !!bRow && leaked.length === 0, leaked.join(",") || "clean");
 
