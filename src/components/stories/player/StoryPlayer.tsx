@@ -67,7 +67,9 @@ export function StoryPlayer({
   const [grantedXp, setGrantedXp] = useState<number | null>(null);
   const [grantedDinars, setGrantedDinars] = useState<number | null>(null);
   const completionFiredRef = useRef(false);
+  const resumeAfterExportRef = useRef(false);
   const navigate = useNavigate();
+
   const { profile, addPoints, addDinars } = useProfile();
   const isGuest = !profile.loggedIn;
 
