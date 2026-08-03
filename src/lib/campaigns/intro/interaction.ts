@@ -202,10 +202,21 @@ export class IntroPlaybackMachine {
     return true;
   }
 
+  /** External hold (e.g. while a scene card is being exported). */
+  pauseExternal(): void {
+    this.pause();
+  }
+
+  /** Release an external hold; a no-op unless currently paused. */
+  resumeExternal(): void {
+    this.resume();
+  }
+
   destroy(): void {
     this.destroyed = true;
     this.clearTimer();
   }
+
 
   // ---- internals -------------------------------------------------
 
