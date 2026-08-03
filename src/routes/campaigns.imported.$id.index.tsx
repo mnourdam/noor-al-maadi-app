@@ -332,8 +332,24 @@ function ImportedCampaignOverview() {
         )}
 
 
+        {/* Manual intro replay — read-only re-watch. It never marks the
+            intro as seen/unseen, grants nothing, and does not touch any
+            progression state. The automatic first-time intro stays the
+            sole responsibility of <CampaignIntroGate/>. */}
+        {introRef && (
+          <div className="px-5 pt-5">
+            <button
+              type="button"
+              onClick={() => setReplayIntro(true)}
+              className="motion-tap inline-flex items-center gap-1.5 rounded-full border border-gold/30 bg-black/30 px-3.5 py-1.5 text-[11px] text-gold/90"
+            >
+              <RotateCcw className="size-3.5" /> إعادة مشاهدة الافتتاحية
+            </button>
+          </div>
+        )}
 
         <div className="px-5">
+
           {/* REWARDS PREVIEW (final) — unlock IDs resolved to Arabic titles. */}
           {finalRewards && (finalRewards.xp || finalRewards.coins || finalRewards.unlocks?.length || finalRewards.badgeId || finalRewards.artifactId) && (
             <div className="mt-6 rounded-3xl border border-gold/25 bg-gradient-to-br from-amber-900/20 via-surface to-stone-900/20 p-5">
