@@ -17,8 +17,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { StoryMediaRow } from "@/lib/stories/media/dao";
-import { signStoryMediaUrl } from "@/lib/stories/media/url";
-import { resolveImageUrl } from "@/lib/image-cache";
+import { resolveCachedStoryMediaUrl } from "@/lib/stories/media/url";
+
 import {
   bundledCoverContentVersion,
   hasOfflineStoryCover,
@@ -101,10 +101,9 @@ export function useStoryCoverSrc(story: StoryCoverInput): string | null {
       return;
     }
     void (async () => {
-      const signed = await signStoryMediaUrl(row);
-      if (!signed) return;
-      const cached = await resolveImageUrl(signed);
-      if (alive) setRemote(cached ?? signed);
+      const cached = await resolveCachedStoryMediaUrl(row);
+      if (alive && cached) setRemote(cached);
+
     })();
     return () => {
       alive = false;
@@ -167,10 +166,9 @@ export async function syncStoryCovers(stories: StoryCoverInput[]): Promise<numbe
       try {
         const row = await fetchCoverRow(story.id, story.cover_media_id as string);
         if (!row) continue;
-        const signed = await signStoryMediaUrl(row);
-        if (!signed) continue;
-        const ok = await resolveImageUrl(signed);
+        const ok = await resolveCachedStoryMediaUrl(row);
         if (!ok) continue;
+
         ledger[story.id] = Number(story.content_version ?? 1);
         synced += 1;
       } catch {

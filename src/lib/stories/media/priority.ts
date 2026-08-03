@@ -68,27 +68,7 @@ export function collectPriorityMediaIds(
   return out;
 }
 
-/**
- * Build storage public URLs (with `?v=<processing_version>`) for a
- * subset of media IDs. Mirrors `collectStoryMediaCacheUrls` but
- * restricted to the priority set.
- */
-export function collectMediaUrlsForIds(
-  media: MediaLike[],
-  ids: Set<string>,
-): Set<string> {
-  const out = new Set<string>();
-  if (!Array.isArray(media) || ids.size === 0) return out;
-  const supabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL as string | undefined;
-  if (!supabaseUrl) return out;
-  for (const row of media) {
-    if (!row?.verified) continue;
-    if (!ids.has(row.id)) continue;
-    const bucket = row.storage_bucket;
-    const path = row.storage_path;
-    const pv = Number.isFinite(row.processing_version) ? row.processing_version : 1;
-    if (!bucket || !path) continue;
-    out.add(`${supabaseUrl}/storage/v1/object/public/${bucket}/${path}?v=${pv}`);
-  }
-  return out;
-}
+// NOTE: story-media lives in a PRIVATE bucket. Never build
+// `/storage/v1/object/public/...` URLs for it — warm the image cache with
+// `prefetchStoryMediaRows` (signed fetch, stable cache key) instead.
+

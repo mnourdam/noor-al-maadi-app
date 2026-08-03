@@ -78,15 +78,71 @@ export function invalidateStoryMediaUrl(row: MediaLike): void {
   cache.delete(keyOf(row));
 }
 
-/** React hook — returns the signed URL for a media row, or null while resolving. */
+/**
+ * STABLE image-cache key for a media row. The bucket is private, so the
+ * fetched URL is a signed URL whose token rotates hourly — caching under
+ * that URL would never hit. Everything (prefetch + read) therefore keys
+ * on this canonical, token-free identifier.
+ */
+export function storyMediaCacheKey(row: MediaLike | null | undefined): string | null {
+  if (!row?.storage_bucket || !row?.storage_path) return null;
+  const base =
+    ((import.meta as any).env?.VITE_SUPABASE_URL as string | undefined) ?? "irth://storage";
+  const pv = Number.isFinite(row.processing_version as number) ? row.processing_version : 1;
+  return `${base}/storage/v1/object/${row.storage_bucket}/${row.storage_path}?v=${pv}`;
+}
+
+/**
+ * Offline-first read: cached bytes when present, otherwise sign + cache.
+ * Returns `null` when offline and not cached so callers can render a
+ * placeholder instead of a broken image.
+ */
+export async function resolveCachedStoryMediaUrl(
+  row: MediaLike | null | undefined,
+): Promise<string | null> {
+  const key = storyMediaCacheKey(row);
+  if (!key) return null;
+  const { resolveKeyedImageUrl } = await import("@/lib/image-cache");
+  return resolveKeyedImageUrl(key, () => signStoryMediaUrl(row));
+}
+
+/** Background warm-up for a set of media rows (signs only what is missing). */
+export async function prefetchStoryMediaRows(
+  rows: readonly (MediaLike & { verified?: boolean })[] | null | undefined,
+): Promise<void> {
+  if (!Array.isArray(rows) || rows.length === 0) return;
+  const { prefetchKeyedImages } = await import("@/lib/image-cache");
+  const entries: { key: string; getUrl: () => Promise<string | null> }[] = [];
+  for (const row of rows) {
+    if (row?.verified === false) continue;
+    const key = storyMediaCacheKey(row);
+    if (!key) continue;
+    entries.push({ key, getUrl: () => signStoryMediaUrl(row) });
+  }
+  await prefetchKeyedImages(entries);
+}
+
+/** React hook — offline-first URL for a media row, or null while resolving. */
 export function useStoryMediaUrl(row: MediaLike | null | undefined): string | null {
   const k = row ? keyOf(row) : null;
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => {
     let alive = true;
+    let created: string | null = null;
     if (!row) { setUrl(null); return; }
-    void signStoryMediaUrl(row).then((v) => { if (alive) setUrl(v); });
-    return () => { alive = false; };
+    void resolveCachedStoryMediaUrl(row).then((v) => {
+      if (!alive) {
+        if (v?.startsWith("blob:")) { try { URL.revokeObjectURL(v); } catch { /* ignore */ } }
+        return;
+      }
+      if (v?.startsWith("blob:")) created = v;
+      setUrl(v);
+    });
+    return () => {
+      alive = false;
+      if (created) { try { URL.revokeObjectURL(created); } catch { /* ignore */ } }
+    };
   }, [k]);
   return url;
 }
+
