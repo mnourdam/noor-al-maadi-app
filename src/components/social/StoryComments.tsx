@@ -51,6 +51,7 @@ export function StoryComments({ anchorType = "story", anchorId, storyId, classNa
   const [loadingMore, setLoadingMore] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [myFlags, setMyFlags] = useState<Record<string, MyContributionFlag>>({});
+  const [authors, setAuthors] = useState<Record<string, CommentAuthor>>({});
 
   const load = useCallback(
     async (nextSort: CommentSort) => {
