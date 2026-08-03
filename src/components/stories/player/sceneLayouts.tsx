@@ -293,15 +293,13 @@ export function SceneStage({
   if (layout === "C") {
     return (
       <LayoutFrame>
-        <KenBurns src={primaryUrl} alt={title} seed={scene.id} blur={16} overlay="vignette" />
+        <KenBurns src={primaryUrl} alt={title} seed={scene.id} overlay="vignette" />
         <div
           className="pointer-events-none absolute inset-0 z-[5]"
-          style={{
-            background:
-              "radial-gradient(ellipse at center, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.85) 80%)",
-          }}
+          style={{ background: "rgba(0,0,0,0.8)" }}
           aria-hidden
         />
+
         <div className="absolute inset-0 z-10 grid place-items-center px-6 sm:px-10">
           <SceneReadingColumn align="center">
             <Sparkles className="mx-auto mb-5 size-6 text-gold/80" />
