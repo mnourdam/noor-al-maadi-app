@@ -51,8 +51,10 @@ async function toObjectUrl(response: Response): Promise<string | null> {
   } catch { return null; }
 }
 
-/** Try to fetch + store an image. Uses `no-cors` for cross-origin. */
-async function fetchAndCache(url: string, cache: Cache): Promise<Response | null> {
+/** Try to fetch + store an image. Uses `no-cors` for cross-origin.
+ *  `cacheKey` lets callers store transient URLs (e.g. signed storage URLs
+ *  whose token rotates every hour) under a STABLE key. */
+async function fetchAndCache(url: string, cache: Cache, cacheKey: string = url): Promise<Response | null> {
   const sameOrigin = (() => {
     try {
       if (typeof window === "undefined") return true;
@@ -64,10 +66,81 @@ async function fetchAndCache(url: string, cache: Cache): Promise<Response | null
     const res = await fetch(url, init);
     // `no-cors` yields an opaque response (status 0); still cacheable.
     if (!res || (res.status !== 0 && !res.ok)) return null;
-    try { await cache.put(url, res.clone()); } catch { /* quota / opaque limits */ }
+    try { await cache.put(cacheKey, res.clone()); } catch { /* quota / opaque limits */ }
     return res;
   } catch { return null; }
 }
+
+/**
+ * Cache-first resolve for images whose fetch URL is transient (signed
+ * storage URLs). The bytes are stored under the caller's stable
+ * `cacheKey`, so a rotated token still hits the same cache entry and
+ * offline playback keeps working.
+ */
+export async function resolveKeyedImageUrl(
+  cacheKey: string,
+  getFetchUrl: () => Promise<string | null>,
+): Promise<string | null> {
+  if (!cacheKey) return null;
+  const cache = await openCache();
+  if (cache) {
+    try {
+      const hit = await cache.match(cacheKey);
+      if (hit) {
+        const obj = await toObjectUrl(hit);
+        if (obj) return obj;
+      }
+    } catch { /* fall through */ }
+  }
+  const online = typeof navigator === "undefined" || navigator.onLine !== false;
+  if (!online) return null;
+  const url = await getFetchUrl();
+  if (!url) return null;
+  if (!cache) return url;
+  const fresh = await fetchAndCache(url, cache, cacheKey);
+  if (!fresh) return url;
+  const obj = await toObjectUrl(fresh);
+  return obj ?? url;
+}
+
+/**
+ * Background warm-up for keyed entries. Each entry resolves its fetch URL
+ * lazily, so signing only happens for objects that are not cached yet.
+ */
+export async function prefetchKeyedImages(
+  entries: Iterable<{ key: string; getUrl: () => Promise<string | null> }>,
+): Promise<void> {
+  const cache = await openCache();
+  if (!cache) return;
+  const online = typeof navigator === "undefined" || navigator.onLine !== false;
+  if (!online) return;
+
+  const list: { key: string; getUrl: () => Promise<string | null> }[] = [];
+  const seen = new Set<string>();
+  for (const e of entries) {
+    if (!e?.key || seen.has(e.key)) continue;
+    seen.add(e.key);
+    try {
+      const already = await cache.match(e.key);
+      if (!already) list.push(e);
+    } catch { list.push(e); }
+  }
+
+  let i = 0;
+  async function worker() {
+    while (i < list.length) {
+      const e = list[i++];
+      try {
+        const url = await e.getUrl();
+        if (url) await fetchAndCache(url, cache!, e.key);
+      } catch { /* ignore */ }
+    }
+  }
+  await Promise.all(
+    Array.from({ length: Math.min(PREFETCH_CONCURRENCY, list.length) }, () => worker()),
+  );
+}
+
 
 /**
  * Return a usable image URL. Cache-first; falls back to network when online.
