@@ -25,8 +25,9 @@ import type {
 } from "@/lib/social/comments";
 import type { SocialAnchorType } from "@/lib/social/reactions";
 import { GuidedCommentComposer } from "./GuidedCommentComposer";
-import { CommentItem } from "./CommentItem";
+import { CommentItem, type CommentAuthor } from "./CommentItem";
 import { myContributionFlags, type MyContributionFlag } from "@/lib/social/contributions";
+import { fetchPublicProfilesByIds } from "@/lib/social";
 
 interface Props {
   /** Preferred: explicit anchor. Defaults to "story" for backward-compat. */
