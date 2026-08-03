@@ -485,25 +485,26 @@ export async function generateAndStoreSnapshot(): Promise<OfflineSnapshot> {
 async function warmSnapshotImageCache(collections: Record<string, any[]>): Promise<void> {
   try {
     const { collectImageUrls, prefetchImages } = await import("./image-cache");
-    const { collectPriorityMediaIds, collectMediaUrlsForIds } = await import("./stories/media/priority");
-    const media = collections.story_media ?? [];
+    const { collectPriorityMediaIds } = await import("./stories/media/priority");
+    const { prefetchStoryMediaRows } = await import("./stories/media/url");
+    const media: any[] = collections.story_media ?? [];
     const priorityIds = collectPriorityMediaIds(
       collections.stories ?? [],
       collections.story_scenes ?? [],
     );
-    const priorityUrls = collectMediaUrlsForIds(media, priorityIds);
-    if (priorityUrls.size > 0) await prefetchImages(priorityUrls);
+    // The `story-media` bucket is PRIVATE: warm the cache through signed
+    // URLs stored under a stable, token-free cache key.
+    const priorityRows = media.filter((m) => m?.verified && priorityIds.has(m.id));
+    if (priorityRows.length > 0) await prefetchStoryMediaRows(priorityRows);
 
     const generalUrls = collectImageUrls(collections);
     if (generalUrls.size > 0) await prefetchImages(generalUrls);
 
-    const tailUrls = new Set<string>();
-    for (const u of collectStoryMediaCacheUrls(media)) {
-      if (!priorityUrls.has(u)) tailUrls.add(u);
-    }
-    if (tailUrls.size > 0) await prefetchImages(tailUrls);
+    const tailRows = media.filter((m) => m?.verified && !priorityIds.has(m.id));
+    if (tailRows.length > 0) await prefetchStoryMediaRows(tailRows);
   } catch { /* ignore */ }
 }
+
 
 /**
  * Incremental refresh: for each collection with `updated_at`, fetch only
