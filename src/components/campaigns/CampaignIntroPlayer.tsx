@@ -226,19 +226,35 @@ export function CampaignIntroPlayer({
         />
       </div>
 
-      <button
-        type="button"
-        onPointerDown={(e) => e.stopPropagation()}
-        onPointerUp={(e) => e.stopPropagation()}
-        onClick={() => finish("skip")}
-        className="absolute z-30 inline-flex items-center gap-1.5 rounded-full border border-gold/30 bg-black/55 px-3 py-1.5 text-[11px] font-bold text-gold backdrop-blur-sm"
+      <div
+        className="absolute z-30 flex items-center gap-2"
         style={{
           insetInlineStart: "1rem",
           top: "calc(env(safe-area-inset-top) + 34px)",
         }}
       >
-        <SkipForward className="size-3.5" /> تخطي والبدء
-      </button>
+        <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onPointerUp={(e) => e.stopPropagation()}
+          onClick={() => finish("skip")}
+          className="inline-flex items-center gap-1.5 rounded-full border border-gold/30 bg-black/55 px-3 py-1.5 text-[11px] font-bold text-gold backdrop-blur-sm"
+        >
+          <SkipForward className="size-3.5" /> تخطي والبدء
+        </button>
+        <SceneExportButton
+          scene={scene}
+          media={media}
+          onPause={() => {
+            resumeAfterExportRef.current = !snap.paused;
+            machineRef.current?.pauseExternal();
+          }}
+          onResume={() => {
+            if (resumeAfterExportRef.current) machineRef.current?.resumeExternal();
+          }}
+        />
+      </div>
+
     </div>
   );
 }
