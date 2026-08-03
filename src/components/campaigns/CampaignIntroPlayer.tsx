@@ -19,6 +19,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SkipForward } from "lucide-react";
 import { SceneStage } from "@/components/stories/player/sceneLayouts";
 import { SegmentedProgress } from "@/components/stories/player/SegmentedProgress";
+import { SceneExportButton } from "@/components/stories/player/SceneExportButton";
+
 import { sceneDwellMs } from "@/components/stories/player/timing";
 import { loadCampaignIntroBundle } from "@/lib/campaigns/intro/offline";
 import { introDebug } from "@/lib/campaigns/intro/debug";
