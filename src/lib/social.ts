@@ -145,6 +145,15 @@ export async function searchPlayers(q: string, excludeId?: string): Promise<Publ
     seen.add(p.id);
     out.push(p);
   }
+
+  // Same source-of-truth guard as the friends list: if the batch search read
+  // returns nothing, retry the exact handle through the per-profile RPC the
+  // public profile page uses, so a player reachable at /u/<name> is always
+  // findable here too.
+  if (out.length === 0) {
+    const exact = await fetchGatedProfileByUsername(term);
+    if (exact?.id && !(excludeId && exact.id === excludeId)) out.push(exact);
+  }
   return out;
 }
 
@@ -223,6 +232,18 @@ export async function listFriendships(userId: string): Promise<FriendEntry[]> {
   const profiles = await listPublicProfiles({ ids: otherIds, limit: 100 });
   const byId: Record<string, PublicProfile> = {};
   for (const p of (profiles as PublicProfile[]) ?? []) byId[p.id] = p;
+
+  // Source-of-truth guard: the `friendships` row is the truth. If the batch
+  // profile read misses a member (transient error, partial page), fall back to
+  // the same per-profile RPC the public profile page uses instead of silently
+  // dropping the friendship — otherwise a real friend can be visible on their
+  // profile and in the leaderboard but absent from the friends list/search.
+  const missing = otherIds.filter((id) => !byId[id]);
+  if (missing.length) {
+    const recovered = await Promise.all(missing.map((id) => fetchGatedProfileById(id)));
+    for (const p of recovered) if (p?.id) byId[p.id] = p;
+  }
+
   return list
     .map((r) => {
       const otherId = r.user_a === userId ? r.user_b : r.user_a;

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 /**
  * ReadingProgress — ultra-thin scroll progress indicator.
@@ -11,7 +12,10 @@ import { useEffect, useRef, useState } from "react";
 export function ReadingProgress({ className = "" }: { className?: string }) {
   const [progress, setProgress] = useState(0);
   const [visible, setVisible] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const frame = useRef<number | null>(null);
+
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     const compute = () => {
@@ -53,7 +57,12 @@ export function ReadingProgress({ className = "" }: { className?: string }) {
     };
   }, []);
 
-  return (
+  // Rendered through a portal on <body>: the page wrapper keeps a filled
+  // enter animation (transform), which would otherwise become the containing
+  // block for `position: fixed` and make the bar scroll away with the page.
+  if (!mounted || typeof document === "undefined") return null;
+
+  return createPortal(
     <div
       aria-hidden
       className={[
@@ -70,7 +79,8 @@ export function ReadingProgress({ className = "" }: { className?: string }) {
           willChange: "transform",
         }}
       />
-    </div>
+    </div>,
+    document.body,
   );
 }
 
