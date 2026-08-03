@@ -70,6 +70,8 @@ export function CampaignIntroPlayer({
   const resolvedRef = useRef(false);
   const machineRef = useRef<IntroPlaybackMachine | null>(null);
   const surfaceRef = useRef<HTMLDivElement | null>(null);
+  const resumeAfterExportRef = useRef(false);
+
   const reducedMotion = usePrefersReducedMotion();
 
   const finish = useCallback(
