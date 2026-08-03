@@ -231,10 +231,10 @@ export function StoryComments({ anchorType = "story", anchorId, storyId, classNa
         <div className="space-y-3">
           {sort === "editors_helpful_new" &&
             editorsNotes.map((row) => (
-              <CommentItem key={row.id} row={row} onChange={onChange} onDelete={onDelete} currentUserId={user?.id ?? null} contributionFlag={myFlags[row.id] ?? null} />
+              <CommentItem key={row.id} row={row} onChange={onChange} onDelete={onDelete} currentUserId={user?.id ?? null} contributionFlag={myFlags[row.id] ?? null} author={authors[row.author_id] ?? null} />
             ))}
           {items.map((row) => (
-            <CommentItem key={row.id} row={row} onChange={onChange} onDelete={onDelete} currentUserId={user?.id ?? null} contributionFlag={myFlags[row.id] ?? null} />
+            <CommentItem key={row.id} row={row} onChange={onChange} onDelete={onDelete} currentUserId={user?.id ?? null} contributionFlag={myFlags[row.id] ?? null} author={authors[row.author_id] ?? null} />
           ))}
           {cursor && (
             <div className="flex justify-center pt-1">
