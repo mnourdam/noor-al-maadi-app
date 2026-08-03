@@ -81,6 +81,13 @@ function ImportedCampaignOverview() {
 
   // Progress tick — re-read from localStorage when window regains focus.
   const [tick, setTick] = useState(0);
+  // Manual intro replay (read-only). Separate from the auto-intro gate.
+  const [replayIntro, setReplayIntro] = useState(false);
+  const introRef = useMemo(
+    () => (campaign ? resolveCampaignIntro(campaign as never) : null),
+    [campaign],
+  );
+
   const disableGlobalFocusBlur = isAndroidFocusABDisabled("disableGlobalFocusBlur");
   useEffect(() => {
     const onFocus = () => setTick(t => t + 1);
