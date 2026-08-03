@@ -54,7 +54,7 @@ function AdventurePage() {
                 لم تُنشر تحديات بعد. تابع قريبًا.
               </p>
             ) : (
-              <div className="space-y-4 md:grid md:grid-cols-[repeat(auto-fill,minmax(22rem,1fr))] md:items-start md:gap-4 md:space-y-0">
+              <div className="grid grid-cols-1 items-start gap-4 md:gap-5 xl:grid-cols-2">
                 {picks.map((g) => (
                   <DailyCard key={g.id} game={g} completed={completedIds.has(g.id)} />
                 ))}
