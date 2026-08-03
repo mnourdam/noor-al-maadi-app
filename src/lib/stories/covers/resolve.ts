@@ -17,8 +17,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { StoryMediaRow } from "@/lib/stories/media/dao";
-import { signStoryMediaUrl } from "@/lib/stories/media/url";
-import { resolveImageUrl } from "@/lib/image-cache";
+import { resolveCachedStoryMediaUrl } from "@/lib/stories/media/url";
+
 import {
   bundledCoverContentVersion,
   hasOfflineStoryCover,
