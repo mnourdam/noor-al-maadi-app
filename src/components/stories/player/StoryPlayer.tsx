@@ -23,6 +23,8 @@ import { recordStoryProgress, completeStory } from "@/lib/stories/progress";
 import type { StorySummary } from "@/lib/stories/summary";
 import { SegmentedProgress } from "./SegmentedProgress";
 import { SceneStage, resolveSceneTransition } from "./sceneLayouts";
+import { SceneExportButton } from "./SceneExportButton";
+
 
 import { RewardMoment } from "./RewardMoment";
 import { sceneDwellMs } from "./timing";
