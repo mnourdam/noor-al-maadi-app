@@ -152,7 +152,15 @@ function ImportedCampaignOverview() {
         <CampaignIntroPlayer intro={intro} onComplete={onComplete} onSkip={onSkip} />
       )}
     >
+    {replayIntro && introRef && (
+      <CampaignIntroPlayer
+        intro={introRef}
+        onComplete={() => setReplayIntro(false)}
+        onSkip={() => setReplayIntro(false)}
+      />
+    )}
     <AppShell>
+
 
       <div className="animate-reveal pb-10">
         {/* ================= CINEMATIC CHAPTER HEADER =================
