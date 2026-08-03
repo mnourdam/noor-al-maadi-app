@@ -32,12 +32,16 @@ export interface PublicProfile {
   favorite_state_id: string | null;
   favorite_figure_id: string | null;
   avatar_id: string | null;
-  // Owner-only / unavailable through the public view.
-  dinars?: number;
+  // Public progression stats (comparison surface).
   streak?: number;
+  longest_streak?: number;
+  museum_items_unlocked?: number;
+  investigations_completed?: number;
+  join_date?: string;
+  // Owner-only / never exposed by the public RPC.
+  dinars?: number;
   referral_code?: string | null;
   last_active?: string;
-  join_date?: string;
 }
 
 
@@ -46,7 +50,7 @@ export interface PublicProfile {
 // column list) — never read from the base `profiles` table for non-owner
 // queries, and never through a view that could widen the column set.
 const PUBLIC_COLS =
-  "id, username, display_name, bio, title, level, xp, campaigns_completed, artifacts_collected, discovery_pct, favorite_state_id, favorite_figure_id, avatar_id";
+  "id, username, display_name, bio, title, level, xp, campaigns_completed, artifacts_collected, discovery_pct, favorite_state_id, favorite_figure_id, avatar_id, streak, longest_streak, museum_items_unlocked, investigations_completed, join_date";
 
 /** Allow-list of columns the public surface may ever expose. */
 export const PUBLIC_PROFILE_COLUMNS = PUBLIC_COLS.split(",").map((c) => c.trim());
@@ -83,11 +87,25 @@ export async function fetchPublicProfileByUsername(username: string): Promise<Pu
   return rows[0] ?? null;
 }
 
+/**
+ * Batch hydration for surfaces that render many authors at once
+ * (comments, leaderboards, activity feeds). Curated columns only.
+ */
+export async function fetchPublicProfilesByIds(ids: string[]): Promise<PublicProfile[]> {
+  const unique = Array.from(new Set(ids.filter(Boolean)));
+  if (unique.length === 0) return [];
+  const out: PublicProfile[] = [];
+  for (let i = 0; i < unique.length; i += 100) {
+    out.push(...(await listPublicProfiles({ ids: unique.slice(i, i + 100), limit: 100 })));
+  }
+  return out;
+}
+
 
 /**
- * Friendship-gated profile fetchers. Returns the full public profile only
- * when the viewer is the same user or an accepted friend. For anyone else
- * the RPC returns NULL — enforced server-side in `get_gated_public_profile`.
+ * Public profile fetchers for another player. Any signed-in player may open
+ * another player's public card; the server returns the curated column set
+ * only (never email / hearts / dinars / referral code).
  */
 export async function fetchGatedProfileById(id: string): Promise<PublicProfile | null> {
   const { data } = await db.rpc("get_gated_public_profile", { p_user_id: id });

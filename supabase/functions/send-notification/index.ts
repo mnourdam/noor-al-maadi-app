@@ -334,7 +334,12 @@ Deno.serve(async (req) => {
         error: result.ok ? null : result.error,
         sent_at: result.ok ? new Date().toISOString() : null,
       };
-      await admin.from("notification_deliveries").insert(deliveryRow);
+      // One delivery row per (notification, user). Multiple device tokens must
+      // NOT create multiple rows — the Notification Center joins on this pair
+      // and duplicate rows surfaced the same notification several times.
+      await admin
+        .from("notification_deliveries")
+        .upsert(deliveryRow, { onConflict: "notification_id,user_id" });
 
       if (result.ok) {
         sent++;

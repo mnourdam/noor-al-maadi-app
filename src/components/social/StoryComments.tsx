@@ -25,8 +25,9 @@ import type {
 } from "@/lib/social/comments";
 import type { SocialAnchorType } from "@/lib/social/reactions";
 import { GuidedCommentComposer } from "./GuidedCommentComposer";
-import { CommentItem } from "./CommentItem";
+import { CommentItem, type CommentAuthor } from "./CommentItem";
 import { myContributionFlags, type MyContributionFlag } from "@/lib/social/contributions";
+import { fetchPublicProfilesByIds } from "@/lib/social";
 
 interface Props {
   /** Preferred: explicit anchor. Defaults to "story" for backward-compat. */
@@ -50,6 +51,7 @@ export function StoryComments({ anchorType = "story", anchorId, storyId, classNa
   const [loadingMore, setLoadingMore] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [myFlags, setMyFlags] = useState<Record<string, MyContributionFlag>>({});
+  const [authors, setAuthors] = useState<Record<string, CommentAuthor>>({});
 
   const load = useCallback(
     async (nextSort: CommentSort) => {
@@ -107,6 +109,40 @@ export function StoryComments({ anchorType = "story", anchorId, storyId, classNa
     })();
     return () => { cancelled = true; };
   }, [user, editorsNotes, items]);
+
+  // Hydrate author identity (emblem + level + display name) through the
+  // curated public-profile RPC. Signed-out readers keep the plain name the
+  // comments RPC already returns.
+  useEffect(() => {
+    if (!user) { setAuthors({}); return; }
+    const ids = Array.from(
+      new Set([...editorsNotes, ...items].map((r) => r.author_id).filter(Boolean)),
+    );
+    const missing = ids.filter((id) => !authors[id]);
+    if (missing.length === 0) return;
+    let cancelled = false;
+    void (async () => {
+      const rows = await fetchPublicProfilesByIds(missing);
+      if (cancelled || rows.length === 0) return;
+      setAuthors((prev) => {
+        const next = { ...prev };
+        for (const p of rows) {
+          next[p.id] = {
+            display_name: p.display_name,
+            username: p.username,
+            avatar_id: p.avatar_id,
+            level: p.level,
+          };
+        }
+        return next;
+      });
+    })();
+    return () => { cancelled = true; };
+    // `authors` is intentionally read-only here (guarded by `missing`).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, editorsNotes, items]);
+
+
 
   const onPosted = useCallback((row: SocialCommentRow) => {
     // New comments land at the top of the "newest" surface regardless of sort.
@@ -195,10 +231,10 @@ export function StoryComments({ anchorType = "story", anchorId, storyId, classNa
         <div className="space-y-3">
           {sort === "editors_helpful_new" &&
             editorsNotes.map((row) => (
-              <CommentItem key={row.id} row={row} onChange={onChange} onDelete={onDelete} currentUserId={user?.id ?? null} contributionFlag={myFlags[row.id] ?? null} />
+              <CommentItem key={row.id} row={row} onChange={onChange} onDelete={onDelete} currentUserId={user?.id ?? null} contributionFlag={myFlags[row.id] ?? null} author={authors[row.author_id] ?? null} />
             ))}
           {items.map((row) => (
-            <CommentItem key={row.id} row={row} onChange={onChange} onDelete={onDelete} currentUserId={user?.id ?? null} contributionFlag={myFlags[row.id] ?? null} />
+            <CommentItem key={row.id} row={row} onChange={onChange} onDelete={onDelete} currentUserId={user?.id ?? null} contributionFlag={myFlags[row.id] ?? null} author={authors[row.author_id] ?? null} />
           ))}
           {cursor && (
             <div className="flex justify-center pt-1">

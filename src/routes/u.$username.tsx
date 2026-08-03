@@ -32,10 +32,9 @@ function PublicProfilePage() {
   useEffect(() => {
     let alive = true;
     (async () => {
-      // Try the friendship-gated fetch first — returns the profile only for
-      // self or accepted friends. If it returns null, fall back to a minimal
-      // identity lookup so we can still show the "Add friend" call-to-action
-      // (name + avatar only, no progress details).
+      // Public player card: any signed-in player may open it. The RPC returns
+      // curated public columns only. Falls back to the search projection if
+      // the profile lookup is unavailable (offline / transient error).
       const gated = await fetchGatedProfileByUsername(username);
       if (gated) {
         if (!alive) return;
