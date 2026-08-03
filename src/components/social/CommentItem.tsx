@@ -110,10 +110,21 @@ export function CommentItem({ row, onChange, onDelete, currentUserId = null, con
         </div>
       )}
 
-      {/* Attribution only — plain text, never a link to a profile. */}
-      <p className="mb-1 text-[12px] font-medium text-foreground/80">
-        {row.author_name?.trim() || "قارئ في إرث"}
-      </p>
+      {/* Attribution: emblem + name + level. Plain text, never a profile link. */}
+      <div className="mb-1 flex items-center gap-2">
+        <EmblemArt avatarId={author?.avatar_id ?? null} size="xs" className="size-6 shrink-0" />
+        <p className="text-[12px] font-medium text-foreground/80">
+          {(author?.display_name?.trim() || author?.username?.trim() || row.author_name?.trim()) ||
+            "قارئ في إرث"}
+        </p>
+        {typeof author?.level === "number" && (
+          <span className="rounded-full bg-gold/10 px-1.5 py-0.5 text-[10px] tabular-nums text-gold">
+            المستوى {author.level}
+          </span>
+        )}
+      </div>
+
+
 
 
 
