@@ -110,6 +110,40 @@ export function StoryComments({ anchorType = "story", anchorId, storyId, classNa
     return () => { cancelled = true; };
   }, [user, editorsNotes, items]);
 
+  // Hydrate author identity (emblem + level + display name) through the
+  // curated public-profile RPC. Signed-out readers keep the plain name the
+  // comments RPC already returns.
+  useEffect(() => {
+    if (!user) { setAuthors({}); return; }
+    const ids = Array.from(
+      new Set([...editorsNotes, ...items].map((r) => r.author_id).filter(Boolean)),
+    );
+    const missing = ids.filter((id) => !authors[id]);
+    if (missing.length === 0) return;
+    let cancelled = false;
+    void (async () => {
+      const rows = await fetchPublicProfilesByIds(missing);
+      if (cancelled || rows.length === 0) return;
+      setAuthors((prev) => {
+        const next = { ...prev };
+        for (const p of rows) {
+          next[p.id] = {
+            display_name: p.display_name,
+            username: p.username,
+            avatar_id: p.avatar_id,
+            level: p.level,
+          };
+        }
+        return next;
+      });
+    })();
+    return () => { cancelled = true; };
+    // `authors` is intentionally read-only here (guarded by `missing`).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, editorsNotes, items]);
+
+
+
   const onPosted = useCallback((row: SocialCommentRow) => {
     // New comments land at the top of the "newest" surface regardless of sort.
     setItems((prev) => [{ ...row, is_mine: true }, ...prev]);
