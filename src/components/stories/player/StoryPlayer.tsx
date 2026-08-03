@@ -23,6 +23,8 @@ import { recordStoryProgress, completeStory } from "@/lib/stories/progress";
 import type { StorySummary } from "@/lib/stories/summary";
 import { SegmentedProgress } from "./SegmentedProgress";
 import { SceneStage, resolveSceneTransition } from "./sceneLayouts";
+import { SceneExportButton } from "./SceneExportButton";
+
 
 import { RewardMoment } from "./RewardMoment";
 import { sceneDwellMs } from "./timing";
@@ -65,7 +67,9 @@ export function StoryPlayer({
   const [grantedXp, setGrantedXp] = useState<number | null>(null);
   const [grantedDinars, setGrantedDinars] = useState<number | null>(null);
   const completionFiredRef = useRef(false);
+  const resumeAfterExportRef = useRef(false);
   const navigate = useNavigate();
+
   const { profile, addPoints, addDinars } = useProfile();
   const isGuest = !profile.loggedIn;
 
@@ -339,17 +343,34 @@ export function StoryPlayer({
               <Pause className="size-3.5 text-gold" aria-label="متوقفة" />
             )}
           </div>
-          <button
-            type="button"
-            className="pointer-events-auto grid size-9 place-items-center rounded-full bg-black/40 text-white/85 backdrop-blur"
-            onClick={(e) => {
-              e.stopPropagation();
-              onExit();
-            }}
-            aria-label="إغلاق"
-          >
-            <X className="size-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            {scene && (
+              <SceneExportButton
+                scene={scene}
+                media={media}
+                storyTitle={story.title_ar}
+                onPause={() => {
+                  resumeAfterExportRef.current = !paused;
+                  setPaused(true);
+                }}
+                onResume={() => {
+                  if (resumeAfterExportRef.current) setPaused(false);
+                }}
+              />
+            )}
+            <button
+              type="button"
+              className="pointer-events-auto grid size-9 place-items-center rounded-full bg-black/40 text-white/85 backdrop-blur"
+              onClick={(e) => {
+                e.stopPropagation();
+                onExit();
+              }}
+              aria-label="إغلاق"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+
         </div>
       </div>
 
