@@ -22,8 +22,7 @@
 // ============================================================
 
 import { supabase } from "@/integrations/supabase/client";
-import { collectStoryMediaCacheUrls } from "@/lib/offline-snapshot";
-import { prefetchImages } from "@/lib/image-cache";
+import { prefetchStoryMediaRows } from "@/lib/stories/media/url";
 import {
   deleteSyncedIntroBundle,
   listSyncedIntroBundles,
@@ -258,7 +257,7 @@ export async function syncCampaignIntroContent(
 
       // Media warm-up is best-effort and never gates readiness.
       if (mediaForPrefetch.length > 0) {
-        void prefetchImages(collectStoryMediaCacheUrls(mediaForPrefetch));
+        void prefetchStoryMediaRows(mediaForPrefetch as any);
       }
       lastRunAt = Date.now();
       return next;
