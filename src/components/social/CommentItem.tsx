@@ -52,7 +52,7 @@ function formatDateAr(iso: string) {
   }
 }
 
-export function CommentItem({ row, onChange, onDelete, currentUserId = null, contributionFlag = null }: Props) {
+export function CommentItem({ row, onChange, onDelete, currentUserId = null, contributionFlag = null, author = null }: Props) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(row.body_text);
   const [pending, setPending] = useState(false);
