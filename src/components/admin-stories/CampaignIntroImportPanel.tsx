@@ -271,6 +271,15 @@ export function CampaignIntroImportPanel() {
               </table>
             </div>
           )}
+
+          {/* Raw server report — last-resort diagnostic so no validation code
+              can ever be swallowed by the summary UI. */}
+          <details className="rounded-md border bg-muted/30 p-2 text-xs">
+            <summary className="cursor-pointer select-none">التقرير الخام من الخادم (JSON)</summary>
+            <pre dir="ltr" className="mt-2 max-h-72 overflow-auto whitespace-pre-wrap break-all font-mono text-[11px]">
+              {JSON.stringify(preview, null, 2)}
+            </pre>
+          </details>
         </div>
       )}
     </section>
