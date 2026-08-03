@@ -166,10 +166,9 @@ export async function syncStoryCovers(stories: StoryCoverInput[]): Promise<numbe
       try {
         const row = await fetchCoverRow(story.id, story.cover_media_id as string);
         if (!row) continue;
-        const signed = await signStoryMediaUrl(row);
-        if (!signed) continue;
-        const ok = await resolveImageUrl(signed);
+        const ok = await resolveCachedStoryMediaUrl(row);
         if (!ok) continue;
+
         ledger[story.id] = Number(story.content_version ?? 1);
         synced += 1;
       } catch {
