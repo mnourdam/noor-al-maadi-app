@@ -4218,7 +4218,12 @@ export type Database = {
           favorite_figure_id: string
           favorite_state_id: string
           id: string
+          investigations_completed: number
+          join_date: string
           level: number
+          longest_streak: number
+          museum_items_unlocked: number
+          streak: number
           title: string
           username: string
           xp: number
