@@ -11,7 +11,7 @@ import { createFileRoute, Link, useParams, useSearch, notFound } from "@tanstack
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight, Lock, Check, Crown, Trophy, Scroll, BookOpen, Sparkles,
-  Clock, Tag, Coins, Zap, Gift, Package, Play, ChevronLeft,
+  Clock, Tag, Coins, Zap, Gift, Package, Play, ChevronLeft, RotateCcw,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { FeedbackCTA } from "@/components/feedback/FeedbackCTA";
@@ -19,6 +19,8 @@ import { fetchCampaignByIdOrSlug, onCampaignPublished, fetchPublishedFeed } from
 import { useCampaignLockStatus } from "@/lib/campaigns/useCampaignProgression";
 import { CampaignIntroGate } from "@/components/campaigns/CampaignIntroGate";
 import { CampaignIntroPlayer } from "@/components/campaigns/CampaignIntroPlayer";
+import { resolveCampaignIntro } from "@/lib/campaigns/intro/resolve";
+
 
 import { CampaignArtwork, hasCampaignKeyArt, type CampaignArtworkInput } from "@/lib/campaignArtwork";
 import { KeyArtDissolve } from "@/components/KeyArtDissolve";
