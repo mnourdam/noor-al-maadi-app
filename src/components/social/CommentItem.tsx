@@ -20,7 +20,16 @@ import {
 import type { SocialCommentRow } from "@/lib/social/comments";
 import { ReportCommentButton } from "./ReportCommentButton";
 import { ContributionBadge } from "./ContributionBadge";
+import { EmblemArt } from "@/components/EmblemArt";
 import type { MyContributionFlag } from "@/lib/social/contributions";
+
+/** Curated public identity of the comment author (name, emblem, level). */
+export interface CommentAuthor {
+  display_name?: string | null;
+  username?: string;
+  avatar_id?: string | null;
+  level?: number;
+}
 
 interface Props {
   row: SocialCommentRow;
@@ -28,6 +37,7 @@ interface Props {
   onDelete: (id: string) => void;
   currentUserId?: string | null;
   contributionFlag?: MyContributionFlag | null;
+  author?: CommentAuthor | null;
 }
 
 function formatDateAr(iso: string) {
