@@ -101,10 +101,9 @@ export function useStoryCoverSrc(story: StoryCoverInput): string | null {
       return;
     }
     void (async () => {
-      const signed = await signStoryMediaUrl(row);
-      if (!signed) return;
-      const cached = await resolveImageUrl(signed);
-      if (alive) setRemote(cached ?? signed);
+      const cached = await resolveCachedStoryMediaUrl(row);
+      if (alive && cached) setRemote(cached);
+
     })();
     return () => {
       alive = false;
