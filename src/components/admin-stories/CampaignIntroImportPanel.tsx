@@ -25,6 +25,16 @@ import {
   INTRO_ISSUE_LABEL,
   type IntroValidationIssue,
 } from "@/lib/stories/envelope";
+/** Renders the server-side issue payload without swallowing its detail. */
+function serverIssueDetail(issue: Record<string, unknown>): string {
+  const rest = Object.fromEntries(Object.entries(issue).filter(([k]) => k !== "code"));
+  const keys = Object.keys(rest);
+  if (keys.length === 0) return "";
+  const short = rest.message ?? rest.detail ?? rest.value ?? rest.id ?? rest.ids ?? rest.field;
+  if (typeof short === "string" || typeof short === "number") return `— ${short}`;
+  return `— ${JSON.stringify(rest)}`;
+}
+
 
 export function CampaignIntroImportPanel() {
   const [envelope, setEnvelope] = useState<StoryExportEnvelopeV2 | null>(null);
