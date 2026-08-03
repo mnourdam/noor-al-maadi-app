@@ -213,9 +213,54 @@ export function CampaignIntroImportPanel() {
       )}
 
       {preview && (
-        <div className="flex items-center gap-2 rounded-md border p-2 text-sm">
-          {preview.ok ? <ShieldCheck className="h-4 w-4 text-emerald-500" /> : <AlertTriangle className="h-4 w-4 text-destructive" />}
-          <span>{preview.ok ? "المعاينة نظيفة — التطبيق مسموح." : "المعاينة غير صالحة — راجع التفاصيل."}</span>
+        <div className="space-y-2 rounded-md border p-2 text-sm">
+          <div className="flex items-center gap-2">
+            {preview.ok ? <ShieldCheck className="h-4 w-4 text-emerald-500" /> : <AlertTriangle className="h-4 w-4 text-destructive" />}
+            <span>{preview.ok ? "المعاينة نظيفة — التطبيق مسموح." : "المعاينة غير صالحة — التفاصيل أدناه."}</span>
+          </div>
+
+          {(preview.intro_link_issues ?? []).length > 0 && (
+            <ul className="space-y-1 rounded-md border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive">
+              {(preview.intro_link_issues ?? []).map((i, n) => (
+                <li key={n} className="font-mono leading-relaxed">
+                  ربط الحملة — {i.code}
+                  <span className="text-muted-foreground"> {serverIssueDetail(i)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {preview.items.some((it) => it.issues.length > 0) && (
+            <div className="overflow-x-auto rounded-md border">
+              <table className="w-full text-xs">
+                <thead className="bg-muted/40">
+                  <tr>
+                    <th className="p-2 text-right">القصة</th>
+                    <th className="p-2 text-right">النوع</th>
+                    <th className="p-2 text-right">الأخطاء</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {preview.items.filter((it) => it.issues.length > 0).map((it) => (
+                    <tr key={it.id ?? it.slug ?? Math.random()} className="border-t align-top">
+                      <td className="p-2 font-mono text-[11px]">{it.id ?? it.slug ?? "—"}</td>
+                      <td className="p-2">{it.kind}</td>
+                      <td className="p-2">
+                        <ul className="space-y-1">
+                          {it.issues.map((i, n) => (
+                            <li key={n} className="font-mono text-[11px] leading-relaxed">
+                              <span className="text-destructive">{i.code}</span>
+                              <span className="text-muted-foreground"> {serverIssueDetail(i)}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </section>
