@@ -13,8 +13,28 @@ import { Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { StorySceneRow } from "@/lib/stories/types";
 import type { StoryMediaRow } from "@/lib/stories/media/dao";
-import { renderSceneCard } from "@/lib/stories/export/sceneCard";
-import { shareImage } from "@/lib/share/shareService";
+import {
+  renderSceneCard,
+  SceneCardError,
+  type SceneCardStage,
+} from "@/lib/stories/export/sceneCard";
+import { shareImage, downloadImage } from "@/lib/share/shareService";
+
+/** Arabic, player-facing message per failing stage. */
+function stageMessage(stage: SceneCardStage | "share"): string {
+  switch (stage) {
+    case "resolve-image":
+    case "load-image":
+      return "تعذّر تحميل صورة المشهد — تأكد من الاتصال ثم حاول مجددًا";
+    case "encode":
+      return "تعذّر توليد صورة المشهد على هذا الجهاز";
+    case "share":
+      return "تعذّرت مشاركة الصورة — حاول مجددًا";
+    default:
+      return "تعذّر توليد صورة المشهد — حاول مجددًا";
+  }
+}
+
 
 export function SceneExportButton({
   scene,
