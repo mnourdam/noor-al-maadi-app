@@ -97,6 +97,81 @@ export function sceneCardText(scene: StorySceneRow): {
 
 // ─── low level helpers ─────────────────────────────────────────────────
 
+/** Export pipeline stages, reported to the caller for diagnostics. */
+export type SceneCardStage =
+  | "fonts"
+  | "resolve-image"
+  | "load-image"
+  | "draw"
+  | "encode";
+
+export class SceneCardError extends Error {
+  constructor(public stage: SceneCardStage, message: string) {
+    super(message);
+    this.name = "SceneCardError";
+  }
+}
+
+/** Never let a stage hang forever. Resolves to `fallback` on timeout. */
+async function softTimeout<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
+  let t: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      p,
+      new Promise<T>((resolve) => { t = setTimeout(() => resolve(fallback), ms); }),
+    ]);
+  } finally {
+    if (t) clearTimeout(t);
+  }
+}
+
+/**
+ * Decode an image without tainting the canvas.
+ * 1) fetch → Blob → object URL (same-origin blob, always untainted)
+ * 2) direct <img crossOrigin="anonymous"> as a fallback
+ * Both paths are time-boxed.
+ */
+async function decodeImage(url: string): Promise<HTMLImageElement | null> {
+  const viaBlob = await softTimeout(
+    (async (): Promise<string | null> => {
+      if (url.startsWith("blob:") || url.startsWith("data:")) return url;
+      try {
+        const res = await fetch(url, { mode: "cors", credentials: "omit" });
+        if (!res.ok) return null;
+        const b = await res.blob();
+        return URL.createObjectURL(b);
+      } catch {
+        return null;
+      }
+    })(),
+    8_000,
+    null,
+  );
+
+  const attempt = (src: string, anonymous: boolean) =>
+    softTimeout(
+      new Promise<HTMLImageElement | null>((resolve) => {
+        const img = new Image();
+        if (anonymous) img.crossOrigin = "anonymous";
+        img.decoding = "async";
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = src;
+      }),
+      8_000,
+      null,
+    );
+
+  if (viaBlob) {
+    const img = await attempt(viaBlob, false);
+    if (viaBlob !== url && viaBlob.startsWith("blob:")) {
+      setTimeout(() => { try { URL.revokeObjectURL(viaBlob); } catch { /* ignore */ } }, 10_000);
+    }
+    if (img) return img;
+  }
+  return await attempt(url, true);
+}
+
 async function loadSceneImage(
   scene: StorySceneRow,
   media: StoryMediaRow[],
@@ -105,22 +180,15 @@ async function loadSceneImage(
     ? (media.find((m) => m.id === scene.primary_media_id) ?? null)
     : null;
   if (!row) return null;
-  let url: string | null = null;
-  try {
-    url = await resolveCachedStoryMediaUrl(row);
-  } catch {
-    url = null;
-  }
+  const url = await softTimeout(
+    resolveCachedStoryMediaUrl(row).catch(() => null),
+    8_000,
+    null,
+  );
   if (!url) return null;
-  return await new Promise<HTMLImageElement | null>((resolve) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.decoding = "async";
-    img.onload = () => resolve(img);
-    img.onerror = () => resolve(null);
-    img.src = url as string;
-  });
+  return await decodeImage(url);
 }
+
 
 function drawCover(
   ctx: CanvasRenderingContext2D,
@@ -277,13 +345,32 @@ function verticalGradient(
 export interface SceneCardOptions {
   scene: StorySceneRow;
   media: StoryMediaRow[];
+  /** Diagnostics hook — called as each stage starts. */
+  onStage?: (stage: SceneCardStage) => void;
 }
 
 /** Render one story scene as a 1080×1920 PNG blob. */
-export async function renderSceneCard({ scene, media }: SceneCardOptions): Promise<Blob | null> {
+export async function renderSceneCard({
+  scene,
+  media,
+  onStage,
+}: SceneCardOptions): Promise<Blob | null> {
   if (typeof document === "undefined") return null;
+  const stage = (s: SceneCardStage) => {
+    try { onStage?.(s); } catch { /* diagnostics must never break export */ }
+  };
+
+  stage("fonts");
+  // Fonts must never block the export: 4s cap, then draw with whatever
+  // the platform has (Android WebView can leave `fonts.ready` pending).
   try {
-    await (document as Document & { fonts?: FontFaceSet }).fonts?.ready;
+    await softTimeout(
+      Promise.resolve((document as Document & { fonts?: FontFaceSet }).fonts?.ready).then(
+        () => true,
+      ),
+      4_000,
+      false,
+    );
   } catch {
     /* fonts API unavailable — system fallback is acceptable */
   }
@@ -292,12 +379,16 @@ export async function renderSceneCard({ scene, media }: SceneCardOptions): Promi
   canvas.width = CARD_W;
   canvas.height = CARD_H;
   const ctx = canvas.getContext("2d");
-  if (!ctx) return null;
+  if (!ctx) throw new SceneCardError("draw", "2d context unavailable");
   ctx.direction = "rtl";
 
   const layout = pickLayout(scene);
   const { title, sentences, caption, speaker } = sceneCardText(scene);
-  const img = await loadSceneImage(scene, media);
+  stage("resolve-image");
+  // A missing image is NOT fatal — the card still renders text + wordmark.
+  const img = await loadSceneImage(scene, media).catch(() => null);
+  stage("draw");
+
 
   // 1) Background
   ctx.fillStyle = "#000";
@@ -452,7 +543,33 @@ export async function renderSceneCard({ scene, media }: SceneCardOptions): Promi
   // 4) Wordmark
   drawWordmark(ctx);
 
-  return await new Promise<Blob | null>((resolve) => {
-    canvas.toBlob((b) => resolve(b), "image/png", 0.96);
-  });
+  // 5) Encode — `toBlob` can silently never fire in some WebViews, and a
+  //    tainted canvas throws SecurityError. Both are handled explicitly.
+  stage("encode");
+  const blob = await softTimeout(
+    new Promise<Blob | null>((resolve) => {
+      try {
+        canvas.toBlob((b) => resolve(b), "image/png", 0.96);
+      } catch (err) {
+        console.warn("[scene-card] toBlob threw", err);
+        resolve(null);
+      }
+    }),
+    8_000,
+    null,
+  );
+  if (blob && blob.size > 512) return blob;
+
+  // Fallback: data URL → Blob (works when toBlob is unimplemented).
+  try {
+    const dataUrl = canvas.toDataURL("image/png");
+    const res = await fetch(dataUrl);
+    const b = await res.blob();
+    if (b && b.size > 512) return b;
+  } catch (err) {
+    console.warn("[scene-card] toDataURL fallback failed", err);
+    throw new SceneCardError("encode", "canvas encode failed (possibly tainted)");
+  }
+  throw new SceneCardError("encode", "empty image");
 }
+

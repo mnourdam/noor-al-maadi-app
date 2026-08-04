@@ -13,8 +13,28 @@ import { Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { StorySceneRow } from "@/lib/stories/types";
 import type { StoryMediaRow } from "@/lib/stories/media/dao";
-import { renderSceneCard } from "@/lib/stories/export/sceneCard";
-import { shareImage } from "@/lib/share/shareService";
+import {
+  renderSceneCard,
+  SceneCardError,
+  type SceneCardStage,
+} from "@/lib/stories/export/sceneCard";
+import { shareImage, downloadImage } from "@/lib/share/shareService";
+
+/** Arabic, player-facing message per failing stage. */
+function stageMessage(stage: SceneCardStage | "share"): string {
+  switch (stage) {
+    case "resolve-image":
+    case "load-image":
+      return "تعذّر تحميل صورة المشهد — تأكد من الاتصال ثم حاول مجددًا";
+    case "encode":
+      return "تعذّر توليد صورة المشهد على هذا الجهاز";
+    case "share":
+      return "تعذّرت مشاركة الصورة — حاول مجددًا";
+    default:
+      return "تعذّر توليد صورة المشهد — حاول مجددًا";
+  }
+}
+
 
 export function SceneExportButton({
   scene,
@@ -41,27 +61,48 @@ export function SceneExportButton({
     busyRef.current = true;
     setBusy(true);
     onPause?.();
+    let stage: SceneCardStage | "share" = "fonts";
     try {
-      const blob = await renderSceneCard({ scene, media });
-      if (!blob) {
-        toast.error("تعذّر توليد صورة المشهد");
-        return;
-      }
-      await shareImage({
+      // Hard ceiling for the whole pipeline — the spinner can never hang.
+      const OVERALL_MS = 25_000;
+      const blob = await Promise.race([
+        renderSceneCard({ scene, media, onStage: (s) => { stage = s; } }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new SceneCardError(stage as SceneCardStage, "timeout")), OVERALL_MS),
+        ),
+      ]);
+      if (!blob) throw new SceneCardError("encode", "no blob");
+
+      stage = "share";
+      const filename = `irth-scene-${scene.scene_index + 1}.png`;
+      const res = await shareImage({
         jobId: `story-scene-card-${scene.id}`,
         blob,
-        filename: `irth-scene-${scene.scene_index + 1}.png`,
+        filename,
         title: storyTitle ?? "إرث",
         text: storyTitle ?? "إرث",
       });
-    } catch {
-      toast.error("تعذّر توليد صورة المشهد");
+      // Share unavailable / failed → direct download fallback.
+      if (res.status === "failed") {
+        const dl = await downloadImage({
+          jobId: `story-scene-card-dl-${scene.id}`,
+          blob,
+          filename,
+        });
+        if (dl.status === "failed") {
+          toast.error("تعذّر حفظ الصورة — حاول مجددًا");
+        }
+      }
+    } catch (err) {
+      console.warn("[scene-card] export failed at stage:", stage, err);
+      toast.error(stageMessage(stage));
     } finally {
       busyRef.current = false;
       setBusy(false);
       onResume?.();
     }
   }, [scene, media, storyTitle, onPause, onResume]);
+
 
   return (
     <button
