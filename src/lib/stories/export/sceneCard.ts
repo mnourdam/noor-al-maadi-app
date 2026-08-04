@@ -543,7 +543,33 @@ export async function renderSceneCard({
   // 4) Wordmark
   drawWordmark(ctx);
 
-  return await new Promise<Blob | null>((resolve) => {
-    canvas.toBlob((b) => resolve(b), "image/png", 0.96);
-  });
+  // 5) Encode — `toBlob` can silently never fire in some WebViews, and a
+  //    tainted canvas throws SecurityError. Both are handled explicitly.
+  stage("encode");
+  const blob = await softTimeout(
+    new Promise<Blob | null>((resolve) => {
+      try {
+        canvas.toBlob((b) => resolve(b), "image/png", 0.96);
+      } catch (err) {
+        console.warn("[scene-card] toBlob threw", err);
+        resolve(null);
+      }
+    }),
+    8_000,
+    null,
+  );
+  if (blob && blob.size > 512) return blob;
+
+  // Fallback: data URL → Blob (works when toBlob is unimplemented).
+  try {
+    const dataUrl = canvas.toDataURL("image/png");
+    const res = await fetch(dataUrl);
+    const b = await res.blob();
+    if (b && b.size > 512) return b;
+  } catch (err) {
+    console.warn("[scene-card] toDataURL fallback failed", err);
+    throw new SceneCardError("encode", "canvas encode failed (possibly tainted)");
+  }
+  throw new SceneCardError("encode", "empty image");
 }
+
