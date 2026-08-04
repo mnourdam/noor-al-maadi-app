@@ -97,6 +97,81 @@ export function sceneCardText(scene: StorySceneRow): {
 
 // ─── low level helpers ─────────────────────────────────────────────────
 
+/** Export pipeline stages, reported to the caller for diagnostics. */
+export type SceneCardStage =
+  | "fonts"
+  | "resolve-image"
+  | "load-image"
+  | "draw"
+  | "encode";
+
+export class SceneCardError extends Error {
+  constructor(public stage: SceneCardStage, message: string) {
+    super(message);
+    this.name = "SceneCardError";
+  }
+}
+
+/** Never let a stage hang forever. Resolves to `fallback` on timeout. */
+async function softTimeout<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
+  let t: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      p,
+      new Promise<T>((resolve) => { t = setTimeout(() => resolve(fallback), ms); }),
+    ]);
+  } finally {
+    if (t) clearTimeout(t);
+  }
+}
+
+/**
+ * Decode an image without tainting the canvas.
+ * 1) fetch → Blob → object URL (same-origin blob, always untainted)
+ * 2) direct <img crossOrigin="anonymous"> as a fallback
+ * Both paths are time-boxed.
+ */
+async function decodeImage(url: string): Promise<HTMLImageElement | null> {
+  const viaBlob = await softTimeout(
+    (async (): Promise<string | null> => {
+      if (url.startsWith("blob:") || url.startsWith("data:")) return url;
+      try {
+        const res = await fetch(url, { mode: "cors", credentials: "omit" });
+        if (!res.ok) return null;
+        const b = await res.blob();
+        return URL.createObjectURL(b);
+      } catch {
+        return null;
+      }
+    })(),
+    8_000,
+    null,
+  );
+
+  const attempt = (src: string, anonymous: boolean) =>
+    softTimeout(
+      new Promise<HTMLImageElement | null>((resolve) => {
+        const img = new Image();
+        if (anonymous) img.crossOrigin = "anonymous";
+        img.decoding = "async";
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = src;
+      }),
+      8_000,
+      null,
+    );
+
+  if (viaBlob) {
+    const img = await attempt(viaBlob, false);
+    if (viaBlob !== url && viaBlob.startsWith("blob:")) {
+      setTimeout(() => { try { URL.revokeObjectURL(viaBlob); } catch { /* ignore */ } }, 10_000);
+    }
+    if (img) return img;
+  }
+  return await attempt(url, true);
+}
+
 async function loadSceneImage(
   scene: StorySceneRow,
   media: StoryMediaRow[],
@@ -105,22 +180,15 @@ async function loadSceneImage(
     ? (media.find((m) => m.id === scene.primary_media_id) ?? null)
     : null;
   if (!row) return null;
-  let url: string | null = null;
-  try {
-    url = await resolveCachedStoryMediaUrl(row);
-  } catch {
-    url = null;
-  }
+  const url = await softTimeout(
+    resolveCachedStoryMediaUrl(row).catch(() => null),
+    8_000,
+    null,
+  );
   if (!url) return null;
-  return await new Promise<HTMLImageElement | null>((resolve) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.decoding = "async";
-    img.onload = () => resolve(img);
-    img.onerror = () => resolve(null);
-    img.src = url as string;
-  });
+  return await decodeImage(url);
 }
+
 
 function drawCover(
   ctx: CanvasRenderingContext2D,
