@@ -345,13 +345,32 @@ function verticalGradient(
 export interface SceneCardOptions {
   scene: StorySceneRow;
   media: StoryMediaRow[];
+  /** Diagnostics hook — called as each stage starts. */
+  onStage?: (stage: SceneCardStage) => void;
 }
 
 /** Render one story scene as a 1080×1920 PNG blob. */
-export async function renderSceneCard({ scene, media }: SceneCardOptions): Promise<Blob | null> {
+export async function renderSceneCard({
+  scene,
+  media,
+  onStage,
+}: SceneCardOptions): Promise<Blob | null> {
   if (typeof document === "undefined") return null;
+  const stage = (s: SceneCardStage) => {
+    try { onStage?.(s); } catch { /* diagnostics must never break export */ }
+  };
+
+  stage("fonts");
+  // Fonts must never block the export: 4s cap, then draw with whatever
+  // the platform has (Android WebView can leave `fonts.ready` pending).
   try {
-    await (document as Document & { fonts?: FontFaceSet }).fonts?.ready;
+    await softTimeout(
+      Promise.resolve((document as Document & { fonts?: FontFaceSet }).fonts?.ready).then(
+        () => true,
+      ),
+      4_000,
+      false,
+    );
   } catch {
     /* fonts API unavailable — system fallback is acceptable */
   }
@@ -360,12 +379,16 @@ export async function renderSceneCard({ scene, media }: SceneCardOptions): Promi
   canvas.width = CARD_W;
   canvas.height = CARD_H;
   const ctx = canvas.getContext("2d");
-  if (!ctx) return null;
+  if (!ctx) throw new SceneCardError("draw", "2d context unavailable");
   ctx.direction = "rtl";
 
   const layout = pickLayout(scene);
   const { title, sentences, caption, speaker } = sceneCardText(scene);
-  const img = await loadSceneImage(scene, media);
+  stage("resolve-image");
+  // A missing image is NOT fatal — the card still renders text + wordmark.
+  const img = await loadSceneImage(scene, media).catch(() => null);
+  stage("draw");
+
 
   // 1) Background
   ctx.fillStyle = "#000";
