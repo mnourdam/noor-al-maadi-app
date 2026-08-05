@@ -1204,6 +1204,48 @@ export type Database = {
         }
         Relationships: []
       }
+      investigation_qa_status: {
+        Row: {
+          created_at: string
+          investigation_id: string
+          note: string | null
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          investigation_id: string
+          note?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          investigation_id?: string
+          note?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "investigation_qa_status_investigation_id_fkey"
+            columns: ["investigation_id"]
+            isOneToOne: true
+            referencedRelation: "investigations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "investigation_qa_status_investigation_id_fkey"
+            columns: ["investigation_id"]
+            isOneToOne: true
+            referencedRelation: "investigations_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       investigations: {
         Row: {
           content_version: number
@@ -3508,6 +3550,23 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_list_investigation_qa_status: {
+        Args: never
+        Returns: {
+          created_at: string
+          investigation_id: string
+          note: string | null
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "investigation_qa_status"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       admin_list_investigation_versions: {
         Args: { p_id: string }
         Returns: {
@@ -3760,6 +3819,23 @@ export type Database = {
       admin_set_investigation_enabled: {
         Args: { p_enabled: boolean; p_id: string }
         Returns: Json
+      }
+      admin_set_investigation_qa_status: {
+        Args: { p_id: string; p_note?: string; p_status: string }
+        Returns: {
+          created_at: string
+          investigation_id: string
+          note: string | null
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "investigation_qa_status"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       admin_set_story_status: {
         Args: { p_status: string; p_story_id: string }

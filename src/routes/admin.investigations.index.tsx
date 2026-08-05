@@ -41,6 +41,10 @@ import { onInvestigationPublished } from "@/lib/investigations/adminApi";
 import { InvestigationExportDialog } from "@/components/admin/InvestigationExportDialog";
 import { InvestigationImportDialog } from "@/components/admin/InvestigationImportDialog";
 import { GOLDEN_TEMPLATE_LABEL, isGoldenTemplate } from "@/lib/investigations/golden-template";
+import {
+  QA_CLASS, QA_DEFAULT, QA_DOT, QA_LABEL, QA_STATUSES, QA_WORK_ORDER,
+  loadQaStatuses, setQaStatus, type QaRow, type QaStatus,
+} from "@/lib/investigations/qa-status";
 
 
 
@@ -82,11 +86,13 @@ interface RowView {
   reward: ReturnType<typeof summarizeReward>;
   worldSlug: string | null;
   eraSlug: string | null;
+  /** Admin-only review status (never exported / never player-visible). */
+  qa: QaStatus;
   /** Row-level enrichment / render failure — never crashes the page. */
   renderError: string | null;
 }
 
-type SortKey = "updated_at" | "created_at" | "title" | "difficulty";
+type SortKey = "updated_at" | "created_at" | "title" | "difficulty" | "qa";
 type SortDir = "asc" | "desc";
 type Toast = { kind: "ok" | "err"; msg: string };
 
@@ -140,6 +146,9 @@ function AdminInvestigationsPage() {
   const [worldFilter, setWorldFilter] = useState<string>(""); // "", "__none__", or a world slug
   const [statusFilter, setStatusFilter] = useState<"" | "enabled" | "disabled">("");
   const [templateFilter, setTemplateFilter] = useState<"" | "only" | "hide">("");
+  // Admin-only review workflow (never exported / never player-visible).
+  const [qaMap, setQaMap] = useState<Map<string, QaRow>>(new Map());
+  const [qaFilter, setQaFilter] = useState<"" | QaStatus>("");
 
 
   // Sort.
@@ -183,6 +192,7 @@ function AdminInvestigationsPage() {
         .rpc("admin_list_investigations" as any);
       if (error) throw error;
       setRows(Array.isArray(data) ? (data as ListRow[]) : []);
+      setQaMap(await loadQaStatuses());
     } catch (e: any) {
       const info = classifyRpcError(e);
       setDiag(info);
@@ -240,6 +250,7 @@ function AdminInvestigationsPage() {
           reward,
           worldSlug,
           eraSlug,
+          qa: (r?.id ? qaMap.get(r.id)?.status : undefined) ?? QA_DEFAULT,
           renderError: null,
         };
       } catch (rowE: any) {
@@ -251,11 +262,12 @@ function AdminInvestigationsPage() {
           reward: { unlocks: 0, legacyCoins: false, conflict: false },
           worldSlug: null,
           eraSlug: null,
+          qa: (r?.id ? qaMap.get(r.id)?.status : undefined) ?? QA_DEFAULT,
           renderError: `ROW_RENDER_FAILED: ${rowE?.message ?? String(rowE)}`,
         };
       }
     });
-  }, [rows, worldBySlug]);
+  }, [rows, worldBySlug, qaMap]);
 
   // --- Filters + sort.
   const visible = useMemo<RowView[]>(() => {
@@ -277,6 +289,7 @@ function AdminInvestigationsPage() {
       const golden = isGoldenTemplate(r);
       if (templateFilter === "only" && !golden) return false;
       if (templateFilter === "hide" && golden) return false;
+      if (qaFilter && v.qa !== qaFilter) return false;
       return true;
     });
 
@@ -288,12 +301,44 @@ function AdminInvestigationsPage() {
         case "difficulty":
           return (DIFFICULTIES.indexOf(ar.difficulty as any) - DIFFICULTIES.indexOf(br.difficulty as any)) * dir;
         case "created_at": return ((Date.parse(ar.created_at ?? "") || 0) - (Date.parse(br.created_at ?? "") || 0)) * dir;
+        case "qa": return (QA_WORK_ORDER[a.qa] - QA_WORK_ORDER[b.qa]) * dir;
         case "updated_at":
         default: return ((Date.parse(ar.updated_at ?? "") || 0) - (Date.parse(br.updated_at ?? "") || 0)) * dir;
       }
     });
     return out;
-  }, [enriched, search, difficulty, worldFilter, statusFilter, templateFilter, sortKey, sortDir]);
+  }, [enriched, search, difficulty, worldFilter, statusFilter, templateFilter, qaFilter, sortKey, sortDir]);
+
+  // --- Review workflow counters (admin-only workshop metrics).
+  const qaStats = useMemo(() => {
+    const counts: Record<QaStatus, number> = {
+      needs_review: 0, in_review: 0, golden: 0, needs_rebuild: 0,
+    };
+    for (const v of enriched) counts[v.qa]++;
+    const total = enriched.length;
+    const pct = total > 0 ? Math.round((counts.golden / total) * 100) : 0;
+    return { counts, total, pct };
+  }, [enriched]);
+
+  const changeQa = async (r: ListRow, next: QaStatus) => {
+    const prev = qaMap;
+    // Optimistic update — reverted on failure.
+    setQaMap((m) => {
+      const copy = new Map(m);
+      copy.set(r.id, {
+        investigation_id: r.id, status: next, note: m.get(r.id)?.note ?? null,
+        updated_at: new Date().toISOString(),
+      });
+      return copy;
+    });
+    try {
+      await setQaStatus(r.id, next);
+      notify("ok", `تم تحديث حالة المراجعة: ${QA_LABEL[next]}`);
+    } catch (e: any) {
+      setQaMap(prev);
+      notify("err", e?.message ?? "تعذّر تحديث حالة المراجعة.");
+    }
+  };
 
   // --- Stats (Phase B: only DB-provable numbers).
   const stats = useMemo(() => {
@@ -343,9 +388,9 @@ function AdminInvestigationsPage() {
   };
 
   const clearFilters = () => {
-    setSearch(""); setDifficulty(""); setWorldFilter(""); setStatusFilter(""); setTemplateFilter("");
+    setSearch(""); setDifficulty(""); setWorldFilter(""); setStatusFilter(""); setTemplateFilter(""); setQaFilter("");
   };
-  const anyFilterActive = !!(search || difficulty || worldFilter || statusFilter || templateFilter);
+  const anyFilterActive = !!(search || difficulty || worldFilter || statusFilter || templateFilter || qaFilter);
 
   // --- Export selection helpers.
   const visibleIds = useMemo(() => visible.map((v) => v.raw?.id).filter(Boolean) as string[], [visible]);
@@ -404,6 +449,13 @@ function AdminInvestigationsPage() {
         </header>
 
 
+        <QaDashboard
+          stats={qaStats}
+          active={qaFilter}
+          onPick={(s) => setQaFilter(s)}
+          onSortByWork={() => { setSortKey("qa"); setSortDir("asc"); }}
+        />
+
         <StatsPanel stats={stats} />
 
         {/* Filters */}
@@ -411,7 +463,14 @@ function AdminInvestigationsPage() {
           <div className="mb-2 flex items-center gap-1.5 text-xs text-slate-400">
             <Filter className="h-3.5 w-3.5" /> مرشحات
           </div>
-          <div className="grid gap-2 md:grid-cols-5">
+          <div className="grid gap-2 md:grid-cols-6">
+            <select value={qaFilter} onChange={(e) => setQaFilter(e.target.value as any)}
+              className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm">
+              <option value="">كل حالات المراجعة</option>
+              {QA_STATUSES.map((s) => (
+                <option key={s} value={s}>{QA_DOT[s]} {QA_LABEL[s]}</option>
+              ))}
+            </select>
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -454,6 +513,7 @@ function AdminInvestigationsPage() {
                 : worldFilter && <Chip onRemove={() => setWorldFilter("")}>عالم: {worldFilter}</Chip>}
               {statusFilter && <Chip onRemove={() => setStatusFilter("")}>{statusFilter === "enabled" ? "مفعّل" : "معطّل"}</Chip>}
               {templateFilter && <Chip onRemove={() => setTemplateFilter("")}>{templateFilter === "only" ? "قوالب فقط" : "بدون قوالب"}</Chip>}
+              {qaFilter && <Chip onRemove={() => setQaFilter("")}>{QA_DOT[qaFilter]} {QA_LABEL[qaFilter]}</Chip>}
 
               <button onClick={clearFilters}
                 className="rounded-full border border-slate-700 px-2 py-0.5 text-slate-400 hover:border-amber-400/40 hover:text-amber-300">
@@ -558,6 +618,7 @@ function AdminInvestigationsPage() {
                     <th className="px-3 py-2">محتوى</th>
                     <th className="px-3 py-2">مكافأة</th>
                     <th className="px-3 py-2">الحالة</th>
+                    <SortHeader label="المراجعة" k="qa" sortKey={sortKey} sortDir={sortDir} onSort={(k) => { setSortKey(k); setSortDir(sortDir === "asc" ? "desc" : "asc"); }} />
                     <SortHeader label="حُدّث" k="updated_at" sortKey={sortKey} sortDir={sortDir} onSort={(k) => { setSortKey(k); setSortDir(sortDir === "asc" ? "desc" : "asc"); }} />
                     <th className="px-3 py-2"></th>
                   </tr>
@@ -572,6 +633,7 @@ function AdminInvestigationsPage() {
                       onExport={() => v.raw?.id && setExportScope({ ids: [v.raw.id], label: v.raw.slug })}
                       onPreview={() => openPreview(v.raw.slug)}
                       onToggle={() => toggleEnabled(v.raw)}
+                      onQaChange={(s) => changeQa(v.raw, s)}
                     />
                   ))}
                 </tbody>
@@ -628,6 +690,82 @@ function AdminInvestigationsPage() {
 // ------------------------------------------------------------
 // Sub-components.
 // ------------------------------------------------------------
+
+/**
+ * Review workshop dashboard — administrative metrics only.
+ * These numbers never leave the admin panel: the QA status is stored in a
+ * separate table and is excluded from every export/import payload.
+ */
+function QaDashboard({ stats, active, onPick, onSortByWork }: {
+  stats: { counts: Record<QaStatus, number>; total: number; pct: number };
+  active: "" | QaStatus;
+  onPick: (s: "" | QaStatus) => void;
+  onSortByWork: () => void;
+}) {
+  return (
+    <section className="rounded-xl border border-amber-500/20 bg-slate-900/50 p-4">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-sm font-bold text-amber-100">ورشة مراجعة التحقيقات</h2>
+        <button onClick={onSortByWork}
+          className="rounded-lg border border-slate-700 px-2.5 py-1 text-[11px] text-slate-300 hover:border-amber-400 hover:text-amber-300">
+          ترتيب: غير المنجزة أولًا
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
+        <button onClick={() => onPick("")}
+          className={`rounded-lg border px-3 py-2 text-right ${active === "" ? "border-amber-400/60 bg-amber-500/10" : "border-slate-800 bg-slate-950/40"}`}>
+          <div className="text-[11px] text-slate-400">إجمالي التحقيقات</div>
+          <div className="text-lg font-bold text-amber-100">{stats.total}</div>
+        </button>
+        {QA_STATUSES.map((s) => (
+          <button key={s} onClick={() => onPick(active === s ? "" : s)}
+            className={`rounded-lg border px-3 py-2 text-right ${active === s ? "border-amber-400/60 bg-amber-500/10" : "border-slate-800 bg-slate-950/40"}`}>
+            <div className="text-[11px] text-slate-400">{QA_DOT[s]} {QA_LABEL[s]}</div>
+            <div className="text-lg font-bold text-slate-100">{stats.counts[s]}</div>
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-4">
+        <div className="mb-1 flex items-center justify-between text-xs">
+          <span className="text-slate-300">تم الوصول إلى مستوى القالب الذهبي</span>
+          <span className="text-amber-200">
+            {stats.counts.golden} / {stats.total} · {stats.pct}%
+          </span>
+        </div>
+        <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-800">
+          <div className="h-full rounded-full bg-gradient-to-l from-amber-400 to-emerald-400 transition-all"
+            style={{ width: `${stats.pct}%` }} />
+        </div>
+        <p className="mt-2 flex items-start gap-1.5 text-[11px] text-slate-500">
+          <Info className="mt-0.5 h-3 w-3" />
+          حالة المراجعة إدارية فقط — لا تُصدَّر في JSON ولا تظهر داخل التطبيق ولا تؤثر على ترتيب التحقيقات للاعبين.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+/** Inline status badge + quick-change menu (no need to open the editor). */
+function QaBadgeMenu({ value, onChange }: { value: QaStatus; onChange: (s: QaStatus) => void }) {
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] ${QA_CLASS[value]}`}>
+      <span aria-hidden>{QA_DOT[value]}</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value as QaStatus)}
+        aria-label="حالة المراجعة"
+        title="تغيير حالة المراجعة"
+        className="cursor-pointer appearance-none bg-transparent text-[10px] text-inherit outline-none">
+        {QA_STATUSES.map((s) => (
+          <option key={s} value={s} className="bg-slate-900 text-slate-100">{QA_LABEL[s]}</option>
+        ))}
+      </select>
+    </span>
+  );
+}
+
 function StatsPanel({ stats }: { stats: {
   total: number; enabled: number; disabled: number; malformed: number; legacy: number;
   byDifficulty: Record<string, number>; byWorld: Record<string, number>;
@@ -702,6 +840,7 @@ class SafeRow extends React.Component<
     onExport: () => void;
     onPreview: () => void;
     onToggle: () => void;
+    onQaChange: (s: QaStatus) => void;
   },
   { error: string | null }
 > {
@@ -714,13 +853,13 @@ class SafeRow extends React.Component<
     console.error("[admin.investigations] row render failed", err, this.props.view?.raw);
   }
   render() {
-    const { view, selected, onSelect, onExport, onPreview, onToggle } = this.props;
+    const { view, selected, onSelect, onExport, onPreview, onToggle, onQaChange } = this.props;
     const combinedError = this.state.error ?? view.renderError;
     if (combinedError) {
       const r = view.raw ?? ({} as ListRow);
       return (
         <tr className="bg-red-950/20">
-          <td colSpan={10} className="px-3 py-2 text-xs text-red-200">
+          <td colSpan={11} className="px-3 py-2 text-xs text-red-200">
             <div className="flex flex-wrap items-center gap-2">
               <AlertTriangle className="h-3.5 w-3.5" />
               <span className="rounded border border-red-400/40 bg-red-500/10 px-1.5 py-0.5 font-mono text-[10px]">
@@ -743,7 +882,7 @@ class SafeRow extends React.Component<
     }
     return (
       <Row view={view} selected={selected} onSelect={onSelect}
-        onExport={onExport} onPreview={onPreview} onToggle={onToggle} />
+        onExport={onExport} onPreview={onPreview} onToggle={onToggle} onQaChange={onQaChange} />
     );
   }
 }
@@ -763,9 +902,9 @@ function Chip({ children, onRemove }: { children: React.ReactNode; onRemove: () 
   );
 }
 
-function Row({ view, selected, onSelect, onExport, onPreview, onToggle }: {
+function Row({ view, selected, onSelect, onExport, onPreview, onToggle, onQaChange }: {
   view: RowView; selected: boolean; onSelect: () => void; onExport: () => void;
-  onPreview: () => void; onToggle: () => void;
+  onPreview: () => void; onToggle: () => void; onQaChange: (s: QaStatus) => void;
 }) {
   const r = view.raw;
   const rw = view.reward;
@@ -831,6 +970,9 @@ function Row({ view, selected, onSelect, onExport, onPreview, onToggle }: {
             ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-200"
             : "border-slate-600 bg-slate-800 text-slate-400"
         }`}>{r.enabled ? "مفعّل" : "معطّل"}</span>
+      </td>
+      <td className="px-3 py-2">
+        <QaBadgeMenu value={view.qa} onChange={onQaChange} />
       </td>
       <td className="px-3 py-2 text-[11px] text-slate-500">{formatDate(r.updated_at)}</td>
       <td className="px-3 py-2">
