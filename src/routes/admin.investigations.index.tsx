@@ -921,10 +921,6 @@ function Row({ view, selected, onSelect, onExport, onPreview, onToggle, onQaChan
             <div className="font-medium text-slate-100">{r.title}</div>
             {r.subtitle && <div className="text-xs text-slate-400">{r.subtitle}</div>}
           </div>
-          <span className={`rounded border px-1.5 py-0.5 text-[10px] ${QA_CLASS[view.qa]}`}
-            title="حالة المراجعة الإدارية">
-            {QA_DOT[view.qa]} {QA_LABEL[view.qa]}
-          </span>
           {view.hasBlocking && (
             <span title={view.warnings.map((w) => w.detail ?? w.kind).join(" · ")}
               className="rounded border border-red-500/40 bg-red-500/10 px-1.5 py-0.5 text-[10px] text-red-200">
