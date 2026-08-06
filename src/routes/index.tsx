@@ -328,7 +328,29 @@ function HomeFull() {
     // 1. Campaign Slide
     if (campaignSel) {
       const { campaign, hasStarted, isComplete, completedChapters, nextChapter } = campaignSel;
-...
+      const total = campaign.chapters.length;
+      const ctaLabel = isComplete ? "استعرض الحملة" : hasStarted ? "أكمل رحلتك" : "ابدأ رحلتك";
+      const heroBg = campaignHeroBg;
+      const subtitle = nextChapter && !isComplete
+        ? `الفصل ${nextChapter.order ?? completedChapters + 1} · ${nextChapter.title}`
+        : (campaign.subtitle ?? campaign.description ?? "تابع رحلتك في هذه الحملة.");
+      out.push({
+        kind: "campaign",
+        bg: heroBg,
+        eyebrow: isComplete ? "حملتك المكتملة" : hasStarted ? "أكمل رحلتك من حيث توقفت" : "ابدأ رحلتك الآن",
+        title: campaign.title,
+        subtitle,
+        progress: { done: completedChapters, total },
+        cta: { label: ctaLabel, link: (
+          <Link
+            to="/campaigns/imported/$id"
+            params={{ id: campaign.id }}
+            onClick={() => stashOrigin(`/campaigns/imported/${campaign.id}`)}
+            className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-bold text-primary-foreground"
+          >
+            <Play className="size-4 fill-current" />{ctaLabel}
+          </Link>
+        )},
       });
     }
 
@@ -391,7 +413,7 @@ function HomeFull() {
     }
     // LC1 scope cut: Timeline Journey hero slide hidden until content audit completes.
     return out;
-  }, [campaignSel, todayEvents, recentDiscoveries, heroBgs, campaignHeroBg]);
+  }, [campaignSel, storyRec, storyCover, todayEvents, recentDiscoveries, heroBgs, campaignHeroBg]);
 
   // Carousel
   const [slideIdx, setSlideIdx] = useState(0);
