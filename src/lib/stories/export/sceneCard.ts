@@ -293,38 +293,38 @@ function paintBlock(
   }
 }
 
-/** Small, quiet Irth wordmark. Vector + text only ⇒ works offline. */
-function drawWordmark(ctx: CanvasRenderingContext2D) {
-  const x = 72;
-  const y = CARD_H - 92;
+/** Small, quiet Irth logo branding. Vector + image fallback ⇒ works offline. */
+async function drawBranding(ctx: CanvasRenderingContext2D) {
+  const margin = 72;
+  const logoSize = 100; // Visual size for the square logo
+  const x = CARD_W - margin - logoSize;
+  const y = CARD_H - margin - logoSize - 10;
+
   ctx.save();
-  ctx.direction = "rtl";
-  ctx.textAlign = "right";
-  ctx.textBaseline = "middle";
-  ctx.globalAlpha = 0.92;
-  ctx.font = `700 40px ${FONT_STACK}`;
-  ctx.fillStyle = GOLD;
-  ctx.shadowColor = "rgba(0,0,0,0.7)";
-  ctx.shadowBlur = 14;
-  ctx.fillText("إرث", CARD_W - x, y);
-  ctx.shadowBlur = 0;
-  // Thin gold rule + diamond to the left of the wordmark.
-  const rw = ctx.measureText("إرث").width;
-  const lineEnd = CARD_W - x - rw - 22;
-  ctx.strokeStyle = "rgba(233,196,106,0.5)";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(lineEnd, y);
-  ctx.lineTo(lineEnd - 74, y);
-  ctx.stroke();
-  ctx.fillStyle = "rgba(233,196,106,0.75)";
-  ctx.beginPath();
-  ctx.moveTo(lineEnd - 92, y);
-  ctx.lineTo(lineEnd - 83, y - 9);
-  ctx.lineTo(lineEnd - 74, y);
-  ctx.lineTo(lineEnd - 83, y + 9);
-  ctx.closePath();
-  ctx.fill();
+  
+  // 1) Logo Image branding
+  const logoUrl = "/assets/splash/irth-logo.png";
+  const logoImg = await decodeImage(logoUrl).catch(() => null);
+  
+  if (logoImg) {
+    ctx.shadowColor = "rgba(0,0,0,0.6)";
+    ctx.shadowBlur = 20;
+    ctx.globalAlpha = 0.95;
+    ctx.drawImage(logoImg, x, y, logoSize, logoSize);
+    ctx.shadowBlur = 0;
+  } else {
+    // Fallback if image fails (legacy wordmark)
+    ctx.direction = "rtl";
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    ctx.globalAlpha = 0.92;
+    ctx.font = `700 40px ${FONT_STACK}`;
+    ctx.fillStyle = GOLD;
+    ctx.shadowColor = "rgba(0,0,0,0.7)";
+    ctx.shadowBlur = 14;
+    ctx.fillText("إرث", CARD_W - margin, CARD_H - margin - 20);
+  }
+  
   ctx.restore();
 }
 
