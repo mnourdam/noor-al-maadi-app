@@ -332,7 +332,7 @@ function WorldDetailPage() {
           {/* Four progress bars */}
           <div className="mt-4 grid gap-3">
             <ProgressBar
-              label="الحملات (Debug)"
+              label="الحملات"
               icon={<Trophy className="size-3.5" />}
               value={progress.campaigns.pct}
               meta={`${progress.campaigns.completed} / ${progress.campaigns.total}`}
