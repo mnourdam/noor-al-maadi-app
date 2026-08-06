@@ -25,9 +25,11 @@ import {
   useWorldMembership,
   useCloudCampaignProgress,
   useAllWorldsProgress,
+  buildWorldIndex,
   type Recommendation,
   type SectionKey,
 } from "@/lib/worlds-progress";
+import { localPublishedCampaigns } from "@/lib/local-first-store";
 import { useProfile } from "@/lib/profile";
 import { fetchPublishedFeed } from "@/lib/supabaseCampaigns";
 import { useSupabaseInvestigations, countQuestions } from "@/lib/investigations-source";
@@ -241,7 +243,7 @@ function WorldDetailPage() {
 
   const titleBySlug = new Map((worldsIndex ?? []).map((w) => [w.hub.slug, w.entity.title]));
 
-  const { progress, recommendation, rankedSections, ready } = useWorldProgress(slug);
+  const { progress, recommendation, rankedSections, ready, index } = useWorldProgress(slug);
   const { byWorld } = useAllWorldsProgress();
   const reduceMotion = useReduceMotion();
   const stableOrder = useStableSectionOrder(rankedSections, progress.signature);
