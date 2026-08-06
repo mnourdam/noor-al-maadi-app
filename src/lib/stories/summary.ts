@@ -32,6 +32,8 @@ export type StoryRarity = "standard" | "featured" | "rare" | "legendary";
 export type StoryLengthClass = "short" | "standard" | "epic";
 
 export interface StorySummary {
+  story_collection_id: string | null;
+  collection_order: number | null;
   id: string;
   slug: string;
   title_ar: string;
@@ -106,7 +108,6 @@ export async function listStoriesSummary(
     // shapes coming from either the authoritative or the guest RPC.
     const rows = ((data ?? []) as StorySummary[])
       .filter((r) => !isCampaignIntroRow(r as never))
-
       .map((r) => ({
         ...r,
         category: r.category ?? null,
@@ -114,6 +115,8 @@ export async function listStoriesSummary(
         length_class: r.length_class ?? null,
         historical_confidence: r.historical_confidence ?? null,
         tags: Array.isArray(r.tags) ? r.tags.filter((t) => typeof t === "string") : [],
+        story_collection_id: r.story_collection_id ?? null,
+        collection_order: r.collection_order ?? null,
       }));
 
     if (!worldSlug) {
@@ -192,14 +195,11 @@ export async function listStoriesSummary(
         historical_confidence: s.historical_confidence ?? null,
         tags: Array.isArray(s.tags) ? s.tags.filter((t: unknown) => typeof t === "string") : [],
         prereqs: [],
-
+        story_collection_id: s.story_collection_id ?? null,
+        collection_order: s.collection_order ?? null,
         lock_explanation: s.lock_explanation ?? null,
-        // Signed in: previously unlocked (online) stays unlocked offline;
-        // new unlocks never happen offline (server is the authority).
-        // Guest: local evidence decides, online or offline.
         unlocked: alwaysOn || guestUnlocked || unlockedIds.has(s.id),
         completed: guestState ? guestState.completed_story_ids?.has(s.id) ?? false : false,
-
         progress: null,
       } as StorySummary);
     });
