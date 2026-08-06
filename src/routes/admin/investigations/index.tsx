@@ -440,9 +440,13 @@ function AdminInvestigationsPage() {
               className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-amber-400 hover:text-amber-300 disabled:opacity-50">
               <RefreshCw className={`h-3.5 w-3.5 ${busy ? "animate-spin" : ""}`} /> تحديث
             </button>
+            <Link to="/admin/investigations/worlds"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 px-3 py-1.5 text-xs text-amber-200 hover:bg-amber-500/10">
+              <ExternalLink className="h-3.5 w-3.5" /> ربط العوالم
+            </Link>
             <button
               onClick={() => setExportScope({ ids: null, label: `المكتبة كاملة (${enriched.length})` })}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 px-3 py-1.5 text-xs text-amber-200 hover:bg-amber-500/10">
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-amber-400 hover:text-amber-300">
               <Download className="h-3.5 w-3.5" /> تصدير المكتبة
             </button>
             <button
@@ -454,7 +458,6 @@ function AdminInvestigationsPage() {
               title="المسار القديم — إنشاء دفعات فقط"
               className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-400 hover:border-amber-400 hover:text-amber-300">
               <Upload className="h-3.5 w-3.5" /> استيراد قديم
-
             </Link>
           </div>
         </header>

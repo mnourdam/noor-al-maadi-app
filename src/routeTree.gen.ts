@@ -123,7 +123,8 @@ import { Route as AdminGamesIndexRouteImport } from './routes/admin.games.index'
 import { Route as AdminGamesModeRouteImport } from './routes/admin.games.$mode'
 import { Route as AdminGamesCrosswordGeneratorRouteImport } from './routes/admin.games.crossword-generator'
 import { Route as AdminImportHistoryIdRouteImport } from './routes/admin.import-history.$id'
-import { Route as AdminInvestigationsIndexRouteImport } from './routes/admin.investigations.index'
+import { Route as AdminInvestigationsIndexRouteImport } from './routes/admin/investigations/index'
+import { Route as AdminInvestigationsWorldsRouteImport } from './routes/admin/investigations/worlds'
 import { Route as AdminStoriesIndexRouteImport } from './routes/admin.stories.index'
 import { Route as AdminStoriesExportV2RouteImport } from './routes/admin.stories.export-v2'
 import { Route as AdminStoriesImportV2RouteImport } from './routes/admin.stories.import-v2'
@@ -742,6 +743,12 @@ const AdminInvestigationsIndexRoute =
     path: '/',
     getParentRoute: () => AdminInvestigationsRoute,
   } as any)
+const AdminInvestigationsWorldsRoute =
+  AdminInvestigationsWorldsRouteImport.update({
+    id: '/worlds',
+    path: '/worlds',
+    getParentRoute: () => AdminInvestigationsRoute,
+  } as any)
 const AdminStoriesIndexRoute = AdminStoriesIndexRouteImport.update({
   id: '/admin/stories/',
   path: '/admin/stories/',
@@ -984,6 +991,7 @@ export interface FileRoutesByFullPath {
   '/admin/games/$mode': typeof AdminGamesModeRoute
   '/admin/games/crossword-generator': typeof AdminGamesCrosswordGeneratorRoute
   '/admin/import-history/$id': typeof AdminImportHistoryIdRoute
+  '/admin/investigations/worlds': typeof AdminInvestigationsWorldsRoute
   '/admin/stories/export-v2': typeof AdminStoriesExportV2Route
   '/admin/stories/import-v2': typeof AdminStoriesImportV2Route
   '/api/public/native-auth-bounce': typeof ApiPublicNativeAuthBounceRoute
@@ -1120,6 +1128,7 @@ export interface FileRoutesByTo {
   '/admin/games/$mode': typeof AdminGamesModeRoute
   '/admin/games/crossword-generator': typeof AdminGamesCrosswordGeneratorRoute
   '/admin/import-history/$id': typeof AdminImportHistoryIdRoute
+  '/admin/investigations/worlds': typeof AdminInvestigationsWorldsRoute
   '/admin/stories/export-v2': typeof AdminStoriesExportV2Route
   '/admin/stories/import-v2': typeof AdminStoriesImportV2Route
   '/api/public/native-auth-bounce': typeof ApiPublicNativeAuthBounceRoute
@@ -1262,6 +1271,7 @@ export interface FileRoutesById {
   '/admin/games/$mode': typeof AdminGamesModeRoute
   '/admin/games/crossword-generator': typeof AdminGamesCrosswordGeneratorRoute
   '/admin/import-history/$id': typeof AdminImportHistoryIdRoute
+  '/admin/investigations/worlds': typeof AdminInvestigationsWorldsRoute
   '/admin/stories/export-v2': typeof AdminStoriesExportV2Route
   '/admin/stories/import-v2': typeof AdminStoriesImportV2Route
   '/api/public/native-auth-bounce': typeof ApiPublicNativeAuthBounceRoute
@@ -1405,6 +1415,7 @@ export interface FileRouteTypes {
     | '/admin/games/$mode'
     | '/admin/games/crossword-generator'
     | '/admin/import-history/$id'
+    | '/admin/investigations/worlds'
     | '/admin/stories/export-v2'
     | '/admin/stories/import-v2'
     | '/api/public/native-auth-bounce'
@@ -1541,6 +1552,7 @@ export interface FileRouteTypes {
     | '/admin/games/$mode'
     | '/admin/games/crossword-generator'
     | '/admin/import-history/$id'
+    | '/admin/investigations/worlds'
     | '/admin/stories/export-v2'
     | '/admin/stories/import-v2'
     | '/api/public/native-auth-bounce'
@@ -1682,6 +1694,7 @@ export interface FileRouteTypes {
     | '/admin/games/$mode'
     | '/admin/games/crossword-generator'
     | '/admin/import-history/$id'
+    | '/admin/investigations/worlds'
     | '/admin/stories/export-v2'
     | '/admin/stories/import-v2'
     | '/api/public/native-auth-bounce'
@@ -2640,6 +2653,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminInvestigationsIndexRouteImport
       parentRoute: typeof AdminInvestigationsRoute
     }
+    '/admin/investigations/worlds': {
+      id: '/admin/investigations/worlds'
+      path: '/worlds'
+      fullPath: '/admin/investigations/worlds'
+      preLoaderRoute: typeof AdminInvestigationsWorldsRouteImport
+      parentRoute: typeof AdminInvestigationsRoute
+    }
     '/admin/stories/': {
       id: '/admin/stories/'
       path: '/admin/stories'
@@ -2914,11 +2934,13 @@ const AdminImportHistoryRouteWithChildren =
   AdminImportHistoryRoute._addFileChildren(AdminImportHistoryRouteChildren)
 
 interface AdminInvestigationsRouteChildren {
+  AdminInvestigationsWorldsRoute: typeof AdminInvestigationsWorldsRoute
   AdminInvestigationsIndexRoute: typeof AdminInvestigationsIndexRoute
   AdminInvestigationsIdEditRoute: typeof AdminInvestigationsIdEditRoute
 }
 
 const AdminInvestigationsRouteChildren: AdminInvestigationsRouteChildren = {
+  AdminInvestigationsWorldsRoute: AdminInvestigationsWorldsRoute,
   AdminInvestigationsIndexRoute: AdminInvestigationsIndexRoute,
   AdminInvestigationsIdEditRoute: AdminInvestigationsIdEditRoute,
 }

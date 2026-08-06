@@ -162,18 +162,24 @@ export function buildWorldIndex(): Map<string, WorldEntityIndex> {
   // 2. Campaigns → world via canonical worldSlug (fallback: entity refs).
   // Also populate `campaignRowsById` on the winning world so downstream
   // consumers get O(1) row lookup without rescanning the campaign list.
-  const camps = localPublishedCampaigns() as Array<{ data: any }>;
+  const camps = localPublishedCampaigns() as any[];
   for (const c of camps) {
     const d = (c?.data ?? {}) as Record<string, unknown>;
-    const cid = typeof d.id === "string" ? d.id : null;
+    const cid = typeof d.id === "string" ? d.id : (typeof c.id === "string" ? c.id : null);
     const assign = (ws: string) => {
       const idx = byWorld.get(ws);
       if (!idx || !cid) return;
       idx.campaignIds.push(cid);
       idx.campaignRowsById.set(cid, c);
     };
-    const ws = typeof d.worldSlug === "string" && WORLD_SLUGS.has(d.worldSlug as string)
+    const ws = (typeof d.worldSlug === "string" && WORLD_SLUGS.has(d.worldSlug as string))
       ? (d.worldSlug as string)
+      : (typeof d.world_slug === "string" && WORLD_SLUGS.has(d.world_slug as string))
+      ? (d.world_slug as string)
+      : (typeof c.era === "string" && WORLD_SLUGS.has(c.era))
+      ? c.era
+      : (c.group_key && WORLD_SLUGS.has(c.group_key))
+      ? c.group_key
       : null;
     if (ws) { assign(ws); continue; }
     // Fallback: pick the world matched by the majority of core/supporting refs.
