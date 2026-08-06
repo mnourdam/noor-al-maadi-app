@@ -196,9 +196,17 @@ export function buildWorldIndex(): Map<string, WorldEntityIndex> {
   }
 
   // 3. Investigations → world via majority era of related_entities.
-  const invs = localInvestigations() as Array<{ slug: string; related_entities?: unknown; enabled?: boolean }>;
+  const invs = localInvestigations() as Array<{ slug: string; world_slug?: string | null; related_entities?: unknown; enabled?: boolean }>;
   for (const inv of invs) {
     if (!inv || inv.enabled === false || !inv.slug) continue;
+    
+    // 3a. Explicit world mapping (authored in admin editor).
+    if (inv.world_slug && WORLD_SLUGS.has(inv.world_slug)) {
+      byWorld.get(inv.world_slug)!.investigationSlugs.push(inv.slug);
+      continue;
+    }
+
+    // 3b. Fallback: majority era of related_entities.
     const refs = Array.isArray(inv.related_entities) ? inv.related_entities as unknown[] : [];
     const tally = new Map<string, number>();
     for (const r of refs) {

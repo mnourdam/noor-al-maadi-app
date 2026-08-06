@@ -54,6 +54,7 @@ export interface InvestigationRow {
   reward: InvestigationReward;
   steps: InvestigationStep[];
   related_entities: string[];
+  world_slug?: string | null;
   enabled: boolean;
   created_at: string;
   updated_at: string;

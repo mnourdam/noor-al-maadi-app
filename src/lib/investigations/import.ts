@@ -56,6 +56,7 @@ export interface ImportRunResult {
 /** Arabic labels for the diffed columns, for the dry-run summary. */
 export const FIELD_LABELS: Record<string, string> = {
   slug: "المعرّف النصي (slug)",
+  world_slug: "العالم",
   title: "العنوان",
   subtitle: "العنوان الفرعي",
   description: "الوصف",
@@ -155,5 +156,10 @@ export async function commitInvestigationImport(
       notifyInvestigationInvalidated(item.id, "publish");
     }
   }
+  // Force world index refresh to pick up new explicit world_slug mappings
+  try {
+    const { invalidateWorldIndex } = await import("@/lib/worlds-progress");
+    invalidateWorldIndex();
+  } catch { /* noop */ }
   return result;
 }
