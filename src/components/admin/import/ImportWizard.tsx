@@ -253,7 +253,13 @@ export function ImportWizard({ engine }: WizardProps) {
           skipped: res.skipped ?? 0,
           failed: res.failed ?? 0,
           errors: [],
-        });
+          // Phase 5.5 - detailed metadata from transactional RPC
+          metadata: {
+            matched: res.items?.length ?? 0,
+            attempted: (res.created ?? 0) + (res.updated ?? 0) + (res.failed ?? 0),
+            unchanged: res.unchanged ?? 0,
+          }
+        } as any);
         // Fix 5: emit the same content-invalidation signal the editor uses,
         // so /admin/campaigns, /admin/campaign-order and open player tabs
         // (via BroadcastChannel) refetch immediately after a campaign import.
