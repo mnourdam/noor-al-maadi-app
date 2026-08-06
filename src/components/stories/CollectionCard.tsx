@@ -12,9 +12,10 @@ interface CollectionCardProps {
 export function CollectionCard({ collection, stories }: CollectionCardProps) {
   // Stats
   const total = stories.length;
-  const completed = stories.filter(s => s.completed).length;
+  const completedCount = stories.filter(s => s.completed).length;
   const started = stories.some(s => s.unlocked && (s.progress || s.completed));
-  const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+  const isFullyCompleted = total > 0 && completedCount === total;
+  const pct = total > 0 ? Math.round((completedCount / total) * 100) : 0;
 
   // Cover Fallback: if collection has no cover, use the first story's cover
   const firstStoryWithCover = stories.find(s => s.cover_media_id);
@@ -25,79 +26,86 @@ export function CollectionCard({ collection, stories }: CollectionCardProps) {
   
   const cover = useStoryCoverSrc(coverSource as any);
 
+  // Status Badge Label
+  const getStatusLabel = () => {
+    if (isFullyCompleted) return "مكتملة";
+    if (started) return "قيد القراءة";
+    return "جديدة";
+  };
+
+  const getStatusColor = () => {
+    if (isFullyCompleted) return "bg-emerald-500/20 text-emerald-400 border-emerald-500/30";
+    if (started) return "bg-gold/20 text-gold border-gold/30";
+    return "bg-white/10 text-white/70 border-white/20";
+  };
+
   return (
     <Link
       to="/stories"
       search={{ collection: collection.id }}
-      className="group relative block aspect-[16/10] w-full overflow-hidden rounded-2xl border border-gold/25 bg-black/60 shadow-lg ring-1 ring-inset ring-white/5 transition hover:border-gold/60"
+      className="group relative block aspect-[16/9] w-full overflow-hidden rounded-2xl border border-gold/25 bg-black/60 shadow-2xl ring-1 ring-inset ring-white/5 transition-all duration-500 hover:border-gold/60 hover:-translate-y-1"
     >
       {/* Background Cover */}
       {cover ? (
-        <img
-          src={cover}
-          alt={collection.title_ar}
-          className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
-        />
+        <div className="absolute inset-0 overflow-hidden">
+          <img
+            src={cover}
+            alt={collection.title_ar}
+            className="h-full w-full object-cover transition duration-1000 group-hover:scale-110"
+          />
+          {/* Book-like Overlay (Darker Gradient) */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent opacity-90" />
+        </div>
       ) : (
         <div className="flex h-full w-full items-center justify-center bg-neutral-900">
-          <BookOpenText className="size-12 text-gold/20" />
+          <BookOpenText className="size-16 text-gold/10" />
         </div>
       )}
 
-      {/* Overlays */}
-      <div 
-        className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" 
-      />
-      
-      <div className="absolute inset-0 p-4 flex flex-col justify-end">
-        <h3 className="font-display text-lg font-bold text-white drop-shadow-md">
-          {collection.title_ar}
-        </h3>
-        
-        {collection.summary_ar && (
-          <p className="mt-1 line-clamp-1 text-xs text-white/70">
-            {collection.summary_ar}
-          </p>
-        )}
+      {/* Content */}
+      <div className="absolute inset-0 p-5 flex flex-col justify-end">
+        {/* Top Badges */}
+        <div className="absolute top-4 end-4 flex items-center gap-2">
+          <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold backdrop-blur-md ${getStatusColor()}`}>
+            {getStatusLabel()}
+          </span>
+        </div>
 
-        <div className="mt-3 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-[10px] text-white/90">
-            <span className="rounded-full bg-black/50 px-2 py-0.5 border border-white/10">
-              {total} قصة
+        {/* Text Details */}
+        <div className="relative space-y-1">
+          <h3 className="font-display text-xl font-bold text-white drop-shadow-lg transition-colors group-hover:text-gold">
+            {collection.title_ar}
+          </h3>
+          
+          {collection.summary_ar && (
+            <p className="line-clamp-2 text-xs leading-relaxed text-white/60">
+              {collection.summary_ar}
+            </p>
+          )}
+        </div>
+
+        {/* Footer Stats & Progress */}
+        <div className="mt-4 space-y-3">
+          <div className="flex items-center justify-between text-[11px] font-medium text-white/80">
+            <span className="flex items-center gap-1.5">
+              <BookOpenText className="size-3 text-gold" />
+              {total} قصص
             </span>
-            {completed > 0 && (
-              <span className="flex items-center gap-1 text-emerald-400">
-                <CheckCircle2 className="size-3" />
-                {completed} مكتملة
-              </span>
-            )}
+            <span className="text-gold">{pct}%</span>
           </div>
 
-          <div className="inline-flex items-center gap-1 text-[11px] font-bold text-gold">
-            {started ? (
-              <>
-                <PlayCircle className="size-3.5" />
-                متابعة
-              </>
-            ) : (
-              <>
-                استكشف السلسلة
-                <ChevronLeft className="size-3.5" />
-              </>
-            )}
+          {/* Golden Progress Bar */}
+          <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden border border-white/5">
+            <div 
+              className="h-full bg-gradient-to-r from-gold/80 to-gold transition-all duration-1000 ease-out shadow-[0_0_8px_rgba(212,175,55,0.4)]" 
+              style={{ width: `${pct}%` }}
+            />
           </div>
         </div>
       </div>
-
-      {/* Progress bar */}
-      {started && (
-        <div className="absolute inset-x-0 bottom-0 h-1 bg-black/40">
-          <div 
-            className="h-full bg-gold transition-all duration-500" 
-            style={{ width: `${pct}%` }}
-          />
-        </div>
-      )}
+      
+      {/* Decorative Shine Effect */}
+      <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/5 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
     </Link>
   );
 }

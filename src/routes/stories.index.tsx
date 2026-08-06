@@ -9,12 +9,11 @@
 // without modifying any backend logic or data structures.
 // ============================================================
 
-import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
+import { createFileRoute, Link, useSearch } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { BookOpenText, Filter, Search, X, ChevronRight } from "lucide-react";
+import { BookOpenText, Filter, Search, X, ChevronLeft, CheckCircle2, PlayCircle, History } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { CinematicPageBackdrop } from "@/components/CinematicPageBackdrop";
 import { AndroidPlainTextInput } from "@/components/AndroidPlainTextInput";
 import { StoryCard } from "@/components/stories/StoryCard";
@@ -22,7 +21,7 @@ import { CollectionCard } from "@/components/stories/CollectionCard";
 import storiesHeaderArt from "@/assets/hero/03-manuscript-lamp.jpg?url";
 import { listStoriesSummary } from "@/lib/stories/summary";
 import { useStoryCollections } from "@/lib/stories/collections";
-import { syncStoryCovers } from "@/lib/stories/covers";
+import { syncStoryCovers, useStoryCoverSrc } from "@/lib/stories/covers";
 import { eraLabelAr, worldLabelAr } from "@/lib/taxonomy-labels";
 import {
   activeFilterCount,
@@ -30,7 +29,6 @@ import {
   EMPTY_STORY_FILTERS,
   filterStories,
   sortStories,
-  storyCategoryLabel,
   storyCounters,
   STORY_SORT_LABELS,
   STORY_STATUS_LABELS,
@@ -68,7 +66,7 @@ export const Route = createFileRoute("/stories/")({
 
 function StoriesIndex() {
   const { collection: activeCollectionId } = useSearch({ from: "/stories/" });
-  const navigate = useNavigate();
+  
 
   const { data: storiesData, isLoading: storiesLoading } = useQuery({
     queryKey: ["stories-summary", null, "catalog"],
@@ -137,37 +135,21 @@ function StoriesIndex() {
       <CinematicPageBackdrop image={storiesHeaderArt} alt="مخطوطة ومصباح" />
 
       <div dir="rtl" className="mx-auto w-full max-w-5xl px-5 pb-20 pt-6">
-        <Breadcrumbs 
-          items={[
-            { label: "الرئيسية", to: "/" }, 
-            { label: "القصص", to: activeCollectionId ? "/stories" : undefined },
-            ...(activeCollection ? [{ label: activeCollection.title_ar }] : [])
-          ]} 
-        />
-
-        <header className="mt-4 flex items-center justify-between">
-          <div>
-            <h1 className="font-display text-2xl font-bold text-gold">
-              {activeCollection ? activeCollection.title_ar : "مكتبة السلاسل القصصية"}
+        {activeCollection ? (
+          <CollectionHero 
+            collection={activeCollection} 
+            stories={stories.filter(s => s.story_collection_id === activeCollection.id)}
+          />
+        ) : (
+          <header className="flex flex-col gap-1">
+            <h1 className="font-display text-3xl font-bold text-gold drop-shadow-sm">
+              مكتبة السلاسل القصصية
             </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {activeCollection 
-                ? activeCollection.summary_ar || "قصص مرتبطة تاريخياً"
-                : "رحلات عبر الزمن من خلال سلاسل موثقة"
-              }
+            <p className="text-sm text-white/50">
+              رحلات عبر الزمن من خلال سلاسل موثقة
             </p>
-          </div>
-          
-          {activeCollectionId && (
-            <Link 
-              to="/stories"
-              className="flex items-center gap-1.5 rounded-full bg-white/5 px-3 py-1.5 text-xs text-white/70 transition hover:bg-white/10 hover:text-white"
-            >
-              <ChevronRight className="size-4" />
-              العودة للمكتبة
-            </Link>
-          )}
-        </header>
+          </header>
+        )}
 
         {/* Search & Filters (Global) */}
         <div className="relative mt-6">
@@ -316,6 +298,125 @@ function StoriesIndex() {
         </div>
       </div>
     </AppShell>
+  );
+}
+
+function CollectionHero({ collection, stories }: { collection: any; stories: any[] }) {
+  const total = stories.length;
+  const completedCount = stories.filter(s => s.completed).length;
+  const started = stories.some(s => s.unlocked && (s.progress || s.completed));
+  const isFullyCompleted = total > 0 && completedCount === total;
+  const pct = total > 0 ? Math.round((completedCount / total) * 100) : 0;
+
+  // Cover
+  const firstStoryWithCover = stories.find(s => s.cover_media_id);
+  const coverSource = {
+    cover_media_id: collection.cover_media_id || firstStoryWithCover?.cover_media_id,
+    id: collection.cover_media_id ? `collection-${collection.id}` : firstStoryWithCover?.id
+  };
+  const cover = useStoryCoverSrc(coverSource as any);
+
+  return (
+    <div className="mb-8 overflow-hidden rounded-3xl border border-gold/30 bg-black/60 shadow-2xl backdrop-blur-md">
+      <div className="relative aspect-[21/9] w-full overflow-hidden sm:aspect-[3/1]">
+        {cover && (
+          <img 
+            src={cover} 
+            alt={collection.title_ar} 
+            className="h-full w-full object-cover"
+          />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+        
+        <Link 
+          to="/stories" 
+          className="absolute start-4 top-4 flex size-10 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md transition hover:bg-gold hover:text-black"
+        >
+          <ChevronLeft className="size-6 translate-x-0.5" />
+        </Link>
+      </div>
+
+      <div className="p-6 sm:p-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex-1 space-y-2">
+            <h1 className="font-display text-3xl font-bold text-gold drop-shadow-sm sm:text-4xl">
+              {collection.title_ar}
+            </h1>
+            <p className="max-w-2xl text-sm leading-relaxed text-white/70 sm:text-base">
+              {collection.summary_ar}
+            </p>
+          </div>
+
+          <div className="flex flex-col items-start gap-4 sm:items-end">
+            <div className="flex gap-4">
+              <Stat label="عدد القصص" value={total} icon={BookOpenText} />
+              <Stat label="نسبة الإنجاز" value={`${pct}%`} icon={CheckCircle2} />
+            </div>
+
+            <SmartContinueButton stories={stories} />
+          </div>
+        </div>
+
+        {/* Global Progress Line */}
+        <div className="mt-8">
+          <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-gold/60">
+            <span>تقدم السلسلة</span>
+            <span>{completedCount} / {total} مكتملة</span>
+          </div>
+          <div className="mt-2 h-1.5 w-full rounded-full bg-white/5 border border-white/5 overflow-hidden">
+            <div 
+              className="h-full bg-gold shadow-[0_0_12px_rgba(212,175,55,0.4)] transition-all duration-1000" 
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SmartContinueButton({ stories }: { stories: any[] }) {
+  const completedCount = stories.filter(s => s.completed).length;
+  const started = stories.some(s => s.unlocked && (s.progress || s.completed));
+  const isFullyCompleted = stories.length > 0 && completedCount === stories.length;
+
+  // Find next story to read (first one not completed)
+  const nextStory = stories.find(s => !s.completed) || stories[0];
+
+  const getLabel = () => {
+    if (isFullyCompleted) return "إعادة القراءة";
+    if (started) return "متابعة";
+    return "ابدأ السلسلة";
+  };
+
+  const getIcon = () => {
+    if (isFullyCompleted) return <History className="size-4" />;
+    return <PlayCircle className="size-4" />;
+  };
+
+  return (
+    <Link
+      to="/investigation/$id"
+      params={{ id: nextStory.id }}
+      className="inline-flex items-center gap-2 rounded-xl bg-gold px-6 py-3 text-sm font-bold text-black shadow-lg shadow-gold/20 transition hover:scale-105 hover:bg-white active:scale-95"
+    >
+      {getIcon()}
+      {getLabel()}
+    </Link>
+  );
+}
+
+function Stat({ label, value, icon: Icon }: { label: string; value: string | number; icon: any }) {
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex size-8 items-center justify-center rounded-lg bg-gold/10 text-gold">
+        <Icon className="size-4" />
+      </div>
+      <div className="flex flex-col">
+        <span className="text-[10px] text-white/40">{label}</span>
+        <span className="text-sm font-bold text-white">{value}</span>
+      </div>
+    </div>
   );
 }
 
