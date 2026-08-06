@@ -162,10 +162,10 @@ export function buildWorldIndex(): Map<string, WorldEntityIndex> {
   // 2. Campaigns → world via canonical worldSlug (fallback: entity refs).
   // Also populate `campaignRowsById` on the winning world so downstream
   // consumers get O(1) row lookup without rescanning the campaign list.
-  const camps = localPublishedCampaigns() as Array<{ data: any }>;
+  const camps = localPublishedCampaigns() as any[];
   for (const c of camps) {
     const d = (c?.data ?? {}) as Record<string, unknown>;
-    const cid = typeof d.id === "string" ? d.id : null;
+    const cid = typeof d.id === "string" ? d.id : (typeof c.id === "string" ? c.id : null);
     const assign = (ws: string) => {
       const idx = byWorld.get(ws);
       if (!idx || !cid) return;
