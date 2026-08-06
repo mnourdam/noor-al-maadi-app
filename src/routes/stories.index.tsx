@@ -1,30 +1,27 @@
 // ============================================================
-// /stories — the Stories library (redesign).
+// /stories — the Stories library (Redesign: Series-first).
 // ------------------------------------------------------------
-// Structured like the Encyclopedia hub and the Campaigns hub:
-//   1. Cinematic header + breadcrumbs
-//   2. Search (local, Arabic-normalised)
-//   3. Counter strip (total / continue / completed / locked)
-//   4. Facet chip rows: status · world · era · category
-//   5. Sort control + result count
-//   6. Grid of cinematic StoryCards
+// Layout:
+//   1. Default: Grid of Story Collections (Series).
+//   2. Detail (?collection=id): Grid of stories within that collection.
 //
-// Every filter is applied LOCALLY on the single catalog feed — no
-// RPC per interaction — and covers come from the offline Story
-// Cover pack, so the grid paints instantly, online or offline.
+// This UI refresh leverages the existing story_collections schema
+// without modifying any backend logic or data structures.
 // ============================================================
 
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { BookOpenText, Filter, Lock, Search, Sparkles, X } from "lucide-react";
+import { BookOpenText, Filter, Search, X, ChevronRight } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { CinematicPageBackdrop } from "@/components/CinematicPageBackdrop";
 import { AndroidPlainTextInput } from "@/components/AndroidPlainTextInput";
 import { StoryCard } from "@/components/stories/StoryCard";
+import { CollectionCard } from "@/components/stories/CollectionCard";
 import storiesHeaderArt from "@/assets/hero/03-manuscript-lamp.jpg?url";
 import { listStoriesSummary } from "@/lib/stories/summary";
+import { useStoryCollections } from "@/lib/stories/collections";
 import { syncStoryCovers } from "@/lib/stories/covers";
 import { eraLabelAr, worldLabelAr } from "@/lib/taxonomy-labels";
 import {
@@ -41,20 +38,26 @@ import {
   type StorySortKey,
   type StoryStatusFilter,
 } from "@/lib/stories/catalog-filters";
+import { z } from "zod";
+
+const storiesSearchSchema = z.object({
+  collection: z.string().optional(),
+});
 
 export const Route = createFileRoute("/stories/")({
+  validateSearch: (search) => storiesSearchSchema.parse(search),
   head: () => ({
     meta: [
       { title: "مكتبة القصص — إرث" },
       {
         name: "description",
         content:
-          "مكتبة قصص إرث: مشاهد قصيرة مبنية على مصادر تاريخية موثّقة. تصفّح حسب العالم والحقبة والتصنيف.",
+          "مكتبة قصص إرث: مشاهد قصيرة مبنية على مصادر تاريخية موثّقة. تصفّح حسب السلاسل والعوالم.",
       },
       { property: "og:title", content: "مكتبة القصص — إرث" },
       {
         property: "og:description",
-        content: "مشاهد قصيرة موثّقة من التاريخ الإسلامي، مرتّبة حسب العالم والحقبة.",
+        content: "مشاهد قصيرة موثّقة من التاريخ الإسلامي، مرتبة في سلاسل تاريخية.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -64,16 +67,19 @@ export const Route = createFileRoute("/stories/")({
 });
 
 function StoriesIndex() {
-  const { data, isLoading, error } = useQuery({
+  const { collection: activeCollectionId } = useSearch({ from: "/stories/" });
+  const navigate = useNavigate();
+
+  const { data: storiesData, isLoading: storiesLoading } = useQuery({
     queryKey: ["stories-summary", null, "catalog"],
     queryFn: () => listStoriesSummary(null),
     staleTime: 30_000,
   });
 
-  const stories = useMemo(() => data ?? [], [data]);
+  const { collections, loading: collectionsLoading } = useStoryCollections();
 
-  // Delta sync: bundled covers need nothing; only stories published
-  // after this build was cut are fetched once and cached offline.
+  const stories = useMemo(() => storiesData ?? [], [storiesData]);
+
   useEffect(() => {
     if (stories.length === 0) return;
     void syncStoryCovers(stories);
@@ -85,45 +91,97 @@ function StoriesIndex() {
 
   const facets = useMemo(() => buildStoryFacets(stories), [stories]);
   const counters = useMemo(() => storyCounters(stories), [stories]);
-  const visible = useMemo(
-    () => sortStories(filterStories(stories, filters), sort),
-    [stories, filters, sort],
+  
+  // Filtered pool of stories
+  const filteredStories = useMemo(
+    () => filterStories(stories, filters),
+    [stories, filters]
   );
+
+  const activeCollection = useMemo(
+    () => collections.find(c => c.id === activeCollectionId),
+    [collections, activeCollectionId]
+  );
+
+  // Derive visible content
+  const visibleCollections = useMemo(() => {
+    if (activeCollectionId) return [];
+    
+    return collections.filter(c => {
+      const collectionStories = stories.filter(s => s.story_collection_id === c.id);
+      if (collectionStories.length === 0) return false;
+      
+      // Filter collections based on filters: 
+      // Show collection if any story inside matches the filters
+      const matchingStories = filteredStories.filter(s => s.story_collection_id === c.id);
+      return matchingStories.length > 0;
+    });
+  }, [collections, stories, filteredStories, activeCollectionId]);
+
+  const visibleStories = useMemo(() => {
+    if (!activeCollectionId) return [];
+    
+    const storiesInCollection = filteredStories.filter(s => s.story_collection_id === activeCollectionId);
+    return sortStories(storiesInCollection, sort).sort((a, b) => (a.collection_order ?? 0) - (b.collection_order ?? 0));
+  }, [filteredStories, activeCollectionId, sort]);
+
   const activeCount = activeFilterCount(filters);
 
   const patch = (next: Partial<StoryCatalogFilters>) =>
     setFilters((prev) => ({ ...prev, ...next }));
 
+  const isLoading = storiesLoading || collectionsLoading;
+
   return (
     <AppShell>
       <CinematicPageBackdrop image={storiesHeaderArt} alt="مخطوطة ومصباح" />
 
-      <div dir="rtl" className="mx-auto w-full max-w-5xl px-5 pb-10 pt-6">
-        <Breadcrumbs items={[{ label: "الرئيسية", to: "/" }, { label: "القصص" }]} />
+      <div dir="rtl" className="mx-auto w-full max-w-5xl px-5 pb-20 pt-6">
+        <Breadcrumbs 
+          items={[
+            { label: "الرئيسية", to: "/" }, 
+            { label: "القصص", to: activeCollectionId ? "/stories" : undefined },
+            ...(activeCollection ? [{ label: activeCollection.title_ar }] : [])
+          ]} 
+        />
 
-        <header className="mt-4">
-          <h1 className="font-display text-2xl font-bold text-gold">مكتبة القصص</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            مشاهد قصيرة موثّقة من التاريخ الإسلامي
-          </p>
+        <header className="mt-4 flex items-center justify-between">
+          <div>
+            <h1 className="font-display text-2xl font-bold text-gold">
+              {activeCollection ? activeCollection.title_ar : "مكتبة السلاسل القصصية"}
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {activeCollection 
+                ? activeCollection.summary_ar || "قصص مرتبطة تاريخياً"
+                : "رحلات عبر الزمن من خلال سلاسل موثقة"
+              }
+            </p>
+          </div>
+          
+          {activeCollectionId && (
+            <Link 
+              to="/stories"
+              className="flex items-center gap-1.5 rounded-full bg-white/5 px-3 py-1.5 text-xs text-white/70 transition hover:bg-white/10 hover:text-white"
+            >
+              <ChevronRight className="size-4" />
+              العودة للمكتبة
+            </Link>
+          )}
         </header>
 
-        {/* Search */}
-        <div className="relative mt-5">
+        {/* Search & Filters (Global) */}
+        <div className="relative mt-6">
           <Search className="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <AndroidPlainTextInput
             value={filters.q}
             onChange={(e) => patch({ q: e.target.value })}
-
-            placeholder="ابحث في القصص…"
-            aria-label="ابحث في القصص"
+            placeholder={activeCollectionId ? "ابحث داخل السلسلة…" : "ابحث في السلاسل والقصص…"}
             className="w-full rounded-xl border border-gold/25 bg-black/40 px-4 py-3 pe-10 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-gold/60"
           />
           {filters.q && (
             <button
               type="button"
               onClick={() => patch({ q: "" })}
-              aria-label="مسح البحث"
               className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-gold"
             >
               <X className="size-4" />
@@ -131,77 +189,72 @@ function StoriesIndex() {
           )}
         </div>
 
-        {/* Counters */}
-        <div className="mt-4 grid grid-cols-4 gap-2">
-          <Counter label="قصة" value={counters.total} />
-          <Counter label="قيد القراءة" value={counters.inProgress} />
-          <Counter label="مكتملة" value={counters.completed} />
-          <Counter label="مقفلة" value={counters.locked} />
-        </div>
+        {/* Counters & Advanced Filters Toggle */}
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex gap-2">
+            <Counter label="سلسلة" value={activeCollectionId ? 1 : visibleCollections.length} />
+            <Counter label="قصة" value={activeCollectionId ? visibleStories.length : counters.total} />
+          </div>
 
-        {/* Status chips — always visible, the primary axis */}
-        <ChipRow>
-          {(Object.keys(STORY_STATUS_LABELS) as StoryStatusFilter[]).map((key) => (
-            <Chip
-              key={key}
-              active={filters.status === key}
-              onClick={() => patch({ status: key })}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setShowFacets((v) => !v)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-gold/30 bg-black/40 px-3 py-1.5 text-xs text-gold"
             >
-              {STORY_STATUS_LABELS[key]}
-            </Chip>
-          ))}
-        </ChipRow>
+              <Filter className="size-3.5" />
+              تصفية متقدمة
+              {activeCount > 0 && (
+                <span className="rounded-full bg-gold px-1.5 text-[10px] font-bold text-black">
+                  {activeCount}
+                </span>
+              )}
+            </button>
 
-        {/* Secondary facets — collapsed by default to keep the page calm */}
-        <div className="mt-3 flex items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={() => setShowFacets((v) => !v)}
-            className="inline-flex items-center gap-1.5 rounded-full border border-gold/30 bg-black/40 px-3 py-1.5 text-xs text-gold"
-          >
-            <Filter className="size-3.5" />
-            تصفية متقدمة
-            {activeCount > 0 && (
-              <span className="rounded-full bg-gold px-1.5 text-[10px] font-bold text-black">
-                {activeCount}
-              </span>
+            {activeCollectionId && (
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value as StorySortKey)}
+                className="rounded-lg border border-gold/25 bg-black/50 px-2 py-1.5 text-xs text-foreground outline-none focus:border-gold/60"
+              >
+                {(Object.keys(STORY_SORT_LABELS) as StorySortKey[]).map((k) => (
+                  <option key={k} value={k}>
+                    {STORY_SORT_LABELS[k]}
+                  </option>
+                ))}
+              </select>
             )}
-          </button>
-
-          <label className="flex items-center gap-2 text-xs text-muted-foreground">
-            الترتيب
-            <select
-              value={sort}
-              onChange={(e) => setSort(e.target.value as StorySortKey)}
-              aria-label="ترتيب القصص"
-              className="rounded-lg border border-gold/25 bg-black/50 px-2 py-1.5 text-xs text-foreground outline-none focus:border-gold/60"
-            >
-              {(Object.keys(STORY_SORT_LABELS) as StorySortKey[]).map((k) => (
-                <option key={k} value={k}>
-                  {STORY_SORT_LABELS[k]}
-                </option>
-              ))}
-            </select>
-          </label>
+          </div>
         </div>
 
         {showFacets && (
           <div className="mt-3 space-y-3 rounded-2xl border border-gold/20 bg-black/30 p-3">
+            <Facet title="الحالة">
+              {(Object.keys(STORY_STATUS_LABELS) as StoryStatusFilter[]).map((key) => (
+                <Chip
+                  key={key}
+                  active={filters.status === key}
+                  onClick={() => patch({ status: key })}
+                >
+                  {STORY_STATUS_LABELS[key]}
+                </Chip>
+              ))}
+            </Facet>
+
             {facets.worlds.length > 0 && (
               <Facet title="العالم">
                 {facets.worlds.map((f) => (
                   <Chip
                     key={f.value}
                     active={filters.world === f.value}
-                    onClick={() =>
-                      patch({ world: filters.world === f.value ? null : f.value })
-                    }
+                    onClick={() => patch({ world: filters.world === f.value ? null : f.value })}
                   >
                     {worldLabelAr(f.value)} <Count n={f.count} />
                   </Chip>
                 ))}
               </Facet>
             )}
+
             {facets.eras.length > 0 && (
               <Facet title="الحقبة">
                 {facets.eras.map((f) => (
@@ -215,95 +268,52 @@ function StoriesIndex() {
                 ))}
               </Facet>
             )}
-            {facets.categories.length > 0 && (
-              <Facet title="التصنيف">
-                {facets.categories.map((f) => (
-                  <Chip
-                    key={f.value}
-                    active={filters.category === f.value}
-                    onClick={() =>
-                      patch({ category: filters.category === f.value ? null : f.value })
-                    }
-                  >
-                    {storyCategoryLabel(f.value)} <Count n={f.count} />
-                  </Chip>
-                ))}
-              </Facet>
-            )}
+
             {activeCount > 0 && (
               <button
                 type="button"
                 onClick={() => setFilters(EMPTY_STORY_FILTERS)}
-                className="text-xs text-muted-foreground underline underline-offset-4 hover:text-gold"
+                className="text-xs text-muted-foreground underline hover:text-gold"
               >
-                مسح كل عوامل التصفية
+                مسح الفلاتر
               </button>
             )}
           </div>
         )}
 
-        {/* Results */}
-        <div className="mt-5">
-          {isLoading && (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="aspect-[3/4] animate-pulse rounded-2xl border border-gold/10 bg-black/40"
+        {/* Content Grid */}
+        <div className="mt-8">
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+              <div className="size-8 animate-spin rounded-full border-2 border-gold border-t-transparent" />
+              <p className="mt-4 text-sm">جارٍ تحميل المكتبة…</p>
+            </div>
+          ) : activeCollectionId ? (
+            /* Stories within a collection */
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              {visibleStories.map((story) => (
+                <StoryCard key={story.id} story={story} />
+              ))}
+              {visibleStories.length === 0 && (
+                <EmptyState message="لا توجد قصص تطابق هذا البحث داخل السلسلة." />
+              )}
+            </div>
+          ) : (
+            /* Collection library view */
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-2">
+              {visibleCollections.map((col) => (
+                <CollectionCard 
+                  key={col.id} 
+                  collection={col} 
+                  stories={stories.filter(s => s.story_collection_id === col.id)}
                 />
               ))}
-            </div>
-          )}
-
-          {error && (
-            <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-              تعذّر تحميل القصص: {(error as Error).message}
-            </div>
-          )}
-
-          {!isLoading && !error && visible.length === 0 && (
-            <div className="rounded-2xl border border-dashed border-gold/30 bg-surface/40 p-8 text-center">
-              <BookOpenText className="mx-auto mb-3 size-8 text-gold/70" />
-              <p className="font-display text-base font-bold text-gold">
-                {stories.length === 0 ? "لا توجد قصص منشورة بعد" : "لا توجد نتائج مطابقة"}
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {stories.length === 0
-                  ? "ابقَ قريبًا — سنضيف قصصًا جديدة قريبًا بإذن الله."
-                  : "جرّب تغيير عوامل التصفية أو كلمة البحث."}
-              </p>
-              {stories.length > 0 && activeCount > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setFilters(EMPTY_STORY_FILTERS)}
-                  className="mt-3 rounded-full border border-gold/40 px-3 py-1.5 text-xs text-gold"
-                >
-                  عرض كل القصص
-                </button>
+              {visibleCollections.length === 0 && (
+                <EmptyState message="لا توجد سلاسل تطابق عوامل التصفية المختارة." />
               )}
             </div>
           )}
-
-          {visible.length > 0 && (
-            <>
-              <p className="mb-2 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                <Sparkles className="size-3 text-gold/70" />
-                {visible.length} من {stories.length} قصة
-              </p>
-              <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                {visible.map((s) => (
-                  <li key={s.id}>
-                    <StoryCard story={s} />
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
         </div>
-
-        <p className="mt-6 flex items-center justify-center gap-1 text-[11px] text-muted-foreground">
-          <Lock className="size-3" /> بعض القصص تُفتح بعد إنجاز حملات أو تحقيقات أو اكتشافات.
-        </p>
       </div>
     </AppShell>
   );
@@ -311,23 +321,19 @@ function StoriesIndex() {
 
 function Counter({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-xl border border-gold/20 bg-black/40 p-2 text-center">
-      <div className="font-display text-lg font-bold text-gold">{value}</div>
-      <div className="text-[10px] text-muted-foreground">{label}</div>
+    <div className="flex items-center gap-1.5 rounded-full bg-black/40 px-3 py-1 text-xs border border-white/5">
+      <span className="font-bold text-gold">{value}</span>
+      <span className="text-muted-foreground">{label}</span>
     </div>
-  );
-}
-
-function ChipRow({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="mt-4 flex flex-wrap gap-2">{children}</div>
   );
 }
 
 function Facet({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div>
-      <div className="mb-1.5 text-[11px] font-medium text-muted-foreground">{title}</div>
+    <div className="space-y-2">
+      <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
+        {title}
+      </h4>
       <div className="flex flex-wrap gap-2">{children}</div>
     </div>
   );
@@ -346,11 +352,10 @@ function Chip({
     <button
       type="button"
       onClick={onClick}
-      aria-pressed={active}
-      className={`rounded-full border px-3 py-1.5 text-xs transition ${
+      className={`rounded-full px-3 py-1.5 text-xs transition-colors ${
         active
-          ? "border-gold bg-gold text-black font-bold"
-          : "border-gold/25 bg-black/40 text-foreground/80 hover:border-gold/50"
+          ? "bg-gold font-bold text-black"
+          : "bg-black/40 text-muted-foreground border border-white/10 hover:bg-white/5 hover:text-white"
       }`}
     >
       {children}
@@ -359,5 +364,14 @@ function Chip({
 }
 
 function Count({ n }: { n: number }) {
-  return <span className="opacity-60">({n})</span>;
+  return <span className="ms-1 text-[10px] opacity-60">({n})</span>;
+}
+
+function EmptyState({ message }: { message: string }) {
+  return (
+    <div className="col-span-full py-20 text-center">
+      <BookOpenText className="mx-auto size-12 text-muted-foreground/20" />
+      <p className="mt-4 text-sm text-muted-foreground">{message}</p>
+    </div>
+  );
 }
