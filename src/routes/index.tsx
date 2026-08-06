@@ -48,6 +48,7 @@ import { fetchWorldsIndex } from "@/lib/worlds";
 import { DailyChallengesSection } from "@/components/home/DailyChallengesSection";
 import { DailyQuestCard } from "@/components/home/DailyQuestCard";
 import { StoriesRail } from "@/components/stories/StoriesRail";
+import { useQueryClient } from "@tanstack/react-query";
 import { pickHeroImages, defaultHeroImages } from "@/lib/hero-pool";
 import { scheduleIdle, decodeImage, perfMark } from "@/lib/idle";
 import { listStoriesSummary } from "@/lib/stories/summary";
@@ -81,6 +82,7 @@ type HeroSlide =
 function HomeFull() {
   const { profile } = useProfile();
   const { user, lastSyncAt, displayName: resolvedDisplayName } = useAccount();
+  const queryClient = useQueryClient();
   const stashOrigin = useStashCurrentAsOrigin();
 
 
@@ -315,12 +317,9 @@ function HomeFull() {
   useEffect(() => {
     const handleProgressChange = () => {
       // Trigger a re-fetch of stories summary which will update the recommendation.
-      // Since it's a TanStack Query, we can invalidate it.
-      import("@tanstack/react-query").then(({ useQueryClient }) => {
-        // This is tricky inside useEffect without access to queryClient.
-        // But we can dispatch a local state change or just use window event to trigger re-render if needed.
-        // Actually, the useQuery already has staleTime, but we want immediate update.
-      });
+      if (queryClient) {
+        queryClient.invalidateQueries({ queryKey: ["stories-summary"] });
+      }
     };
 
     window.addEventListener("irth:story-progress:changed", handleProgressChange);
@@ -329,7 +328,7 @@ function HomeFull() {
       window.removeEventListener("irth:story-progress:changed", handleProgressChange);
       window.removeEventListener("irth:story-completions:changed", handleProgressChange);
     };
-  }, []);
+  }, [queryClient]);
 
   const storyCover = useStoryCoverSrc(
     storyRec ? { 
