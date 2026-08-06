@@ -48,6 +48,7 @@ import { fetchWorldsIndex } from "@/lib/worlds";
 import { DailyChallengesSection } from "@/components/home/DailyChallengesSection";
 import { DailyQuestCard } from "@/components/home/DailyQuestCard";
 import { StoriesRail } from "@/components/stories/StoriesRail";
+import { useQueryClient } from "@tanstack/react-query";
 import { pickHeroImages, defaultHeroImages } from "@/lib/hero-pool";
 import { scheduleIdle, decodeImage, perfMark } from "@/lib/idle";
 import { listStoriesSummary } from "@/lib/stories/summary";
@@ -81,6 +82,7 @@ type HeroSlide =
 function HomeFull() {
   const { profile } = useProfile();
   const { user, lastSyncAt, displayName: resolvedDisplayName } = useAccount();
+  const queryClient = useQueryClient();
   const stashOrigin = useStashCurrentAsOrigin();
 
 
@@ -311,6 +313,22 @@ function HomeFull() {
     if (!storiesData || !collections.length) return null;
     return getStoryRecommendation(storiesData, collections);
   }, [storiesData, collections]);
+
+  useEffect(() => {
+    const handleProgressChange = () => {
+      // Trigger a re-fetch of stories summary which will update the recommendation.
+      if (queryClient) {
+        queryClient.invalidateQueries({ queryKey: ["stories-summary"] });
+      }
+    };
+
+    window.addEventListener("irth:story-progress:changed", handleProgressChange);
+    window.addEventListener("irth:story-completions:changed", handleProgressChange);
+    return () => {
+      window.removeEventListener("irth:story-progress:changed", handleProgressChange);
+      window.removeEventListener("irth:story-completions:changed", handleProgressChange);
+    };
+  }, [queryClient]);
 
   const storyCover = useStoryCoverSrc(
     storyRec ? { 

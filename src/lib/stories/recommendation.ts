@@ -14,13 +14,9 @@ export interface StoryRecommendation {
  * 
  * Logic:
  * 1. RESUME MODE: Unfinished library stories (unlocked=true, completed=false, progress!=null).
- *    Sorted by updated_at (or latest progress).
+ *    Strict check: progress must be < total scenes and not marked completed.
  * 2. START MODE: First unlocked, unstarted story (unlocked=true, progress=null) 
  *    in the first available collection (by display_order).
- * 
- * Filters:
- * - Excludes Campaign Intros (already filtered in listStoriesSummary).
- * - Must be published and unlocked.
  */
 export function getStoryRecommendation(
   stories: StorySummary[],
@@ -29,17 +25,12 @@ export function getStoryRecommendation(
   if (!stories.length) return null;
 
   // 1. Try Resume Mode (unfinished)
-  // listStoriesSummary already includes progress if present in online mode.
-  // We sort by 'in-progress' logic.
   const inProgress = stories
     .filter(s => s.unlocked && !s.completed && s.progress)
-    // We don't have updated_at in StorySummary, but we can assume the RPC 
-    // or local feed order or just take the first.
-    // Actually, pickHomeStories uses this logic too.
-    .sort((a, b) => {
-        // Prefer one with higher progress or just keep current order?
-        // User wants "latest" unfinished.
-        return 0; // Stability for now
+    .filter(s => {
+      // Must not be finished
+      if (!s.progress) return false;
+      return s.progress.max_scene_index_reached < s.scene_count - 1;
     });
 
   if (inProgress.length > 0) {
