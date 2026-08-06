@@ -5,10 +5,13 @@
  *   - Use the browser Cache Storage API (`caches.open('irth-images-v1')`)
  *     to persist image bytes across sessions. This works in modern browsers
  *     and inside the Capacitor Android WebView.
- *   - Cache-first: return the cached blob URL if present; otherwise fetch
- *     from network, store in the cache, and return the fresh URL.
- *   - When offline and not cached, return `null` so callers can render a
- *     graceful placeholder instead of a broken thumbnail.
+ *   - Priority:
+ *     1. Memory Cache (current session object URLs)
+ *     2. Persistent Storage (Cache Storage API via stable keys)
+ *     3. Network (only if not in storage, then persist for next time)
+ *   - Stable Keys: Supabase storage URLs are mapped to `irth://storage/bucket/path`
+ *     to prevent re-downloads when signed tokens rotate.
+ *   - When offline and not cached, return `null`.
  *   - Cross-origin fetches use `no-cors` mode when needed so the response
  *     can be stored even without CORS headers (opaque responses are fine
  *     for `<img>` display).
