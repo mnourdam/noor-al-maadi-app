@@ -30,6 +30,17 @@ export function WorldDebug({ worldSlug }: { worldSlug: string }) {
       chronological_order: (c as any).chronological_order
     }));
 
+    // Find campaigns that appear in sections under "prophetic" dividers
+    const campaignsBySection: Record<string, string[]> = {};
+    feedData.sections.forEach(s => {
+      const dividerTitle = s.divider?.title || "Uncategorized";
+      const dividerEra = s.divider?.era || "NONE";
+      const dividerRawKey = (s.divider as any)?.rawSectionKey || "NONE";
+      const key = `${dividerTitle} (Era: ${dividerEra}, Raw: ${dividerRawKey})`;
+      campaignsBySection[key] = s.campaigns.map(c => c.slug);
+    });
+    console.log(`[WorldDebug] Campaigns by Section:`, campaignsBySection);
+
     const propheticInFeed = feedCampaigns.filter(c => 
       c.world_slug === "prophetic" || 
       c.era === "prophetic" || 
