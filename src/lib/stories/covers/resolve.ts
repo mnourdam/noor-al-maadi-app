@@ -77,20 +77,22 @@ async function fetchCoverRow(
  * Card cover source. Returns the bundled path immediately when the cover
  * ships with the app; otherwise resolves (and offline-caches) the remote one.
  */
-export function useStoryCoverSrc(story: StoryCoverInput): string | null {
+export function useStoryCoverSrc(story: StoryCoverInput | null): string | null {
   const local = useMemo(
-    () => (bundledCoverIsCurrent(story) ? localStoryCoverPath(story.id) : null),
-    [story.id, story.content_version],
+    () => (story && bundledCoverIsCurrent(story) ? localStoryCoverPath(story.id) : null),
+    [story?.id, story?.content_version],
   );
 
-  const needsRemote = !local && !!story.cover_media_id;
+  const needsRemote = !local && !!story?.cover_media_id;
+  const storyId = story?.id ?? "";
+  const coverMediaId = story?.cover_media_id ?? "";
 
   const { data: row } = useQuery({
-    queryKey: ["story-cover-row:v3", story.id, story.cover_media_id],
-    enabled: needsRemote,
+    queryKey: ["story-cover-row:v3", storyId, coverMediaId],
+    enabled: needsRemote && !!storyId && !!coverMediaId,
     staleTime: 10 * 60_000,
     gcTime: 60 * 60_000,
-    queryFn: () => fetchCoverRow(story.id, story.cover_media_id as string),
+    queryFn: () => fetchCoverRow(storyId, coverMediaId),
   });
 
   const [remote, setRemote] = useState<string | null>(null);
