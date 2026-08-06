@@ -9,7 +9,8 @@
  * Runtime read priority:
  *   1. latest synced local cache (IndexedDB)
  *   2. bundled snapshot (/offline-snapshot.json)
- *   3. Supabase live fallback (if online)
+ *   3. Differential Manifest Check (only triggers fetch if server updated_at > local)
+ *   4. Supabase live fallback (if online)
  *
  * Only public/player-safe published content is included. No drafts, no
  * admin-only data, no PII (profiles, referrals, audit logs, emails).
