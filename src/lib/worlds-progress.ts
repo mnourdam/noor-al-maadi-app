@@ -172,8 +172,14 @@ export function buildWorldIndex(): Map<string, WorldEntityIndex> {
       idx.campaignIds.push(cid);
       idx.campaignRowsById.set(cid, c);
     };
-    const ws = typeof d.worldSlug === "string" && WORLD_SLUGS.has(d.worldSlug as string)
+    const ws = (typeof d.worldSlug === "string" && WORLD_SLUGS.has(d.worldSlug as string))
       ? (d.worldSlug as string)
+      : (typeof d.world_slug === "string" && WORLD_SLUGS.has(d.world_slug as string))
+      ? (d.world_slug as string)
+      : (typeof c.era === "string" && WORLD_SLUGS.has(c.era))
+      ? c.era
+      : (c.group_key && WORLD_SLUGS.has(c.group_key))
+      ? c.group_key
       : null;
     if (ws) { assign(ws); continue; }
     // Fallback: pick the world matched by the majority of core/supporting refs.
