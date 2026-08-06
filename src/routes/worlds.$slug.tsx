@@ -288,7 +288,6 @@ function WorldDetailPage() {
 
   return (
     <AppShell>
-      <WorldDebug worldSlug={slug} />
       <div className="px-5 pt-8 pb-12">
         <Link
           to="/worlds"
