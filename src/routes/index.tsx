@@ -72,7 +72,7 @@ export const Route = createFileRoute("/")({
 // ============================================================
 type HeroSlide =
   | { kind: "campaign"; bg: string; eyebrow: string; title: string; subtitle: string; quote?: string; progress?: { done: number; total: number }; cta: { label: string; link: React.ReactNode } }
-  | { kind: "story"; bg: string; eyebrow: string; title: string; subtitle: string; progress?: number; cta: { label: string; link: React.ReactNode } }
+  | { kind: "story"; bg: string; eyebrow: string; title: string; subtitle: string; mode: "resume" | "start"; collectionTitle?: string; reachedScene?: number; totalScenes?: number; progress?: number; cta: { label: string; link: React.ReactNode } }
   | { kind: "history"; bg: string; eyebrow: string; title: string; subtitle: string; cta?: { label: string; link: React.ReactNode } }
   | { kind: "discovery"; bg: string; eyebrow: string; title: string; subtitle: string; icon: string; cta: { label: string; link: React.ReactNode } }
   | { kind: "timeline"; bg: string; eyebrow: string; title: string; subtitle: string; cta: { label: string; link: React.ReactNode } };
@@ -376,14 +376,18 @@ function HomeFull() {
       const { mode, story, collection, progress } = storyRec;
       const heroBg = storyCover || bgAt(3);
       const isResume = mode === "resume";
-      const ctaLabel = isResume ? "متابعة القصة" : "ابدأ القصة";
+      const ctaLabel = isResume ? "تابع من حيث توقفت" : "ابدأ رحلة جديدة";
       
       out.push({
         kind: "story",
         bg: heroBg,
-        eyebrow: isResume ? "أكمل القصة من حيث توقفت" : "قصة مقترحة لك",
+        mode: mode,
+        eyebrow: isResume ? "تابع من حيث توقفت" : "ابدأ رحلة جديدة",
         title: story.title_ar,
-        subtitle: story.summary_ar || collection?.title_ar || "قصة تاريخية مشوقة من إرث.",
+        subtitle: isResume ? "" : (story.summary_ar || "قصة تاريخية مشوقة من إرث."),
+        collectionTitle: collection?.title_ar,
+        reachedScene: storyRec.reachedScene,
+        totalScenes: storyRec.totalScenes,
         progress: isResume ? progress : undefined,
         cta: {
           label: ctaLabel,
@@ -764,11 +768,20 @@ function HomeFull() {
                   {slide.kind === "story" && <PlayCircle className="size-3.5" />}
                   <span className="tracking-[0.25em]">{slide.eyebrow}</span>
                 </div>
+                
+                {slide.kind === "story" && slide.mode === "resume" && slide.collectionTitle && (
+                  <p className="mt-2 text-[10px] tracking-[0.1em] text-gold/80 opacity-90">{slide.collectionTitle}</p>
+                )}
+
                 <h1 className="font-display mt-3 text-4xl font-bold leading-[1.15] text-white drop-shadow-[0_4px_18px_oklch(0_0_0/0.6)]">
                   {slide.kind === "discovery" && <span className="me-2 text-3xl">{slide.icon}</span>}
                   {slide.title}
                 </h1>
-                <p className="mt-3 line-clamp-3 text-sm text-white/75">{slide.subtitle}</p>
+                
+                {slide.subtitle && (
+                  <p className="mt-3 line-clamp-3 text-sm text-white/75">{slide.subtitle}</p>
+                )}
+
                 {slide.kind === "campaign" && slide.progress && (
                   <div className="mt-5 flex items-center gap-3">
                     <div className="h-[3px] flex-1 overflow-hidden rounded-full bg-white/15">
@@ -777,12 +790,15 @@ function HomeFull() {
                     <span className="text-[11px] text-white/70">{slide.progress.done}/{slide.progress.total} فصل</span>
                   </div>
                 )}
-                {slide.kind === "story" && slide.progress !== undefined && (
+                
+                {slide.kind === "story" && slide.mode === "resume" && slide.progress !== undefined && (
                   <div className="mt-5 flex items-center gap-3">
                     <div className="h-[3px] flex-1 overflow-hidden rounded-full bg-white/15">
                       <div className="h-full bg-gradient-gold transition-all" style={{ width: `${Math.round(slide.progress * 100)}%` }} />
                     </div>
-                    <span className="text-[11px] text-white/70">{Math.round(slide.progress * 100)}%</span>
+                    <span className="text-[11px] text-white/70">
+                      {slide.reachedScene && slide.totalScenes ? `${slide.reachedScene}/${slide.totalScenes} مشهد` : `${Math.round(slide.progress * 100)}%`}
+                    </span>
                   </div>
                 )}
                 {slide.cta && (
