@@ -32,6 +32,8 @@ export type StoryRarity = "standard" | "featured" | "rare" | "legendary";
 export type StoryLengthClass = "short" | "standard" | "epic";
 
 export interface StorySummary {
+  story_collection_id: string | null;
+  collection_order: number | null;
   id: string;
   slug: string;
   title_ar: string;
