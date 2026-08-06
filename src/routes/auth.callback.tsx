@@ -198,7 +198,8 @@ function AuthCallbackPage() {
             <div className="flex flex-col gap-2 pt-2">
               <Link
                 to="/auth"
-                search={{ ref: undefined }}
+                search={{}}
+
                 className="block w-full rounded-xl bg-gradient-gold py-2.5 text-center text-sm font-bold text-primary-foreground shadow-gold"
               >
                 طلب رابط جديد
@@ -213,7 +214,7 @@ function AuthCallbackPage() {
             <div className="flex flex-col gap-2 pt-2">
               <Link
                 to="/auth"
-                search={{ ref: undefined }}
+                search={{}}
                 className="block w-full rounded-xl bg-gradient-gold py-2.5 text-center text-sm font-bold text-primary-foreground shadow-gold"
               >
                 تسجيل الدخول
