@@ -22,6 +22,7 @@ import {
   localEncyclopediaAll,
   localPublishedCampaigns,
   localInvestigations,
+  onLocalSnapshotChange,
 } from "@/lib/local-first-store";
 import { normalizeEntitySlug } from "@/lib/encyclopedia-source";
 import type { SupabaseEncyclopediaEntity } from "@/lib/encyclopedia-source";
