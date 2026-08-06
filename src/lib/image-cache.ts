@@ -211,7 +211,9 @@ export async function prefetchImages(urls: Iterable<string>): Promise<void> {
     if (seen.has(u)) continue;
     seen.add(u);
     try {
-      const already = await cache.match(u);
+      const stableKey = getStableStorageKey(u);
+      const cacheKey = stableKey || u;
+      const already = await cache.match(cacheKey);
       if (!already) list.push(u);
     } catch { list.push(u); }
   }
