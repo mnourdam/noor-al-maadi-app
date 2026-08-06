@@ -50,6 +50,11 @@ import { DailyQuestCard } from "@/components/home/DailyQuestCard";
 import { StoriesRail } from "@/components/stories/StoriesRail";
 import { pickHeroImages, defaultHeroImages } from "@/lib/hero-pool";
 import { scheduleIdle, decodeImage, perfMark } from "@/lib/idle";
+import { listStoriesSummary } from "@/lib/stories/summary";
+import { useStoryCollections } from "@/lib/stories/collections";
+import { getStoryRecommendation } from "@/lib/stories/recommendation";
+import { useStoryCoverSrc } from "@/lib/stories/covers";
+import { BookOpen, PlayCircle, Clock } from "lucide-react";
 
 
 export const Route = createFileRoute("/")({
@@ -67,6 +72,7 @@ export const Route = createFileRoute("/")({
 // ============================================================
 type HeroSlide =
   | { kind: "campaign"; bg: string; eyebrow: string; title: string; subtitle: string; quote?: string; progress?: { done: number; total: number }; cta: { label: string; link: React.ReactNode } }
+  | { kind: "story"; bg: string; eyebrow: string; title: string; subtitle: string; progress?: number; cta: { label: string; link: React.ReactNode } }
   | { kind: "history"; bg: string; eyebrow: string; title: string; subtitle: string; cta?: { label: string; link: React.ReactNode } }
   | { kind: "discovery"; bg: string; eyebrow: string; title: string; subtitle: string; icon: string; cta: { label: string; link: React.ReactNode } }
   | { kind: "timeline"; bg: string; eyebrow: string; title: string; subtitle: string; cta: { label: string; link: React.ReactNode } };
@@ -295,39 +301,68 @@ function HomeFull() {
     heroPoolFallback,
   );
 
+  // ===== Story recommendation slide =====
+  const { data: storiesData } = useQuery({
+    queryKey: ["stories-summary", null, "hero"],
+    queryFn: () => listStoriesSummary(null),
+    staleTime: 60_000,
+  });
+  const { collections } = useStoryCollections();
+  const storyRec = useMemo(() => {
+    if (!storiesData || !collections.length) return null;
+    return getStoryRecommendation(storiesData, collections);
+  }, [storiesData, collections]);
+
+  const storyCover = useStoryCoverSrc(
+    storyRec ? { 
+      cover_media_id: storyRec.cover, 
+      id: storyRec.story.id 
+    } as any : null
+  );
+
   // ===== Hero slides =====
   const slides = useMemo<HeroSlide[]>(() => {
     const out: HeroSlide[] = [];
     const bgAt = (i: number) => heroBgs[i % Math.max(heroBgs.length, 1)] ?? heroBgs[0] ?? "";
+    
+    // 1. Campaign Slide
     if (campaignSel) {
       const { campaign, hasStarted, isComplete, completedChapters, nextChapter } = campaignSel;
-      const total = campaign.chapters.length;
-      const ctaLabel = isComplete ? "استعرض الحملة" : hasStarted ? "أكمل رحلتك" : "ابدأ رحلتك";
-      const heroBg = campaignHeroBg;
-      const subtitle = nextChapter && !isComplete
-        ? `الفصل ${nextChapter.order ?? completedChapters + 1} · ${nextChapter.title}`
-        : (campaign.subtitle ?? campaign.description ?? "تابع رحلتك في هذه الحملة.");
-      out.push({
-        kind: "campaign",
-        bg: heroBg,
-        eyebrow: isComplete ? "حملتك المكتملة" : hasStarted ? "أكمل رحلتك من حيث توقفت" : "ابدأ رحلتك الآن",
-
-        title: campaign.title,
-        subtitle,
-        progress: { done: completedChapters, total },
-        cta: { label: ctaLabel, link: (
-          <Link
-            to="/campaigns/imported/$id"
-            params={{ id: campaign.id }}
-            onClick={() => stashOrigin(`/campaigns/imported/${campaign.id}`)}
-            className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-bold text-primary-foreground"
-          >
-
-            <Play className="size-4 fill-current" />{ctaLabel}
-          </Link>
-        )},
+...
       });
     }
+
+    // 2. Story Slide
+    if (storyRec) {
+      const { mode, story, collection, progress } = storyRec;
+      const heroBg = storyCover || bgAt(3);
+      const isResume = mode === "resume";
+      const ctaLabel = isResume ? "متابعة القصة" : "ابدأ القصة";
+      
+      out.push({
+        kind: "story",
+        bg: heroBg,
+        eyebrow: isResume ? "أكمل القصة من حيث توقفت" : "قصة مقترحة لك",
+        title: story.title_ar,
+        subtitle: story.summary_ar || collection?.title_ar || "قصة تاريخية مشوقة من إرث.",
+        progress: isResume ? progress : undefined,
+        cta: {
+          label: ctaLabel,
+          link: (
+            <Link
+              to="/story/$id"
+              params={{ id: story.id }}
+              className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-bold text-primary-foreground"
+            >
+              <PlayCircle className="size-4 fill-current" />
+              {ctaLabel}
+            </Link>
+          ),
+        },
+      });
+    }
+
+    // 3. History Slide
     todayEvents.forEach((ev, i) => {
       const yr = ev.hijri_year ? `${ev.hijri_year} هـ` : (ev.gregorian_year ? `${ev.gregorian_year} م` : "في مثل هذا اليوم");
       const suffix = todayEvents.length > 1 ? ` · ${i + 1}/${todayEvents.length}` : "";
