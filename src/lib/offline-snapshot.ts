@@ -448,34 +448,24 @@ export async function generateAndStoreSnapshot(): Promise<OfflineSnapshot> {
       await writeBundledSnapshotFile({ data: { json: JSON.stringify(snap, null, 2) } });
     } catch { /* dev-only path; ignore in prod */ }
   }
-  // Warm the shared image cache in the background. Concurrency is limited
-  // to 6 in image-cache.ts.
-  const warm = async () => {
-    const { warmSnapshotImageCache } = await import("./offline-snapshot-warm");
-    await warmSnapshotImageCache(snap);
-  };
-
-  if (typeof window !== "undefined" && "requestIdleCallback" in window) {
-    (window as any).requestIdleCallback(() => void warm(), { timeout: 10000 });
-  } else {
-    setTimeout(() => void warm(), 5000);
-  }
-
-  // scene, first document, first reveal) go first so slow networks
-  // still land the important assets before the long tail.
   // Warm the shared image cache in the background using idle time.
-  const warm = () => {
-    void warmSnapshotImageCache(snap.collections);
+  const warmTask = async () => {
+    try {
+      const { warmSnapshotImageCache } = await import("./offline-snapshot-warm-bridge");
+      await warmSnapshotImageCache(snap.collections);
+    } catch (err) {
+      console.warn("[snapshot] background warming failed:", err);
+    }
   };
+
   if (typeof window !== "undefined") {
     if ("requestIdleCallback" in window) {
-      (window as any).requestIdleCallback(warm, { timeout: 4000 });
+      (window as any).requestIdleCallback(() => void warmTask(), { timeout: 10000 });
     } else {
-      setTimeout(warm, 1500);
+      setTimeout(() => void warmTask(), 5000);
     }
-  } else {
-    warm();
   }
+
   return snap;
 }
 
