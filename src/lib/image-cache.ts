@@ -38,7 +38,24 @@ function hasCaches(): boolean {
 function isLikelyImage(url: string): boolean {
   if (!url || typeof url !== "string") return false;
   if (url.startsWith("data:image/") || url.startsWith("blob:")) return false;
-  return IMAGE_EXT.test(url) || /\/storage\/v1\/object\//.test(url);
+  // If it's a Supabase storage URL, it's definitely an image we want to cache.
+  if (/\/storage\/v1\/object\//.test(url)) return true;
+  return IMAGE_EXT.test(url);
+}
+
+/** 
+ * Extract a stable cache key from a Supabase storage URL.
+ * Converts: https://.../storage/v1/object/public/bucket/path/to/img.png?token=...
+ * To: irth://storage/bucket/path/to/img.png
+ */
+export function getStableStorageKey(url: string): string | null {
+  if (!url || typeof url !== "string") return null;
+  const match = url.match(/\/storage\/v1\/object\/(?:public\/|sign\/)?([^\/?]+)\/([^?]+)/);
+  if (match) {
+    const [, bucket, path] = match;
+    return `irth://storage/${bucket}/${path}`;
+  }
+  return null;
 }
 
 async function openCache(): Promise<Cache | null> {
