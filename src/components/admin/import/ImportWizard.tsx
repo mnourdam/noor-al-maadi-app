@@ -871,6 +871,13 @@ export function ImportWizard({ engine }: WizardProps) {
               <Stat label="تخطّي" value={result.skipped} tone="skip" />
               <Stat label="فشل" value={result.failed} tone={result.failed > 0 ? "blocked" : "skip"} />
             </dl>
+            {(result as any).metadata?.verified_count > 0 && (
+              <div className="mt-3 flex items-center gap-2 text-[10px] text-emerald-400">
+                <CheckCircle2 className="h-3 w-3" />
+                <span>تم التحقق من كتابة {(result as any).metadata.verified_count} حقلاً من نوع (world_slug) بنجاح.</span>
+              </div>
+            )}
+
             {result.errors.length > 0 && (
               <div className="mt-3 rounded-md border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-200">
                 <div className="mb-1 font-semibold">عيّنة من الأخطاء:</div>
