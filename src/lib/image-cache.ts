@@ -166,13 +166,24 @@ export async function prefetchKeyedImages(
  * Return a usable image URL. Cache-first; falls back to network when online.
  * Returns `null` when the URL is not cached and the app is offline.
  */
+/**
+ * Return a usable image URL. Cache-first; falls back to network when online.
+ * Returns `null` when the URL is not cached and the app is offline.
+ * 
+ * Automatically detects Supabase storage URLs and uses a stable cache key
+ * to prevent redundant downloads when signed tokens rotate.
+ */
 export async function resolveImageUrl(url: string): Promise<string | null> {
   if (!url) return null;
   if (url.startsWith("data:") || url.startsWith("blob:")) return url;
+  
+  const stableKey = getStableStorageKey(url);
+  const cacheKey = stableKey || url;
+
   const cache = await openCache();
   if (cache) {
     try {
-      const hit = await cache.match(url);
+      const hit = await cache.match(cacheKey);
       if (hit) {
         const obj = await toObjectUrl(hit);
         if (obj) return obj;
@@ -182,8 +193,9 @@ export async function resolveImageUrl(url: string): Promise<string | null> {
   const online = typeof navigator === "undefined" || navigator.onLine !== false;
   if (!online) return null;
   if (!cache) return url;
-  const fresh = await fetchAndCache(url, cache);
-  if (!fresh) return url; // last-resort: let the browser try directly
+  
+  const fresh = await fetchAndCache(url, cache, cacheKey);
+  if (!fresh) return url; 
   const obj = await toObjectUrl(fresh);
   return obj ?? url;
 }
