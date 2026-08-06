@@ -71,6 +71,7 @@ export function CampaignIntroPlayer({
   const machineRef = useRef<IntroPlaybackMachine | null>(null);
   const surfaceRef = useRef<HTMLDivElement | null>(null);
   const resumeAfterExportRef = useRef(false);
+  const [exportLockScene, setExportLockScene] = useState<number | null>(null);
 
   const reducedMotion = usePrefersReducedMotion();
 
@@ -123,7 +124,8 @@ export function CampaignIntroPlayer({
     };
   }, [scenes, reducedMotion, finish]);
 
-  const scene = scenes?.[snap.index] ?? null;
+  const activeIdx = exportLockScene !== null ? exportLockScene : snap.index;
+  const scene = scenes?.[activeIdx] ?? null;
   const dwellMs = useMemo(() => (scene ? sceneDwellMs(scene) : 4000), [scene]);
 
   // --- Preload the neighbouring scene artwork --------------------
@@ -149,15 +151,17 @@ export function CampaignIntroPlayer({
 
   // --- Pointer handling (unified: no touch + mouse duplication) ---
   const onPointerDown = useCallback((e: React.PointerEvent) => {
+    if (exportLockScene !== null) return;
     machineRef.current?.pointerDown(e.clientX);
-  }, []);
+  }, [exportLockScene]);
   const onPointerMove = useCallback((e: React.PointerEvent) => {
     machineRef.current?.pointerMove(e.clientX);
   }, []);
   const onPointerUp = useCallback((e: React.PointerEvent) => {
+    if (exportLockScene !== null) return;
     const width = surfaceRef.current?.clientWidth ?? window.innerWidth;
     machineRef.current?.pointerUp(e.clientX, width);
-  }, []);
+  }, [exportLockScene]);
   const onPointerCancel = useCallback(() => {
     machineRef.current?.pointerCancel();
   }, []);
@@ -198,7 +202,7 @@ export function CampaignIntroPlayer({
           scene={scene}
           media={media}
           epoch={scene.id}
-          paused={snap.paused || snap.transitioning}
+          paused={snap.paused || snap.transitioning || exportLockScene !== null}
         />
       </div>
 
@@ -210,7 +214,7 @@ export function CampaignIntroPlayer({
         data-testid="intro-interaction-surface"
         role="presentation"
         className="absolute inset-0 z-20 touch-none select-none"
-        style={{ ...noSelect, pointerEvents: snap.transitioning ? "none" : "auto" }}
+        style={{ ...noSelect, pointerEvents: (snap.transitioning || exportLockScene !== null) ? "none" : "auto" }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -223,9 +227,9 @@ export function CampaignIntroPlayer({
       <div className="pointer-events-none absolute inset-x-0 top-0 z-20 px-4 pt-[calc(env(safe-area-inset-top)+10px)]">
         <SegmentedProgress
           total={scenes.length}
-          activeIndex={snap.index}
+          activeIndex={activeIdx}
           activeMs={dwellMs}
-          paused={snap.paused || snap.transitioning}
+          paused={snap.paused || snap.transitioning || exportLockScene !== null}
           epoch={scene.id}
         />
       </div>
@@ -251,9 +255,11 @@ export function CampaignIntroPlayer({
           media={media}
           onPause={() => {
             resumeAfterExportRef.current = !snap.paused;
+            setExportLockScene(snap.index);
             machineRef.current?.pauseExternal();
           }}
           onResume={() => {
+            setExportLockScene(null);
             if (resumeAfterExportRef.current) machineRef.current?.resumeExternal();
           }}
         />
