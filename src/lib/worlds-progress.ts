@@ -869,11 +869,13 @@ export function useWorldProgress(worldSlug: string) {
   const canonicalInv = useCanonicalInvestigationProgress();
   const investigationDoneKeys = canonicalInv.completedKeys;
   const [ready, setReady] = useState(false);
+  const [v, setV] = useState(0);
 
   useEffect(() => {
     let alive = true;
     ensureLocalSnapshotLoaded().then(() => { if (alive) setReady(true); });
-    return () => { alive = false; };
+    const unsub = onLocalSnapshotChange(() => { if (alive) setV(n => n + 1); });
+    return () => { alive = false; unsub(); };
   }, []);
 
   return useMemo(() => {
@@ -907,7 +909,7 @@ export function useWorldProgress(worldSlug: string) {
     const recommendation = pickContinueJourney(worldSlug, inputs);
     const rankedSections = rankWorldSections(progress);
     return { ready: true, index, progress, recommendation, rankedSections };
-  }, [ready, worldSlug, discovered, museum, cloudCampaign, investigationDoneKeys]);
+  }, [ready, worldSlug, discovered, museum, cloudCampaign, investigationDoneKeys, v]);
 }
 
 /** Compact per-world progress for the index page. */
@@ -918,11 +920,13 @@ export function useAllWorldsProgress() {
   const canonicalInv = useCanonicalInvestigationProgress();
   const investigationDoneKeys = canonicalInv.completedKeys;
   const [ready, setReady] = useState(false);
+  const [v, setV] = useState(0);
 
   useEffect(() => {
     let alive = true;
     ensureLocalSnapshotLoaded().then(() => { if (alive) setReady(true); });
-    return () => { alive = false; };
+    const unsub = onLocalSnapshotChange(() => { if (alive) setV(n => n + 1); });
+    return () => { alive = false; unsub(); };
   }, []);
 
   return useMemo(() => {
@@ -942,5 +946,5 @@ export function useAllWorldsProgress() {
       byWorld.set(h.slug, { progress, recommendation });
     }
     return { ready: true, byWorld };
-  }, [ready, discovered, museum, cloudCampaign, investigationDoneKeys]);
+  }, [ready, discovered, museum, cloudCampaign, investigationDoneKeys, v]);
 }
