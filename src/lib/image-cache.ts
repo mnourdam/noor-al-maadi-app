@@ -228,7 +228,9 @@ export async function prefetchImages(urls: Iterable<string>): Promise<void> {
       let retries = 0;
       while (retries <= PREFETCH_RETRY_LIMIT) {
         try {
-          const res = await fetchAndCache(u, cache!);
+          const stableKey = getStableStorageKey(u);
+          const cacheKey = stableKey || u;
+          const res = await fetchAndCache(u, cache!, cacheKey);
           if (res) break;
         } catch { /* ignore */ }
         retries++;
