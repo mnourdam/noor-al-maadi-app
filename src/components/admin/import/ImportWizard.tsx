@@ -861,12 +861,14 @@ export function ImportWizard({ engine }: WizardProps) {
           <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-5">
             <div className="flex items-center gap-2 text-emerald-200">
               <CheckCircle2 className="h-5 w-5" />
-              <h3 className="text-sm font-bold">اكتمل الاستيراد</h3>
+              <h3 className="text-sm font-bold">اكتمل الاستيراد المعاملي</h3>
             </div>
-            <dl className="mt-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+            <dl className="mt-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-6">
+              <Stat label="مطابق" value={(result as any).metadata?.matched ?? rows.length} tone="neutral" />
+              <Stat label="منفّذ" value={(result as any).metadata?.attempted ?? (result.inserted + result.updated)} tone="update" />
               <Stat label="أُدرج" value={result.inserted} tone="new" />
-              <Stat label="حُدِّث" value={result.updated} tone="update" />
-              <Stat label="تُخطّي" value={result.skipped} tone="skip" />
+              <Stat label="حُدِّث فعلياً" value={result.updated} tone="update" />
+              <Stat label="تخطّي" value={result.skipped} tone="skip" />
               <Stat label="فشل" value={result.failed} tone={result.failed > 0 ? "blocked" : "skip"} />
             </dl>
             {result.errors.length > 0 && (
