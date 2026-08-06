@@ -271,6 +271,7 @@ function AdminInvestigationsPage() {
           hasBlocking: true,
           reward: { unlocks: 0, legacyCoins: false, conflict: false },
           worldSlug: null,
+          effectiveWorldSlug: null,
           eraSlug: null,
           qa: (r?.id ? qaMap.get(r.id)?.status : undefined) ?? QA_DEFAULT,
           renderError: `ROW_RENDER_FAILED: ${rowE?.message ?? String(rowE)}`,
