@@ -4,7 +4,7 @@ import { markBootHealthy } from "@/lib/diagnostics/safe-boot";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Search, Map as MapIcon, ChevronLeft, Crown, Lock, Compass, Play,
-  Hourglass, Calendar, Heart, Trophy, Package, BookOpen,
+  Hourglass, Calendar, Heart, Trophy, Package, BookOpen, PlayCircle, Clock,
   Sparkles, Bell, Gem, Target, Flame, Sunrise, Zap, Award,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
@@ -54,7 +54,6 @@ import { listStoriesSummary } from "@/lib/stories/summary";
 import { useStoryCollections } from "@/lib/stories/collections";
 import { getStoryRecommendation } from "@/lib/stories/recommendation";
 import { useStoryCoverSrc } from "@/lib/stories/covers";
-import { BookOpen, PlayCircle, Clock } from "lucide-react";
 
 
 export const Route = createFileRoute("/")({
@@ -744,6 +743,7 @@ function HomeFull() {
                   {slide.kind === "history" && <Calendar className="size-3.5" />}
                   {slide.kind === "discovery" && <Gem className="size-3.5" />}
                   {slide.kind === "timeline" && <Hourglass className="size-3.5" />}
+                  {slide.kind === "story" && <PlayCircle className="size-3.5" />}
                   <span className="tracking-[0.25em]">{slide.eyebrow}</span>
                 </div>
                 <h1 className="font-display mt-3 text-4xl font-bold leading-[1.15] text-white drop-shadow-[0_4px_18px_oklch(0_0_0/0.6)]">
@@ -757,6 +757,14 @@ function HomeFull() {
                       <div className="h-full bg-gradient-gold transition-all" style={{ width: `${Math.round((slide.progress.done / slide.progress.total) * 100)}%` }} />
                     </div>
                     <span className="text-[11px] text-white/70">{slide.progress.done}/{slide.progress.total} فصل</span>
+                  </div>
+                )}
+                {slide.kind === "story" && slide.progress !== undefined && (
+                  <div className="mt-5 flex items-center gap-3">
+                    <div className="h-[3px] flex-1 overflow-hidden rounded-full bg-white/15">
+                      <div className="h-full bg-gradient-gold transition-all" style={{ width: `${Math.round(slide.progress * 100)}%` }} />
+                    </div>
+                    <span className="text-[11px] text-white/70">{Math.round(slide.progress * 100)}%</span>
                   </div>
                 )}
                 {slide.cta && (
