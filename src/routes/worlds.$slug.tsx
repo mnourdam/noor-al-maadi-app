@@ -25,9 +25,11 @@ import {
   useWorldMembership,
   useCloudCampaignProgress,
   useAllWorldsProgress,
+  buildWorldIndex,
   type Recommendation,
   type SectionKey,
 } from "@/lib/worlds-progress";
+import { localPublishedCampaigns } from "@/lib/local-first-store";
 import { useProfile } from "@/lib/profile";
 import { fetchPublishedFeed } from "@/lib/supabaseCampaigns";
 import { useSupabaseInvestigations, countQuestions } from "@/lib/investigations-source";
