@@ -58,50 +58,102 @@ export function SceneExportButton({
 
   const run = useCallback(async () => {
     if (busyRef.current) return;
+    
+    // Feature Flag / Environment Guard
+    const isAndroid = typeof window !== "undefined" && (window as any).Capacitor?.getPlatform() === "android";
+    const EXPORT_BUILD_VERSION = 4;
+    
+    console.log(`[IrthExport] click EXPORT_BUILD_VERSION=${EXPORT_BUILD_VERSION} isAndroid=${isAndroid}`);
+
     busyRef.current = true;
     setBusy(true);
     onPause?.();
-    let stage: SceneCardStage | "share" = "fonts";
+    let stage: SceneCardStage | "share" | "save" = "fonts";
+    
     try {
-      // Hard ceiling for the whole pipeline — the spinner can never hang.
-      const OVERALL_MS = 25_000;
+      // 1. Scene Card Generation
+      const OVERALL_MS = 20_000;
       const blob = await Promise.race([
-        renderSceneCard({ scene, media, onStage: (s) => { stage = s; } }),
+        renderSceneCard({ scene, media, onStage: (s) => { 
+          stage = s;
+          console.log(`[IrthExport] stage=${s}`);
+        } }),
         new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new SceneCardError(stage as SceneCardStage, "timeout")), OVERALL_MS),
+          setTimeout(() => reject(new Error("TIMEOUT")), OVERALL_MS),
         ),
       ]);
-      if (!blob) throw new SceneCardError("encode", "no blob");
 
-      stage = "share";
-      const filename = `irth-scene-${scene.scene_index + 1}.png`;
-      const res = await shareImage({
-        jobId: `story-scene-card-${scene.id}`,
-        blob,
-        filename,
-        title: storyTitle ?? "إرث",
-        text: storyTitle ?? "إرث",
-      });
-      // Share unavailable / failed → direct download fallback.
-      if (res.status === "failed") {
-        const dl = await downloadImage({
-          jobId: `story-scene-card-dl-${scene.id}`,
+      if (!blob) throw new Error("ENCODE_FAILED");
+      console.log(`[IrthExport] blob_ready size=${blob.size}`);
+
+      // 2. Android Native Path (Primary)
+      if (isAndroid) {
+        stage = "save";
+        console.log(`[IrthExport] android_start_save`);
+        const filename = `irth-scene-${scene.scene_index + 1}.png`;
+        
+        // Convert blob to base64 for native bridge
+        const reader = new FileReader();
+        const base64Promise = new Promise<string>((resolve, reject) => {
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+        });
+        reader.readAsDataURL(blob);
+        const base64Data = await base64Promise;
+
+        // Use Capacitor Filesystem + Share
+        const { Filesystem, Directory } = await import("@capacitor/filesystem");
+        const { Share } = await import("@capacitor/share");
+
+        const saveResult = await Filesystem.writeFile({
+          path: filename,
+          data: base64Data,
+          directory: Directory.Cache
+        });
+
+        console.log(`[IrthExport] android_save_ok uri=${saveResult.uri}`);
+        
+        await Share.share({
+          title: storyTitle ?? "إرث",
+          text: storyTitle ?? "إرث",
+          url: saveResult.uri,
+        });
+        
+        console.log(`[IrthExport] android_share_dispatched`);
+      } else {
+        // 3. Browser Path
+        stage = "share";
+        const filename = `irth-scene-${scene.scene_index + 1}.png`;
+        const res = await shareImage({
+          jobId: `story-scene-card-${scene.id}`,
           blob,
           filename,
+          title: storyTitle ?? "إرث",
+          text: storyTitle ?? "إرث",
         });
-        if (dl.status === "failed") {
-          toast.error("تعذّر حفظ الصورة — حاول مجددًا");
+        if (res.status === "failed") {
+          await downloadImage({
+            jobId: `story-scene-card-dl-${scene.id}`,
+            blob,
+            filename,
+          });
         }
       }
-    } catch (err) {
-      console.warn("[scene-card] export failed at stage:", stage, err);
-      toast.error(stageMessage(stage));
+    } catch (err: any) {
+      console.error(`[IrthExport] error stage=${stage}`, err);
+      if (isAndroid) {
+        toast.error(`تعذّر تصدير المشهد على هذا الجهاز حالياً (${stage})`);
+      } else {
+        toast.error(stageMessage(stage as any));
+      }
     } finally {
       busyRef.current = false;
       setBusy(false);
       onResume?.();
+      console.log(`[IrthExport] finished`);
     }
   }, [scene, media, storyTitle, onPause, onResume]);
+
 
 
   return (

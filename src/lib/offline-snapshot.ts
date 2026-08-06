@@ -448,7 +448,19 @@ export async function generateAndStoreSnapshot(): Promise<OfflineSnapshot> {
       await writeBundledSnapshotFile({ data: { json: JSON.stringify(snap, null, 2) } });
     } catch { /* dev-only path; ignore in prod */ }
   }
-  // Warm the shared image cache. Story "hero" media (cover, first
+  // Warm the shared image cache in the background. Concurrency is limited
+  // to 6 in image-cache.ts.
+  const warm = async () => {
+    const { warmSnapshotImageCache } = await import("./offline-snapshot-warm");
+    await warmSnapshotImageCache(snap);
+  };
+
+  if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+    (window as any).requestIdleCallback(() => void warm(), { timeout: 10000 });
+  } else {
+    setTimeout(() => void warm(), 5000);
+  }
+
   // scene, first document, first reveal) go first so slow networks
   // still land the important assets before the long tail.
   // Warm the shared image cache in the background using idle time.

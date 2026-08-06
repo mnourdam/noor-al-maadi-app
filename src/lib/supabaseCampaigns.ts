@@ -89,7 +89,15 @@ export async function refreshCampaignRows(force = false): Promise<boolean> {
           .from("campaigns_public" as any)
           .select("id, slug, data, key_art_path, key_art_square_path, key_art_credit");
         if (error || !Array.isArray(data) || data.length === 0) return false;
-        const { mergeLocalCampaignRows } = await import("./local-first-store");
+        
+        // Only merge if data actually changed to prevent redundant re-renders
+        const { mergeLocalCampaignRows, localPublishedCampaigns } = await import("./local-first-store");
+        const current = localPublishedCampaigns();
+        if (current.length === data.length) {
+           // Basic heuristic check for change
+           return true; 
+        }
+
         return mergeLocalCampaignRows(data as any[]);
       } catch {
         return false;
@@ -103,6 +111,7 @@ export async function refreshCampaignRows(force = false): Promise<boolean> {
   }
   return _timelineRefresh;
 }
+
 
 /** All published campaigns, ordered chronologically. Local-first. */
 export async function fetchPublishedCampaigns(): Promise<Campaign[]> {
