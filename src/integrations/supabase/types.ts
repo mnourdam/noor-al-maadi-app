@@ -1267,6 +1267,7 @@ export type Database = {
           title: string
           updated_at: string
           updated_by: string | null
+          world_slug: string | null
         }
         Insert: {
           content_version?: number
@@ -1288,6 +1289,7 @@ export type Database = {
           title: string
           updated_at?: string
           updated_by?: string | null
+          world_slug?: string | null
         }
         Update: {
           content_version?: number
@@ -1309,6 +1311,7 @@ export type Database = {
           title?: string
           updated_at?: string
           updated_by?: string | null
+          world_slug?: string | null
         }
         Relationships: []
       }
@@ -3244,6 +3247,7 @@ export type Database = {
           subtitle: string | null
           title: string | null
           updated_at: string | null
+          world_slug: string | null
         }
         Insert: {
           content_version?: number | null
@@ -3260,6 +3264,7 @@ export type Database = {
           subtitle?: string | null
           title?: string | null
           updated_at?: string | null
+          world_slug?: string | null
         }
         Update: {
           content_version?: number | null
@@ -3276,6 +3281,7 @@ export type Database = {
           subtitle?: string | null
           title?: string | null
           updated_at?: string | null
+          world_slug?: string | null
         }
         Relationships: []
       }
