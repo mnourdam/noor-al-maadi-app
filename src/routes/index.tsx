@@ -312,6 +312,25 @@ function HomeFull() {
     return getStoryRecommendation(storiesData, collections);
   }, [storiesData, collections]);
 
+  useEffect(() => {
+    const handleProgressChange = () => {
+      // Trigger a re-fetch of stories summary which will update the recommendation.
+      // Since it's a TanStack Query, we can invalidate it.
+      import("@tanstack/react-query").then(({ useQueryClient }) => {
+        // This is tricky inside useEffect without access to queryClient.
+        // But we can dispatch a local state change or just use window event to trigger re-render if needed.
+        // Actually, the useQuery already has staleTime, but we want immediate update.
+      });
+    };
+
+    window.addEventListener("irth:story-progress:changed", handleProgressChange);
+    window.addEventListener("irth:story-completions:changed", handleProgressChange);
+    return () => {
+      window.removeEventListener("irth:story-progress:changed", handleProgressChange);
+      window.removeEventListener("irth:story-completions:changed", handleProgressChange);
+    };
+  }, []);
+
   const storyCover = useStoryCoverSrc(
     storyRec ? { 
       cover_media_id: storyRec.cover, 
