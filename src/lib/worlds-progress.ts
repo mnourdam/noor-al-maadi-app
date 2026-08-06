@@ -613,9 +613,13 @@ export function computeWorldProgress(
     const cloudDone = inputs.cloudCampaign.get(cid) ?? new Set<string>();
     // Merge local + cloud for the "started/completed" boolean.
     const local = getCampaignProgress(cid);
+    const hasCloudRecord = cloudDone.size > 0;
     let doneN = 0;
     for (const ch of chapters) {
-      const isDone = cloudDone.has(ch.id) || !!local.chapters[ch.id]?.completed;
+      // Logic: 
+      // - If we have Cloud records for this campaign, we trust Cloud only.
+      // - If NO Cloud records exist yet (e.g. offline, first run), we trust Local.
+      const isDone = cloudDone.has(ch.id) || (!hasCloudRecord && !!local.chapters[ch.id]?.completed);
       if (isDone) doneN++;
     }
     completedChapters += doneN;
