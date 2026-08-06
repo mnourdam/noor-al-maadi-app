@@ -740,8 +740,8 @@ function ProgressTab({
     }
     // Investigations total: fall back to the canonical hook when world index
     // hasn't hydrated yet (guest / cold-start).
-    if (invTotal === 0 && canonicalInv.count > invCompleted) {
-      invCompleted = canonicalInv.count;
+    if (invTotal === 0 && (canonicalInv as any).count > invCompleted) {
+      invCompleted = (canonicalInv as any).count;
     }
     return {
       campaigns:      { current: campaignsCompleted, goal: Math.max(campaignsTotal, campaignsCompleted, 1) },
