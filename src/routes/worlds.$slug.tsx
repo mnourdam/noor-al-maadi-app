@@ -241,7 +241,26 @@ function WorldDetailPage() {
 
   const titleBySlug = new Map((worldsIndex ?? []).map((w) => [w.hub.slug, w.entity.title]));
 
-  const { progress, recommendation, rankedSections, ready } = useWorldProgress(slug);
+  const { progress, recommendation, rankedSections, ready, index } = useWorldProgress(slug);
+  
+  useEffect(() => {
+    if (ready) {
+      const idx = index.get(slug);
+      console.log("[world-debug] worldSlug", slug);
+      console.log("[world-debug] campaignFeedCount", localPublishedCampaigns().length);
+      console.log("[world-debug] membershipCount", idx?.campaignIds.length ?? 0);
+      console.log("[world-debug] renderedCampaignTotal", progress.campaigns.total);
+      console.log("[world-debug] dataSource", "buildWorldIndex");
+      console.log("[world-debug] campaignSample", idx?.campaignIds.slice(0, 3));
+      
+      const rawCamps = localPublishedCampaigns() as any[];
+      const propheticCamps = rawCamps.filter(c => {
+        const d = c?.data || {};
+        return d.worldSlug === "prophetic" || d.world_slug === "prophetic" || c.era === "prophetic" || c.group_key === "prophetic";
+      });
+      console.log("[world-debug] manualFilterCount", propheticCamps.length);
+    }
+  }, [ready, slug, index, progress]);
   const { byWorld } = useAllWorldsProgress();
   const reduceMotion = useReduceMotion();
   const stableOrder = useStableSectionOrder(rankedSections, progress.signature);
