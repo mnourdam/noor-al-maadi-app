@@ -709,10 +709,12 @@ function ProgressTab({
   // Canonical inputs — every metric comes from a v2 canonical service.
   // Do NOT read legacy profile arrays (storiesRead, artifactsFound,
   // charactersUnlocked, regionsUnlocked, timelinesCompleted, decisionsCompleted).
-  const worldsAgg = useAllWorldsProgress();
-  const canonicalInv = useCanonicalInvestigationProgress();
-  const { recommendation: campaignRec } = useCampaignRecommendation();
-  const achCompletion = useAchievementCompletion();
+  const { data: worldsAgg, isLoading: worldsLoading } = useAllWorldsProgress();
+  const { data: canonicalInv, isLoading: invLoading } = useCanonicalInvestigationProgress();
+  const { recommendation: campaignRec, isLoading: recLoading } = useCampaignRecommendation();
+  const { data: achCompletion, isLoading: achLoading } = useAchievementCompletion();
+
+  const isLoading = worldsLoading && !worldsAgg;
 
   // Aggregate world roll-ups → totals across every world.
   const canonical = useMemo(() => {
@@ -722,7 +724,7 @@ function ProgressTab({
     let museumFound = 0, museumTotal = 0;
     let worldsComplete = 0;
     let worldsTotal = 0;
-    if (worldsAgg.ready) {
+    if (worldsAgg?.ready) {
       for (const { progress } of worldsAgg.byWorld.values()) {
         campaignsCompleted += progress.campaigns.completed;
         campaignsTotal     += progress.campaigns.total;
@@ -768,6 +770,10 @@ function ProgressTab({
     { icon: Landmark,   label: "المتحف",              current: canonical.museum.current,         goal: canonical.museum.goal,         to: "/collection" },
     { icon: Compass,    label: "العوالم المكتملة",   current: canonical.worlds.current,         goal: canonical.worlds.goal,         to: "/worlds" },
   ];
+
+  if (isLoading) {
+    return <div className="py-10 text-center text-muted-foreground">جارٍ تحميل البيانات…</div>;
+  }
 
   return (
     <div className="space-y-4">
@@ -815,7 +821,9 @@ function ProgressTab({
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {modules.map((it) => {
           const Icon = it.icon;
-          const pct = Math.min(100, Math.round((it.current / Math.max(1, it.goal)) * 100));
+          const current = it.current ?? 0;
+          const goal = it.goal ?? 1;
+          const pct = Math.min(100, Math.round((current / Math.max(1, goal)) * 100));
           const body = (
             <div className="rounded-2xl border border-white/10 bg-surface p-4 transition-colors hover:border-gold/40">
               <div className="flex items-center gap-3">
@@ -881,13 +889,13 @@ function ProgressTab({
           <div className="min-w-0 flex-1">
             <p className="font-display text-sm font-bold">الإنجازات</p>
             <p className="text-[11px] text-muted-foreground">
-              {achCompletion.earned.toLocaleString("en-US")} / {achCompletion.total.toLocaleString("en-US")}
+              {achCompletion?.earned?.toLocaleString("en-US") ?? 0} / {achCompletion?.total?.toLocaleString("en-US") ?? 0}
             </p>
           </div>
-          <span className="font-display text-sm text-gold">{achCompletion.pct}%</span>
+          <span className="font-display text-sm text-gold">{achCompletion?.pct ?? 0}%</span>
         </div>
         <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
-          <div className="h-full bg-gradient-gold transition-[width] duration-700" style={{ width: `${achCompletion.pct}%` }} />
+          <div className="h-full bg-gradient-gold transition-[width] duration-700" style={{ width: `${achCompletion?.pct ?? 0}%` }} />
         </div>
       </div>
     </div>
