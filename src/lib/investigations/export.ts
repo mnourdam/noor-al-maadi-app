@@ -21,6 +21,7 @@ export const INVESTIGATION_EXPORT_VERSION = 1;
 export interface ExportedInvestigation {
   id: string;
   slug: string;
+  world_slug: string | null;
   title: string | null;
   subtitle: string | null;
   description: string | null;
@@ -362,6 +363,7 @@ const CSV_HEADERS = [
   "id",
   "title",
   "subtitle",
+  "world_slug",
   "difficulty",
   "status",
   "steps",
@@ -397,6 +399,7 @@ export function buildCsv(rows: ExportedInvestigation[]): string {
         row.id,
         row.title ?? "",
         row.subtitle ?? "",
+        row.world_slug ?? "",
         row.difficulty ?? "",
         row.status,
         v.counts.steps,
