@@ -68,6 +68,7 @@ export function StoryPlayer({
   const [grantedDinars, setGrantedDinars] = useState<number | null>(null);
   const completionFiredRef = useRef(false);
   const resumeAfterExportRef = useRef(false);
+  const [exportLockScene, setExportLockScene] = useState<number | null>(null);
   const navigate = useNavigate();
 
   const { profile, addPoints, addDinars } = useProfile();
@@ -75,7 +76,9 @@ export function StoryPlayer({
 
   const queryClient = useQueryClient();
 
-  const scene = ordered[idx] ?? null;
+  // Use the locked scene index during export to prevent auto-advance or navigation drifts.
+  const activeIdx = exportLockScene !== null ? exportLockScene : idx;
+  const scene = ordered[activeIdx] ?? null;
   const dwellMs = useMemo(() => (scene ? sceneDwellMs(scene) : 4000), [scene]);
   const autoAdvance = scene ? scene.scene_type !== "reflection" : false;
   const isReflectionScene = scene?.scene_type === "reflection";
@@ -98,13 +101,14 @@ export function StoryPlayer({
 
   // --- Auto advance ----------------------------------------------
   useEffect(() => {
-    if (phase !== "playing" || !autoAdvance || paused) return;
+    // Disable auto-advance during export or when paused.
+    if (phase !== "playing" || !autoAdvance || paused || exportLockScene !== null) return;
     const t = window.setTimeout(() => {
       void goNext();
     }, dwellMs);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, idx, paused, dwellMs, autoAdvance]);
+  }, [phase, idx, paused, dwellMs, autoAdvance, exportLockScene]);
 
   // --- Sync long-press halo with pause state ---------------------
   useEffect(() => {
@@ -230,7 +234,7 @@ export function StoryPlayer({
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (phase !== "playing") return;
-    if (isReflectionScene) return; // reflection scenes own their own input
+    if (isReflectionScene || exportLockScene !== null) return; // reflection and export lock own their input
     touchRef.current = { x: e.clientX, y: e.clientY, t: performance.now() };
     if (longPressTimer.current) clearTimeout(longPressTimer.current);
     longPressTimer.current = window.setTimeout(() => {
@@ -246,7 +250,7 @@ export function StoryPlayer({
     }
     const start = touchRef.current;
     touchRef.current = null;
-    if (isReflectionScene && phase === "playing") return; // ignore taps on reflection scene
+    if ((isReflectionScene || exportLockScene !== null) && phase === "playing") return; // ignore taps during lock
     if (paused) {
       setPaused(false);
       setLongPressPulse(false);
@@ -331,9 +335,9 @@ export function StoryPlayer({
       >
         <SegmentedProgress
           total={ordered.length}
-          activeIndex={idx}
+          activeIndex={activeIdx}
           activeMs={autoAdvance ? dwellMs : 999_999}
-          paused={paused || phase !== "playing"}
+          paused={paused || phase !== "playing" || exportLockScene !== null}
           epoch={progressEpoch}
         />
         <div className="flex items-center justify-between px-4 pt-2 pb-3">
@@ -351,9 +355,11 @@ export function StoryPlayer({
                 storyTitle={story.title_ar}
                 onPause={() => {
                   resumeAfterExportRef.current = !paused;
+                  setExportLockScene(idx);
                   setPaused(true);
                 }}
                 onResume={() => {
+                  setExportLockScene(null);
                   if (resumeAfterExportRef.current) setPaused(false);
                 }}
               />
@@ -384,7 +390,7 @@ export function StoryPlayer({
             scene={scene}
             media={media}
             epoch={scene.id}
-            paused={paused || phase !== "playing"}
+            paused={paused || phase !== "playing" || exportLockScene !== null}
             onReflectionSubmit={saveReflection}
             reflectionReadOnly={alreadyCompleted}
             reflectionInitialText={
