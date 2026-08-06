@@ -7,6 +7,8 @@ export interface StoryRecommendation {
   collection: StoryCollection | null;
   progress: number; // 0 to 1
   cover: string | null;
+  reachedScene?: number;
+  totalScenes?: number;
 }
 
 /**
@@ -46,6 +48,8 @@ export function getStoryRecommendation(
       story,
       collection,
       progress: fraction,
+      reachedScene: reached + 1,
+      totalScenes: story.scene_count,
       cover: story.cover_media_id || collection?.cover_media_id || null
     };
   }
