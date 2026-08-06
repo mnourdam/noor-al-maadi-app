@@ -85,6 +85,11 @@ interface RowView {
   hasBlocking: boolean;
   reward: ReturnType<typeof summarizeReward>;
   worldSlug: string | null;
+  /**
+   * The effective world slug for player routing / grouping. 
+   * Authored `world_slug` wins, otherwise derived from refs.
+   */
+  effectiveWorldSlug: string | null;
   eraSlug: string | null;
   /** Admin-only review status (never exported / never player-visible). */
   qa: QaStatus;
@@ -237,18 +242,23 @@ function AdminInvestigationsPage() {
           reward: r?.reward,
         });
         const reward = summarizeReward(r?.reward);
-        let worldSlug: string | null = null;
+        let derivedWorldSlug: string | null = null;
         try {
-          worldSlug = (r?.slug ? worldBySlug.get(r.slug) : null) ?? null;
-        } catch { worldSlug = null; }
-        const eraSlug = worldSlug ? (WORLD_ERA[worldSlug] ?? worldSlug) : null;
+          derivedWorldSlug = (r?.slug ? worldBySlug.get(r.slug) : null) ?? null;
+        } catch { derivedWorldSlug = null; }
+        
+        // authored world wins for player surfaces
+        const effectiveWorldSlug = (r as any).world_slug || derivedWorldSlug;
+        const eraSlug = effectiveWorldSlug ? (WORLD_ERA[effectiveWorldSlug] ?? effectiveWorldSlug) : null;
+        
         return {
           raw: r,
           warnings: normalized.warnings,
           hasLegacy: normalized.hasLegacy,
           hasBlocking: normalized.hasBlockingIssue,
           reward,
-          worldSlug,
+          worldSlug: (r as any).world_slug ?? null, // explicit field only
+          effectiveWorldSlug,
           eraSlug,
           qa: (r?.id ? qaMap.get(r.id)?.status : undefined) ?? QA_DEFAULT,
           renderError: null,
@@ -282,9 +292,9 @@ function AdminInvestigationsPage() {
       if (statusFilter === "enabled" && !r.enabled) return false;
       if (statusFilter === "disabled" && r.enabled) return false;
       if (worldFilter === "__none__") {
-        if (v.worldSlug) return false;
+        if (v.effectiveWorldSlug) return false;
       } else if (worldFilter) {
-        if (v.worldSlug !== worldFilter) return false;
+        if (v.effectiveWorldSlug !== worldFilter) return false;
       }
       const golden = isGoldenTemplate(r);
       if (templateFilter === "only" && !golden) return false;
@@ -348,7 +358,7 @@ function AdminInvestigationsPage() {
     for (const v of enriched) {
       const d = (v.raw.difficulty ?? "").toLowerCase();
       byDifficulty[d in byDifficulty ? d : "unknown"]++;
-      const w = v.worldSlug ?? "__none__";
+      const w = v.effectiveWorldSlug ?? "__none__";
       byWorld[w] = (byWorld[w] ?? 0) + 1;
       if (v.raw.enabled) enabled++; else disabled++;
       if (v.hasBlocking) malformed++;

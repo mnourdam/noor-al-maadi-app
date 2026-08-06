@@ -475,14 +475,21 @@ type WP = import("@/lib/worlds-progress").WorldProgress;
 const DIFF_RANK: Record<string, number> = { easy: 0, medium: 1, hard: 2 };
 
 function CampaignsSection({ worldSlug, progress }: { worldSlug: string; progress: WP }) {
-  const { data } = useQuery({ queryKey: ["campaigns", "feed"], queryFn: fetchPublishedFeed });
+  const { data } = useQuery({ queryKey: ["campaigns", "feed"], queryFn: fetchPublishedFeed, staleTime: 60_000 });
   const { campaignIds } = useWorldMembership(worldSlug);
   const cloudCampaign = useCloudCampaignProgress();
   const canonicalInv = useCanonicalInvestigationProgress();
   const invalidatedTick = canonicalInv.count; // dep to re-render on progress change
 
   const ordered = useMemo(() => {
-    const list = (data?.campaigns ?? []).filter((c) => campaignIds.has(c.id));
+    const list = (data?.campaigns ?? []).filter((c) => {
+      // 1. Matches via explicit membership set (preferred)
+      if (campaignIds.has(c.id)) return true;
+      // 2. Fallback: authored world_slug
+      const cWorld = (c as any).world_slug || (c as any).worldSlug;
+      if (cWorld === worldSlug) return true;
+      return false;
+    });
     type Row = {
       c: ImportedCampaign;
       status: "in_progress" | "unstarted" | "completed";

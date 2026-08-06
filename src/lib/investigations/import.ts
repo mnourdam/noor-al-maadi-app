@@ -56,6 +56,7 @@ export interface ImportRunResult {
 /** Arabic labels for the diffed columns, for the dry-run summary. */
 export const FIELD_LABELS: Record<string, string> = {
   slug: "المعرّف النصي (slug)",
+  world_slug: "العالم",
   title: "العنوان",
   subtitle: "العنوان الفرعي",
   description: "الوصف",
