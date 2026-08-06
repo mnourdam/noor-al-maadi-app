@@ -4,7 +4,7 @@ import { markBootHealthy } from "@/lib/diagnostics/safe-boot";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Search, Map as MapIcon, ChevronLeft, Crown, Lock, Compass, Play,
-  Hourglass, Calendar, Heart, Trophy, Package, BookOpen,
+  Hourglass, Calendar, Heart, Trophy, Package, BookOpen, PlayCircle, Clock,
   Sparkles, Bell, Gem, Target, Flame, Sunrise, Zap, Award,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
@@ -50,6 +50,10 @@ import { DailyQuestCard } from "@/components/home/DailyQuestCard";
 import { StoriesRail } from "@/components/stories/StoriesRail";
 import { pickHeroImages, defaultHeroImages } from "@/lib/hero-pool";
 import { scheduleIdle, decodeImage, perfMark } from "@/lib/idle";
+import { listStoriesSummary } from "@/lib/stories/summary";
+import { useStoryCollections } from "@/lib/stories/collections";
+import { getStoryRecommendation } from "@/lib/stories/recommendation";
+import { useStoryCoverSrc } from "@/lib/stories/covers";
 
 
 export const Route = createFileRoute("/")({
@@ -67,6 +71,7 @@ export const Route = createFileRoute("/")({
 // ============================================================
 type HeroSlide =
   | { kind: "campaign"; bg: string; eyebrow: string; title: string; subtitle: string; quote?: string; progress?: { done: number; total: number }; cta: { label: string; link: React.ReactNode } }
+  | { kind: "story"; bg: string; eyebrow: string; title: string; subtitle: string; progress?: number; cta: { label: string; link: React.ReactNode } }
   | { kind: "history"; bg: string; eyebrow: string; title: string; subtitle: string; cta?: { label: string; link: React.ReactNode } }
   | { kind: "discovery"; bg: string; eyebrow: string; title: string; subtitle: string; icon: string; cta: { label: string; link: React.ReactNode } }
   | { kind: "timeline"; bg: string; eyebrow: string; title: string; subtitle: string; cta: { label: string; link: React.ReactNode } };
@@ -295,10 +300,31 @@ function HomeFull() {
     heroPoolFallback,
   );
 
+  // ===== Story recommendation slide =====
+  const { data: storiesData } = useQuery({
+    queryKey: ["stories-summary", null, "hero"],
+    queryFn: () => listStoriesSummary(null),
+    staleTime: 60_000,
+  });
+  const { collections } = useStoryCollections();
+  const storyRec = useMemo(() => {
+    if (!storiesData || !collections.length) return null;
+    return getStoryRecommendation(storiesData, collections);
+  }, [storiesData, collections]);
+
+  const storyCover = useStoryCoverSrc(
+    storyRec ? { 
+      cover_media_id: storyRec.cover, 
+      id: storyRec.story.id 
+    } as any : null
+  );
+
   // ===== Hero slides =====
   const slides = useMemo<HeroSlide[]>(() => {
     const out: HeroSlide[] = [];
     const bgAt = (i: number) => heroBgs[i % Math.max(heroBgs.length, 1)] ?? heroBgs[0] ?? "";
+    
+    // 1. Campaign Slide
     if (campaignSel) {
       const { campaign, hasStarted, isComplete, completedChapters, nextChapter } = campaignSel;
       const total = campaign.chapters.length;
@@ -311,7 +337,6 @@ function HomeFull() {
         kind: "campaign",
         bg: heroBg,
         eyebrow: isComplete ? "حملتك المكتملة" : hasStarted ? "أكمل رحلتك من حيث توقفت" : "ابدأ رحلتك الآن",
-
         title: campaign.title,
         subtitle,
         progress: { done: completedChapters, total },
@@ -322,12 +347,43 @@ function HomeFull() {
             onClick={() => stashOrigin(`/campaigns/imported/${campaign.id}`)}
             className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-bold text-primary-foreground"
           >
-
             <Play className="size-4 fill-current" />{ctaLabel}
           </Link>
         )},
       });
     }
+
+    // 2. Story Slide
+    if (storyRec) {
+      const { mode, story, collection, progress } = storyRec;
+      const heroBg = storyCover || bgAt(3);
+      const isResume = mode === "resume";
+      const ctaLabel = isResume ? "متابعة القصة" : "ابدأ القصة";
+      
+      out.push({
+        kind: "story",
+        bg: heroBg,
+        eyebrow: isResume ? "أكمل القصة من حيث توقفت" : "قصة مقترحة لك",
+        title: story.title_ar,
+        subtitle: story.summary_ar || collection?.title_ar || "قصة تاريخية مشوقة من إرث.",
+        progress: isResume ? progress : undefined,
+        cta: {
+          label: ctaLabel,
+          link: (
+            <Link
+              to="/story/$id"
+              params={{ id: story.id }}
+              className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-bold text-primary-foreground"
+            >
+              <PlayCircle className="size-4 fill-current" />
+              {ctaLabel}
+            </Link>
+          ),
+        },
+      });
+    }
+
+    // 3. History Slide
     todayEvents.forEach((ev, i) => {
       const yr = ev.hijri_year ? `${ev.hijri_year} هـ` : (ev.gregorian_year ? `${ev.gregorian_year} م` : "في مثل هذا اليوم");
       const suffix = todayEvents.length > 1 ? ` · ${i + 1}/${todayEvents.length}` : "";
@@ -356,7 +412,7 @@ function HomeFull() {
     }
     // LC1 scope cut: Timeline Journey hero slide hidden until content audit completes.
     return out;
-  }, [campaignSel, todayEvents, recentDiscoveries, heroBgs, campaignHeroBg]);
+  }, [campaignSel, storyRec, storyCover, todayEvents, recentDiscoveries, heroBgs, campaignHeroBg]);
 
   // Carousel
   const [slideIdx, setSlideIdx] = useState(0);
@@ -687,6 +743,7 @@ function HomeFull() {
                   {slide.kind === "history" && <Calendar className="size-3.5" />}
                   {slide.kind === "discovery" && <Gem className="size-3.5" />}
                   {slide.kind === "timeline" && <Hourglass className="size-3.5" />}
+                  {slide.kind === "story" && <PlayCircle className="size-3.5" />}
                   <span className="tracking-[0.25em]">{slide.eyebrow}</span>
                 </div>
                 <h1 className="font-display mt-3 text-4xl font-bold leading-[1.15] text-white drop-shadow-[0_4px_18px_oklch(0_0_0/0.6)]">
@@ -700,6 +757,14 @@ function HomeFull() {
                       <div className="h-full bg-gradient-gold transition-all" style={{ width: `${Math.round((slide.progress.done / slide.progress.total) * 100)}%` }} />
                     </div>
                     <span className="text-[11px] text-white/70">{slide.progress.done}/{slide.progress.total} فصل</span>
+                  </div>
+                )}
+                {slide.kind === "story" && slide.progress !== undefined && (
+                  <div className="mt-5 flex items-center gap-3">
+                    <div className="h-[3px] flex-1 overflow-hidden rounded-full bg-white/15">
+                      <div className="h-full bg-gradient-gold transition-all" style={{ width: `${Math.round(slide.progress * 100)}%` }} />
+                    </div>
+                    <span className="text-[11px] text-white/70">{Math.round(slide.progress * 100)}%</span>
                   </div>
                 )}
                 {slide.cta && (
