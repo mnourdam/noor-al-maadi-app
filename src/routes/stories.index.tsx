@@ -105,40 +105,14 @@ function StoriesIndex() {
   const visibleCollections = useMemo(() => {
     if (activeCollectionId) return [];
     
-    // If we have real collections in DB, use them.
-    if (collections.length > 0) {
-      return collections.filter(c => {
-        const collectionStories = stories.filter(s => s.story_collection_id === c.id);
-        if (collectionStories.length === 0) return false;
-        
-        const activeCount = activeFilterCount(filters);
-        if (activeCount === 0) return true;
-
-        const matchingStories = filteredStories.filter(s => s.story_collection_id === c.id);
-        return matchingStories.length > 0;
-      });
-    }
-
-    // FALLBACK: If story_collections table is empty (e.g. preview environment),
-    // synthesize collections from the story_collection_id field in stories.
-    const uniqueIds = Array.from(new Set(stories.map(s => s.story_collection_id).filter(Boolean)));
-    return uniqueIds.map(id => {
-      const collectionStories = stories.filter(s => s.story_collection_id === id);
-      const first = collectionStories[0];
-      // Generate a friendly name from the ID slug: collection_fall_of_andalus -> Fall Of Andalus
-      const title = id!.replace('collection_', '').split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+    // Only use collections that exist in the database.
+    return collections.filter(c => {
+      const collectionStories = stories.filter(s => s.story_collection_id === c.id);
+      if (collectionStories.length === 0) return false;
       
-      return {
-        id: id!,
-        slug: id!.replace('collection_', ''),
-        title_ar: `سلسلة ${title}`, // Placeholder Arabic
-        title_en: title,
-        summary_ar: `مجموعة قصص تاريخية حول ${title}`,
-        summary_en: `A collection of historical stories about ${title}`,
-        cover_media_id: first.cover_media_id,
-        display_order: 0
-      };
-    }).filter(c => {
+      const activeCount = activeFilterCount(filters);
+      if (activeCount === 0) return true;
+
       const matchingStories = filteredStories.filter(s => s.story_collection_id === c.id);
       return matchingStories.length > 0;
     });
