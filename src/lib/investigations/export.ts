@@ -21,6 +21,7 @@ export const INVESTIGATION_EXPORT_VERSION = 1;
 export interface ExportedInvestigation {
   id: string;
   slug: string;
+  world_slug: string | null;
   title: string | null;
   subtitle: string | null;
   description: string | null;
