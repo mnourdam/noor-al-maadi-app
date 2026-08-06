@@ -77,10 +77,10 @@ async function fetchCoverRow(
  * Card cover source. Returns the bundled path immediately when the cover
  * ships with the app; otherwise resolves (and offline-caches) the remote one.
  */
-export function useStoryCoverSrc(story: StoryCoverInput): string | null {
+export function useStoryCoverSrc(story: StoryCoverInput | null): string | null {
   const local = useMemo(
-    () => (bundledCoverIsCurrent(story) ? localStoryCoverPath(story.id) : null),
-    [story.id, story.content_version],
+    () => (story && bundledCoverIsCurrent(story) ? localStoryCoverPath(story.id) : null),
+    [story?.id, story?.content_version],
   );
 
   const needsRemote = !local && !!story.cover_media_id;
