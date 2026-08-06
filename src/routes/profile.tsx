@@ -711,10 +711,10 @@ function ProgressTab({
   // charactersUnlocked, regionsUnlocked, timelinesCompleted, decisionsCompleted).
   const worldsAgg = useAllWorldsProgress();
   const canonicalInv = useCanonicalInvestigationProgress();
-  const { recommendation: campaignRec } = useCampaignRecommendation();
+  const { recommendation: campaignRec, ready: recReady } = useCampaignRecommendation();
   const achCompletion = useAchievementCompletion();
 
-  const isLoading = !worldsAgg.ready || !canonicalInv.ready || !achCompletion;
+  const isLoading = !worldsAgg.ready || !canonicalInv.ready || !recReady || !achCompletion;
 
   // Aggregate world roll-ups → totals across every world.
   const canonical = useMemo(() => {
