@@ -129,7 +129,6 @@ import { Route as AdminStoriesIndexRouteImport } from './routes/admin.stories.in
 import { Route as AdminStoriesExportV2RouteImport } from './routes/admin.stories.export-v2'
 import { Route as AdminStoriesImportV2RouteImport } from './routes/admin.stories.import-v2'
 import { Route as ApiPublicNativeAuthBounceRouteImport } from './routes/api/public/native-auth-bounce'
-import { Route as ApiPublicWorldsAuditRouteImport } from './routes/api/public/worlds-audit'
 import { Route as EncyclopediaEntityIdRouteImport } from './routes/encyclopedia.entity.$id'
 import { Route as EncyclopediaPathIdRouteImport } from './routes/encyclopedia.path.$id'
 import { Route as EncyclopediaStateIdRouteImport } from './routes/encyclopedia.state.$id'
@@ -771,11 +770,6 @@ const ApiPublicNativeAuthBounceRoute =
     path: '/api/public/native-auth-bounce',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicWorldsAuditRoute = ApiPublicWorldsAuditRouteImport.update({
-  id: '/api/public/worlds-audit',
-  path: '/api/public/worlds-audit',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const EncyclopediaEntityIdRoute = EncyclopediaEntityIdRouteImport.update({
   id: '/entity/$id',
   path: '/entity/$id',
@@ -1001,7 +995,6 @@ export interface FileRoutesByFullPath {
   '/admin/stories/export-v2': typeof AdminStoriesExportV2Route
   '/admin/stories/import-v2': typeof AdminStoriesImportV2Route
   '/api/public/native-auth-bounce': typeof ApiPublicNativeAuthBounceRoute
-  '/api/public/worlds-audit': typeof ApiPublicWorldsAuditRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
   '/encyclopedia/path/$id': typeof EncyclopediaPathIdRoute
   '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
@@ -1139,7 +1132,6 @@ export interface FileRoutesByTo {
   '/admin/stories/export-v2': typeof AdminStoriesExportV2Route
   '/admin/stories/import-v2': typeof AdminStoriesImportV2Route
   '/api/public/native-auth-bounce': typeof ApiPublicNativeAuthBounceRoute
-  '/api/public/worlds-audit': typeof ApiPublicWorldsAuditRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
   '/encyclopedia/path/$id': typeof EncyclopediaPathIdRoute
   '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
@@ -1283,7 +1275,6 @@ export interface FileRoutesById {
   '/admin/stories/export-v2': typeof AdminStoriesExportV2Route
   '/admin/stories/import-v2': typeof AdminStoriesImportV2Route
   '/api/public/native-auth-bounce': typeof ApiPublicNativeAuthBounceRoute
-  '/api/public/worlds-audit': typeof ApiPublicWorldsAuditRoute
   '/encyclopedia/entity/$id': typeof EncyclopediaEntityIdRoute
   '/encyclopedia/path/$id': typeof EncyclopediaPathIdRoute
   '/encyclopedia/state/$id': typeof EncyclopediaStateIdRoute
@@ -1428,7 +1419,6 @@ export interface FileRouteTypes {
     | '/admin/stories/export-v2'
     | '/admin/stories/import-v2'
     | '/api/public/native-auth-bounce'
-    | '/api/public/worlds-audit'
     | '/encyclopedia/entity/$id'
     | '/encyclopedia/path/$id'
     | '/encyclopedia/state/$id'
@@ -1566,7 +1556,6 @@ export interface FileRouteTypes {
     | '/admin/stories/export-v2'
     | '/admin/stories/import-v2'
     | '/api/public/native-auth-bounce'
-    | '/api/public/worlds-audit'
     | '/encyclopedia/entity/$id'
     | '/encyclopedia/path/$id'
     | '/encyclopedia/state/$id'
@@ -1709,7 +1698,6 @@ export interface FileRouteTypes {
     | '/admin/stories/export-v2'
     | '/admin/stories/import-v2'
     | '/api/public/native-auth-bounce'
-    | '/api/public/worlds-audit'
     | '/encyclopedia/entity/$id'
     | '/encyclopedia/path/$id'
     | '/encyclopedia/state/$id'
@@ -1841,7 +1829,6 @@ export interface RootRouteChildren {
   AdminStoriesExportV2Route: typeof AdminStoriesExportV2Route
   AdminStoriesImportV2Route: typeof AdminStoriesImportV2Route
   ApiPublicNativeAuthBounceRoute: typeof ApiPublicNativeAuthBounceRoute
-  ApiPublicWorldsAuditRoute: typeof ApiPublicWorldsAuditRoute
   GamesModeSlugRoute: typeof GamesModeSlugRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   AdminCampaignsIndexRoute: typeof AdminCampaignsIndexRoute
@@ -2701,13 +2688,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicNativeAuthBounceRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/worlds-audit': {
-      id: '/api/public/worlds-audit'
-      path: '/api/public/worlds-audit'
-      fullPath: '/api/public/worlds-audit'
-      preLoaderRoute: typeof ApiPublicWorldsAuditRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/encyclopedia/entity/$id': {
       id: '/encyclopedia/entity/$id'
       path: '/entity/$id'
@@ -3072,7 +3052,6 @@ const rootRouteChildren: RootRouteChildren = {
   AdminStoriesExportV2Route: AdminStoriesExportV2Route,
   AdminStoriesImportV2Route: AdminStoriesImportV2Route,
   ApiPublicNativeAuthBounceRoute: ApiPublicNativeAuthBounceRoute,
-  ApiPublicWorldsAuditRoute: ApiPublicWorldsAuditRoute,
   GamesModeSlugRoute: GamesModeSlugRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   AdminCampaignsIndexRoute: AdminCampaignsIndexRoute,
