@@ -38,6 +38,7 @@ import type { Campaign as ImportedCampaign } from "@/types/campaign";
 import { WorldEmblem } from "@/components/worlds/WorldEmblem";
 import { WorldStoriesSection } from "@/components/stories/WorldStoriesSection";
 import { CampaignArtwork } from "@/lib/campaignArtwork";
+import { WorldDebug } from "@/components/WorldDebug";
 
 export const Route = createFileRoute("/worlds/$slug")({
   head: ({ params }) => ({
