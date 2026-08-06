@@ -25,6 +25,9 @@
 const CACHE_NAME = "irth-images-v1";
 /** Cap prefetch to avoid hammering the network on a fresh install. */
 const PREFETCH_CONCURRENCY = 6;
+const PREFETCH_RETRY_LIMIT = 2;
+const prefetchInProgress = new Set<string>();
+
 /** Ignore obvious non-images (audio, video, JSON, etc.). */
 const IMAGE_EXT = /\.(png|jpe?g|gif|webp|avif|svg|ico|bmp|tiff?)(\?.*)?$/i;
 
@@ -191,14 +194,26 @@ export async function prefetchImages(urls: Iterable<string>): Promise<void> {
   let i = 0;
   async function worker() {
     while (i < list.length) {
-      const idx = i++;
-      const u = list[idx];
-      try { await fetchAndCache(u, cache!); } catch { /* ignore */ }
+      const u = list[i++];
+      if (!u || prefetchInProgress.has(u)) continue;
+      
+      prefetchInProgress.add(u);
+      let retries = 0;
+      while (retries <= PREFETCH_RETRY_LIMIT) {
+        try {
+          const res = await fetchAndCache(u, cache!);
+          if (res) break;
+        } catch { /* ignore */ }
+        retries++;
+        if (retries <= PREFETCH_RETRY_LIMIT) await new Promise(r => setTimeout(r, 1000 * retries));
+      }
+      prefetchInProgress.delete(u);
     }
   }
   await Promise.all(
     Array.from({ length: Math.min(PREFETCH_CONCURRENCY, list.length) }, () => worker()),
   );
+
 }
 
 /** Recursively collect image-looking string values from an object. */

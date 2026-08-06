@@ -24,7 +24,7 @@ export function AuthLink({ children, className, ref, mode, origin, onClick }: Pr
   return (
     <Link
       to="/auth"
-      search={{ ref: ref ?? undefined }}
+      search={{}}
       className={className}
       onClick={() => {
         const path =
