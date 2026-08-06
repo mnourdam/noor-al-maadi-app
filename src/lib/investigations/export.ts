@@ -399,6 +399,7 @@ export function buildCsv(rows: ExportedInvestigation[]): string {
         row.id,
         row.title ?? "",
         row.subtitle ?? "",
+        row.world_slug ?? "",
         row.difficulty ?? "",
         row.status,
         v.counts.steps,
