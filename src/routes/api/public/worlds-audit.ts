@@ -1,29 +1,33 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { buildWorldIndex } from '@/lib/worlds-progress';
-import { localPublishedCampaigns, localInvestigations } from '@/lib/local-first-store';
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute('/api/public/worlds-audit')({
   server: {
     handlers: {
       GET: async () => {
-        const index = buildWorldIndex();
-        const results = [];
+        // 1. Fetch campaigns
+        const { data: camps } = await supabase
+          .from("campaigns_public" as any)
+          .select("id, slug, data");
         
-        const allCampaigns = localPublishedCampaigns();
-        const allInvestigations = localInvestigations();
-
-        for (const [slug, world] of index.entries()) {
-          results.push({
-            world: slug,
-            campaignCount: world.campaignIds.length,
-            investigationCount: world.investigationSlugs.length
-          });
-        }
+        // 2. Fetch investigations
+        const { data: invs } = await supabase
+          .from("investigations_public" as any)
+          .select("id, slug, world_slug, related_entities");
 
         return new Response(JSON.stringify({
-          worlds: results,
-          totalPublishedCampaigns: allCampaigns.length,
-          totalInvestigations: allInvestigations.length
+          campaigns: (camps || []).map(c => ({
+            id: c.id,
+            slug: c.slug,
+            worldSlug: c.data?.worldSlug,
+            hasData: !!c.data
+          })),
+          investigations: (invs || []).map(i => ({
+            id: i.id,
+            slug: i.slug,
+            world_slug: (i as any).world_slug,
+            related_count: Array.isArray(i.related_entities) ? i.related_entities.length : 0
+          }))
         }), {
           headers: { 'Content-Type': 'application/json' }
         });
