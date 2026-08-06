@@ -540,8 +540,8 @@ export async function renderSceneCard({
     paintBlock(ctx, laid.lines, x, top, align);
   }
 
-  // 4) Wordmark
-  drawWordmark(ctx);
+  // 4) Final branding
+  await drawBranding(ctx);
 
   // 5) Encode — `toBlob` can silently never fire in some WebViews, and a
   //    tainted canvas throws SecurityError. Both are handled explicitly.
