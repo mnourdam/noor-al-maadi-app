@@ -105,23 +105,27 @@ function StoriesIndex() {
   const visibleCollections = useMemo(() => {
     if (activeCollectionId) return [];
     
+    // We want to show all collections that HAVE stories, 
+    // but if filters are active, we narrow down to matches.
     return collections.filter(c => {
       const collectionStories = stories.filter(s => s.story_collection_id === c.id);
       if (collectionStories.length === 0) return false;
       
-      // Filter collections based on filters: 
-      // Show collection if any story inside matches the filters
+      const activeCount = activeFilterCount(filters);
+      if (activeCount === 0) return true;
+
       const matchingStories = filteredStories.filter(s => s.story_collection_id === c.id);
       return matchingStories.length > 0;
     });
-  }, [collections, stories, filteredStories, activeCollectionId]);
+  }, [collections, stories, filteredStories, activeCollectionId, filters]);
 
   const visibleStories = useMemo(() => {
     if (!activeCollectionId) return [];
     
+    // Within a collection, we show the stories in their authored order
     const storiesInCollection = filteredStories.filter(s => s.story_collection_id === activeCollectionId);
-    return sortStories(storiesInCollection, sort).sort((a, b) => (a.collection_order ?? 0) - (b.collection_order ?? 0));
-  }, [filteredStories, activeCollectionId, sort]);
+    return storiesInCollection.sort((a, b) => (a.collection_order ?? 0) - (b.collection_order ?? 0));
+  }, [filteredStories, activeCollectionId]);
 
   const activeCount = activeFilterCount(filters);
 
