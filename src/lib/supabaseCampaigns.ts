@@ -85,25 +85,36 @@ export async function refreshCampaignRows(force = false): Promise<boolean> {
   if (!_timelineRefresh) {
     _timelineRefresh = (async () => {
       try {
+        // Differential Sync Guard: Check manifest before fetching full rows.
+        const { fetchContentManifest } = await import("./offline-manifest");
+        const manifest = await fetchContentManifest();
+        const { localSnapshotInfo } = await import("./local-first-store");
+        const local = localSnapshotInfo();
+
+        if (manifest && local?.content_counts) {
+          const entry = manifest.find(m => m.collection === "admin_campaigns");
+          const localCount = local.content_counts["admin_campaigns"] ?? 0;
+          const serverDate = entry ? new Date(entry.last_updated).getTime() : 0;
+          const localDate = new Date(local.generated_at).getTime();
+
+          // If counts match and server data is older than our last snapshot, skip.
+          if (entry && entry.total_count === localCount && serverDate <= localDate) {
+            return true;
+          }
+        }
+
         const { data, error } = await supabase
           .from("campaigns_public" as any)
           .select("id, slug, data, key_art_path, key_art_square_path, key_art_credit");
         if (error || !Array.isArray(data) || data.length === 0) return false;
         
-        // Only merge if data actually changed to prevent redundant re-renders
         const { mergeLocalCampaignRows, localPublishedCampaigns } = await import("./local-first-store");
-        const current = localPublishedCampaigns();
-        if (current.length === data.length) {
-           // Basic heuristic check for change
-           return true; 
-        }
-
         return mergeLocalCampaignRows(data as any[]);
-      } catch {
+      } catch (err) {
+        console.warn("[supabaseCampaigns] refresh failed:", err);
         return false;
       }
     })();
-    // A failed attempt must not poison the session.
     _timelineRefresh = _timelineRefresh.then((ok) => {
       if (!ok) _timelineRefresh = null;
       return ok;

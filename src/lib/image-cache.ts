@@ -38,7 +38,24 @@ function hasCaches(): boolean {
 function isLikelyImage(url: string): boolean {
   if (!url || typeof url !== "string") return false;
   if (url.startsWith("data:image/") || url.startsWith("blob:")) return false;
-  return IMAGE_EXT.test(url) || /\/storage\/v1\/object\//.test(url);
+  // If it's a Supabase storage URL, it's definitely an image we want to cache.
+  if (/\/storage\/v1\/object\//.test(url)) return true;
+  return IMAGE_EXT.test(url);
+}
+
+/** 
+ * Extract a stable cache key from a Supabase storage URL.
+ * Converts: https://.../storage/v1/object/public/bucket/path/to/img.png?token=...
+ * To: irth://storage/bucket/path/to/img.png
+ */
+export function getStableStorageKey(url: string): string | null {
+  if (!url || typeof url !== "string") return null;
+  const match = url.match(/\/storage\/v1\/object\/(?:public\/|sign\/)?([^\/?]+)\/([^?]+)/);
+  if (match) {
+    const [, bucket, path] = match;
+    return `irth://storage/${bucket}/${path}`;
+  }
+  return null;
 }
 
 async function openCache(): Promise<Cache | null> {
@@ -148,14 +165,21 @@ export async function prefetchKeyedImages(
 /**
  * Return a usable image URL. Cache-first; falls back to network when online.
  * Returns `null` when the URL is not cached and the app is offline.
+ * 
+ * Automatically detects Supabase storage URLs and uses a stable cache key
+ * to prevent redundant downloads when signed tokens rotate.
  */
 export async function resolveImageUrl(url: string): Promise<string | null> {
   if (!url) return null;
   if (url.startsWith("data:") || url.startsWith("blob:")) return url;
+  
+  const stableKey = getStableStorageKey(url);
+  const cacheKey = stableKey || url;
+
   const cache = await openCache();
   if (cache) {
     try {
-      const hit = await cache.match(url);
+      const hit = await cache.match(cacheKey);
       if (hit) {
         const obj = await toObjectUrl(hit);
         if (obj) return obj;
@@ -165,8 +189,9 @@ export async function resolveImageUrl(url: string): Promise<string | null> {
   const online = typeof navigator === "undefined" || navigator.onLine !== false;
   if (!online) return null;
   if (!cache) return url;
-  const fresh = await fetchAndCache(url, cache);
-  if (!fresh) return url; // last-resort: let the browser try directly
+  
+  const fresh = await fetchAndCache(url, cache, cacheKey);
+  if (!fresh) return url; 
   const obj = await toObjectUrl(fresh);
   return obj ?? url;
 }
@@ -186,7 +211,9 @@ export async function prefetchImages(urls: Iterable<string>): Promise<void> {
     if (seen.has(u)) continue;
     seen.add(u);
     try {
-      const already = await cache.match(u);
+      const stableKey = getStableStorageKey(u);
+      const cacheKey = stableKey || u;
+      const already = await cache.match(cacheKey);
       if (!already) list.push(u);
     } catch { list.push(u); }
   }
@@ -201,7 +228,9 @@ export async function prefetchImages(urls: Iterable<string>): Promise<void> {
       let retries = 0;
       while (retries <= PREFETCH_RETRY_LIMIT) {
         try {
-          const res = await fetchAndCache(u, cache!);
+          const stableKey = getStableStorageKey(u);
+          const cacheKey = stableKey || u;
+          const res = await fetchAndCache(u, cache!, cacheKey);
           if (res) break;
         } catch { /* ignore */ }
         retries++;

@@ -3995,6 +3995,14 @@ export type Database = {
         Returns: boolean
       }
       gen_referral_code: { Args: never; Returns: string }
+      get_content_manifest: {
+        Args: never
+        Returns: {
+          collection: string
+          last_updated: string
+          total_count: number
+        }[]
+      }
       get_feedback_issue_thread: { Args: { p_issue_id: string }; Returns: Json }
       get_gated_public_profile: { Args: { p_user_id: string }; Returns: Json }
       get_gated_public_profile_by_username: {
