@@ -156,5 +156,10 @@ export async function commitInvestigationImport(
       notifyInvestigationInvalidated(item.id, "publish");
     }
   }
+  // Force world index refresh to pick up new explicit world_slug mappings
+  try {
+    const { invalidateWorldIndex } = await import("@/lib/worlds-progress");
+    invalidateWorldIndex();
+  } catch { /* noop */ }
   return result;
 }

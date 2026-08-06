@@ -956,14 +956,18 @@ function Row({ view, selected, onSelect, onExport, onPreview, onToggle, onQaChan
       <td className="px-3 py-2 font-mono text-xs text-slate-400" dir="ltr">{r.slug}</td>
       <td className="px-3 py-2 text-xs text-amber-300">{DIFFICULTY_LABEL[r.difficulty ?? ""] ?? r.difficulty ?? "—"}</td>
       <td className="px-3 py-2 text-xs text-slate-300">
-        {view.worldSlug ? (
-          <>
-            <div>{view.worldSlug}</div>
-            <div className="text-[10px] text-slate-500">{view.eraSlug}</div>
-          </>
-        ) : (
-          <span className="text-slate-500">—</span>
-        )}
+        <div className="flex flex-col">
+          {view.worldSlug ? (
+            <span className="font-medium text-amber-200" title="تم الربط يدوياً">{view.worldSlug}</span>
+          ) : view.effectiveWorldSlug ? (
+            <span className="text-slate-400" title="تم الاستنتاج من المراجع">{view.effectiveWorldSlug}</span>
+          ) : (
+            <span className="text-slate-500 italic">—</span>
+          )}
+          {view.eraSlug && (
+            <span className="text-[10px] text-slate-500">{view.eraSlug}</span>
+          )}
+        </div>
       </td>
       <td className="px-3 py-2 text-xs text-slate-300">
         <div>خطوات {r.step_count}</div>
