@@ -385,7 +385,7 @@ function SmartContinueButton({ stories }: { stories: any[] }) {
 
   const getLabel = () => {
     if (isFullyCompleted) return "إعادة القراءة";
-    if (started) return "متابعة";
+    if (started) return "متابعة القراءة";
     return "ابدأ السلسلة";
   };
 
@@ -396,7 +396,7 @@ function SmartContinueButton({ stories }: { stories: any[] }) {
 
   return (
     <Link
-      to="/investigation/$id"
+      to="/stories/$id"
       params={{ id: nextStory.id }}
       className="inline-flex items-center gap-2 rounded-xl bg-gold px-6 py-3 text-sm font-bold text-black shadow-lg shadow-gold/20 transition hover:scale-105 hover:bg-white active:scale-95"
     >
