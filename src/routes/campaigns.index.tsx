@@ -50,10 +50,12 @@ function CampaignsHubFull() {
   const rawWorld = safeKey(Route.useSearch().world);
   const worldSlug = rawWorld && isValidWorldSlug(rawWorld) && findHub(rawWorld) ? rawWorld : null;
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading: queryLoading } = useQuery({
     queryKey: ["campaigns", "feed"],
     queryFn: fetchPublishedFeed,
+    staleTime: 60000,
   });
+  const isLoading = queryLoading && !data;
   const { data: worldsIndex } = useQuery({
     queryKey: ["worlds-index"],
     queryFn: () => fetchWorldsIndex(),

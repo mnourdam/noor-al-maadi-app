@@ -711,8 +711,10 @@ function ProgressTab({
   // charactersUnlocked, regionsUnlocked, timelinesCompleted, decisionsCompleted).
   const worldsAgg = useAllWorldsProgress();
   const canonicalInv = useCanonicalInvestigationProgress();
-  const { recommendation: campaignRec } = useCampaignRecommendation();
+  const { recommendation: campaignRec, ready: recReady } = useCampaignRecommendation();
   const achCompletion = useAchievementCompletion();
+
+  const isLoading = !worldsAgg.ready || !canonicalInv.ready || !recReady || !achCompletion;
 
   // Aggregate world roll-ups → totals across every world.
   const canonical = useMemo(() => {
@@ -738,8 +740,8 @@ function ProgressTab({
     }
     // Investigations total: fall back to the canonical hook when world index
     // hasn't hydrated yet (guest / cold-start).
-    if (invTotal === 0 && canonicalInv.count > invCompleted) {
-      invCompleted = canonicalInv.count;
+    if (invTotal === 0 && (canonicalInv as any).count > invCompleted) {
+      invCompleted = (canonicalInv as any).count;
     }
     return {
       campaigns:      { current: campaignsCompleted, goal: Math.max(campaignsTotal, campaignsCompleted, 1) },
@@ -768,6 +770,10 @@ function ProgressTab({
     { icon: Landmark,   label: "المتحف",              current: canonical.museum.current,         goal: canonical.museum.goal,         to: "/collection" },
     { icon: Compass,    label: "العوالم المكتملة",   current: canonical.worlds.current,         goal: canonical.worlds.goal,         to: "/worlds" },
   ];
+
+  if (isLoading) {
+    return <div className="py-10 text-center text-muted-foreground">جارٍ تحميل البيانات…</div>;
+  }
 
   return (
     <div className="space-y-4">
@@ -815,7 +821,9 @@ function ProgressTab({
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {modules.map((it) => {
           const Icon = it.icon;
-          const pct = Math.min(100, Math.round((it.current / Math.max(1, it.goal)) * 100));
+          const current = it.current ?? 0;
+          const goal = it.goal ?? 1;
+          const pct = Math.min(100, Math.round((current / Math.max(1, goal)) * 100));
           const body = (
             <div className="rounded-2xl border border-white/10 bg-surface p-4 transition-colors hover:border-gold/40">
               <div className="flex items-center gap-3">

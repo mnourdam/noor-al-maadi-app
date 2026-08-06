@@ -451,7 +451,19 @@ export async function generateAndStoreSnapshot(): Promise<OfflineSnapshot> {
   // Warm the shared image cache. Story "hero" media (cover, first
   // scene, first document, first reveal) go first so slow networks
   // still land the important assets before the long tail.
-  void warmSnapshotImageCache(snap.collections);
+  // Warm the shared image cache in the background using idle time.
+  const warm = () => {
+    void warmSnapshotImageCache(snap.collections);
+  };
+  if (typeof window !== "undefined") {
+    if ("requestIdleCallback" in window) {
+      (window as any).requestIdleCallback(warm, { timeout: 4000 });
+    } else {
+      setTimeout(warm, 1500);
+    }
+  } else {
+    warm();
+  }
   return snap;
 }
 
@@ -584,7 +596,19 @@ export async function refreshSnapshotIncremental(): Promise<OfflineSnapshot> {
   // general snapshot images, then long-tail scene media. Version bumps
   // yield new URLs (via `?v=<processing_version>`) and thus a fresh
   // fetch — invalidation happens exactly when processing_version moves.
-  void warmSnapshotImageCache(nextCollections);
+  // Warm the image cache in the background using idle time.
+  const warm = () => {
+    void warmSnapshotImageCache(nextCollections);
+  };
+  if (typeof window !== "undefined") {
+    if ("requestIdleCallback" in window) {
+      (window as any).requestIdleCallback(warm, { timeout: 4000 });
+    } else {
+      setTimeout(warm, 1500);
+    }
+  } else {
+    warm();
+  }
 
   console.info(`[offline-sync] incremental: ${totalDeltas} row deltas across ${COLLECTIONS.length} collections`);
   return snap;
