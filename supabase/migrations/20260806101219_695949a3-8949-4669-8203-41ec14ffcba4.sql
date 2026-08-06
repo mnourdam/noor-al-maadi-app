@@ -1,0 +1,1 @@
+DO $$ BEGIN RAISE NOTICE 'Current User: %, Role Setting: %', current_user, current_setting('role', true); END $$;
