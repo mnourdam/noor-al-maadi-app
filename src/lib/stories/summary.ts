@@ -195,14 +195,11 @@ export async function listStoriesSummary(
         historical_confidence: s.historical_confidence ?? null,
         tags: Array.isArray(s.tags) ? s.tags.filter((t: unknown) => typeof t === "string") : [],
         prereqs: [],
-
+        story_collection_id: s.story_collection_id ?? null,
+        collection_order: s.collection_order ?? null,
         lock_explanation: s.lock_explanation ?? null,
-        // Signed in: previously unlocked (online) stays unlocked offline;
-        // new unlocks never happen offline (server is the authority).
-        // Guest: local evidence decides, online or offline.
         unlocked: alwaysOn || guestUnlocked || unlockedIds.has(s.id),
         completed: guestState ? guestState.completed_story_ids?.has(s.id) ?? false : false,
-
         progress: null,
       } as StorySummary);
     });
