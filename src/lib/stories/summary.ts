@@ -108,7 +108,6 @@ export async function listStoriesSummary(
     // shapes coming from either the authoritative or the guest RPC.
     const rows = ((data ?? []) as StorySummary[])
       .filter((r) => !isCampaignIntroRow(r as never))
-
       .map((r) => ({
         ...r,
         category: r.category ?? null,
@@ -116,6 +115,8 @@ export async function listStoriesSummary(
         length_class: r.length_class ?? null,
         historical_confidence: r.historical_confidence ?? null,
         tags: Array.isArray(r.tags) ? r.tags.filter((t) => typeof t === "string") : [],
+        story_collection_id: r.story_collection_id ?? null,
+        collection_order: r.collection_order ?? null,
       }));
 
     if (!worldSlug) {
