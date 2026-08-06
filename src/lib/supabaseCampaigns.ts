@@ -107,7 +107,7 @@ export async function refreshCampaignRows(force = false): Promise<boolean> {
 /** All published campaigns, ordered chronologically. Local-first. */
 export async function fetchPublishedCampaigns(): Promise<Campaign[]> {
   await ensureLocalSnapshotLoaded();
-  await refreshCampaignRows();
+  void refreshCampaignRows();
   const local = localPublishedCampaigns() as { id: string; slug: string; data: any }[];
 
   if (local.length > 0) {
@@ -291,7 +291,7 @@ export async function fetchPublishedFeed(): Promise<{
   await ensureLocalSnapshotLoaded();
   // Ordering is authored in the admin workshop; refresh before grouping so a
   // stale snapshot can never move a campaign into the wrong era section.
-  await refreshCampaignRows();
+  void refreshCampaignRows();
   let campaignRows = localPublishedCampaigns() as { id: string; slug: string; data: any }[];
   let dividerRows = localCampaignDividerRows() as { id: string; slug: string; data: any }[];
   if (campaignRows.length === 0) {

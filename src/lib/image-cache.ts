@@ -24,7 +24,7 @@
 
 const CACHE_NAME = "irth-images-v1";
 /** Cap prefetch to avoid hammering the network on a fresh install. */
-const PREFETCH_CONCURRENCY = 4;
+const PREFETCH_CONCURRENCY = 6;
 /** Ignore obvious non-images (audio, video, JSON, etc.). */
 const IMAGE_EXT = /\.(png|jpe?g|gif|webp|avif|svg|ico|bmp|tiff?)(\?.*)?$/i;
 
