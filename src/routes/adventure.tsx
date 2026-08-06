@@ -28,13 +28,11 @@ const MODE_ICON: Record<GameMode, React.ComponentType<{ className?: string; stro
 };
 
 function AdventurePage() {
-  const { state, isLoading: challengeLoading } = useDailyChallengeState();
+  const { state, loading } = useDailyChallengeState();
   const picks = state?.picks ?? null;
   const completedIds = state?.completedIds ?? new Set<string>();
   const todaysPicksDone = state?.todaysPicksDone ?? false;
   const allEligibleExhausted = state?.allEligibleExhausted ?? false;
-
-  const loading = challengeLoading && !state;
 
 
   return (

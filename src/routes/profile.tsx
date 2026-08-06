@@ -709,12 +709,12 @@ function ProgressTab({
   // Canonical inputs — every metric comes from a v2 canonical service.
   // Do NOT read legacy profile arrays (storiesRead, artifactsFound,
   // charactersUnlocked, regionsUnlocked, timelinesCompleted, decisionsCompleted).
-  const { data: worldsAgg, isLoading: worldsLoading } = useAllWorldsProgress();
-  const { data: canonicalInv, isLoading: invLoading } = useCanonicalInvestigationProgress();
-  const { recommendation: campaignRec, isLoading: recLoading } = useCampaignRecommendation();
-  const { data: achCompletion, isLoading: achLoading } = useAchievementCompletion();
+  const worldsAgg = useAllWorldsProgress();
+  const canonicalInv = useCanonicalInvestigationProgress();
+  const { recommendation: campaignRec } = useCampaignRecommendation();
+  const achCompletion = useAchievementCompletion();
 
-  const isLoading = worldsLoading && !worldsAgg;
+  const isLoading = !worldsAgg.ready || !canonicalInv.ready || !achCompletion;
 
   // Aggregate world roll-ups → totals across every world.
   const canonical = useMemo(() => {
@@ -724,7 +724,7 @@ function ProgressTab({
     let museumFound = 0, museumTotal = 0;
     let worldsComplete = 0;
     let worldsTotal = 0;
-    if (worldsAgg?.ready) {
+    if (worldsAgg.ready) {
       for (const { progress } of worldsAgg.byWorld.values()) {
         campaignsCompleted += progress.campaigns.completed;
         campaignsTotal     += progress.campaigns.total;
@@ -889,13 +889,13 @@ function ProgressTab({
           <div className="min-w-0 flex-1">
             <p className="font-display text-sm font-bold">الإنجازات</p>
             <p className="text-[11px] text-muted-foreground">
-              {achCompletion?.earned?.toLocaleString("en-US") ?? 0} / {achCompletion?.total?.toLocaleString("en-US") ?? 0}
+              {achCompletion.earned.toLocaleString("en-US")} / {achCompletion.total.toLocaleString("en-US")}
             </p>
           </div>
-          <span className="font-display text-sm text-gold">{achCompletion?.pct ?? 0}%</span>
+          <span className="font-display text-sm text-gold">{achCompletion.pct}%</span>
         </div>
         <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
-          <div className="h-full bg-gradient-gold transition-[width] duration-700" style={{ width: `${achCompletion?.pct ?? 0}%` }} />
+          <div className="h-full bg-gradient-gold transition-[width] duration-700" style={{ width: `${achCompletion.pct}%` }} />
         </div>
       </div>
     </div>
