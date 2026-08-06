@@ -250,10 +250,19 @@ async function fetchCollection(def: CollectionDef): Promise<any[]> {
  * Returns `null` when the collection has no `updated_at` column and the
  * caller must fall back to a full fetch.
  */
+/**
+ * Fetch only rows whose `updated_at` is strictly greater than `since`.
+ * Returns `null` when the collection has no `updated_at` column and the
+ * caller must fall back to a full fetch.
+ */
 async function fetchCollectionSince(def: CollectionDef, since: string): Promise<any[] | null> {
   if (NO_UPDATED_AT.has(def.key)) return null;
   const PAGE = 500;
   const out: any[] = [];
+  
+  // Guard: if we are trying to sync against a future/empty timestamp, full fetch.
+  if (!since || since === new Date(0).toISOString()) return null;
+
   for (let from = 0; ; from += PAGE) {
     let query: any = supabase
       .from(def.table as any)
@@ -265,7 +274,6 @@ async function fetchCollectionSince(def: CollectionDef, since: string): Promise<
     if (def.filter) query = def.filter(query);
     const { data, error } = await query;
     if (error) {
-      // Missing column, permission issue, etc. — surrender to full fetch.
       console.warn(`[snapshot] incremental fetch failed for ${def.table}:`, error.message);
       return null;
     }
@@ -406,6 +414,32 @@ export async function generateSnapshot(): Promise<OfflineSnapshot> {
 
 export async function generateAndStoreSnapshot(): Promise<OfflineSnapshot> {
   const previous = await loadSnapshot();
+  
+  // Differential Sync Strategy: Check manifest before starting any work.
+  const { fetchContentManifest } = await import("./offline-manifest");
+  const serverManifest = await fetchContentManifest();
+  
+  // If we have a previous snapshot and a server manifest, check if anything actually changed.
+  if (previous?.collections && serverManifest) {
+    let changed = false;
+    for (const s of serverManifest) {
+      const localCount = previous.content_counts[s.collection] ?? 0;
+      // We don't have per-collection timestamps in the snapshot JSON yet,
+      // but generated_at serves as a global ceiling.
+      const serverDate = new Date(s.last_updated).getTime();
+      const localDate = new Date(previous.generated_at).getTime();
+      
+      if (s.total_count !== localCount || serverDate > localDate) {
+        changed = true;
+        break;
+      }
+    }
+    if (!changed) {
+      console.info("[snapshot] background sync skipped: local content matches server manifest");
+      return previous;
+    }
+  }
+
   const snap = await generateSnapshot();
   const { validateSnapshot } = await import("./offline-snapshot-validate");
   const report = validateSnapshot(snap);
@@ -413,42 +447,32 @@ export async function generateAndStoreSnapshot(): Promise<OfflineSnapshot> {
     console.warn("[snapshot] refusing to store invalid live snapshot", report.issues);
     throw new Error("Invalid offline snapshot; keeping existing local content");
   }
-  // Never let a full online refresh SHRINK the local cache. If a public
-  // policy tightened, a network hop returned partial data, or an API page
-  // came back short, we still keep every row we already had. We union by
-  // `id` with the previous snapshot so the full-fetch path can only ADD
-  // or REFRESH rows, never remove them. Explicit removal only happens
-  // through the admin "Clear Offline Cache" action.
+
   if (previous?.collections) {
     for (const def of COLLECTIONS) {
       const prevRows = previous.collections[def.key] ?? [];
       const nextRows = snap.collections[def.key] ?? [];
       const merged = mergeRows(prevRows, nextRows);
-      if (nextRows.length < prevRows.length) {
-        console.warn(
-          `[snapshot] full-fetch of ${def.key} returned ${nextRows.length} rows ` +
-          `(< previous ${prevRows.length}). Preserving old rows via id-merge.`,
-        );
-      }
+      
+      // If we only fetched a delta or a short page, merge keeps existing rows.
       snap.collections[def.key] = merged;
       snap.content_counts[def.key] = merged.length;
     }
   }
 
   await saveSnapshot(snap);
-  // Keep the in-memory local-first index in sync with the freshly persisted
-  // snapshot so subsequent route reads see the new content immediately.
   try {
     const { applyLocalSnapshot } = await import("./local-first-store");
     applyLocalSnapshot(snap);
   } catch { /* ignore */ }
+  
   if (import.meta.env.DEV && typeof window === "undefined") {
     try {
       const { writeBundledSnapshotFile } = await import("./offline-snapshot-write.functions");
       await writeBundledSnapshotFile({ data: { json: JSON.stringify(snap, null, 2) } });
-    } catch { /* dev-only path; ignore in prod */ }
+    } catch { /* ignore */ }
   }
-  // Warm the shared image cache in the background using idle time.
+  
   const warmTask = async () => {
     try {
       const { warmSnapshotImageCache } = await import("./offline-snapshot-warm-bridge");
