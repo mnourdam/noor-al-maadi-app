@@ -646,7 +646,13 @@ function InvestigationsSection({ worldSlug, progress }: { worldSlug: string; pro
 
 
   const ordered = useMemo(() => {
-    const list = (rows ?? []).filter((r) => investigationSlugs.has(r.slug));
+    const list = (rows ?? []).filter((r) => {
+      // 1. Matches via explicit membership set (preferred)
+      if (investigationSlugs.has(r.slug)) return true;
+      // 2. Fallback: authored world_slug
+      if (r.world_slug === worldSlug) return true;
+      return false;
+    });
     return list
       .map((r) => ({ r, done: canonicalInv.matches(r.slug) || canonicalInv.matches(r.id) }))
       .sort((a, b) => {

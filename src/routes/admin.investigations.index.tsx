@@ -625,7 +625,8 @@ function AdminInvestigationsPage() {
                     <SortHeader label="العنوان" k="title" sortKey={sortKey} sortDir={sortDir} onSort={(k) => { setSortKey(k); setSortDir(sortDir === "asc" ? "desc" : "asc"); }} />
                     <th className="px-3 py-2">Slug</th>
                     <SortHeader label="صعوبة" k="difficulty" sortKey={sortKey} sortDir={sortDir} onSort={(k) => { setSortKey(k); setSortDir(sortDir === "asc" ? "desc" : "asc"); }} />
-                    <th className="px-3 py-2">عالم / عصر</th>
+                    <th className="px-3 py-2">العالم</th>
+                    <th className="px-3 py-2">عصر</th>
                     <th className="px-3 py-2">محتوى</th>
                     <th className="px-3 py-2">مكافأة</th>
                     <th className="px-3 py-2">الحالة</th>
