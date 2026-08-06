@@ -165,10 +165,6 @@ export async function prefetchKeyedImages(
 /**
  * Return a usable image URL. Cache-first; falls back to network when online.
  * Returns `null` when the URL is not cached and the app is offline.
- */
-/**
- * Return a usable image URL. Cache-first; falls back to network when online.
- * Returns `null` when the URL is not cached and the app is offline.
  * 
  * Automatically detects Supabase storage URLs and uses a stable cache key
  * to prevent redundant downloads when signed tokens rotate.
