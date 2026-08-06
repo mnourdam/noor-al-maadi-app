@@ -331,7 +331,7 @@ function HomeFull() {
   }, [queryClient]);
 
   const storyCover = useStoryCoverSrc(
-    storyRec?.story ? { 
+    storyRec ? { 
       cover_media_id: storyRec.cover, 
       id: storyRec.story.id 
     } as any : null
