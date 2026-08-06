@@ -363,6 +363,7 @@ const CSV_HEADERS = [
   "id",
   "title",
   "subtitle",
+  "world_slug",
   "difficulty",
   "status",
   "steps",
