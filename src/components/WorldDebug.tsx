@@ -37,7 +37,7 @@ export function WorldDebug({ worldSlug }: { worldSlug: string }) {
       const dividerEra = s.divider?.era || "NONE";
       const dividerRawKey = (s.divider as any)?.rawSectionKey || "NONE";
       const key = `${dividerTitle} (Era: ${dividerEra}, Raw: ${dividerRawKey})`;
-      campaignsBySection[key] = s.campaigns.map(c => c.slug);
+      campaignsBySection[key] = s.campaigns.map(c => c.slug ?? "no-slug");
     });
     console.log(`[WorldDebug] Campaigns by Section:`, campaignsBySection);
 
