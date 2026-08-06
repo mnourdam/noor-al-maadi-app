@@ -24,7 +24,7 @@ export function getStoryRecommendation(
   stories: StorySummary[],
   collections: StoryCollection[]
 ): StoryRecommendation | null {
-  if (!stories.length) return null;
+  if (!stories.length || !collections.length) return null;
 
   // 1. Try Resume Mode (unfinished)
   const inProgress = stories
