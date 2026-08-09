@@ -360,10 +360,9 @@ function PriorityAuditPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                <div className="space-y-3">
                   {filteredList.map((entity: EntityPriorityReport) => (
-                <div 
-                  key={entity.id}
+                    <div 
+                      key={entity.id}
                   className={`
                     group border rounded-xl p-4 transition-all
                     ${entity.canonical.isEligible 
