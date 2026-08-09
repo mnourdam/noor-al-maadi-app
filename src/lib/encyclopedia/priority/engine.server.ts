@@ -13,25 +13,23 @@ import {
  */
 
 export async function generatePriorityAudit(): Promise<PriorityAuditResult> {
-  const { data: entities, error: entitiesError } = await supabaseAdmin
-    .from("encyclopedia_entities")
-    .select("id, slug, title, entity_type, metadata, image_path");
-
-  if (entitiesError) throw entitiesError;
-
   // 1. Fetch relations for scoring
-  // Using public tables where available, otherwise admin for campaign data
+  // Using admin client to bypass RLS and access admin tables
   const [
+    { data: entities, error: entitiesError },
     { data: storyRelations },
     { data: campaigns },
     { data: investigations },
     { data: stories }
   ] = await Promise.all([
+    supabaseAdmin.from("encyclopedia_entities").select("id, slug, title, entity_type, metadata, image_path"),
     supabaseAdmin.from("story_relations").select("story_id, target_id, target_type, role"),
     supabaseAdmin.from("admin_campaigns").select("id, data"),
     supabaseAdmin.from("investigations").select("id, related_entities"),
     supabaseAdmin.from("stories").select("id, unlock_spec")
   ]);
+
+  if (entitiesError) throw entitiesError;
 
   const report: EntityPriorityReport[] = [];
 
@@ -102,7 +100,7 @@ export async function generatePriorityAudit(): Promise<PriorityAuditResult> {
   });
 
   // 3. Calculate Scores
-  entities.forEach(entity => {
+  entities?.forEach(entity => {
     const id = entity.id;
     const metadata = (entity.metadata as any) || {};
     
@@ -157,7 +155,19 @@ export async function generatePriorityAudit(): Promise<PriorityAuditResult> {
     });
   });
 
-  // 4. Rank within types
+  // 4. Map DB types to canonical UI types and rank
+  const canonicalMap: Record<string, EntityType> = {
+    'figure': 'Figure',
+    'person': 'Figure',
+    'character': 'Figure',
+    'event': 'Event',
+    'battle': 'Battle',
+    'city': 'City',
+    'landmark': 'Landmark',
+    'state': 'State',
+    'artifact': 'Artifact'
+  };
+
   const types: EntityType[] = ["Figure", "Event", "City", "Battle", "Landmark", "State", "Artifact"];
   const distribution: Record<EntityType, number> = {
     Figure: 0, Event: 0, City: 0, Battle: 0, Landmark: 0, State: 0, Artifact: 0
@@ -165,6 +175,16 @@ export async function generatePriorityAudit(): Promise<PriorityAuditResult> {
   const shortlists: Record<EntityType, EntityPriorityReport[]> = {
     Figure: [], Event: [], City: [], Battle: [], Landmark: [], State: [], Artifact: []
   };
+
+  // Pre-calculate full rankings for all entities
+  report.forEach(e => {
+    const dbType = String(e.type).toLowerCase().trim();
+    const canonical = canonicalMap[dbType] || (types.includes(e.type as any) ? e.type : null);
+    if (canonical) {
+      e.type = canonical as EntityType;
+      distribution[e.type]++;
+    }
+  });
 
   types.forEach(type => {
     const typedEntities = report.filter(e => e.type === type);
@@ -174,16 +194,18 @@ export async function generatePriorityAudit(): Promise<PriorityAuditResult> {
       e.rankWithinType = i + 1;
     });
 
-    distribution[type] = typedEntities.length;
-    shortlists[type] = typedEntities
-      .filter(e => !e.hasImage)
-      .slice(0, type === "State" ? undefined : 100);
+    // Return Top 100 for all types to support category tabs
+    shortlists[type] = typedEntities.slice(0, 100);
   });
 
-  const top25Overall = report
+  const top25Overall = [...report]
     .filter(e => !e.hasImage)
     .sort((a, b) => b.finalScore - a.finalScore)
     .slice(0, 25);
+
+  // Diagnostic logging (Server-side)
+  console.log(`[PriorityAudit] Total Ranked: \${report.length}`);
+  console.log(`[PriorityAudit] Distribution:`, distribution);
 
   return {
     scoringLogic: "Deterministic additive scoring: Mandatory Unlock (+50), Core Campaign (+40), Supporting Campaign (+15), Story (+25), Investigation (+15), Curated Core (+30), Major (+15), Structural (+20). Cross-system bonuses: 2 systems (+10), 3 (+25), 4+ (+40).",
@@ -192,6 +214,6 @@ export async function generatePriorityAudit(): Promise<PriorityAuditResult> {
     top25Overall,
     shortlists,
     anomalies: [],
-    assessment: "Priority Engine V1 is operational."
+    assessment: `Priority Engine V1 is operational. Found \${report.length} ranked entities across \${types.length} categories.`
   };
 }
