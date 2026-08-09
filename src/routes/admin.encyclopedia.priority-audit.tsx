@@ -268,7 +268,13 @@ function PriorityAuditPage() {
                     </div>
                   ))}
                   <div className="pt-8 flex justify-center">
-                    <button className="bg-amber-500 hover:bg-amber-400 text-black px-8 py-3 rounded-full font-bold transition-all shadow-xl shadow-amber-500/10 flex items-center gap-2">
+                    <button 
+                      onClick={async () => {
+                        alert("Starting generation...");
+                        // Integration with runBatch01Generation
+                      }}
+                      className="bg-amber-500 hover:bg-amber-400 text-black px-8 py-3 rounded-full font-bold transition-all shadow-xl shadow-amber-500/10 flex items-center gap-2"
+                    >
                       <Zap className="size-5" /> بدء إنتاج Batch 01 (Staging)
                     </button>
                   </div>
