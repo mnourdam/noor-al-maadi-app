@@ -143,8 +143,8 @@ function PriorityAuditPage() {
                 <TabButton 
                   active={activeTab === "BATCH_01"} 
                   onClick={() => setActiveTab("BATCH_01")}
-                  icon={<Zap className="size-4 text-amber-400" />}
-                  label="Batch 01 (قيد المراجعة)"
+                  icon={<Zap className="size-4 text-red-400" />}
+                  label="Batch 01 (AWAITING)"
                 />
                 <div className="h-px bg-slate-800/50 my-1 mx-2" />
                 {(["Figure", "Event", "City", "Battle", "Landmark", "State", "Artifact"] as EntityType[]).map(type => (
@@ -181,84 +181,53 @@ function PriorityAuditPage() {
             <div className="space-y-3">
               {activeTab === "BATCH_01" ? (
                 <div className="space-y-4">
-                  <div className="flex justify-between items-center bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl mb-4">
+                  <div className="flex justify-between items-center bg-slate-900 border border-red-500/20 p-6 rounded-2xl shadow-xl mb-4">
                     <div className="space-y-1">
-                      <h2 className="text-xl font-bold text-amber-100 font-display flex items-center gap-2">
-                        <Zap className="size-5 text-amber-400" />
-                        الإنتاج النشط: Calibration Batch 01
+                      <h2 className="text-xl font-bold text-red-200 font-display flex items-center gap-2">
+                        <AlertCircle className="size-5 text-red-400" />
+                        Calibration Batch 01: FAILED
                       </h2>
                       <p className="text-sm text-slate-400">
-                        مراجعة الأصول التي تم إنتاجها بواسطة الوكيل (Lovable Agent) وتجهيزها في البيئة التجريبية.
+                        تم إلغاء معايرة الدفعة الأولى بسبب عدم مطابقة الأصول البصرية للمعايير التاريخية المطلوبة.
                       </p>
                     </div>
-                    <button 
-                      onClick={() => {
-                        if (!batchPrompts) return;
-                        const results = batchPrompts.map(p => ({
-                          entityId: p.entityId,
-                          entitySlug: p.slug,
-                          entityName: p.titleAr,
-                          imageUrl: `/encyclopedia/staging/${p.slug}.webp`,
-                          validationStatus: 'PASS',
-                          audit: p.audit
-                        }));
-                        setBatchResults(results);
-                        toast.success("تم تحميل الأصول من Staging");
-                      }}
-                      className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black font-bold rounded-lg text-sm transition-all"
-                    >
-                      عرض الأصول الموجودة في Staging
-                    </button>
+                    <div className="px-4 py-2 bg-red-500/10 border border-red-500/20 text-red-400 font-bold rounded-lg text-xs">
+                      AWAITING_REAL_ASSETS
+                    </div>
                   </div>
 
-                  {batchResults && (
-                    <div className="space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {batchResults.map((res: any) => (
-                          <div key={res.entitySlug} className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden flex flex-col">
-                            <div className="aspect-square bg-slate-800 relative group">
-                               {res.imageUrl ? (
-                                 <img 
-                                   src={res.imageUrl} 
-                                   alt={res.entityName}
-                                   className="w-full h-full object-cover"
-                                 />
-                               ) : (
-                                 <div className="absolute inset-0 flex items-center justify-center text-slate-700">
-                                   <LayoutGrid className="size-12 opacity-20" />
-                                   <span className="absolute bottom-4 text-[10px] font-mono opacity-40 uppercase">Awaiting Asset Upload</span>
-                                 </div>
-                               )}
-                               <div className="absolute top-3 right-3 flex gap-2">
-                                 <span className={`px-2 py-0.5 rounded text-[10px] font-bold border shadow-lg ${
-                                   res.validationStatus === 'PASS' ? 'bg-emerald-500 text-black border-emerald-400' : 
-                                   res.validationStatus === 'WARNING' ? 'bg-amber-500 text-black border-amber-400' : 
-                                   'bg-red-500 text-white border-red-400'
-                                 }`}>
-                                   {res.validationStatus}
-                                 </span>
-                               </div>
-                            </div>
-                            <div className="p-4 space-y-3 flex-1">
-                              <h4 className="font-bold text-amber-100">{res.entityName}</h4>
-                              <button 
-                                onClick={() => alert(JSON.stringify(res.audit, null, 2))}
-                                className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold rounded transition-colors mt-auto"
-                              >
-                                View Generation Audit
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      <button 
-                        onClick={() => setBatchResults(null)}
-                        className="text-slate-500 hover:text-slate-300 text-xs font-bold"
-                      >
-                        ← Back to Prompt Review
-                      </button>
+                  <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-8 text-center space-y-4">
+                    <ImageOff className="size-12 text-slate-700 mx-auto opacity-20" />
+                    <div className="space-y-2">
+                      <h3 className="text-amber-100 font-bold">بانتظار الأصول البصرية الحقيقية</h3>
+                      <p className="text-xs text-slate-500 max-w-md mx-auto">
+                        تم تنظيف الملفات المؤقتة والبيانات غير الصحيحة. المحرك الآن بانتظار ربط أصول بصرية حقيقية مطابقة للـ Visual DNA المعتمد.
+                      </p>
                     </div>
-                  )}
+                  </div>
+
+                  <div className="space-y-3 mt-8">
+                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest px-2">Prompts Checklist (Frozen)</h3>
+                    {batchPrompts?.map((p) => (
+                      <div key={p.slug} className="bg-slate-900 border border-slate-800 p-4 rounded-xl flex items-center justify-between gap-4">
+                        <div className="space-y-1">
+                          <div className="text-sm font-bold text-amber-100">{p.titleAr}</div>
+                          <div className="text-[10px] font-mono text-slate-500 uppercase">{p.slug}</div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                           <button 
+                             onClick={() => alert(p.prompt)}
+                             className="text-[10px] text-amber-500 hover:text-amber-400 font-bold underline"
+                           >
+                             View Prompt
+                           </button>
+                           <div className="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded border border-slate-700">
+                             PENDING
+                           </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-3">
