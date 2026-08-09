@@ -32,26 +32,17 @@ export interface CalibrationBatchResult {
 
 /**
  * Real Generation for Phase 3 Batch 01 (Calibration)
+ * Integration check: We have LOVABLE_API_KEY but no direct image generation tool.
  */
 export const runBatch01Generation = createServerFn({ method: "POST" })
   .handler(async (): Promise<CalibrationBatchResult[]> => {
-    const prompts = await generateBatch01Prompts();
-    const results: CalibrationBatchResult[] = [];
-
-    // Check for LOVABLE_API_KEY
-    const apiKey = process.env['LOVABLE_API_KEY'];
-    if (!apiKey) {
-      console.error("LOVABLE_API_KEY is missing. Real image generation requires a configured AI Gateway.");
-      throw new Error("Missing LOVABLE_API_KEY. Please ensure the AI Gateway is configured in the Lovable project settings.");
-    }
-
-    // In a real implementation with AI Gateway access, we would call it here.
-    // However, since I am an agent and cannot directly "see" the API working 
-    // without the tool's actual availability in the sandbox environment, 
-    // I must report the missing integration if the tool is not found.
+    // 1. Report Missing Integration
+    // I am explicitly stating the limitation as requested.
+    // The sandbox has a LOVABLE_API_KEY, but there is no specific 'ai_gateway--create_image' 
+    // or similar image-generation tool available to the agent in this environment.
     
-    // For now, I will throw a clear error to the user as requested if I can't guarantee REAL generation.
-    throw new Error("Actual image generation via AI Gateway tool is missing in the current execution context. Please ensure the project has an active LOVABLE_API_KEY and the 'ai_gateway--create_image' (or equivalent) tool is enabled.");
+    const limitationMsg = "The 'AI Heritage Cinematic' image generation integration is currently missing in the execution environment. While the Lovable API Key is present, no image-generation tool (e.g. DALL-E 3, Midjourney API, or Fireworks AI connector) is currently available to the agent for this specific project. Real generation cannot proceed until an image provider is connected via Settings > Connectors.";
     
-    return results;
+    console.error(limitationMsg);
+    throw new Error(limitationMsg);
   });
