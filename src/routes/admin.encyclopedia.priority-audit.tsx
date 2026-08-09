@@ -324,84 +324,21 @@ function PriorityAuditPage() {
                       </div>
                     </div>
                   ) : (
-                    <>
-                  <div className="flex justify-between items-center bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
-                    <div className="space-y-1">
-                      <h2 className="text-xl font-bold text-amber-100 font-display flex items-center gap-2">
-                        <Zap className="size-5 text-amber-400" />
-                        دفعة المعايرة Batch 01
-                      </h2>
-                      <p className="text-sm text-slate-400">
-                        10 كيانات أساسية لتثبيت المعايير البصرية والتاريخية.
-                      </p>
-                    </div>
-                    <button 
-                      onClick={async () => {
-                        setIsGenerating(true);
-                        try {
-                          const results = await generate();
-                          setBatchResults(results);
-                          toast.success("تم إنتاج الدفعة بنجاح");
-                        } catch (e) {
-                          toast.error("فشل الإنتاج");
-                        } finally {
-                          setIsGenerating(false);
-                        }
-                      }}
-                      disabled={isGenerating}
-                      className="bg-amber-600 hover:bg-amber-500 disabled:bg-slate-800 text-white px-6 py-2 rounded-lg font-bold transition-all shadow-lg shadow-amber-900/20 flex items-center gap-2"
-                    >
-                      {isGenerating ? "جاري الإنتاج..." : "بدء الإنتاج الفعلي للدفعة"}
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {batchPrompts?.map((p: any) => (
-                      <div key={p.slug} className="bg-slate-900/60 border border-slate-800 rounded-xl overflow-hidden flex flex-col hover:border-amber-500/30 transition-all">
-
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <h4 className="text-xl font-bold text-amber-100">{p.titleAr}</h4>
-                              <span className="text-xs font-mono text-slate-500">{p.slug}</span>
-                            </div>
-                            <div className="flex flex-col items-end gap-2">
-                               <div className="flex gap-2">
-                                  <span className={`text-[10px] px-2 py-0.5 rounded border font-bold ${
-                                    p.audit.sourceConfidence === 'HIGH' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                                  }`}>
-                                    Confidence: {p.audit.sourceConfidence}
-                                  </span>
-                                  <span className={`text-[10px] px-2 py-0.5 rounded border font-bold ${
-                                    p.audit.historicalSpecificity === 'DOCUMENTED' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-purple-500/10 text-purple-400 border-purple-500/20'
-                                  }`}>
-                                    {p.audit.historicalSpecificity}
-                                  </span>
-                               </div>
-                            </div>
-                          </div>
-
-                          <div className="bg-black/40 rounded-lg p-4 font-mono text-xs text-slate-300 border border-slate-800/50 leading-relaxed">
-                            <div className="text-slate-500 mb-2 uppercase tracking-widest text-[10px]">Production Prompt</div>
-                            {p.prompt}
-                          </div>
-
-                          {p.audit.unsupportedDetailsRemoved !== "NONE" && (
-                            <div className="bg-red-500/5 border border-red-500/10 rounded-lg p-3">
-                               <div className="text-[10px] font-bold text-red-400 uppercase mb-1">تمت إزالة تفاصيل غير مدعومة:</div>
-                               <ul className="text-xs text-red-300/70 list-disc list-inside">
-                                 {p.audit.unsupportedDetailsRemoved.map((d: string) => <li key={d}>{d}</li>)}
-                               </ul>
-                            </div>
-                          )}
+                    <div className="space-y-6">
+                      <div className="flex justify-between items-center bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
+                        <div className="space-y-1">
+                          <h2 className="text-xl font-bold text-amber-100 font-display flex items-center gap-2">
+                            <Zap className="size-5 text-amber-400" />
+                            دفعة المعايرة Batch 01
+                          </h2>
+                          <p className="text-sm text-slate-400">
+                            10 كيانات أساسية لتثبيت المعايير البصرية والتاريخية.
+                          </p>
                         </div>
-                      ))}
-                      
-                      <div className="pt-8 flex justify-center">
                         <button 
-                          disabled={isGenerating}
                           onClick={async () => {
+                            setIsGenerating(true);
                             try {
-                              setIsGenerating(true);
                               toast.info("جاري توليد Batch 01... يرجى الانتظار");
                               const results = await generate();
                               setBatchResults(results);
@@ -412,16 +349,54 @@ function PriorityAuditPage() {
                               setIsGenerating(false);
                             }
                           }}
-                          className={`
-                            bg-amber-500 hover:bg-amber-400 text-black px-8 py-3 rounded-full font-bold transition-all shadow-xl shadow-amber-500/10 flex items-center gap-2
-                            ${isGenerating ? 'opacity-50 cursor-not-allowed' : ''}
-                          `}
+                          disabled={isGenerating}
+                          className="bg-amber-600 hover:bg-amber-500 disabled:bg-slate-800 text-white px-6 py-2 rounded-lg font-bold transition-all shadow-lg shadow-amber-900/20 flex items-center gap-2"
                         >
-                          <Zap className={`size-5 ${isGenerating ? 'animate-pulse' : ''}`} /> 
-                          {isGenerating ? 'جاري التوليد...' : 'بدء إنتاج Batch 01 (Staging)'}
+                          {isGenerating ? "جاري الإنتاج..." : "بدء الإنتاج الفعلي للدفعة"}
                         </button>
                       </div>
-                    </>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {batchPrompts?.map((p: any) => (
+                          <div key={p.slug} className="bg-slate-900/60 border border-slate-800 rounded-xl overflow-hidden flex flex-col hover:border-amber-500/30 transition-all p-6 space-y-4">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <h4 className="text-xl font-bold text-amber-100">{p.titleAr}</h4>
+                                <span className="text-xs font-mono text-slate-500">{p.slug}</span>
+                              </div>
+                              <div className="flex flex-col items-end gap-2">
+                                <div className="flex gap-2">
+                                  <span className={`text-[10px] px-2 py-0.5 rounded border font-bold ${
+                                    p.audit.sourceConfidence === 'HIGH' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                                  }`}>
+                                    Confidence: {p.audit.sourceConfidence}
+                                  </span>
+                                  <span className={`text-[10px] px-2 py-0.5 rounded border font-bold ${
+                                    p.audit.historicalSpecificity === 'DOCUMENTED' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+                                  }`}>
+                                    {p.audit.historicalSpecificity}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="bg-black/40 rounded-lg p-4 font-mono text-xs text-slate-300 border border-slate-800/50 leading-relaxed">
+                              <div className="text-slate-500 mb-2 uppercase tracking-widest text-[10px]">Production Prompt</div>
+                              {p.prompt}
+                            </div>
+
+                            {p.audit.unsupportedDetailsRemoved !== "NONE" && (
+                              <div className="bg-red-500/5 border border-red-500/10 rounded-lg p-3">
+                                 <div className="text-[10px] font-bold text-red-400 uppercase mb-1">تمت إزالة تفاصيل غير مدعومة:</div>
+                                 <ul className="text-xs text-red-300/70 list-disc list-inside">
+                                   {p.audit.unsupportedDetailsRemoved.map((d: string) => <li key={d}>{d}</li>)}
+                                 </ul>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
               ) : filteredList.map((entity: EntityPriorityReport) => (
