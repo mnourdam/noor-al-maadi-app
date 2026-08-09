@@ -353,9 +353,10 @@ function PriorityAuditPage() {
                          >
                            ← Back to Prompt Review
                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ) : null}
+                    ) : null}
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-3">
