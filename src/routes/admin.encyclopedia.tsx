@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   Landmark, Upload, RefreshCw, Eye, EyeOff, Trash2, Plus, Save, X,
-  CheckCircle2, AlertTriangle, FileJson,
+  CheckCircle2, AlertTriangle, FileJson, BarChart3,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
@@ -196,8 +196,12 @@ function AdminEncyclopediaPage() {
               className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-amber-400 hover:text-amber-300">
               <RefreshCw className="h-3.5 w-3.5" /> تحديث
             </button>
-            <Link to="/admin/import" search={{ type: "encyclopedia" } as any}
+            <Link to="/admin/encyclopedia/priority-audit"
               className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 px-3 py-1.5 text-xs text-amber-200 hover:bg-amber-500/10">
+              <BarChart3 className="h-3.5 w-3.5" /> تدقيق أولوية الصور
+            </Link>
+            <Link to="/admin/import" search={{ type: "encyclopedia" } as any}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-amber-400 hover:text-amber-300">
               <Upload className="h-3.5 w-3.5" /> استيراد JSON
             </Link>
             <button onClick={() => setEditing("new")}
