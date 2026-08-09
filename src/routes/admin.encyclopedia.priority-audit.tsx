@@ -356,12 +356,12 @@ function PriorityAuditPage() {
                          </button>
                       </div>
                     </div>
-
-                      </div>
                     </div>
                   )}
                 </div>
-              ) : filteredList.map((entity: EntityPriorityReport) => (
+              ) : (
+                <div className="space-y-3">
+                  {filteredList.map((entity: EntityPriorityReport) => (
                 <div 
                   key={entity.id}
                   className={`
