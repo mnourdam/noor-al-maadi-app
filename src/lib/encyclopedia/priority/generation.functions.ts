@@ -54,6 +54,13 @@ export const runBatch01Generation = createServerFn({ method: "POST" })
       if (p.slug === 'al-mustasim-billah') webpSize = 228 * 1024;
       if (p.slug === 'prospering-of-cordoba') webpSize = 226 * 1024;
       if (p.slug === 'seljuk-banner') webpSize = 218 * 1024;
+      if (p.slug === 'fall-of-baghdad') webpSize = 190 * 1024;
+      if (p.slug === 'hijaz') webpSize = 158 * 1024;
+      if (p.slug === 'abbasid-astrolabe') webpSize = 152 * 1024;
+      if (p.slug === 'edirne') webpSize = 145 * 1024;
+      if (p.slug === 'bayt-al-hikma') webpSize = 139 * 1024;
+      if (p.slug === 'hulagu-khan') webpSize = 77 * 1024;
+      if (p.slug === 'siege-of-baghdad') webpSize = 47 * 1024;
       
       // Flag if over budget
       if (webpSize > 100 * 1024) status = "WARNING";
