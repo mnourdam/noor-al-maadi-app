@@ -13,25 +13,23 @@ import {
  */
 
 export async function generatePriorityAudit(): Promise<PriorityAuditResult> {
-  const { data: entities, error: entitiesError } = await supabaseAdmin
-    .from("encyclopedia_entities")
-    .select("id, slug, title, entity_type, metadata, image_path");
-
-  if (entitiesError) throw entitiesError;
-
   // 1. Fetch relations for scoring
-  // Using public tables where available, otherwise admin for campaign data
+  // Using admin client to bypass RLS and access admin tables
   const [
+    { data: entities, error: entitiesError },
     { data: storyRelations },
     { data: campaigns },
     { data: investigations },
     { data: stories }
   ] = await Promise.all([
+    supabaseAdmin.from("encyclopedia_entities").select("id, slug, title, entity_type, metadata, image_path"),
     supabaseAdmin.from("story_relations").select("story_id, target_id, target_type, role"),
     supabaseAdmin.from("admin_campaigns").select("id, data"),
     supabaseAdmin.from("investigations").select("id, related_entities"),
     supabaseAdmin.from("stories").select("id, unlock_spec")
   ]);
+
+  if (entitiesError) throw entitiesError;
 
   const report: EntityPriorityReport[] = [];
 
@@ -102,7 +100,7 @@ export async function generatePriorityAudit(): Promise<PriorityAuditResult> {
   });
 
   // 3. Calculate Scores
-  entities.forEach(entity => {
+  entities?.forEach(entity => {
     const id = entity.id;
     const metadata = (entity.metadata as any) || {};
     
@@ -206,7 +204,7 @@ export async function generatePriorityAudit(): Promise<PriorityAuditResult> {
     .slice(0, 25);
 
   // Diagnostic logging (Server-side)
-  console.log(`[PriorityAudit] Total Ranked: ${report.length}`);
+  console.log(`[PriorityAudit] Total Ranked: \${report.length}`);
   console.log(`[PriorityAudit] Distribution:`, distribution);
 
   return {
@@ -216,6 +214,6 @@ export async function generatePriorityAudit(): Promise<PriorityAuditResult> {
     top25Overall,
     shortlists,
     anomalies: [],
-    assessment: `Priority Engine V1 is operational. Found ${report.length} ranked entities.`
+    assessment: `Priority Engine V1 is operational. Found \${report.length} ranked entities across \${types.length} categories.`
   };
 }
