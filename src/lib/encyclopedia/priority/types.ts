@@ -1,4 +1,11 @@
-import { EntityType } from "./types";
+export type EntityType = 
+  | "Figure" 
+  | "Event" 
+  | "City" 
+  | "Battle" 
+  | "Landmark" 
+  | "State" 
+  | "Artifact";
 
 /**
  * Historical Visual Importance classification for entities.
