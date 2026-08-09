@@ -132,18 +132,21 @@ export async function generateBatch01Prompts(): Promise<ProductionPrompt[]> {
   return batch.map(entity => {
     let basePrompt = "";
     
-    // Construct base cinematic prompt based on Visual DNA
-    const typeSpec = IRTH_VISUAL_DNA.typeSpecs[entity.type];
-    const dnaCore = IRTH_VISUAL_DNA.coreQualities.join(", ");
-    
-    // Very simplified prompt generation for the dry-run/logic demonstration
-    basePrompt = `${IRTH_VISUAL_DNA.styleName}: ${entity.titleAr} (${entity.type}). ${typeSpec.focus}. ${dnaCore}. Lighting: ${IRTH_VISUAL_DNA.lighting[0]}.`;
-
-    // Add specific details for corrections
+    // Detailed prompt construction
     if (entity.slug === "al-mustasim-billah") {
-      basePrompt += " Emotional concept: The weight of a falling empire. Rear-three-quarter view of an Abbasid Caliph in black and gold silk robes.";
+      basePrompt = `${IRTH_VISUAL_DNA.styleName}: Al-Mustasim Billah, the last Abbasid Caliph in Baghdad. Emotional concept: The weight of a falling empire. Composition: rear-three-quarter environmental portrait. He is seen from behind, slightly angled, wearing heavy black silk robes with intricate gold borders (Abbasid colors). He stands in a conservative late-Abbasid palatial interior in Baghdad. Through a window, a low sun casts long shadows over parchment scrolls on a low desk. Atmospheric depth with motes of dust in the light. No facial identity, focus on posture and period-plausible luxury.`;
     } else if (entity.slug === "bayt-al-hikma") {
-      basePrompt += " Scholars, wood, parchment, ink, lamps, period architecture.";
+      basePrompt = `${IRTH_VISUAL_DNA.styleName}: Bayt al-Hikma (House of Wisdom), Baghdad. Composition: framed-through-architecture. A historically plausible Abbasid scholarly library environment. Rows of polished wood shelves filled with bound manuscripts and parchment scrolls. Scholars in period-plausible robes are seen in soft-focus background, engaged in translation work. Natural light filtered through high arched windows. Details: copper lamps, inkwells, reed pens. Focus on the intellectual atmosphere of the translation movement. No monumental grand hall claims.`;
+    } else if (entity.slug === "abbasid-astrolabe") {
+      basePrompt = `${IRTH_VISUAL_DNA.styleName}: Abbasid-period Astrolabe. Composition: museum-macro-detail. A historically plausible astronomical instrument made of weathered brass and bronze. Intricate geometric engravings (no legible text). Controlled museum directional lighting highlighting the metallic texture and patina. The object is resting on a dark velvet or aged silk surface. Depth of field obscuring the background. Premium historical artifact reconstruction.`;
+    } else if (entity.slug === "seljuk-banner") {
+      basePrompt = `${IRTH_VISUAL_DNA.styleName}: Seljuk War Banner (11th Century). Composition: action-tracking. A heavy silk or linen banner on a wooden pole, fluttering in the wind over an Anatolian ridge. Muted earth tones, conservative period-plausible textile weave. No fabricated heraldic emblems or inscriptions. Lighting: overcast battlefield light. The background shows the silhouettes of a marching army in the mist. Focus on material authenticity and atmospheric historical presence.`;
+    } else if (entity.slug === "fall-of-baghdad") {
+      basePrompt = `${IRTH_VISUAL_DNA.styleName}: The Fall of Baghdad (1258). Composition: wide-establishing. A somber urban atmosphere under a low, smoke-filled sun. Distant views of the city's walls and towers. Piles of abandoned scrolls and artifacts in the foreground, half-buried in dust. Small groups of inhabitants moving away in the shadows. The atmosphere is one of civilizational collapse and silence. Deep navy shadows inflected with warm, ash-like highlights.`;
+    } else if (entity.slug === "siege-of-baghdad") {
+      basePrompt = `${IRTH_VISUAL_DNA.styleName}: The Siege of Baghdad (1258). Composition: medium-environmental. Intense military pressure. Large formations of Mongol cavalry and siege engines (trebuchets) positioned on the ridges overlooking the Tigris. Dust clouds, wooden palisades, and military encampments. Kinetic energy through formations and equipment. Restrained lighting, focus on the logistical scale of the siege.`;
+    } else {
+      basePrompt = `${IRTH_VISUAL_DNA.styleName}: ${entity.titleAr} (${entity.type}). ${typeSpec.focus}. ${dnaCore}. Lighting: ${IRTH_VISUAL_DNA.lighting[0]}. Historical grounding and period-plausible materials.`;
     }
 
     const { prompt, audit } = applyHistoricalSpecificityGate(entity, basePrompt, {});
