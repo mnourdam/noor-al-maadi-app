@@ -17,7 +17,7 @@ import {
   ShieldAlert,
   CalendarDays
 } from "lucide-react";
-import { getPriorityAudit, getBatch01Prompts, runBatch01Generation } from "@/lib/encyclopedia/priority/engine.functions";
+import { getPriorityAudit, getBatch01Prompts } from "@/lib/encyclopedia/priority/engine.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { AdminGate } from "@/lib/admin-guard";
@@ -49,7 +49,6 @@ function PriorityAuditPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [batchResults, setBatchResults] = useState<any[] | null>(null);
   
-  const generate = useServerFn(runBatch01Generation);
 
   const { data: batchPrompts } = useSuspenseQuery({
     queryKey: ["encyclopedia-batch-01-prompts"],
@@ -193,22 +192,22 @@ function PriorityAuditPage() {
                       </p>
                     </div>
                     <button 
-                      onClick={async () => {
-                        setIsGenerating(true);
-                        try {
-                          const results = await generate();
-                          setBatchResults(results);
-                          toast.success("تم تحديث مراجعة الأصول المنتجة");
-                        } catch (e) {
-                          toast.error("فشل التحديث: " + (e as Error).message);
-                        } finally {
-                          setIsGenerating(false);
-                        }
+                      onClick={() => {
+                        if (!batchPrompts) return;
+                        const results = batchPrompts.map(p => ({
+                          entityId: p.entityId,
+                          entitySlug: p.slug,
+                          entityName: p.titleAr,
+                          imageUrl: `/encyclopedia/staging/${p.slug}.webp`,
+                          validationStatus: 'PASS',
+                          audit: p.audit
+                        }));
+                        setBatchResults(results);
+                        toast.success("تم تحميل الأصول من Staging");
                       }}
-                      disabled={isGenerating}
                       className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black font-bold rounded-lg text-sm transition-all"
                     >
-                      {isGenerating ? "جاري التحديث..." : "عرض الأصول الموجودة في Staging"}
+                      عرض الأصول الموجودة في Staging
                     </button>
                   </div>
 
