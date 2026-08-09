@@ -325,8 +325,40 @@ function PriorityAuditPage() {
                     </div>
                   ) : (
                     <>
-                      {batchPrompts?.map((p: any) => (
-                        <div key={p.slug} className="bg-slate-900/60 border border-slate-800 rounded-xl p-6 space-y-4">
+                  <div className="flex justify-between items-center bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
+                    <div className="space-y-1">
+                      <h2 className="text-xl font-bold text-amber-100 font-display flex items-center gap-2">
+                        <Zap className="size-5 text-amber-400" />
+                        دفعة المعايرة Batch 01
+                      </h2>
+                      <p className="text-sm text-slate-400">
+                        10 كيانات أساسية لتثبيت المعايير البصرية والتاريخية.
+                      </p>
+                    </div>
+                    <button 
+                      onClick={async () => {
+                        setIsGenerating(true);
+                        try {
+                          const results = await generate();
+                          setBatchResults(results);
+                          toast.success("تم إنتاج الدفعة بنجاح");
+                        } catch (e) {
+                          toast.error("فشل الإنتاج");
+                        } finally {
+                          setIsGenerating(false);
+                        }
+                      }}
+                      disabled={isGenerating}
+                      className="bg-amber-600 hover:bg-amber-500 disabled:bg-slate-800 text-white px-6 py-2 rounded-lg font-bold transition-all shadow-lg shadow-amber-900/20 flex items-center gap-2"
+                    >
+                      {isGenerating ? "جاري الإنتاج..." : "بدء الإنتاج الفعلي للدفعة"}
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {batchPrompts?.map((p: any) => (
+                      <div key={p.slug} className="bg-slate-900/60 border border-slate-800 rounded-xl overflow-hidden flex flex-col hover:border-amber-500/30 transition-all">
+
                           <div className="flex items-start justify-between">
                             <div>
                               <h4 className="text-xl font-bold text-amber-100">{p.titleAr}</h4>
