@@ -119,6 +119,7 @@ import { Route as AdminEncyclopediaCleanupImportPreviewRouteImport } from './rou
 import { Route as AdminEncyclopediaCleanupIntegrityRouteImport } from './routes/admin.encyclopedia-cleanup.integrity'
 import { Route as AdminEncyclopediaCleanupRedirectsRouteImport } from './routes/admin.encyclopedia-cleanup.redirects'
 import { Route as AdminEncyclopediaCleanupReviewRouteImport } from './routes/admin.encyclopedia-cleanup.review'
+import { Route as AdminEncyclopediaIndexRouteImport } from './routes/admin/encyclopedia/index'
 import { Route as AdminEncyclopediaPriorityAuditRouteImport } from './routes/admin.encyclopedia.priority-audit'
 import { Route as AdminGamesIndexRouteImport } from './routes/admin.games.index'
 import { Route as AdminGamesModeRouteImport } from './routes/admin.games.$mode'
@@ -717,6 +718,11 @@ const AdminEncyclopediaCleanupReviewRoute =
     path: '/review',
     getParentRoute: () => AdminEncyclopediaCleanupRoute,
   } as any)
+const AdminEncyclopediaIndexRoute = AdminEncyclopediaIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminEncyclopediaRoute,
+} as any)
 const AdminEncyclopediaPriorityAuditRoute =
   AdminEncyclopediaPriorityAuditRouteImport.update({
     id: '/priority-audit',
@@ -1011,6 +1017,7 @@ export interface FileRoutesByFullPath {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/admin/campaigns/': typeof AdminCampaignsIndexRoute
   '/admin/encyclopedia-cleanup/': typeof AdminEncyclopediaCleanupIndexRoute
+  '/admin/encyclopedia/': typeof AdminEncyclopediaIndexRoute
   '/admin/games/': typeof AdminGamesIndexRoute
   '/admin/investigations/': typeof AdminInvestigationsIndexRoute
   '/admin/stories/': typeof AdminStoriesIndexRoute
@@ -1079,7 +1086,6 @@ export interface FileRoutesByTo {
   '/admin/crash-diagnostics': typeof AdminCrashDiagnosticsRoute
   '/admin/cross-hub-links': typeof AdminCrossHubLinksRoute
   '/admin/emblems': typeof AdminEmblemsRoute
-  '/admin/encyclopedia': typeof AdminEncyclopediaRouteWithChildren
   '/admin/encyclopedia-audit': typeof AdminEncyclopediaAuditRoute
   '/admin/encyclopedia-report': typeof AdminEncyclopediaReportRoute
   '/admin/era-assignment': typeof AdminEraAssignmentRoute
@@ -1149,6 +1155,7 @@ export interface FileRoutesByTo {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/admin/campaigns': typeof AdminCampaignsIndexRoute
   '/admin/encyclopedia-cleanup': typeof AdminEncyclopediaCleanupIndexRoute
+  '/admin/encyclopedia': typeof AdminEncyclopediaIndexRoute
   '/admin/games': typeof AdminGamesIndexRoute
   '/admin/investigations': typeof AdminInvestigationsIndexRoute
   '/admin/stories': typeof AdminStoriesIndexRoute
@@ -1293,6 +1300,7 @@ export interface FileRoutesById {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/admin/campaigns/': typeof AdminCampaignsIndexRoute
   '/admin/encyclopedia-cleanup/': typeof AdminEncyclopediaCleanupIndexRoute
+  '/admin/encyclopedia/': typeof AdminEncyclopediaIndexRoute
   '/admin/games/': typeof AdminGamesIndexRoute
   '/admin/investigations/': typeof AdminInvestigationsIndexRoute
   '/admin/stories/': typeof AdminStoriesIndexRoute
@@ -1438,6 +1446,7 @@ export interface FileRouteTypes {
     | '/lovable/email/suppression'
     | '/admin/campaigns/'
     | '/admin/encyclopedia-cleanup/'
+    | '/admin/encyclopedia/'
     | '/admin/games/'
     | '/admin/investigations/'
     | '/admin/stories/'
@@ -1506,7 +1515,6 @@ export interface FileRouteTypes {
     | '/admin/crash-diagnostics'
     | '/admin/cross-hub-links'
     | '/admin/emblems'
-    | '/admin/encyclopedia'
     | '/admin/encyclopedia-audit'
     | '/admin/encyclopedia-report'
     | '/admin/era-assignment'
@@ -1576,6 +1584,7 @@ export interface FileRouteTypes {
     | '/lovable/email/suppression'
     | '/admin/campaigns'
     | '/admin/encyclopedia-cleanup'
+    | '/admin/encyclopedia'
     | '/admin/games'
     | '/admin/investigations'
     | '/admin/stories'
@@ -1719,6 +1728,7 @@ export interface FileRouteTypes {
     | '/lovable/email/suppression'
     | '/admin/campaigns/'
     | '/admin/encyclopedia-cleanup/'
+    | '/admin/encyclopedia/'
     | '/admin/games/'
     | '/admin/investigations/'
     | '/admin/stories/'
@@ -2631,6 +2641,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminEncyclopediaCleanupReviewRouteImport
       parentRoute: typeof AdminEncyclopediaCleanupRoute
     }
+    '/admin/encyclopedia/': {
+      id: '/admin/encyclopedia/'
+      path: '/'
+      fullPath: '/admin/encyclopedia/'
+      preLoaderRoute: typeof AdminEncyclopediaIndexRouteImport
+      parentRoute: typeof AdminEncyclopediaRoute
+    }
     '/admin/encyclopedia/priority-audit': {
       id: '/admin/encyclopedia/priority-audit'
       path: '/priority-audit'
@@ -2900,10 +2917,12 @@ const EncyclopediaRouteWithChildren = EncyclopediaRoute._addFileChildren(
 
 interface AdminEncyclopediaRouteChildren {
   AdminEncyclopediaPriorityAuditRoute: typeof AdminEncyclopediaPriorityAuditRoute
+  AdminEncyclopediaIndexRoute: typeof AdminEncyclopediaIndexRoute
 }
 
 const AdminEncyclopediaRouteChildren: AdminEncyclopediaRouteChildren = {
   AdminEncyclopediaPriorityAuditRoute: AdminEncyclopediaPriorityAuditRoute,
+  AdminEncyclopediaIndexRoute: AdminEncyclopediaIndexRoute,
 }
 
 const AdminEncyclopediaRouteWithChildren =
@@ -3103,13 +3122,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
