@@ -11,12 +11,16 @@ import {
   Info,
   BadgeAlert,
   ImageOff,
-  Star
+  Star,
+  Zap,
+  History,
+  ShieldAlert,
+  CalendarDays
 } from "lucide-react";
 import { getPriorityAudit } from "@/lib/encyclopedia/priority/engine.functions";
 import { AdminGate } from "@/lib/admin-guard";
 import { useState, useMemo } from "react";
-import { EntityType, ProductionStatus } from "@/lib/encyclopedia/priority/types";
+import { EntityType, ProductionStatus, EntityPriorityReport, HistoricalVisualImportance } from "@/lib/encyclopedia/priority/types";
 
 export const Route = createFileRoute("/admin/encyclopedia/priority-audit")({
   head: () => ({
@@ -33,18 +37,10 @@ export const Route = createFileRoute("/admin/encyclopedia/priority-audit")({
 });
 
 function PriorityAuditPage() {
-  const { data: audit, error, isLoading } = useSuspenseQuery({
+  const { data: audit, error } = useSuspenseQuery({
     queryKey: ["encyclopedia-priority-audit"],
     queryFn: () => getPriorityAudit()
   });
-
-  // Development Diagnostic
-  if (process.env.NODE_ENV === "development") {
-    console.log("[PriorityAudit] Raw Result:", audit);
-    if (audit) {
-      console.log("[PriorityAudit] Distribution:", audit.distribution);
-    }
-  }
 
   const [activeTab, setActiveTab] = useState<EntityType | "OVERALL">("OVERALL");
   const [search, setSearch] = useState("");
@@ -52,16 +48,16 @@ function PriorityAuditPage() {
   const currentList = useMemo(() => {
     if (!audit) return [];
     if (activeTab === "OVERALL") {
-      return audit.top25Overall || [];
+      return audit.top50Overall || [];
     }
     return (audit.shortlists && audit.shortlists[activeTab]) || [];
   }, [activeTab, audit]);
 
   const filteredList = useMemo(() => {
-    let list = currentList;
+    let list = currentList as EntityPriorityReport[];
     if (search) {
       const q = search.toLowerCase();
-      list = list.filter(e => 
+      list = list.filter((e: EntityPriorityReport) => 
         e.titleAr?.toLowerCase().includes(q) || 
         e.slug?.toLowerCase().includes(q)
       );
@@ -94,38 +90,30 @@ function PriorityAuditPage() {
               <ChevronRight className="size-3" />
               <span>الموسوعة</span>
             </div>
-            <h1 className="text-3xl font-bold text-amber-100 font-display">محرك الأولويات V1</h1>
+            <h1 className="text-3xl font-bold text-amber-100 font-display">محرك الأولويات V2</h1>
             <p className="text-slate-400 text-sm max-w-2xl">
-              تحليل وتصنيف تلقائي لمدخلات الموسوعة بناءً على أهميتها في مسار اللاعب (Gameplay Critical) والتغطية التاريخية.
+              نظام التقييم التراكمي (CPS): Gameplay Gravity + Historical Visual Importance.
             </p>
           </div>
           
           <div className="flex flex-wrap gap-3">
              <div className="bg-slate-900/80 border border-slate-800 rounded-lg px-4 py-2 flex items-center gap-3">
                 <BarChart3 className="size-4 text-amber-400" />
-                <div className="text-xs">
+                <div className="text-xs text-left">
                    <div className="text-slate-500">منطق التقييم</div>
-                   <div className="text-amber-200 font-mono">Additive Deterministic</div>
+                   <div className="text-amber-200 font-mono">CPS Engine V2</div>
                 </div>
              </div>
           </div>
         </header>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
-           <StatCard label="شخصيات" value={audit.distribution?.Figure || 0} />
-           <StatCard label="أحداث" value={audit.distribution?.Event || 0} />
-           <StatCard label="مدن" value={audit.distribution?.City || 0} />
-           <StatCard label="معارك" value={audit.distribution?.Battle || 0} />
-           <StatCard label="معالم" value={audit.distribution?.Landmark || 0} />
-           <StatCard label="دول" value={audit.distribution?.State || 0} />
-           <StatCard label="آثار" value={audit.distribution?.Artifact || 0} />
-           <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 flex flex-col justify-center items-center text-center">
-              <div className="text-[10px] text-amber-300/70 font-bold uppercase tracking-wider">الإجمالي</div>
-              <div className="text-xl font-bold text-amber-400">
-                {audit.distribution ? Object.values(audit.distribution).reduce((a, b) => a + (b || 0), 0) : 0}
-              </div>
-           </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+           <StatCard label="شخصيات" value={audit.distribution?.Figure || 0} color="emerald" />
+           <StatCard label="مدن ومعالم" value={(audit.distribution?.City || 0) + (audit.distribution?.Landmark || 0)} color="blue" />
+           <StatCard label="أحداث ومعارك" value={(audit.distribution?.Event || 0) + (audit.distribution?.Battle || 0)} color="red" />
+           <StatCard label="الكون المؤهل" value={audit.eligibleUniverseCount} color="amber" highlight />
+           <StatCard label="المؤرشفة / التحويلات" value={audit.archivedOrRedirectedCount} color="slate" />
         </div>
 
         {/* Main Content Area */}
@@ -140,7 +128,7 @@ function PriorityAuditPage() {
                   active={activeTab === "OVERALL"} 
                   onClick={() => setActiveTab("OVERALL")}
                   icon={<Star className="size-4" />}
-                  label="أهم 25 (عام)"
+                  label="أهم 50 (CPS الأعلى)"
                 />
                 <div className="h-px bg-slate-800/50 my-1 mx-2" />
                 {(["Figure", "Event", "City", "Battle", "Landmark", "State", "Artifact"] as EntityType[]).map(type => (
@@ -155,25 +143,47 @@ function PriorityAuditPage() {
               </nav>
             </div>
 
-            <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 space-y-3">
+            <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 space-y-4">
                <h3 className="flex items-center gap-2 text-sm font-bold text-amber-200">
                   <Info className="size-4" />
-                  عن هذا التحليل
+                  عن التقييم التراكمي (CPS)
                </h3>
-               <p className="text-xs text-slate-400 leading-relaxed">
-                  يتم احتساب النقاط بناءً على:
-               </p>
-               <ul className="text-[11px] text-slate-500 space-y-2 list-disc list-inside">
-                  <li>متطلب فتح قصة (Mandatory): +50</li>
-                  <li>عنصر أساسي في حملة (Core): +40</li>
-                  <li>علاقة بقصة (Story): +25</li>
-                  <li>علاقة بتحقيق (Inv): +15</li>
-                  <li>أهمية منسقة (Curated): +30</li>
-               </ul>
+               
+               <div className="space-y-3">
+                 <div className="space-y-1">
+                   <div className="text-[10px] text-slate-500 font-bold uppercase tracking-tight">إشارة اللعبة (Gravity)</div>
+                   <p className="text-[10px] text-slate-400 leading-tight">متطلبات الفتح والحملات والقصص والتحقيقات.</p>
+                 </div>
+                 
+                 <div className="space-y-1">
+                   <div className="text-[10px] text-amber-500 font-bold uppercase tracking-tight">الأهمية التاريخية (Importance)</div>
+                   <ul className="text-[10px] text-slate-500 space-y-1">
+                      <li>• Core (التأسيسية): +100</li>
+                      <li>• Major (الكبرى): +60</li>
+                      <li>• Normal (العادية): +20</li>
+                   </ul>
+                 </div>
+               </div>
+
                <div className="pt-2 border-t border-slate-800 mt-2">
                   <p className="text-[10px] text-amber-500/70 font-mono">
                     {audit.assessment}
                   </p>
+               </div>
+            </div>
+
+            <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 space-y-3">
+               <h3 className="flex items-center gap-2 text-sm font-bold text-slate-300">
+                  <CalendarDays className="size-4" />
+                  توزيع العصور (Eligible)
+               </h3>
+               <div className="max-h-48 overflow-y-auto pr-2 custom-scrollbar space-y-2">
+                 {Object.entries(audit.eraBias || {}).sort((a,b) => b[1] - a[1]).map(([era, count]) => (
+                   <div key={era} className="flex items-center justify-between text-[10px]">
+                      <span className="text-slate-500">{era}</span>
+                      <span className="text-amber-400 font-mono">{count}</span>
+                   </div>
+                 ))}
                </div>
             </div>
           </aside>
@@ -197,10 +207,16 @@ function PriorityAuditPage() {
             </div>
 
             <div className="space-y-3">
-              {filteredList.map((entity) => (
+              {filteredList.map((entity: EntityPriorityReport) => (
                 <div 
                   key={entity.id}
-                  className="group bg-slate-900/40 border border-slate-800/60 rounded-xl p-4 hover:border-amber-500/30 hover:bg-slate-900/60 transition-all"
+                  className={`
+                    group border rounded-xl p-4 transition-all
+                    ${entity.canonical.isEligible 
+                      ? "bg-slate-900/40 border-slate-800/60 hover:border-amber-500/30 hover:bg-slate-900/60" 
+                      : "bg-slate-950 border-red-900/20 opacity-60 grayscale"
+                    }
+                  `}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="space-y-1">
@@ -211,6 +227,18 @@ function PriorityAuditPage() {
                         {entity.hasImage && (
                           <span className="bg-emerald-500/10 text-emerald-400 text-[9px] px-1.5 py-0.5 rounded border border-emerald-500/20">
                             يوجد صورة
+                          </span>
+                        )}
+                        {!entity.canonical.isEligible && (
+                          <span className="bg-red-500/10 text-red-400 text-[9px] px-1.5 py-0.5 rounded border border-red-500/20 flex items-center gap-1">
+                            <ShieldAlert className="size-3" /> غير مؤهل (مؤرشف/تحويل)
+                          </span>
+                        )}
+                        {entity.historicalImportance !== "UNREVIEWED" && (
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded border border-amber-500/20 font-bold ${
+                            entity.historicalImportance === "CORE" ? "bg-amber-500 text-black" : "bg-amber-500/10 text-amber-400"
+                          }`}>
+                            {entity.historicalImportance}
                           </span>
                         )}
                       </div>
@@ -224,33 +252,38 @@ function PriorityAuditPage() {
                     <div className="flex flex-col items-end gap-2">
                       <div className="flex items-baseline gap-1">
                         <span className="text-2xl font-black text-amber-400">{entity.finalScore}</span>
-                        <span className="text-[10px] text-slate-500 font-bold uppercase">Points</span>
+                        <span className="text-[10px] text-slate-500 font-bold uppercase">CPS</span>
                       </div>
                       <StatusBadge status={entity.productionStatus} />
                     </div>
                   </div>
 
                   <div className="mt-4 pt-4 border-t border-slate-800/50 grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <ScoreStat label="الجاذبية (Gravity)" value={entity.gameplayGravity} subLabel="Signals" />
                     <ScoreStat label="حملات" value={entity.campaignCount} />
                     <ScoreStat label="قصص" value={entity.storyCount} />
                     <ScoreStat label="تحقيقات" value={entity.investigationCount} />
-                    <ScoreStat label="متطلبات فتح" value={entity.unlockDependencyCount} />
                   </div>
 
                   <div className="mt-4 flex items-center justify-between text-[10px]">
                     <div className="flex flex-wrap gap-2">
                        {entity.scoreBreakdown.mandatoryUnlock > 0 && <PointTag label="Gameplay Critical" points={entity.scoreBreakdown.mandatoryUnlock} color="red" />}
-                       {entity.scoreBreakdown.coreCampaign > 0 && <PointTag label="Campaign Core" points={entity.scoreBreakdown.coreCampaign} color="amber" />}
-                       {entity.scoreBreakdown.curatedImportance > 0 && <PointTag label="Historical Importance" points={entity.scoreBreakdown.curatedImportance} color="blue" />}
-                       {entity.scoreBreakdown.crossSystemBonus > 0 && <PointTag label="System Multiplier" points={entity.scoreBreakdown.crossSystemBonus} color="emerald" />}
+                       {entity.scoreBreakdown.historicalImportanceBonus > 0 && <PointTag label="Importance Bonus" points={entity.scoreBreakdown.historicalImportanceBonus} color="amber" />}
+                       {entity.scoreBreakdown.structuralAnchor > 0 && <PointTag label="Structural" points={entity.scoreBreakdown.structuralAnchor} color="blue" />}
+                       {entity.scoreBreakdown.crossSystemBonus > 0 && <PointTag label="Multiplier" points={entity.scoreBreakdown.crossSystemBonus} color="emerald" />}
                     </div>
-                    <Link 
-                      to="/admin/encyclopedia" 
-                      search={{ search: entity.slug } as any}
-                      className="text-slate-500 hover:text-amber-400 transition-colors flex items-center gap-1"
-                    >
-                      تعديل <ExternalLink className="size-3" />
-                    </Link>
+                    <div className="flex items-center gap-3">
+                       {entity.canonical.isRedirect && (
+                         <span className="text-red-400/70">→ محول إلى {entity.canonical.canonicalId}</span>
+                       )}
+                       <Link 
+                        to="/admin/encyclopedia" 
+                        search={{ search: entity.slug } as any}
+                        className="text-slate-500 hover:text-amber-400 transition-colors flex items-center gap-1"
+                      >
+                        تعديل <ExternalLink className="size-3" />
+                      </Link>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -272,11 +305,18 @@ function PriorityAuditPage() {
   );
 }
 
-function StatCard({ label, value }: { label: string, value: number }) {
+function StatCard({ label, value, color = "amber", highlight = false }: { label: string, value: number, color?: string, highlight?: boolean }) {
+  const colorMap: Record<string, string> = {
+    amber: "border-amber-500/20 text-amber-400",
+    emerald: "border-emerald-500/20 text-emerald-400",
+    blue: "border-blue-500/20 text-blue-400",
+    red: "border-red-500/20 text-red-400",
+    slate: "border-slate-800 text-slate-400"
+  };
   return (
-    <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-3 flex flex-col items-center justify-center text-center">
-      <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{label}</div>
-      <div className="text-xl font-bold text-slate-200">{value}</div>
+    <div className={`bg-slate-900/50 border rounded-xl p-3 flex flex-col items-center justify-center text-center ${colorMap[color]} ${highlight ? 'bg-amber-500/5' : ''}`}>
+      <div className="text-[10px] font-bold uppercase tracking-wider opacity-60">{label}</div>
+      <div className="text-xl font-bold">{value}</div>
     </div>
   );
 }
@@ -302,11 +342,14 @@ function TabButton({ active, onClick, icon, label, count }: { active: boolean, o
   );
 }
 
-function ScoreStat({ label, value }: { label: string, value: number }) {
+function ScoreStat({ label, value, subLabel }: { label: string, value: number, subLabel?: string }) {
   return (
     <div>
       <div className="text-[9px] text-slate-500 uppercase font-bold tracking-tight">{label}</div>
-      <div className="text-sm font-bold text-slate-300">{value}</div>
+      <div className="flex items-baseline gap-1">
+        <div className="text-sm font-bold text-slate-300">{value}</div>
+        {subLabel && <span className="text-[9px] text-slate-600">{subLabel}</span>}
+      </div>
     </div>
   );
 }
@@ -330,13 +373,20 @@ function StatusBadge({ status }: { status: ProductionStatus }) {
     case "READY_FOR_VISUAL_PRODUCTION":
       return (
         <span className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-400">
-          <LayoutGrid className="size-3" /> جاهز للإنتاج
+          <Zap className="size-3" /> جاهز للإنتاج
         </span>
       );
     case "HAS_EXISTING_IMAGE":
       return (
         <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500">
           <CheckCircle2 className="size-3" /> تم التنفيذ
+        </span>
+      );
+    case "DUPLICATE_Archived":
+    case "DUPLICATE_Redirected":
+      return (
+        <span className="flex items-center gap-1.5 text-[10px] font-bold text-red-500/50">
+          <History className="size-3" /> مكرر / مؤرشف
         </span>
       );
     case "LOW_SIGNAL":
@@ -358,13 +408,13 @@ function StatusBadge({ status }: { status: ProductionStatus }) {
 
 function getTypeLabel(type: EntityType): string {
   const labels: Record<EntityType, string> = {
-    Figure: "شخصية",
-    Event: "حدث",
-    City: "مدينة",
-    Battle: "معركة",
-    Landmark: "معلم",
-    State: "دولة",
-    Artifact: "أثر"
+    Figure: "شخصيات",
+    Event: "أحداث",
+    City: "مدن",
+    Battle: "معارك",
+    Landmark: "معالم",
+    State: "دول",
+    Artifact: "آثار"
   };
   return labels[type];
 }
