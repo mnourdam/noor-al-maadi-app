@@ -17,7 +17,7 @@ import {
   ShieldAlert,
   CalendarDays
 } from "lucide-react";
-import { getPriorityAudit } from "@/lib/encyclopedia/priority/engine.functions";
+import { getPriorityAudit, getBatch01Prompts } from "@/lib/encyclopedia/priority/engine.functions";
 import { AdminGate } from "@/lib/admin-guard";
 import { useState, useMemo } from "react";
 import { EntityType, ProductionStatus, EntityPriorityReport, HistoricalVisualImportance } from "@/lib/encyclopedia/priority/types";
@@ -42,14 +42,20 @@ function PriorityAuditPage() {
     queryFn: () => getPriorityAudit()
   });
 
-  const [activeTab, setActiveTab] = useState<EntityType | "OVERALL">("OVERALL");
+  const [activeTab, setActiveTab] = useState<EntityType | "OVERALL" | "BATCH_01">("OVERALL");
   const [search, setSearch] = useState("");
+
+  const { data: batchPrompts } = useSuspenseQuery({
+    queryKey: ["encyclopedia-batch-01-prompts"],
+    queryFn: () => getBatch01Prompts()
+  });
 
   const currentList = useMemo(() => {
     if (!audit) return [];
     if (activeTab === "OVERALL") {
       return audit.top50Overall || [];
     }
+    if (activeTab === "BATCH_01") return [];
     return (audit.shortlists && audit.shortlists[activeTab]) || [];
   }, [activeTab, audit]);
 
@@ -130,6 +136,12 @@ function PriorityAuditPage() {
                   icon={<Star className="size-4" />}
                   label="أهم 50 (CPS الأعلى)"
                 />
+                <TabButton 
+                  active={activeTab === "BATCH_01"} 
+                  onClick={() => setActiveTab("BATCH_01")}
+                  icon={<Zap className="size-4 text-amber-400" />}
+                  label="Batch 01 (قيد المراجعة)"
+                />
                 <div className="h-px bg-slate-800/50 my-1 mx-2" />
                 {(["Figure", "Event", "City", "Battle", "Landmark", "State", "Artifact"] as EntityType[]).map(type => (
                   <TabButton 
@@ -207,7 +219,61 @@ function PriorityAuditPage() {
             </div>
 
             <div className="space-y-3">
-              {filteredList.map((entity: EntityPriorityReport) => (
+              {activeTab === "BATCH_01" ? (
+                <div className="space-y-4">
+                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 text-sm text-amber-200">
+                    <h5 className="font-bold flex items-center gap-2 mb-1">
+                      <ShieldAlert className="size-4" /> وضع المراجعة: Batch 01 (Dry Run)
+                    </h5>
+                    <p className="opacity-80">
+                      تم تطبيق "بوابة يقين التفاصيل التاريخية". لا تقم ببدء التوليد إلا بعد مراجعة تقارير التدقيق أدناه.
+                    </p>
+                  </div>
+                  {batchPrompts?.map((p: any) => (
+                    <div key={p.slug} className="bg-slate-900/60 border border-slate-800 rounded-xl p-6 space-y-4">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h4 className="text-xl font-bold text-amber-100">{p.titleAr}</h4>
+                          <span className="text-xs font-mono text-slate-500">{p.slug}</span>
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                           <div className="flex gap-2">
+                              <span className={`text-[10px] px-2 py-0.5 rounded border font-bold ${
+                                p.audit.sourceConfidence === 'HIGH' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                              }`}>
+                                Confidence: {p.audit.sourceConfidence}
+                              </span>
+                              <span className={`text-[10px] px-2 py-0.5 rounded border font-bold ${
+                                p.audit.historicalSpecificity === 'DOCUMENTED' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+                              }`}>
+                                {p.audit.historicalSpecificity}
+                              </span>
+                           </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-black/40 rounded-lg p-4 font-mono text-xs text-slate-300 border border-slate-800/50 leading-relaxed">
+                        <div className="text-slate-500 mb-2 uppercase tracking-widest text-[10px]">Production Prompt</div>
+                        {p.prompt}
+                      </div>
+
+                      {p.audit.unsupportedDetailsRemoved !== "NONE" && (
+                        <div className="bg-red-500/5 border border-red-500/10 rounded-lg p-3">
+                           <div className="text-[10px] font-bold text-red-400 uppercase mb-1">تمت إزالة تفاصيل غير مدعومة:</div>
+                           <ul className="text-xs text-red-300/70 list-disc list-inside">
+                             {p.audit.unsupportedDetailsRemoved.map((d: string) => <li key={d}>{d}</li>)}
+                           </ul>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  <div className="pt-8 flex justify-center">
+                    <button className="bg-amber-500 hover:bg-amber-400 text-black px-8 py-3 rounded-full font-bold transition-all shadow-xl shadow-amber-500/10 flex items-center gap-2">
+                      <Zap className="size-5" /> بدء إنتاج Batch 01 (Staging)
+                    </button>
+                  </div>
+                </div>
+              ) : filteredList.map((entity: EntityPriorityReport) => (
                 <div 
                   key={entity.id}
                   className={`
