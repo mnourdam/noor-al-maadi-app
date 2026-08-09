@@ -119,7 +119,7 @@ export async function generatePriorityAudit(): Promise<PriorityAuditResult> {
 
     const breakdown: ScoreBreakdown = {
       mandatoryUnlock: (entityUnlocks.get(id)?.size || 0) * 50,
-      coreCampaign: (entityCoreCampaigns.get(id)?.size || 0) * 40,
+      coreCampaign: (entityCoreCampaigns.get(id)?.size || 0) * 60, // Increased weight
       supportingCampaign: (entityCampaigns.get(id)?.size || 0) * 15,
       storyPrimary: (entityStories.get(id)?.size || 0) * 25,
       investigationRelation: (entityInvestigations.get(id)?.size || 0) * 15,
