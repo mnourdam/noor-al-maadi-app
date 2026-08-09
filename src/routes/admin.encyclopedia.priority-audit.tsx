@@ -8,7 +8,6 @@ import {
   ExternalLink,
   Search,
   LayoutGrid,
-  History,
   Info,
   BadgeAlert,
   ImageOff,
@@ -34,7 +33,7 @@ export const Route = createFileRoute("/admin/encyclopedia/priority-audit")({
 });
 
 function PriorityAuditPage() {
-  const { data: audit } = useSuspenseQuery({
+  const { data: audit, error, isLoading } = useSuspenseQuery({
     queryKey: ["encyclopedia-priority-audit"],
     queryFn: () => getPriorityAudit()
   });
@@ -42,17 +41,20 @@ function PriorityAuditPage() {
   // Development Diagnostic
   if (process.env.NODE_ENV === "development") {
     console.log("[PriorityAudit] Raw Result:", audit);
-    console.log("[PriorityAudit] Distribution:", audit.distribution);
+    if (audit) {
+      console.log("[PriorityAudit] Distribution:", audit.distribution);
+    }
   }
 
   const [activeTab, setActiveTab] = useState<EntityType | "OVERALL">("OVERALL");
   const [search, setSearch] = useState("");
 
   const currentList = useMemo(() => {
+    if (!audit) return [];
     if (activeTab === "OVERALL") {
-      return audit.top25Overall;
+      return audit.top25Overall || [];
     }
-    return audit.shortlists[activeTab] || [];
+    return (audit.shortlists && audit.shortlists[activeTab]) || [];
   }, [activeTab, audit]);
 
   const filteredList = useMemo(() => {
@@ -60,13 +62,26 @@ function PriorityAuditPage() {
     if (search) {
       const q = search.toLowerCase();
       list = list.filter(e => 
-        e.titleAr.toLowerCase().includes(q) || 
-        e.slug.toLowerCase().includes(q)
+        e.titleAr?.toLowerCase().includes(q) || 
+        e.slug?.toLowerCase().includes(q)
       );
     }
     return list;
   }, [currentList, search]);
 
+  if (error) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-red-400 p-8 flex flex-col items-center justify-center gap-4">
+        <AlertCircle className="size-12" />
+        <h2 className="text-xl font-bold">حدث خطأ أثناء تحميل البيانات</h2>
+        <pre className="bg-black/50 p-4 rounded text-xs max-w-full overflow-auto">
+          {error.message || String(error)}
+        </pre>
+      </div>
+    );
+  }
+
+  if (!audit) return null;
 
   return (
     <div dir="rtl" className="min-h-screen bg-slate-950 text-slate-100 px-4 py-8">
@@ -98,16 +113,18 @@ function PriorityAuditPage() {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
-           <StatCard label="شخصيات" value={audit.distribution.Figure} />
-           <StatCard label="أحداث" value={audit.distribution.Event} />
-           <StatCard label="مدن" value={audit.distribution.City} />
-           <StatCard label="معارك" value={audit.distribution.Battle} />
-           <StatCard label="معالم" value={audit.distribution.Landmark} />
-           <StatCard label="دول" value={audit.distribution.State} />
-           <StatCard label="آثار" value={audit.distribution.Artifact} />
+           <StatCard label="شخصيات" value={audit.distribution?.Figure || 0} />
+           <StatCard label="أحداث" value={audit.distribution?.Event || 0} />
+           <StatCard label="مدن" value={audit.distribution?.City || 0} />
+           <StatCard label="معارك" value={audit.distribution?.Battle || 0} />
+           <StatCard label="معالم" value={audit.distribution?.Landmark || 0} />
+           <StatCard label="دول" value={audit.distribution?.State || 0} />
+           <StatCard label="آثار" value={audit.distribution?.Artifact || 0} />
            <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 flex flex-col justify-center items-center text-center">
               <div className="text-[10px] text-amber-300/70 font-bold uppercase tracking-wider">الإجمالي</div>
-              <div className="text-xl font-bold text-amber-400">{Object.values(audit.distribution).reduce((a, b) => a + b, 0)}</div>
+              <div className="text-xl font-bold text-amber-400">
+                {audit.distribution ? Object.values(audit.distribution).reduce((a, b) => a + (b || 0), 0) : 0}
+              </div>
            </div>
         </div>
 
@@ -132,7 +149,7 @@ function PriorityAuditPage() {
                     active={activeTab === type} 
                     onClick={() => setActiveTab(type)}
                     label={getTypeLabel(type)}
-                    count={audit.shortlists[type]?.length}
+                    count={audit.shortlists ? audit.shortlists[type]?.length : 0}
                   />
                 ))}
               </nav>
