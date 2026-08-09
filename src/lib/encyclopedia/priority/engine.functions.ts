@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { generatePriorityAudit } from "./engine.server";
 import { generateBatch01Prompts } from "./production.server";
-import { runBatch01Generation as runGen } from "./generation.functions";
+// Removed runBatch01Generation from generation.functions to prevent server info errors
 
 export const getPriorityAudit = createServerFn({ method: "GET" })
   .handler(async () => {
@@ -13,7 +13,4 @@ export const getBatch01Prompts = createServerFn({ method: "GET" })
     return generateBatch01Prompts();
   });
 
-export const runBatch01Generation = createServerFn({ method: "POST" })
-  .handler(async () => {
-    return runGen();
-  });
+// runBatch01Generation removed as per user instruction to avoid server function info errors.
