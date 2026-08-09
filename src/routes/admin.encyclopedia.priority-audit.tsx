@@ -258,7 +258,8 @@ function PriorityAuditPage() {
                        </button>
                     </div>
                   </div>
-                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 text-sm text-amber-200">
+                  <div className="space-y-4">
+                    <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 text-sm text-amber-200">
                     <h5 className="font-bold flex items-center gap-2 mb-1">
                       <ShieldAlert className="size-4" /> وضع المراجعة: Batch 01 (Calibration)
                     </h5>
