@@ -22,7 +22,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { AdminGate } from "@/lib/admin-guard";
 import { useState, useMemo } from "react";
-import { EntityType, ProductionStatus, EntityPriorityReport, HistoricalVisualImportance } from "@/lib/encyclopedia/priority/types";
+import { EntityType, ProductionStatus, EntityPriorityReport } from "@/lib/encyclopedia/priority/types";
 
 export const Route = createFileRoute("/admin/encyclopedia/priority-audit")({
   head: () => ({
@@ -51,7 +51,7 @@ function PriorityAuditPage() {
   
   const generate = useServerFn(runBatch01Generation);
 
-  const { data: batchPrompts, refetch: refetchBatchPrompts } = useSuspenseQuery({
+  const { data: batchPrompts } = useSuspenseQuery({
     queryKey: ["encyclopedia-batch-01-prompts"],
     queryFn: () => getBatch01Prompts()
   });
@@ -130,7 +130,6 @@ function PriorityAuditPage() {
 
         {/* Main Content Area */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          
           {/* Sidebar Filters */}
           <aside className="space-y-6">
             <div className="space-y-2">
@@ -159,50 +158,6 @@ function PriorityAuditPage() {
                   />
                 ))}
               </nav>
-            </div>
-
-            <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 space-y-4">
-               <h3 className="flex items-center gap-2 text-sm font-bold text-amber-200">
-                  <Info className="size-4" />
-                  عن التقييم التراكمي (CPS)
-               </h3>
-               
-               <div className="space-y-3">
-                 <div className="space-y-1">
-                   <div className="text-[10px] text-slate-500 font-bold uppercase tracking-tight">إشارة اللعبة (Gravity)</div>
-                   <p className="text-[10px] text-slate-400 leading-tight">متطلبات الفتح والحملات والقصص والتحقيقات.</p>
-                 </div>
-                 
-                 <div className="space-y-1">
-                   <div className="text-[10px] text-amber-500 font-bold uppercase tracking-tight">الأهمية التاريخية (Importance)</div>
-                   <ul className="text-[10px] text-slate-500 space-y-1">
-                      <li>• Core (التأسيسية): +100</li>
-                      <li>• Major (الكبرى): +60</li>
-                      <li>• Normal (العادية): +20</li>
-                   </ul>
-                 </div>
-               </div>
-
-               <div className="pt-2 border-t border-slate-800 mt-2">
-                  <p className="text-[10px] text-amber-500/70 font-mono">
-                    {audit.assessment}
-                  </p>
-               </div>
-            </div>
-
-            <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 space-y-3">
-               <h3 className="flex items-center gap-2 text-sm font-bold text-slate-300">
-                  <CalendarDays className="size-4" />
-                  توزيع العصور (Eligible)
-               </h3>
-               <div className="max-h-48 overflow-y-auto pr-2 custom-scrollbar space-y-2">
-                 {Object.entries(audit.eraBias || {}).sort((a,b) => b[1] - a[1]).map(([era, count]) => (
-                   <div key={era} className="flex items-center justify-between text-[10px]">
-                      <span className="text-slate-500">{era}</span>
-                      <span className="text-amber-400 font-mono">{count}</span>
-                   </div>
-                 ))}
-               </div>
             </div>
           </aside>
 
@@ -237,38 +192,27 @@ function PriorityAuditPage() {
                         مراجعة الأصول التي تم إنتاجها بواسطة الوكيل (Lovable Agent) وتجهيزها في البيئة التجريبية.
                       </p>
                     </div>
-                    <div className="flex flex-col items-end gap-2">
-                       <button 
-                         onClick={async () => {
-                           setIsGenerating(true);
-                           try {
-                             const results = await generate();
-                             setBatchResults(results);
-                             toast.success("تم تحديث مراجعة الأصول المنتجة");
-                           } catch (e) {
-                             toast.error("فشل التحديث: " + (e as Error).message);
-                           } finally {
-                             setIsGenerating(false);
-                           }
-                         }}
-                         disabled={isGenerating}
-                         className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black font-bold rounded-lg text-sm transition-all"
-                       >
-                         {isGenerating ? "جاري التحديث..." : "عرض الأصول الموجودة في Staging"}
-                       </button>
-                    </div>
+                    <button 
+                      onClick={async () => {
+                        setIsGenerating(true);
+                        try {
+                          const results = await generate();
+                          setBatchResults(results);
+                          toast.success("تم تحديث مراجعة الأصول المنتجة");
+                        } catch (e) {
+                          toast.error("فشل التحديث: " + (e as Error).message);
+                        } finally {
+                          setIsGenerating(false);
+                        }
+                      }}
+                      disabled={isGenerating}
+                      className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black font-bold rounded-lg text-sm transition-all"
+                    >
+                      {isGenerating ? "جاري التحديث..." : "عرض الأصول الموجودة في Staging"}
+                    </button>
                   </div>
-                  <div className="space-y-4">
-                    <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 text-sm text-amber-200">
-                      <h5 className="font-bold flex items-center gap-2 mb-1">
-                        <ShieldAlert className="size-4" /> وضع المراجعة: Batch 01 (Calibration)
-                      </h5>
-                      <p className="opacity-80">
-                        تم تطبيق "بوابة يقين التفاصيل التاريخية". راجع المطالبات المصححة أدناه قبل بدء التوليد إلى STAGING.
-                      </p>
-                    </div>
 
-                    {batchResults ? (
+                  {batchResults && (
                     <div className="space-y-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {batchResults.map((res: any) => (
@@ -297,43 +241,9 @@ function PriorityAuditPage() {
                                </div>
                             </div>
                             <div className="p-4 space-y-3 flex-1">
-                              <div className="flex justify-between items-start">
-                                <div>
-                                  <h4 className="font-bold text-amber-100">{res.entityName}</h4>
-                                  <div className="text-[10px] text-slate-500 font-mono">{res.entitySlug}</div>
-                                </div>
-                                <div className="text-right">
-                                  <div className="text-[10px] text-slate-500 uppercase font-bold">WebP Size</div>
-                                  <div className="text-xs font-mono text-amber-400">{Math.round(res.finalWebPSize / 1024)} KB</div>
-                                </div>
-                              </div>
-                              
-                              <div className="grid grid-cols-2 gap-2 text-[9px]">
-                                <div className="bg-slate-950/50 p-2 rounded border border-slate-800/50">
-                                   <div className="text-slate-500 uppercase font-bold mb-1">ID الكيان</div>
-                                   <div className="text-slate-300 font-mono text-[8px] truncate">{res.entityId}</div>
-                                </div>
-                                <div className="bg-slate-950/50 p-2 rounded border border-slate-800/50">
-                                   <div className="text-slate-500 uppercase font-bold mb-1">Specificity</div>
-                                   <div className="text-slate-300">{res.audit.historicalSpecificity}</div>
-                                </div>
-                              </div>
-
-                              {res.validationWarnings.length > 0 && (
-                                <div className="bg-amber-500/5 border border-amber-500/10 p-2 rounded">
-                                   <div className="text-[9px] font-bold text-amber-500 uppercase mb-1 flex items-center gap-1">
-                                      <AlertCircle className="size-3" /> Warnings:
-                                   </div>
-                                   <ul className="text-[9px] text-amber-200/60 list-disc list-inside">
-                                      {res.validationWarnings.map((w: string) => <li key={w}>{w}</li>)}
-                                   </ul>
-                                </div>
-                              )}
-
+                              <h4 className="font-bold text-amber-100">{res.entityName}</h4>
                               <button 
-                                onClick={() => {
-                                  alert(JSON.stringify(res.audit, null, 2));
-                                }}
+                                onClick={() => alert(JSON.stringify(res.audit, null, 2))}
                                 className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold rounded transition-colors mt-auto"
                               >
                                 View Generation Audit
@@ -342,111 +252,46 @@ function PriorityAuditPage() {
                           </div>
                         ))}
                       </div>
-
-                      <div className="flex justify-between items-center pt-4">
-                         <div className="text-[10px] text-amber-500 font-bold border border-amber-500/20 px-3 py-1 rounded bg-amber-500/5">
-                            Status: Calibration Batch 01 (Assisted Mode)
-                         </div>
-                         <button 
-                           onClick={() => setBatchResults(null)}
-                           className="text-slate-500 hover:text-slate-300 text-xs font-bold"
-                         >
-                           ← Back to Prompt Review
-                         </button>
+                      <button 
+                        onClick={() => setBatchResults(null)}
+                        className="text-slate-500 hover:text-slate-300 text-xs font-bold"
+                      >
+                        ← Back to Prompt Review
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {filteredList.map((entity: EntityPriorityReport) => (
+                    <div 
+                      key={entity.id}
+                      className={`group border rounded-xl p-4 transition-all ${
+                        entity.canonical.isEligible 
+                        ? "bg-slate-900/40 border-slate-800/60 hover:border-amber-500/30 hover:bg-slate-900/60" 
+                        : "bg-slate-950 border-red-900/20 opacity-60 grayscale"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="space-y-1">
+                          <h4 className="text-lg font-bold text-amber-100">{entity.titleAr}</h4>
+                          <span className="text-[10px] font-bold text-slate-500 uppercase">
+                            #{entity.rankWithinType} {getTypeLabel(entity.type)}
+                          </span>
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <span className="text-2xl font-black text-amber-400">{entity.finalScore}</span>
+                          <StatusBadge status={entity.productionStatus} />
                         </div>
                       </div>
-                    ) : null}
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {filteredList.map((entity: EntityPriorityReport) => (
-                      <div 
-                        key={entity.id}
-                        className={`
-                    group border rounded-xl p-4 transition-all
-                    ${entity.canonical.isEligible 
-                      ? "bg-slate-900/40 border-slate-800/60 hover:border-amber-500/30 hover:bg-slate-900/60" 
-                      : "bg-slate-950 border-red-900/20 opacity-60 grayscale"
-                    }
-                  `}
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">
-                          #{entity.rankWithinType} {getTypeLabel(entity.type)}
-                        </span>
-                        {entity.hasImage && (
-                          <span className="bg-emerald-500/10 text-emerald-400 text-[9px] px-1.5 py-0.5 rounded border border-emerald-500/20">
-                            يوجد صورة
-                          </span>
-                        )}
-                        {!entity.canonical.isEligible && (
-                          <span className="bg-red-500/10 text-red-400 text-[9px] px-1.5 py-0.5 rounded border border-red-500/20 flex items-center gap-1">
-                            <ShieldAlert className="size-3" /> غير مؤهل (مؤرشف/تحويل)
-                          </span>
-                        )}
-                        {entity.historicalImportance !== "UNREVIEWED" && (
-                          <span className={`text-[9px] px-1.5 py-0.5 rounded border border-amber-500/20 font-bold ${
-                            entity.historicalImportance === "CORE" ? "bg-amber-500 text-black" : "bg-amber-500/10 text-amber-400"
-                          }`}>
-                            {entity.historicalImportance}
-                          </span>
-                        )}
-                      </div>
-                      <h4 className="text-lg font-bold text-amber-100">{entity.titleAr}</h4>
-                      <div className="flex items-center gap-3 text-[11px] text-slate-400 font-mono">
-                        <span className="opacity-60">{entity.slug}</span>
-                        {entity.era && <span className="text-amber-500/70">{entity.era}</span>}
-                      </div>
                     </div>
-
-                    <div className="flex flex-col items-end gap-2">
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-2xl font-black text-amber-400">{entity.finalScore}</span>
-                        <span className="text-[10px] text-slate-500 font-bold uppercase">CPS</span>
-                      </div>
-                      <StatusBadge status={entity.productionStatus} />
+                  ))}
+                  {filteredList.length === 0 && (
+                    <div className="py-20 text-center">
+                      <BadgeAlert className="size-12 text-slate-800 mx-auto mb-4" />
+                      <h5 className="text-slate-400 font-bold">لا يوجد نتائج</h5>
                     </div>
-                  </div>
-
-                  <div className="mt-4 pt-4 border-t border-slate-800/50 grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <ScoreStat label="الجاذبية (Gravity)" value={entity.gameplayGravity} subLabel="Signals" />
-                    <ScoreStat label="حملات" value={entity.campaignCount} />
-                    <ScoreStat label="قصص" value={entity.storyCount} />
-                    <ScoreStat label="تحقيقات" value={entity.investigationCount} />
-                  </div>
-
-                  <div className="mt-4 flex items-center justify-between text-[10px]">
-                    <div className="flex flex-wrap gap-2">
-                       {entity.scoreBreakdown.mandatoryUnlock > 0 && <PointTag label="Gameplay Critical" points={entity.scoreBreakdown.mandatoryUnlock} color="red" />}
-                       {entity.scoreBreakdown.historicalImportanceBonus > 0 && <PointTag label="Importance Bonus" points={entity.scoreBreakdown.historicalImportanceBonus} color="amber" />}
-                       {entity.scoreBreakdown.structuralAnchor > 0 && <PointTag label="Structural" points={entity.scoreBreakdown.structuralAnchor} color="blue" />}
-                       {entity.scoreBreakdown.crossSystemBonus > 0 && <PointTag label="Multiplier" points={entity.scoreBreakdown.crossSystemBonus} color="emerald" />}
-                    </div>
-                    <div className="flex items-center gap-3">
-                       {entity.canonical.isRedirect && (
-                         <span className="text-red-400/70">→ محول إلى {entity.canonical.canonicalId}</span>
-                       )}
-                       <Link 
-                        to="/admin/encyclopedia" 
-                        search={{ search: entity.slug } as any}
-                        className="text-slate-500 hover:text-amber-400 transition-colors flex items-center gap-1"
-                      >
-                        تعديل <ExternalLink className="size-3" />
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              {filteredList.length === 0 && (
-                <div className="py-20 text-center space-y-4">
-                  <BadgeAlert className="size-12 text-slate-800 mx-auto" />
-                  <div className="space-y-1">
-                    <h5 className="text-slate-400 font-bold">لا يوجد نتائج</h5>
-                    <p className="text-slate-600 text-sm">جرب تغيير معايير البحث أو الفئة.</p>
-                  </div>
+                  )}
                 </div>
               )}
             </div>
@@ -477,13 +322,11 @@ function TabButton({ active, onClick, icon, label, count }: { active: boolean, o
   return (
     <button 
       onClick={onClick}
-      className={`
-        flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all
-        ${active 
-          ? "bg-amber-500/10 text-amber-200 border border-amber-500/20" 
-          : "text-slate-400 hover:text-slate-200 hover:bg-slate-900/50"
-        }
-      `}
+      className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all ${
+        active 
+        ? "bg-amber-500/10 text-amber-200 border border-amber-500/20" 
+        : "text-slate-400 hover:text-slate-200 hover:bg-slate-900/50"
+      }`}
     >
       <div className="flex items-center gap-2">
         {icon}
@@ -494,65 +337,12 @@ function TabButton({ active, onClick, icon, label, count }: { active: boolean, o
   );
 }
 
-function ScoreStat({ label, value, subLabel }: { label: string, value: number, subLabel?: string }) {
-  return (
-    <div>
-      <div className="text-[9px] text-slate-500 uppercase font-bold tracking-tight">{label}</div>
-      <div className="flex items-baseline gap-1">
-        <div className="text-sm font-bold text-slate-300">{value}</div>
-        {subLabel && <span className="text-[9px] text-slate-600">{subLabel}</span>}
-      </div>
-    </div>
-  );
-}
-
-function PointTag({ label, points, color }: { label: string, points: number, color: "red" | "amber" | "blue" | "emerald" }) {
-  const colors = {
-    red: "text-red-400 bg-red-400/10 border-red-400/20",
-    amber: "text-amber-400 bg-amber-400/10 border-amber-400/20",
-    blue: "text-blue-400 bg-blue-400/10 border-blue-400/20",
-    emerald: "text-emerald-400 bg-emerald-400/10 border-emerald-400/20"
-  };
-  return (
-    <span className={`px-2 py-0.5 rounded border text-[9px] font-bold ${colors[color]}`}>
-      {label} +{points}
-    </span>
-  );
-}
-
 function StatusBadge({ status }: { status: ProductionStatus }) {
   switch (status) {
     case "READY_FOR_VISUAL_PRODUCTION":
-      return (
-        <span className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-400">
-          <Zap className="size-3" /> جاهز للإنتاج
-        </span>
-      );
+      return <span className="text-[10px] font-bold text-emerald-400 flex items-center gap-1"><Zap className="size-3" /> جاهز</span>;
     case "HAS_EXISTING_IMAGE":
-      return (
-        <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500">
-          <CheckCircle2 className="size-3" /> تم التنفيذ
-        </span>
-      );
-    case "DUPLICATE_Archived":
-    case "DUPLICATE_Redirected":
-      return (
-        <span className="flex items-center gap-1.5 text-[10px] font-bold text-red-500/50">
-          <History className="size-3" /> مكرر / مؤرشف
-        </span>
-      );
-    case "LOW_SIGNAL":
-      return (
-        <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-600 italic">
-          <ImageOff className="size-3" /> إشارة ضعيفة
-        </span>
-      );
-    case "NEEDS_MANUAL_PRIORITY_REVIEW":
-      return (
-        <span className="flex items-center gap-1.5 text-[10px] font-bold text-amber-500">
-          <AlertCircle className="size-3" /> مراجعة يدوية
-        </span>
-      );
+      return <span className="text-[10px] font-bold text-slate-500 flex items-center gap-1"><CheckCircle2 className="size-3" /> منفذ</span>;
     default:
       return null;
   }
@@ -560,13 +350,13 @@ function StatusBadge({ status }: { status: ProductionStatus }) {
 
 function getTypeLabel(type: EntityType): string {
   const labels: Record<EntityType, string> = {
-    Figure: "شخصيات",
-    Event: "أحداث",
-    City: "مدن",
-    Battle: "معارك",
-    Landmark: "معالم",
-    State: "دول",
-    Artifact: "آثار"
+    Figure: "شخصية",
+    Event: "حدث",
+    City: "مدينة",
+    Battle: "معركة",
+    Landmark: "معلم",
+    State: "دولة",
+    Artifact: "أثر"
   };
   return labels[type];
 }
