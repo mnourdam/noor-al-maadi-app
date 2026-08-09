@@ -278,12 +278,12 @@ function PriorityAuditPage() {
                               
                               <div className="grid grid-cols-2 gap-2 text-[9px]">
                                 <div className="bg-slate-950/50 p-2 rounded border border-slate-800/50">
-                                   <div className="text-slate-500 uppercase font-bold mb-1">Specificity</div>
-                                   <div className="text-slate-300">{res.audit.historicalSpecificity}</div>
+                                   <div className="text-slate-500 uppercase font-bold mb-1">ID الكيان</div>
+                                   <div className="text-slate-300 font-mono text-[8px] truncate">{res.entityId}</div>
                                 </div>
                                 <div className="bg-slate-950/50 p-2 rounded border border-slate-800/50">
-                                   <div className="text-slate-500 uppercase font-bold mb-1">Confidence</div>
-                                   <div className="text-slate-300">{res.audit.sourceConfidence}</div>
+                                   <div className="text-slate-500 uppercase font-bold mb-1">Specificity</div>
+                                   <div className="text-slate-300">{res.audit.historicalSpecificity}</div>
                                 </div>
                               </div>
 
