@@ -227,6 +227,39 @@ function PriorityAuditPage() {
             <div className="space-y-3">
               {activeTab === "BATCH_01" ? (
                 <div className="space-y-4">
+                  <div className="flex justify-between items-center bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl mb-4">
+                    <div className="space-y-1">
+                      <h2 className="text-xl font-bold text-amber-100 font-display flex items-center gap-2">
+                        <Zap className="size-5 text-amber-400" />
+                        الإنتاج النشط: Calibration Batch 01
+                      </h2>
+                      <p className="text-sm text-slate-400">
+                        مراجعة الأصول التي تم إنتاجها بواسطة الوكيل (Lovable Agent) وتجهيزها في البيئة التجريبية.
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                       <button 
+                         onClick={async () => {
+                           setIsGenerating(true);
+                           try {
+                             const results = await generate();
+                             setBatchResults(results);
+                             toast.success("تم تحديث مراجعة الأصول المنتجة");
+                           } catch (e) {
+                             toast.error("فشل التحديث: " + (e as Error).message);
+                           } finally {
+                             setIsGenerating(false);
+                           }
+                         }}
+                         disabled={isGenerating}
+                         className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black font-bold rounded-lg text-sm transition-all"
+                       >
+                         {isGenerating ? "جاري التحديث..." : "عرض الأصول الموجودة في Staging"}
+                       </button>
+                    </div>
+                  </div>
+
+                <div className="space-y-4">
                   <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 text-sm text-amber-200">
                     <h5 className="font-bold flex items-center gap-2 mb-1">
                       <ShieldAlert className="size-4" /> وضع المراجعة: Batch 01 (Calibration)
@@ -323,33 +356,16 @@ function PriorityAuditPage() {
                          </button>
                       </div>
                     </div>
-                  ) : (
-                    <div className="space-y-6">
-                      <div className="flex justify-between items-center bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
-                        <div className="space-y-1">
-                          <h2 className="text-xl font-bold text-amber-100 font-display flex items-center gap-2">
-                            <Zap className="size-5 text-amber-400" />
-                            دفعة المعايرة Batch 01
-                          </h2>
-                          <p className="text-sm text-slate-400">
-                            10 كيانات أساسية لتثبيت المعايير البصرية والتاريخية.
+                        {/* Start Production Button removed as per instructions: no runtime generation */}
+                        <div className="flex flex-col items-end gap-2">
+                          <span className="text-[10px] font-bold text-amber-500 uppercase tracking-widest bg-amber-500/10 px-2 py-1 rounded">
+                            Production Mode: Agent-Assisted
+                          </span>
+                          <p className="text-[10px] text-slate-500 max-w-[200px] text-left">
+                            Assets are produced by the Lovable Agent during development sessions and staged in /public/encyclopedia/staging/.
                           </p>
                         </div>
-                        <button 
-                          onClick={async () => {
-                            setIsGenerating(true);
-                            try {
-                              toast.info("جاري توليد Batch 01... يرجى الانتظار");
-                              const results = await generate();
-                              setBatchResults(results);
-                              toast.success("اكتمل توليد Calibration Batch 01 بنجاح");
-                            } catch (e) {
-                              toast.error("فشل التوليد: " + (e as Error).message);
-                            } finally {
-                              setIsGenerating(false);
-                            }
-                          }}
-                          disabled={isGenerating}
+
                           className="bg-amber-600 hover:bg-amber-500 disabled:bg-slate-800 text-white px-6 py-2 rounded-lg font-bold transition-all shadow-lg shadow-amber-900/20 flex items-center gap-2"
                         >
                           {isGenerating ? "جاري الإنتاج..." : "بدء الإنتاج الفعلي للدفعة"}
