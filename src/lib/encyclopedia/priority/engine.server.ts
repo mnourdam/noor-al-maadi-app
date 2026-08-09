@@ -157,7 +157,19 @@ export async function generatePriorityAudit(): Promise<PriorityAuditResult> {
     });
   });
 
-  // 4. Rank within types
+  // 4. Map DB types to canonical UI types and rank
+  const canonicalMap: Record<string, EntityType> = {
+    'figure': 'Figure',
+    'person': 'Figure',
+    'character': 'Figure',
+    'event': 'Event',
+    'battle': 'Battle',
+    'city': 'City',
+    'landmark': 'Landmark',
+    'state': 'State',
+    'artifact': 'Artifact'
+  };
+
   const types: EntityType[] = ["Figure", "Event", "City", "Battle", "Landmark", "State", "Artifact"];
   const distribution: Record<EntityType, number> = {
     Figure: 0, Event: 0, City: 0, Battle: 0, Landmark: 0, State: 0, Artifact: 0
@@ -167,7 +179,17 @@ export async function generatePriorityAudit(): Promise<PriorityAuditResult> {
   };
 
   types.forEach(type => {
-    const typedEntities = report.filter(e => e.type === type);
+    // Normalize type from DB and filter
+    const typedEntities = report.filter(e => {
+      const dbType = String(e.type).toLowerCase().trim();
+      const canonical = canonicalMap[dbType] || (types.includes(e.type as any) ? e.type : null);
+      if (canonical === type) {
+        e.type = canonical as EntityType; // Apply normalized type
+        return true;
+      }
+      return false;
+    });
+
     typedEntities.sort((a, b) => b.finalScore - a.finalScore || a.titleAr.localeCompare(b.titleAr));
     
     typedEntities.forEach((e, i) => {
@@ -175,10 +197,15 @@ export async function generatePriorityAudit(): Promise<PriorityAuditResult> {
     });
 
     distribution[type] = typedEntities.length;
+    // Return Top 100 for all types, except State where we might want all
     shortlists[type] = typedEntities
-      .filter(e => !e.hasImage)
       .slice(0, type === "State" ? undefined : 100);
   });
+
+  // Diagnostic logging (Server-side)
+  console.log(`[PriorityAudit] Total Ranked: ${report.length}`);
+  console.log(`[PriorityAudit] Distribution:`, distribution);
+
 
   const top25Overall = report
     .filter(e => !e.hasImage)

@@ -39,6 +39,12 @@ function PriorityAuditPage() {
     queryFn: () => getPriorityAudit()
   });
 
+  // Development Diagnostic
+  if (process.env.NODE_ENV === "development") {
+    console.log("[PriorityAudit] Raw Result:", audit);
+    console.log("[PriorityAudit] Distribution:", audit.distribution);
+  }
+
   const [activeTab, setActiveTab] = useState<EntityType | "OVERALL">("OVERALL");
   const [search, setSearch] = useState("");
 
@@ -50,13 +56,17 @@ function PriorityAuditPage() {
   }, [activeTab, audit]);
 
   const filteredList = useMemo(() => {
-    if (!search) return currentList;
-    const q = search.toLowerCase();
-    return currentList.filter(e => 
-      e.titleAr.toLowerCase().includes(q) || 
-      e.slug.toLowerCase().includes(q)
-    );
+    let list = currentList;
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter(e => 
+        e.titleAr.toLowerCase().includes(q) || 
+        e.slug.toLowerCase().includes(q)
+      );
+    }
+    return list;
   }, [currentList, search]);
+
 
   return (
     <div dir="rtl" className="min-h-screen bg-slate-950 text-slate-100 px-4 py-8">
