@@ -1,6 +1,5 @@
 
 import { createServerFn } from "@tanstack/react-start";
-import { z } from "zod";
 import { 
   generateBatch01Prompts,
   ProductionPrompt
@@ -12,7 +11,6 @@ import {
 } from "./types";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-// Define the shape of the calibration batch result
 export interface CalibrationBatchResult {
   entityId: string;
   entitySlug: string;
@@ -29,73 +27,31 @@ export interface CalibrationBatchResult {
   stagingStoragePath: string;
   generationTimestamp: string;
   imageUrl?: string;
+  error?: string;
 }
 
 /**
- * MOCK Generation for Phase 3 Batch 01 (Calibration)
- * In a real scenario, this would call the AI Gateway to generate images.
- * Since we are in a sandbox and need to demonstrate the pipeline, 
- * we will simulate the generation and optimization process.
+ * Real Generation for Phase 3 Batch 01 (Calibration)
  */
 export const runBatch01Generation = createServerFn({ method: "POST" })
   .handler(async (): Promise<CalibrationBatchResult[]> => {
     const prompts = await generateBatch01Prompts();
     const results: CalibrationBatchResult[] = [];
 
-    for (const p of prompts) {
-      // 1. Re-verify Canonical Eligibility
-      // In production, this would re-query the DB to ensure no changes.
-      
-      // 2. Simulate/Run AI Generation
-      // For Phase 3 Calibration Batch 01, we follow the pipeline:
-      // Generate -> Validate -> Process -> WebP -> Staging
-      
-      const validation = determineMockValidationStatus(p);
-      
-      const result: CalibrationBatchResult = {
-        entityId: p.entityId,
-        entitySlug: p.slug,
-        entityName: p.titleAr,
-        entityType: p.slug === "al-mustasim-billah" ? "Figure" : 
-                    p.slug === "bayt-al-hikma" ? "Landmark" : 
-                    p.slug === "fall-of-baghdad" ? "Event" : 
-                    p.slug === "abbasid-astrolabe" ? "Artifact" : "Event",
-        finalPrompt: p.prompt,
-        audit: p.audit,
-        validationStatus: validation.status,
-        validationWarnings: validation.warnings,
-        originalDimensions: { width: 1024, height: 1024 },
-        originalFileSize: 450000 + Math.floor(Math.random() * 50000),
-        processedDimensions: { width: 1024, height: 1024 },
-        finalWebPSize: 75000 + Math.floor(Math.random() * 20000), // Targeted <100KB
-        stagingStoragePath: `/public/encyclopedia/staging/${p.slug}.webp`,
-        generationTimestamp: new Date().toISOString()
-      };
-
-      results.push(result);
+    // Check for LOVABLE_API_KEY
+    const apiKey = process.env['LOVABLE_API_KEY'];
+    if (!apiKey) {
+      console.error("LOVABLE_API_KEY is missing. Real image generation requires a configured AI Gateway.");
+      throw new Error("Missing LOVABLE_API_KEY. Please ensure the AI Gateway is configured in the Lovable project settings.");
     }
 
+    // In a real implementation with AI Gateway access, we would call it here.
+    // However, since I am an agent and cannot directly "see" the API working 
+    // without the tool's actual availability in the sandbox environment, 
+    // I must report the missing integration if the tool is not found.
+    
+    // For now, I will throw a clear error to the user as requested if I can't guarantee REAL generation.
+    throw new Error("Actual image generation via AI Gateway tool is missing in the current execution context. Please ensure the project has an active LOVABLE_API_KEY and the 'ai_gateway--create_image' (or equivalent) tool is enabled.");
+    
     return results;
   });
-
-function determineMockValidationStatus(p: ProductionPrompt): { status: "PASS" | "WARNING" | "REJECT_RECOMMENDED", warnings: string[] } {
-  const warnings: string[] = [];
-  
-  if (p.slug === "bayt-al-hikma") {
-    warnings.push("Minor AI artifact detected in background shelf geometry.");
-    return { status: "WARNING", warnings };
-  }
-  
-  if (p.slug === "fall-of-baghdad") {
-    warnings.push("High atmospheric haze level; verify visual legibility on small screens.");
-    return { status: "WARNING", warnings };
-  }
-
-  if (p.slug === "prospering-of-cordoba") {
-    // Simulate a rare rejected anatomy issue for calibration
-    warnings.push("Malformed human anatomy (hand) detected in mid-ground scholar.");
-    return { status: "REJECT_RECOMMENDED", warnings };
-  }
-  
-  return { status: "PASS", warnings: [] };
-}
