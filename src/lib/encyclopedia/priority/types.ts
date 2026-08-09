@@ -6,16 +6,16 @@ export type EntityType =
   | "Landmark" 
   | "State" 
   | "Artifact";
-9: 
-10: export type HistoricalSpecificity = "DOCUMENTED" | "PERIOD_PLAUSIBLE" | "MIXED";
-11: export type SourceConfidence = "HIGH" | "MEDIUM" | "LOW";
-12: 
-13: export interface GenerationAudit {
-14:   historicalSpecificity: HistoricalSpecificity;
-15:   unsupportedDetailsRemoved: string[] | "NONE";
-16:   sourceConfidence: SourceConfidence;
-17:   notes?: string;
-18: }
+
+export type HistoricalSpecificity = "DOCUMENTED" | "PERIOD_PLAUSIBLE" | "MIXED";
+export type SourceConfidence = "HIGH" | "MEDIUM" | "LOW";
+
+export interface GenerationAudit {
+  historicalSpecificity: HistoricalSpecificity;
+  unsupportedDetailsRemoved: string[] | "NONE";
+  sourceConfidence: SourceConfidence;
+  notes?: string;
+}
 
 /**
  * Historical Visual Importance classification for entities.
