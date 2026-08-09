@@ -119,6 +119,7 @@ import { Route as AdminEncyclopediaCleanupImportPreviewRouteImport } from './rou
 import { Route as AdminEncyclopediaCleanupIntegrityRouteImport } from './routes/admin.encyclopedia-cleanup.integrity'
 import { Route as AdminEncyclopediaCleanupRedirectsRouteImport } from './routes/admin.encyclopedia-cleanup.redirects'
 import { Route as AdminEncyclopediaCleanupReviewRouteImport } from './routes/admin.encyclopedia-cleanup.review'
+import { Route as AdminEncyclopediaPriorityAuditRouteImport } from './routes/admin/encyclopedia/priority-audit'
 import { Route as AdminGamesIndexRouteImport } from './routes/admin.games.index'
 import { Route as AdminGamesModeRouteImport } from './routes/admin.games.$mode'
 import { Route as AdminGamesCrosswordGeneratorRouteImport } from './routes/admin.games.crossword-generator'
@@ -716,6 +717,12 @@ const AdminEncyclopediaCleanupReviewRoute =
     path: '/review',
     getParentRoute: () => AdminEncyclopediaCleanupRoute,
   } as any)
+const AdminEncyclopediaPriorityAuditRoute =
+  AdminEncyclopediaPriorityAuditRouteImport.update({
+    id: '/priority-audit',
+    path: '/priority-audit',
+    getParentRoute: () => AdminEncyclopediaRoute,
+  } as any)
 const AdminGamesIndexRoute = AdminGamesIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -931,7 +938,7 @@ export interface FileRoutesByFullPath {
   '/admin/crash-diagnostics': typeof AdminCrashDiagnosticsRoute
   '/admin/cross-hub-links': typeof AdminCrossHubLinksRoute
   '/admin/emblems': typeof AdminEmblemsRoute
-  '/admin/encyclopedia': typeof AdminEncyclopediaRoute
+  '/admin/encyclopedia': typeof AdminEncyclopediaRouteWithChildren
   '/admin/encyclopedia-audit': typeof AdminEncyclopediaAuditRoute
   '/admin/encyclopedia-cleanup': typeof AdminEncyclopediaCleanupRouteWithChildren
   '/admin/encyclopedia-report': typeof AdminEncyclopediaReportRoute
@@ -988,6 +995,7 @@ export interface FileRoutesByFullPath {
   '/admin/encyclopedia-cleanup/integrity': typeof AdminEncyclopediaCleanupIntegrityRoute
   '/admin/encyclopedia-cleanup/redirects': typeof AdminEncyclopediaCleanupRedirectsRoute
   '/admin/encyclopedia-cleanup/review': typeof AdminEncyclopediaCleanupReviewRoute
+  '/admin/encyclopedia/priority-audit': typeof AdminEncyclopediaPriorityAuditRoute
   '/admin/games/$mode': typeof AdminGamesModeRoute
   '/admin/games/crossword-generator': typeof AdminGamesCrosswordGeneratorRoute
   '/admin/import-history/$id': typeof AdminImportHistoryIdRoute
@@ -1071,7 +1079,7 @@ export interface FileRoutesByTo {
   '/admin/crash-diagnostics': typeof AdminCrashDiagnosticsRoute
   '/admin/cross-hub-links': typeof AdminCrossHubLinksRoute
   '/admin/emblems': typeof AdminEmblemsRoute
-  '/admin/encyclopedia': typeof AdminEncyclopediaRoute
+  '/admin/encyclopedia': typeof AdminEncyclopediaRouteWithChildren
   '/admin/encyclopedia-audit': typeof AdminEncyclopediaAuditRoute
   '/admin/encyclopedia-report': typeof AdminEncyclopediaReportRoute
   '/admin/era-assignment': typeof AdminEraAssignmentRoute
@@ -1125,6 +1133,7 @@ export interface FileRoutesByTo {
   '/admin/encyclopedia-cleanup/integrity': typeof AdminEncyclopediaCleanupIntegrityRoute
   '/admin/encyclopedia-cleanup/redirects': typeof AdminEncyclopediaCleanupRedirectsRoute
   '/admin/encyclopedia-cleanup/review': typeof AdminEncyclopediaCleanupReviewRoute
+  '/admin/encyclopedia/priority-audit': typeof AdminEncyclopediaPriorityAuditRoute
   '/admin/games/$mode': typeof AdminGamesModeRoute
   '/admin/games/crossword-generator': typeof AdminGamesCrosswordGeneratorRoute
   '/admin/import-history/$id': typeof AdminImportHistoryIdRoute
@@ -1211,7 +1220,7 @@ export interface FileRoutesById {
   '/admin/crash-diagnostics': typeof AdminCrashDiagnosticsRoute
   '/admin/cross-hub-links': typeof AdminCrossHubLinksRoute
   '/admin/emblems': typeof AdminEmblemsRoute
-  '/admin/encyclopedia': typeof AdminEncyclopediaRoute
+  '/admin/encyclopedia': typeof AdminEncyclopediaRouteWithChildren
   '/admin/encyclopedia-audit': typeof AdminEncyclopediaAuditRoute
   '/admin/encyclopedia-cleanup': typeof AdminEncyclopediaCleanupRouteWithChildren
   '/admin/encyclopedia-report': typeof AdminEncyclopediaReportRoute
@@ -1268,6 +1277,7 @@ export interface FileRoutesById {
   '/admin/encyclopedia-cleanup/integrity': typeof AdminEncyclopediaCleanupIntegrityRoute
   '/admin/encyclopedia-cleanup/redirects': typeof AdminEncyclopediaCleanupRedirectsRoute
   '/admin/encyclopedia-cleanup/review': typeof AdminEncyclopediaCleanupReviewRoute
+  '/admin/encyclopedia/priority-audit': typeof AdminEncyclopediaPriorityAuditRoute
   '/admin/games/$mode': typeof AdminGamesModeRoute
   '/admin/games/crossword-generator': typeof AdminGamesCrosswordGeneratorRoute
   '/admin/import-history/$id': typeof AdminImportHistoryIdRoute
@@ -1412,6 +1422,7 @@ export interface FileRouteTypes {
     | '/admin/encyclopedia-cleanup/integrity'
     | '/admin/encyclopedia-cleanup/redirects'
     | '/admin/encyclopedia-cleanup/review'
+    | '/admin/encyclopedia/priority-audit'
     | '/admin/games/$mode'
     | '/admin/games/crossword-generator'
     | '/admin/import-history/$id'
@@ -1549,6 +1560,7 @@ export interface FileRouteTypes {
     | '/admin/encyclopedia-cleanup/integrity'
     | '/admin/encyclopedia-cleanup/redirects'
     | '/admin/encyclopedia-cleanup/review'
+    | '/admin/encyclopedia/priority-audit'
     | '/admin/games/$mode'
     | '/admin/games/crossword-generator'
     | '/admin/import-history/$id'
@@ -1691,6 +1703,7 @@ export interface FileRouteTypes {
     | '/admin/encyclopedia-cleanup/integrity'
     | '/admin/encyclopedia-cleanup/redirects'
     | '/admin/encyclopedia-cleanup/review'
+    | '/admin/encyclopedia/priority-audit'
     | '/admin/games/$mode'
     | '/admin/games/crossword-generator'
     | '/admin/import-history/$id'
@@ -1777,7 +1790,7 @@ export interface RootRouteChildren {
   AdminCrashDiagnosticsRoute: typeof AdminCrashDiagnosticsRoute
   AdminCrossHubLinksRoute: typeof AdminCrossHubLinksRoute
   AdminEmblemsRoute: typeof AdminEmblemsRoute
-  AdminEncyclopediaRoute: typeof AdminEncyclopediaRoute
+  AdminEncyclopediaRoute: typeof AdminEncyclopediaRouteWithChildren
   AdminEncyclopediaAuditRoute: typeof AdminEncyclopediaAuditRoute
   AdminEncyclopediaCleanupRoute: typeof AdminEncyclopediaCleanupRouteWithChildren
   AdminEncyclopediaReportRoute: typeof AdminEncyclopediaReportRoute
@@ -2618,6 +2631,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminEncyclopediaCleanupReviewRouteImport
       parentRoute: typeof AdminEncyclopediaCleanupRoute
     }
+    '/admin/encyclopedia/priority-audit': {
+      id: '/admin/encyclopedia/priority-audit'
+      path: '/priority-audit'
+      fullPath: '/admin/encyclopedia/priority-audit'
+      preLoaderRoute: typeof AdminEncyclopediaPriorityAuditRouteImport
+      parentRoute: typeof AdminEncyclopediaRoute
+    }
     '/admin/games/': {
       id: '/admin/games/'
       path: '/'
@@ -2878,6 +2898,17 @@ const EncyclopediaRouteWithChildren = EncyclopediaRoute._addFileChildren(
   EncyclopediaRouteChildren,
 )
 
+interface AdminEncyclopediaRouteChildren {
+  AdminEncyclopediaPriorityAuditRoute: typeof AdminEncyclopediaPriorityAuditRoute
+}
+
+const AdminEncyclopediaRouteChildren: AdminEncyclopediaRouteChildren = {
+  AdminEncyclopediaPriorityAuditRoute: AdminEncyclopediaPriorityAuditRoute,
+}
+
+const AdminEncyclopediaRouteWithChildren =
+  AdminEncyclopediaRoute._addFileChildren(AdminEncyclopediaRouteChildren)
+
 interface AdminEncyclopediaCleanupRouteChildren {
   AdminEncyclopediaCleanupDataHygieneRoute: typeof AdminEncyclopediaCleanupDataHygieneRoute
   AdminEncyclopediaCleanupImportPreviewRoute: typeof AdminEncyclopediaCleanupImportPreviewRoute
@@ -3000,7 +3031,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminCrashDiagnosticsRoute: AdminCrashDiagnosticsRoute,
   AdminCrossHubLinksRoute: AdminCrossHubLinksRoute,
   AdminEmblemsRoute: AdminEmblemsRoute,
-  AdminEncyclopediaRoute: AdminEncyclopediaRoute,
+  AdminEncyclopediaRoute: AdminEncyclopediaRouteWithChildren,
   AdminEncyclopediaAuditRoute: AdminEncyclopediaAuditRoute,
   AdminEncyclopediaCleanupRoute: AdminEncyclopediaCleanupRouteWithChildren,
   AdminEncyclopediaReportRoute: AdminEncyclopediaReportRoute,
@@ -3072,13 +3103,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
