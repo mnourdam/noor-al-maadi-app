@@ -6,7 +6,7 @@ import { EntityType } from "./types";
  */
 export type HistoricalVisualImportance = 
   | "CORE"       // Foundational entities (e.g. Prophets, Major Sahaba, Holy Cities)
-  | | "MAJOR"      // Highly influential figures/events/locations
+  | "MAJOR"      // Highly influential figures/events/locations
   | "NORMAL"     // Standard encyclopedia entities
   | "SUPPORTING" // Entities with minor or supporting roles
   | "UNREVIEWED"; // Default state before classification
