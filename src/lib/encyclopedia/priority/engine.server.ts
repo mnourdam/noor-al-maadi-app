@@ -178,39 +178,36 @@ export async function generatePriorityAudit(): Promise<PriorityAuditResult> {
     Figure: [], Event: [], City: [], Battle: [], Landmark: [], State: [], Artifact: []
   };
 
-  types.forEach(type => {
-    // Normalize type from DB and filter
-    const typedEntities = report.filter(e => {
-      const dbType = String(e.type).toLowerCase().trim();
-      const canonical = canonicalMap[dbType] || (types.includes(e.type as any) ? e.type : null);
-      if (canonical === type) {
-        e.type = canonical as EntityType; // Apply normalized type
-        return true;
-      }
-      return false;
-    });
+  // Pre-calculate full rankings for all entities
+  report.forEach(e => {
+    const dbType = String(e.type).toLowerCase().trim();
+    const canonical = canonicalMap[dbType] || (types.includes(e.type as any) ? e.type : null);
+    if (canonical) {
+      e.type = canonical as EntityType;
+      distribution[e.type]++;
+    }
+  });
 
+  types.forEach(type => {
+    const typedEntities = report.filter(e => e.type === type);
     typedEntities.sort((a, b) => b.finalScore - a.finalScore || a.titleAr.localeCompare(b.titleAr));
     
     typedEntities.forEach((e, i) => {
       e.rankWithinType = i + 1;
     });
 
-    distribution[type] = typedEntities.length;
-    // Return Top 100 for all types, except State where we might want all
-    shortlists[type] = typedEntities
-      .slice(0, type === "State" ? undefined : 100);
+    // Return Top 100 for all types to support category tabs
+    shortlists[type] = typedEntities.slice(0, 100);
   });
+
+  const top25Overall = [...report]
+    .filter(e => !e.hasImage)
+    .sort((a, b) => b.finalScore - a.finalScore)
+    .slice(0, 25);
 
   // Diagnostic logging (Server-side)
   console.log(`[PriorityAudit] Total Ranked: ${report.length}`);
   console.log(`[PriorityAudit] Distribution:`, distribution);
-
-
-  const top25Overall = report
-    .filter(e => !e.hasImage)
-    .sort((a, b) => b.finalScore - a.finalScore)
-    .slice(0, 25);
 
   return {
     scoringLogic: "Deterministic additive scoring: Mandatory Unlock (+50), Core Campaign (+40), Supporting Campaign (+15), Story (+25), Investigation (+15), Curated Core (+30), Major (+15), Structural (+20). Cross-system bonuses: 2 systems (+10), 3 (+25), 4+ (+40).",
@@ -219,6 +216,6 @@ export async function generatePriorityAudit(): Promise<PriorityAuditResult> {
     top25Overall,
     shortlists,
     anomalies: [],
-    assessment: "Priority Engine V1 is operational."
+    assessment: `Priority Engine V1 is operational. Found ${report.length} ranked entities.`
   };
 }
