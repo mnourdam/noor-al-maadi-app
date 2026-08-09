@@ -7,6 +7,16 @@ export type EntityType =
   | "State" 
   | "Artifact";
 
+export type HistoricalSpecificity = "DOCUMENTED" | "PERIOD_PLAUSIBLE" | "MIXED";
+export type SourceConfidence = "HIGH" | "MEDIUM" | "LOW";
+
+export interface GenerationAudit {
+  historicalSpecificity: HistoricalSpecificity;
+  unsupportedDetailsRemoved: string[] | "NONE";
+  sourceConfidence: SourceConfidence;
+  notes?: string;
+}
+
 /**
  * Historical Visual Importance classification for entities.
  * These are manually assigned or derived to prioritize visual production.

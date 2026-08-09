@@ -35,6 +35,7 @@ export interface VisualDNASpec {
     religiousSafeguards?: string[];
     forbidden?: string[];
   }>;
+  historicalSpecificityRules: string[];
 }
 
 export const IRTH_VISUAL_DNA: VisualDNASpec = {
@@ -74,6 +75,14 @@ export const IRTH_VISUAL_DNA: VisualDNASpec = {
     "NO visible text, captions, logos, or fabricated Arabic calligraphy",
     "If inscriptions are required by object type, keep them visually non-legible through angle, DOF, or lighting",
     "Reject obvious AI artifacts (extra fingers, malformed horses, etc.)"
+  ],
+  historicalSpecificityRules: [
+    "Classify all details as DOCUMENTED, PERIOD-PLAUSIBLE, or SPECULATIVE.",
+    "DOCUMENTED: Supported by reliable entity data or historically established evidence. Use directly.",
+    "PERIOD-PLAUSIBLE: Appropriate for period/region/culture but not specifically documented for this entity. Avoid presenting as an exact reconstruction of a known object/building.",
+    "SPECULATIVE: Detail that cannot be supported reliably. REMOVE or GENERALIZE.",
+    "NEVER convert uncertain reconstruction into visual fact for cinematic gain.",
+    "Entities with LOW source confidence + highly specific reconstruction must be routed to NEEDS_REVIEW."
   ],
   typeSpecs: {
     Figure: {
