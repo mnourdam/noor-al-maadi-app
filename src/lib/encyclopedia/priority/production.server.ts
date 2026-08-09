@@ -122,12 +122,19 @@ export async function generateBatch01Prompts(): Promise<ProductionPrompt[]> {
   const candidates: EntityPriorityReport[] = [];
   Object.values(report.candidateLists).forEach(list => {
     list.forEach(e => {
-      if (testSlugs.includes(e.slug)) candidates.push(e);
+      if (testSlugs.includes(e.slug)) {
+        // Uniqueness guard: only add if not already in candidates
+        if (!candidates.find(c => c.slug === e.slug)) {
+          candidates.push(e);
+        }
+      }
     });
   });
 
-  // Map to match exact batch order
-  const batch = testSlugs.map(slug => candidates.find(c => c.slug === slug)).filter(Boolean) as EntityPriorityReport[];
+  // Map to match exact batch order and ensure exactly 10 unique items
+  const batch = testSlugs
+    .map(slug => candidates.find(c => c.slug === slug))
+    .filter((c): c is EntityPriorityReport => !!c);
 
   return batch.map(entity => {
     let basePrompt = "";
