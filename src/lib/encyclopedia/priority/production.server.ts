@@ -131,6 +131,8 @@ export async function generateBatch01Prompts(): Promise<ProductionPrompt[]> {
 
   return batch.map(entity => {
     let basePrompt = "";
+    const typeSpec = IRTH_VISUAL_DNA.typeSpecs[entity.type];
+    const dnaCore = IRTH_VISUAL_DNA.coreQualities.join(", ");
     
     // Detailed prompt construction
     if (entity.slug === "al-mustasim-billah") {
