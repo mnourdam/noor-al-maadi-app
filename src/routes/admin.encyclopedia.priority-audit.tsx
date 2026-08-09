@@ -260,15 +260,15 @@ function PriorityAuditPage() {
                   </div>
                   <div className="space-y-4">
                     <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 text-sm text-amber-200">
-                    <h5 className="font-bold flex items-center gap-2 mb-1">
-                      <ShieldAlert className="size-4" /> وضع المراجعة: Batch 01 (Calibration)
-                    </h5>
-                    <p className="opacity-80">
-                      تم تطبيق "بوابة يقين التفاصيل التاريخية". راجع المطالبات المصححة أدناه قبل بدء التوليد إلى STAGING.
-                    </p>
-                  </div>
+                      <h5 className="font-bold flex items-center gap-2 mb-1">
+                        <ShieldAlert className="size-4" /> وضع المراجعة: Batch 01 (Calibration)
+                      </h5>
+                      <p className="opacity-80">
+                        تم تطبيق "بوابة يقين التفاصيل التاريخية". راجع المطالبات المصححة أدناه قبل بدء التوليد إلى STAGING.
+                      </p>
+                    </div>
 
-                  {batchResults ? (
+                    {batchResults ? (
                     <div className="space-y-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {batchResults.map((res: any) => (
