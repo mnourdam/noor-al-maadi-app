@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { AlertTriangle, Bell, BookOpen, Upload, Sword, Landmark, ShieldCheck, Database, Search, HardDrive, MapPin, Compass, Network, Hammer, Users, Gamepad2, MessagesSquare, Layers, Mail, Flag, Gem } from "lucide-react";
+import { AlertTriangle, Bell, BookOpen, Upload, Sword, Landmark, ShieldCheck, Database, Search, HardDrive, MapPin, Compass, Network, Hammer, Users, Gamepad2, MessagesSquare, Layers, Mail, Flag, Gem, BarChart3 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
 
@@ -113,6 +113,8 @@ function AdminHub() {
             desc="إطار JSON للتحديات التاريخية: كلمات متقاطعة، ترتيب الأحداث، من أنا؟، الروابط، الذاكرة." />
           <AdminCard to="/admin/encyclopedia" icon={<Landmark className="h-5 w-5" />} title="إدارة الموسوعة"
             desc="إدارة مدخلات الموسوعة (شخصيات، مدن، معارك...)." />
+          <AdminCard to="/admin/encyclopedia/priority-audit" icon={<BarChart3 className="h-5 w-5" />} title="تدقيق أولوية الصور"
+            desc="تحليل وتصنيف تلقائي لمدخلات الموسوعة بناءً على أهميتها في مسار اللاعب." />
           <AdminCard to="/admin/artifacts" icon={<Gem className="h-5 w-5" />} title="إدارة الآثار 🏺"
             desc={`مراجعة وتصحيح تصنيفات الآثار (الاسم، المعرف، النوع، الندرة) مع تصدير واستيراد.${
               stats.artifactsUpdatedAt ? ` آخر تحديث: ${new Date(stats.artifactsUpdatedAt).toLocaleDateString("ar")}` : ""
