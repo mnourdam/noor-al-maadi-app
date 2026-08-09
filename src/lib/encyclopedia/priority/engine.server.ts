@@ -4,17 +4,19 @@ import {
   EntityType, 
   ScoreBreakdown, 
   ProductionStatus,
-  PriorityAuditResult
+  PriorityAuditResult,
+  HistoricalVisualImportance
 } from "./types";
 
 /**
- * Priority Engine V1 - Server-side ranking logic.
- * This is an audit tool, not a data modifier.
+ * Priority Engine V2 - Server-side ranking logic.
+ * Implements "Gameplay Gravity" + "Historical Visual Importance".
+ * Identifies the "Eligible Universe" for visual production.
  */
 
 export async function generatePriorityAudit(): Promise<PriorityAuditResult> {
-  // 1. Fetch relations for scoring
-  // Using admin client to bypass RLS and access admin tables
+  // 1. Fetch relations and entities
+  // Fetching all relevant signals to calculate gravity and importance
   const [
     { data: entities, error: entitiesError },
     { data: storyRelations },
@@ -22,7 +24,7 @@ export async function generatePriorityAudit(): Promise<PriorityAuditResult> {
     { data: investigations },
     { data: stories }
   ] = await Promise.all([
-    supabaseAdmin.from("encyclopedia_entities").select("id, slug, title, entity_type, metadata, image_path"),
+    supabaseAdmin.from("encyclopedia_entities").select("id, slug, title, entity_type, metadata, image_path, enabled, created_at, updated_at"),
     supabaseAdmin.from("story_relations").select("story_id, target_id, target_type, role"),
     supabaseAdmin.from("admin_campaigns").select("id, data"),
     supabaseAdmin.from("investigations").select("id, related_entities"),
@@ -32,15 +34,16 @@ export async function generatePriorityAudit(): Promise<PriorityAuditResult> {
   if (entitiesError) throw entitiesError;
 
   const report: EntityPriorityReport[] = [];
+  let archivedOrRedirectedCount = 0;
+  const eraBias: Record<string, number> = {};
 
   // 2. Pre-process relations for efficient lookup
-  const entityCampaigns = new Map<string, Set<string>>(); // entityId -> Set of campaignIds (supporting)
-  const entityCoreCampaigns = new Map<string, Set<string>>(); // entityId -> Set of campaignIds (core)
-  const entityStories = new Map<string, Set<string>>(); // entityId -> Set of storyIds
-  const entityInvestigations = new Map<string, Set<string>>(); // entityId -> Set of investigationIds
-  const entityUnlocks = new Map<string, Set<string>>(); // entityId -> Set of storyIds
+  const entityCampaigns = new Map<string, Set<string>>(); 
+  const entityCoreCampaigns = new Map<string, Set<string>>(); 
+  const entityStories = new Map<string, Set<string>>(); 
+  const entityInvestigations = new Map<string, Set<string>>(); 
+  const entityUnlocks = new Map<string, Set<string>>(); 
 
-  // Process Campaigns
   campaigns?.forEach(c => {
     const data = c.data as any;
     if (Array.isArray(data?.core_entities)) {
@@ -57,7 +60,6 @@ export async function generatePriorityAudit(): Promise<PriorityAuditResult> {
     }
   });
 
-  // Process Story Relations
   storyRelations?.forEach(rel => {
     if (rel.target_type === "encyclopedia_entity") {
       const id = rel.target_id;
@@ -66,7 +68,6 @@ export async function generatePriorityAudit(): Promise<PriorityAuditResult> {
     }
   });
 
-  // Process Investigations
   investigations?.forEach(inv => {
     const related = inv.related_entities as any;
     if (Array.isArray(related)) {
@@ -77,11 +78,9 @@ export async function generatePriorityAudit(): Promise<PriorityAuditResult> {
     }
   });
 
-  // Process Stories for Unlock Specs
   stories?.forEach(s => {
     const spec = s.unlock_spec as any;
     if (!spec) return;
-
     const findEntityIds = (obj: any): string[] => {
       const ids: string[] = [];
       if (!obj || typeof obj !== 'object') return ids;
@@ -91,7 +90,6 @@ export async function generatePriorityAudit(): Promise<PriorityAuditResult> {
       }
       return ids;
     };
-    
     const ids = findEntityIds(spec);
     ids.forEach(id => {
       if (!entityUnlocks.has(id)) entityUnlocks.set(id, new Set());
@@ -99,20 +97,36 @@ export async function generatePriorityAudit(): Promise<PriorityAuditResult> {
     });
   });
 
-  // 3. Calculate Scores
+  // 3. Score and Classify
   entities?.forEach(entity => {
     const id = entity.id;
     const metadata = (entity.metadata as any) || {};
     
+    // Canonical Audit Logic (Derived from existing patterns in index-store.ts)
+    const isArchived = metadata.archived === true || metadata.hidden_duplicate === true;
+    const isRedirect = !!(metadata.canonical_id || metadata.merged_into || metadata.converted_to || metadata.redirect_to);
+    
+    if (isArchived || isRedirect) {
+      archivedOrRedirectedCount++;
+    }
+
+    // Historical Importance Bonus Calculation
+    const importance = (metadata.importance?.toString().toUpperCase() as HistoricalVisualImportance) || "UNREVIEWED";
+    let importanceBonus = 0;
+    if (importance === "CORE") importanceBonus = 100;
+    else if (importance === "MAJOR") importanceBonus = 60;
+    else if (importance === "NORMAL") importanceBonus = 20;
+
     const breakdown: ScoreBreakdown = {
       mandatoryUnlock: (entityUnlocks.get(id)?.size || 0) * 50,
       coreCampaign: (entityCoreCampaigns.get(id)?.size || 0) * 40,
       supportingCampaign: (entityCampaigns.get(id)?.size || 0) * 15,
       storyPrimary: (entityStories.get(id)?.size || 0) * 25,
       investigationRelation: (entityInvestigations.get(id)?.size || 0) * 15,
-      curatedImportance: metadata.importance === 'core' ? 30 : (metadata.importance === 'major' ? 15 : 0),
       structuralAnchor: metadata.is_structural_anchor ? 20 : 0,
-      crossSystemBonus: 0
+      crossSystemBonus: 0,
+      gameplayGravity: 0,
+      historicalImportanceBonus: importanceBonus
     };
 
     let systems = 0;
@@ -125,47 +139,59 @@ export async function generatePriorityAudit(): Promise<PriorityAuditResult> {
     else if (systems === 3) breakdown.crossSystemBonus = 25;
     else if (systems >= 4) breakdown.crossSystemBonus = 40;
 
-    const finalScore = Object.values(breakdown).reduce((a, b) => a + b, 0);
+    const gravity = breakdown.mandatoryUnlock + breakdown.coreCampaign + breakdown.supportingCampaign + 
+                    breakdown.storyPrimary + breakdown.investigationRelation + breakdown.structuralAnchor + 
+                    breakdown.crossSystemBonus;
+    
+    breakdown.gameplayGravity = gravity;
+    const finalScore = gravity + importanceBonus;
+    
     const hasImage = !!entity.image_path;
-
     let productionStatus: ProductionStatus = "READY_FOR_VISUAL_PRODUCTION";
-    if (hasImage) productionStatus = "HAS_EXISTING_IMAGE";
+    if (isArchived) productionStatus = "DUPLICATE_Archived";
+    else if (isRedirect) productionStatus = "DUPLICATE_Redirected";
+    else if (hasImage) productionStatus = "HAS_EXISTING_IMAGE";
     else if (finalScore === 0) productionStatus = "LOW_SIGNAL";
     else if (metadata.needs_review) productionStatus = "NEEDS_MANUAL_PRIORITY_REVIEW";
+
+    const era = (metadata.era as string) || "Unknown";
+    eraBias[era] = (eraBias[era] || 0) + 1;
 
     report.push({
       rankWithinType: 0,
       id: entity.id,
       slug: entity.slug,
-      titleAr: entity.title, // 'title' stores the Arabic name
+      titleAr: entity.title,
       type: entity.entity_type as EntityType,
       worldSlug: (metadata.world_slug as string) || undefined,
-      era: (metadata.era as string) || undefined,
+      era: era === "Unknown" ? undefined : era,
       finalScore,
+      gameplayGravity: gravity,
+      historicalImportance: importance,
       scoreBreakdown: breakdown,
       campaignCount: (entityCampaigns.get(id)?.size || 0) + (entityCoreCampaigns.get(id)?.size || 0),
       storyCount: entityStories.get(id)?.size || 0,
       investigationCount: entityInvestigations.get(id)?.size || 0,
       unlockDependencyCount: entityUnlocks.get(id)?.size || 0,
-      curatedImportance: (metadata.importance as string) || null,
       distinctSystemsCount: systems,
       hasImage,
       imagePath: entity.image_path || undefined,
-      productionStatus
+      productionStatus,
+      canonical: {
+        isEligible: !isArchived && !isRedirect && entity.enabled !== false,
+        status: entity.enabled ? 'enabled' : 'disabled',
+        isRedirect,
+        isArchived,
+        canonicalId: (metadata.canonical_id || metadata.merged_into || metadata.redirect_to) as string
+      }
     });
   });
 
-  // 4. Map DB types to canonical UI types and rank
+  // 4. Ranking and Distribution
   const canonicalMap: Record<string, EntityType> = {
-    'figure': 'Figure',
-    'person': 'Figure',
-    'character': 'Figure',
-    'event': 'Event',
-    'battle': 'Battle',
-    'city': 'City',
-    'landmark': 'Landmark',
-    'state': 'State',
-    'artifact': 'Artifact'
+    'figure': 'Figure', 'person': 'Figure', 'character': 'Figure',
+    'event': 'Event', 'battle': 'Battle', 'city': 'City',
+    'landmark': 'Landmark', 'state': 'State', 'artifact': 'Artifact'
   };
 
   const types: EntityType[] = ["Figure", "Event", "City", "Battle", "Landmark", "State", "Artifact"];
@@ -176,44 +202,38 @@ export async function generatePriorityAudit(): Promise<PriorityAuditResult> {
     Figure: [], Event: [], City: [], Battle: [], Landmark: [], State: [], Artifact: []
   };
 
-  // Pre-calculate full rankings for all entities
   report.forEach(e => {
     const dbType = String(e.type).toLowerCase().trim();
     const canonical = canonicalMap[dbType] || (types.includes(e.type as any) ? e.type : null);
     if (canonical) {
       e.type = canonical as EntityType;
-      distribution[e.type]++;
+      if (e.canonical.isEligible) {
+        distribution[e.type]++;
+      }
     }
   });
 
   types.forEach(type => {
-    const typedEntities = report.filter(e => e.type === type);
+    const typedEntities = report.filter(e => e.type === type && e.canonical.isEligible);
     typedEntities.sort((a, b) => b.finalScore - a.finalScore || a.titleAr.localeCompare(b.titleAr));
-    
-    typedEntities.forEach((e, i) => {
-      e.rankWithinType = i + 1;
-    });
-
-    // Return Top 100 for all types to support category tabs
+    typedEntities.forEach((e, i) => { e.rankWithinType = i + 1; });
     shortlists[type] = typedEntities.slice(0, 100);
   });
 
-  const top25Overall = [...report]
-    .filter(e => !e.hasImage)
+  const top50Overall = [...report]
+    .filter(e => e.canonical.isEligible && !e.hasImage)
     .sort((a, b) => b.finalScore - a.finalScore)
-    .slice(0, 25);
-
-  // Diagnostic logging (Server-side)
-  console.log(`[PriorityAudit] Total Ranked: \${report.length}`);
-  console.log(`[PriorityAudit] Distribution:`, distribution);
+    .slice(0, 50);
 
   return {
-    scoringLogic: "Deterministic additive scoring: Mandatory Unlock (+50), Core Campaign (+40), Supporting Campaign (+15), Story (+25), Investigation (+15), Curated Core (+30), Major (+15), Structural (+20). Cross-system bonuses: 2 systems (+10), 3 (+25), 4+ (+40).",
-    unavailableSignals: [],
+    scoringLogic: "CPS Engine V2: Gameplay Gravity (Unlock/Campaign/Story/Investigation) + Historical Importance Bonus (Core: +100, Major: +60, Normal: +20).",
+    eligibleUniverseCount: report.filter(e => e.canonical.isEligible).length,
+    archivedOrRedirectedCount,
     distribution,
-    top25Overall,
+    eraBias,
+    top50Overall,
     shortlists,
     anomalies: [],
-    assessment: `Priority Engine V1 is operational. Found \${report.length} ranked entities across \${types.length} categories.`
+    assessment: `Audit complete. Identified ${report.filter(e => e.canonical.isEligible).length} canonical entities for production.`
   };
 }
