@@ -213,27 +213,37 @@ export async function generatePriorityAudit(): Promise<PriorityAuditResult> {
     }
   });
 
+  const eligibleUniverse = report.filter(e => e.canonical.isEligible);
+  const eligibleMissingImage = eligibleUniverse.filter(e => !e.hasImage);
+
   types.forEach(type => {
-    const typedEntities = report.filter(e => e.type === type && e.canonical.isEligible);
-    typedEntities.sort((a, b) => b.finalScore - a.finalScore || a.titleAr.localeCompare(b.titleAr));
-    typedEntities.forEach((e, i) => { e.rankWithinType = i + 1; });
-    shortlists[type] = typedEntities.slice(0, 100);
+    const typedEligible = eligibleUniverse.filter(e => e.type === type);
+    const typedMissing = typedEligible.filter(e => !e.hasImage);
+    
+    typedEligible.sort((a, b) => b.finalScore - a.finalScore || a.titleAr.localeCompare(b.titleAr));
+    typedEligible.forEach((e, i) => { e.rankWithinType = i + 1; });
+    
+    // For visual production planning, we need the top candidates MISSING images
+    typedMissing.sort((a, b) => b.finalScore - a.finalScore || a.titleAr.localeCompare(b.titleAr));
+    shortlists[type] = typedMissing.slice(0, 100);
+    
+    // Update distribution to reflect MISSING images for production planning
+    distribution[type] = typedMissing.length;
   });
 
-  const top50Overall = [...report]
-    .filter(e => e.canonical.isEligible && !e.hasImage)
+  const top50Overall = [...eligibleMissingImage]
     .sort((a, b) => b.finalScore - a.finalScore)
     .slice(0, 50);
 
   return {
     scoringLogic: "CPS Engine V2: Gameplay Gravity (Unlock/Campaign/Story/Investigation) + Historical Importance Bonus (Core: +100, Major: +60, Normal: +20).",
-    eligibleUniverseCount: report.filter(e => e.canonical.isEligible).length,
+    eligibleUniverseCount: eligibleMissingImage.length,
     archivedOrRedirectedCount,
     distribution,
     eraBias,
     top50Overall,
     shortlists,
     anomalies: [],
-    assessment: `Audit complete. Identified ${report.filter(e => e.canonical.isEligible).length} canonical entities for production.`
+    assessment: `Audit complete. Identified ${eligibleMissingImage.length} canonical entities missing images for production.`
   };
 }
