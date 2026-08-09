@@ -357,13 +357,12 @@ function PriorityAuditPage() {
                       </div>
                     ) : null}
                   </div>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {filteredList.map((entity: EntityPriorityReport) => (
-                    <div 
-                      key={entity.id}
-                      className={`
+                ) : (
+                  <div className="space-y-3">
+                    {filteredList.map((entity: EntityPriorityReport) => (
+                      <div 
+                        key={entity.id}
+                        className={`
                     group border rounded-xl p-4 transition-all
                     ${entity.canonical.isEligible 
                       ? "bg-slate-900/40 border-slate-800/60 hover:border-amber-500/30 hover:bg-slate-900/60" 
