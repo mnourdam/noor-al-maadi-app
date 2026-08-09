@@ -356,7 +356,8 @@ function PriorityAuditPage() {
                     </div>
                   )}
                 </div>
-              ) : (
+              </div>
+            ) : (
                 <div className="space-y-3">
                   {filteredList.map((entity: EntityPriorityReport) => (
                     <div 
