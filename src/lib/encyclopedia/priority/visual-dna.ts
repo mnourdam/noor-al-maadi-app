@@ -69,8 +69,10 @@ export const IRTH_VISUAL_DNA: VisualDNASpec = {
   globalRules: [
     "NO visible text, captions, logos, watermarks, or UI",
     "NO fabricated Arabic calligraphy or Qur'anic verses",
-    "Mandatory historical accuracy (period, region, culture)",
-    "NO obvious anachronisms (modern buildings, roads, electric light, etc.)",
+    "Mandatory historical accuracy (period, region, culture, architecture, clothing, weaponry, terrain)",
+    "NO blood, gore, severed limbs, visible wounds, or graphic corpses",
+    "NO visible text, captions, logos, or fabricated Arabic calligraphy",
+    "If inscriptions are required by object type, keep them visually non-legible through angle, DOF, or lighting",
     "Reject obvious AI artifacts (extra fingers, malformed horses, etc.)"
   ],
   typeSpecs: {
