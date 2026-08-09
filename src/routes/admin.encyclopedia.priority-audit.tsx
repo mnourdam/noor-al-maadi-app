@@ -242,10 +242,18 @@ function PriorityAuditPage() {
                         {batchResults.map((res: any) => (
                           <div key={res.entitySlug} className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden flex flex-col">
                             <div className="aspect-square bg-slate-800 relative group">
-                               <div className="absolute inset-0 flex items-center justify-center text-slate-700">
-                                 <LayoutGrid className="size-12 opacity-20" />
-                                 <span className="absolute bottom-4 text-[10px] font-mono opacity-40 uppercase">Staging Placeholder</span>
-                               </div>
+                               {res.imageUrl ? (
+                                 <img 
+                                   src={res.imageUrl} 
+                                   alt={res.entityName}
+                                   className="w-full h-full object-cover"
+                                 />
+                               ) : (
+                                 <div className="absolute inset-0 flex items-center justify-center text-slate-700">
+                                   <LayoutGrid className="size-12 opacity-20" />
+                                   <span className="absolute bottom-4 text-[10px] font-mono opacity-40 uppercase">Awaiting Asset Upload</span>
+                                 </div>
+                               )}
                                <div className="absolute top-3 right-3 flex gap-2">
                                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold border shadow-lg ${
                                    res.validationStatus === 'PASS' ? 'bg-emerald-500 text-black border-emerald-400' : 
@@ -303,7 +311,10 @@ function PriorityAuditPage() {
                         ))}
                       </div>
 
-                      <div className="flex justify-center pt-4">
+                      <div className="flex justify-between items-center pt-4">
+                         <div className="text-[10px] text-amber-500 font-bold border border-amber-500/20 px-3 py-1 rounded bg-amber-500/5">
+                            Status: Calibration Batch 01 (Assisted Mode)
+                         </div>
                          <button 
                            onClick={() => setBatchResults(null)}
                            className="text-slate-500 hover:text-slate-300 text-xs font-bold"

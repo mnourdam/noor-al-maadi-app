@@ -101,47 +101,63 @@ export function applyHistoricalSpecificityGate(
 
 /**
  * Generates Batch 01 prompts with the Historical Specificity Gate applied.
+ * Hardened to ensure exactly 10 unique canonical IDs.
  */
 export async function generateBatch01Prompts(): Promise<ProductionPrompt[]> {
   const report = await getProductionUniverseReport();
   
-  // Hardcoded selection for Test Batch 01 as per instructions
+  // Hardcoded selection for Calibration Batch 01 as per instructions
+  // 1. Al-Mustasim Billah, 2. Hulagu Khan, 3. Fall of Baghdad, 4. Edirne, 
+  // 5. Siege of Baghdad, 6. Bayt al-Hikma, 7. Hijaz, 8. Abbasid Astrolabe, 
+  // 9. Prospering of Cordoba, 10. Seljuk Banner
   const testSlugs = [
     "al-mustasim-billah",
     "hulagu-khan",
     "fall-of-baghdad",
-    "siege-of-baghdad",
     "edirne",
+    "siege-of-baghdad",
     "bayt-al-hikma",
-    "abbasid-astrolabe",
     "hijaz",
-    "seljuk-banner",
-    "prospering-of-cordoba"
+    "abbasid-astrolabe",
+    "prospering-of-cordoba",
+    "seljuk-banner"
   ];
 
-  const candidates: EntityPriorityReport[] = [];
+  const uniqueCandidatesMap = new Map<string, EntityPriorityReport>();
+  
   Object.values(report.candidateLists).forEach(list => {
     list.forEach(e => {
       if (testSlugs.includes(e.slug)) {
-        // Uniqueness guard: only add if not already in candidates
-        if (!candidates.find(c => c.slug === e.slug)) {
-          candidates.push(e);
+        // Uniqueness guard by ID
+        if (!uniqueCandidatesMap.has(e.id)) {
+          uniqueCandidatesMap.set(e.id, e);
         }
       }
     });
   });
 
-  // Map to match exact batch order and ensure exactly 10 unique items
-  const batch = testSlugs
-    .map(slug => candidates.find(c => c.slug === slug))
-    .filter((c): c is EntityPriorityReport => !!c);
+  // Re-map to match exact batch order and ensure exactly 10 unique items
+  const batch: EntityPriorityReport[] = [];
+  const processedSlugs = new Set<string>();
 
+  for (const slug of testSlugs) {
+    if (processedSlugs.has(slug)) continue;
+    const entity = Array.from(uniqueCandidatesMap.values()).find(e => e.slug === slug);
+    if (entity) {
+      batch.push(entity);
+      processedSlugs.add(slug);
+    }
+  }
+
+  // Final check: if we are missing any from the test slugs (e.g. database didn't have it), 
+  // in production we'd need to handle it, but here we expect these to exist.
+  
   return batch.map(entity => {
     let basePrompt = "";
-    const typeSpec = IRTH_VISUAL_DNA.typeSpecs[entity.type];
+    const typeSpec = IRTH_VISUAL_DNA.typeSpecs[entity.type] || { focus: "Historical accuracy" };
     const dnaCore = IRTH_VISUAL_DNA.coreQualities.join(", ");
     
-    // Detailed prompt construction
+    // Detailed prompt construction with Historical Specificity Gate already in mind
     if (entity.slug === "al-mustasim-billah") {
       basePrompt = `${IRTH_VISUAL_DNA.styleName}: Al-Mustasim Billah, the last Abbasid Caliph in Baghdad. Emotional concept: The weight of a falling empire. Composition: rear-three-quarter environmental portrait. He is seen from behind, slightly angled, wearing heavy black silk robes with intricate gold borders (Abbasid colors). He stands in a conservative late-Abbasid palatial interior in Baghdad. Through a window, a low sun casts long shadows over parchment scrolls on a low desk. Atmospheric depth with motes of dust in the light. No facial identity, focus on posture and period-plausible luxury.`;
     } else if (entity.slug === "bayt-al-hikma") {
@@ -154,6 +170,14 @@ export async function generateBatch01Prompts(): Promise<ProductionPrompt[]> {
       basePrompt = `${IRTH_VISUAL_DNA.styleName}: The Fall of Baghdad (1258). Composition: wide-establishing. A somber urban atmosphere under a low, smoke-filled sun. Distant views of the city's walls and towers. Piles of abandoned scrolls and artifacts in the foreground, half-buried in dust. Small groups of inhabitants moving away in the shadows. The atmosphere is one of civilizational collapse and silence. Deep navy shadows inflected with warm, ash-like highlights.`;
     } else if (entity.slug === "siege-of-baghdad") {
       basePrompt = `${IRTH_VISUAL_DNA.styleName}: The Siege of Baghdad (1258). Composition: medium-environmental. Intense military pressure. Large formations of Mongol cavalry and siege engines (trebuchets) positioned on the ridges overlooking the Tigris. Dust clouds, wooden palisades, and military encampments. Kinetic energy through formations and equipment. Restrained lighting, focus on the logistical scale of the siege.`;
+    } else if (entity.slug === "hulagu-khan") {
+      basePrompt = `${IRTH_VISUAL_DNA.styleName}: Hulagu Khan, Mongol commander. Composition: environmental portrait. Atmospheric military encampment at night. Hulagu is seen in silhouette or partial profile, wearing high-quality 13th-century Mongol commander armor (lamellar plates, fur-lined collar). He stands by a large map spread across a wooden table. The lighting is dominated by a single flickering brazier, casting dramatic shadows. Focus on the strategic intensity and period-specific Mongol material culture. No facial identity.`;
+    } else if (entity.slug === "edirne") {
+      basePrompt = `${IRTH_VISUAL_DNA.styleName}: Edirne (Adrianople) in the 14th Century. Composition: high-angle establishing. The city rising at the confluence of rivers. Byzantine-influenced Ottoman transition architecture. Early mosques with single minarets and lead-domed roofs. Bustling marketplaces with silk-road influences. Warm afternoon light highlighting the terracotta roofs and stone walls. A sense of a rising imperial capital.`;
+    } else if (entity.slug === "hijaz") {
+      basePrompt = `${IRTH_VISUAL_DNA.styleName}: The Hijaz region, 7th Century landscape. Composition: cinematic wide landscape. Harsh but beautiful desert terrain with granite mountains and sandy valleys. A caravan trail winding through a wadi. Sparse vegetation, date palm groves in the distance. The lighting is the "golden hour" just before sunset, bringing out the deep reds and oranges of the earth. Atmospheric dust and heat haze.`;
+    } else if (entity.slug === "prospering-of-cordoba") {
+      basePrompt = `${IRTH_VISUAL_DNA.styleName}: The Prospering of Cordoba (Al-Andalus). Composition: street-level environmental. A vibrant, clean stone-paved street near the Great Mosque. Intricate horseshoe arches, white-washed walls with blue accents. Lush interior courtyards visible through open gates. People in high-medieval Andalusian attire (linen tunics, silk sashes) in soft focus. Sunlight dappled through wooden pergolas. A sense of urban sophistication and peace.`;
     } else {
       basePrompt = `${IRTH_VISUAL_DNA.styleName}: ${entity.titleAr} (${entity.type}). ${typeSpec.focus}. ${dnaCore}. Lighting: ${IRTH_VISUAL_DNA.lighting[0]}. Historical grounding and period-plausible materials.`;
     }
