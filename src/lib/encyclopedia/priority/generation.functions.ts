@@ -39,15 +39,13 @@ export const runBatch01Generation = createServerFn({ method: "POST" })
   .handler(async (): Promise<CalibrationBatchResult[]> => {
     const prompts = await generateBatch01Prompts();
     
-    // In browser-assisted mode, the server prepares the metadata and staging records.
-    // The actual "generation" is the act of the agent providing the assets.
-    // We return the requirements for each item so the UI can show them for "review".
-    
+    // In browser-assisted mode, the server prepares metadata.
+    // The actual "generation" is the agent providing assets for review.
     return prompts.map(p => ({
       entityId: p.entityId,
       entitySlug: p.slug,
       entityName: p.titleAr,
-      entityType: "Figure", // Mapping from entity needed if strict, but prompts carry it
+      entityType: "Figure",
       finalPrompt: p.prompt,
       audit: p.audit,
       validationStatus: "PASS",
@@ -58,5 +56,8 @@ export const runBatch01Generation = createServerFn({ method: "POST" })
       finalWebPSize: 0,
       stagingStoragePath: `encyclopedia/staging/${p.slug}.webp`,
       generationTimestamp: new Date().toISOString(),
+      // In a real production flow, we check if the file exists in staging
+      // For this calibration start, the UI will show "Awaiting Asset Upload"
+      imageUrl: `/encyclopedia/staging/${p.slug}.webp`
     }));
   });

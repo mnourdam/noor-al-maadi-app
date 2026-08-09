@@ -311,7 +311,10 @@ function PriorityAuditPage() {
                         ))}
                       </div>
 
-                      <div className="flex justify-center pt-4">
+                      <div className="flex justify-between items-center pt-4">
+                         <div className="text-[10px] text-amber-500 font-bold border border-amber-500/20 px-3 py-1 rounded bg-amber-500/5">
+                            Status: Calibration Batch 01 (Assisted Mode)
+                         </div>
                          <button 
                            onClick={() => setBatchResults(null)}
                            className="text-slate-500 hover:text-slate-300 text-xs font-bold"
