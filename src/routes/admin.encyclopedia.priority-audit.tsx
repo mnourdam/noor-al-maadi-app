@@ -356,7 +356,6 @@ function PriorityAuditPage() {
                       </div>
                     </div>
                   )}
-                  </div>
                 </div>
               ) : (
                 <div className="space-y-3">
