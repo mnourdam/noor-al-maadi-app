@@ -141,8 +141,12 @@ function AuthCallbackPage() {
           user: userRes.user ?? data.session.user,
           intent,
           supabase,
+        }).catch(e => {
+          console.error("[auth-callback] resolveGoogleAuthResult failed (non-fatal)", e);
+          return null;
         });
-        stashGoogleAuthResult(kind);
+        if (kind) stashGoogleAuthResult(kind);
+
         setStatus("success");
         setMessage("تم تأكيد بريدك الإلكتروني بنجاح. مرحباً بك في إرث!");
         const stored = consumeAuthOrigin("");
