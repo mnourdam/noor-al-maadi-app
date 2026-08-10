@@ -354,16 +354,17 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
         } else if (code) {
           console.info("[native-auth] parsed code (len=", code.length, ")");
           console.info("[native-auth] exchanging code");
-          recordTrace("native-auth", "pkce-exchange-start");
+          recordTrace("native-auth", "CODE_EXCHANGE_STARTED");
           const nativeClient = getNativePkceSupabaseClient();
           const { data, error } = await nativeClient.auth.exchangeCodeForSession(code);
           if (error) {
             exchangeError = error.message;
             console.error("[native-auth] exchange failed:", error.message);
-            recordTrace("native-auth", "pkce-exchange-failure", error.message);
+            recordTrace("native-auth", "CODE_EXCHANGE_FAILED", error.message);
+            stashOAuthError({ reason: "OAUTH_EXCHANGE_FAILED", message: error.message, ts: Date.now() });
           } else {
             console.info("[native-auth] exchange success");
-            recordTrace("native-auth", "pkce-exchange-success");
+            recordTrace("native-auth", "CODE_EXCHANGE_SUCCESS");
             // The native PKCE client owns a separate storageKey, so the main
             // `supabase` client will NOT auto-hydrate. Copy the tokens across
             // explicitly.
@@ -376,15 +377,20 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
               if (setErr) {
                 exchangeError = setErr.message;
                 console.error("[native-auth] main setSession failed:", setErr.message);
+                recordTrace("native-auth", "MAIN_CLIENT_SESSION_SET_FAILED", setErr.message);
+                stashOAuthError({ reason: "SESSION_NOT_ESTABLISHED", message: setErr.message, ts: Date.now() });
               } else {
                 exchangedOk = true;
-                recordTrace("native-auth", "session-established");
+                recordTrace("native-auth", "MAIN_CLIENT_SESSION_SET_SUCCESS");
+                recordTrace("native-auth", "SESSION_VERIFIED");
               }
             } else {
               exchangeError = "الجلسة غير مكتملة";
               console.error("[native-auth] exchange returned no tokens");
+              stashOAuthError({ reason: "SESSION_NOT_ESTABLISHED", message: exchangeError, ts: Date.now() });
             }
           }
+
 
         } else {
           exchangeError = "الرابط لا يحتوي على رمز مصادقة";
