@@ -24,6 +24,22 @@ export type GoogleAuthResultKind =
 
 const INTENT_KEY = "irth.google_auth_intent.v1";
 const RESULT_KEY = "irth.google_auth_result.v1";
+const ERROR_KEY = "irth.oauth_error_details.v1";
+
+export type OAuthErrorReason = 
+  | "USER_CANCELLED"
+  | "OAUTH_EXCHANGE_FAILED"
+  | "SESSION_NOT_ESTABLISHED"
+  | "POST_LOGIN_SYNC_FAILED"
+  | "TIMEOUT_WITH_VALID_SESSION"
+  | "UNKNOWN";
+
+export interface OAuthErrorDetails {
+  reason: OAuthErrorReason;
+  message?: string;
+  ts: number;
+}
+
 
 function safeStorage(): Storage | null {
   try {
