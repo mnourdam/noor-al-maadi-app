@@ -287,6 +287,22 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
         const code = params.get("code");
         const accessToken = params.get("access_token");
         const refreshToken = params.get("refresh_token");
+
+        // Idempotency check for codes
+        if (code) {
+          if (processedCodes.has(code)) {
+            console.info("[native-auth] ignoring duplicate appUrlOpen for code (already processed)");
+            recordTrace("native-auth", "duplicate-callback-ignored");
+            return;
+          }
+          processedCodes.add(code);
+          // Keep the set size bounded
+          if (processedCodes.size > 10) {
+            const first = processedCodes.values().next().value;
+            if (first !== undefined) processedCodes.delete(first);
+          }
+        }
+
         const linkType = params.get("type");
         isRecoveryLink = linkType === "recovery";
         // Recovery: lock the app into password-reset mode BEFORE the PKCE
@@ -295,12 +311,11 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
         // to `/reset-password` and the user cannot access the account.
         if (isRecoveryLink) {
           setRecoveryMode(true);
-          recordTrace("native-auth", "recovery-link-detected");
+          recordTrace("native-auth", "OAUTH_RECOVERY_LINK_DETECTED");
         }
         const errorDescription =
           params.get("error_description") || params.get("error");
-        if (code) recordTrace("native-auth", "code-detected");
-
+        if (code) recordTrace("native-auth", "CODE_DETECTED");
 
         // Sanity: log whether the PKCE verifier is present in this instance's
         // localStorage. If it's missing here, `exchangeCodeForSession` will
@@ -312,9 +327,16 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
           exchangeError = errorDescription;
           console.info("[native-auth] ignored because provider returned error:", errorDescription);
           console.error("[native-auth] provider error", errorDescription, "payload=", describeSearchParams(params));
+          
+          stashOAuthError({
+            reason: errorDescription.toLowerCase().includes("cancel") ? "USER_CANCELLED" : "OAUTH_EXCHANGE_FAILED",
+            message: errorDescription,
+            ts: Date.now()
+          });
         } else if (accessToken && refreshToken) {
           console.info("[native-auth] parsed hash tokens (implicit flow)");
           console.info("[native-auth] setSession from hash tokens");
+          recordTrace("native-auth", "IMPLICIT_FLOW_START");
           const { data, error } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken,
@@ -322,10 +344,13 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
           if (error) {
             exchangeError = error.message;
             console.error("[native-auth] setSession failed", error.message);
+            stashOAuthError({ reason: "OAUTH_EXCHANGE_FAILED", message: error.message, ts: Date.now() });
           } else {
             exchangedOk = !!data.session;
             console.info("[native-auth] setSession OK");
+            recordTrace("native-auth", "SESSION_VERIFIED");
           }
+
         } else if (code) {
           console.info("[native-auth] parsed code (len=", code.length, ")");
           console.info("[native-auth] exchanging code");
