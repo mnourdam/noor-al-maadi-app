@@ -125,6 +125,28 @@ export function consumeGoogleAuthResult(): GoogleAuthResultKind | null {
 
 export const GOOGLE_AUTH_RESULT_STORAGE_KEY = RESULT_KEY;
 
+export function stashOAuthError(details: OAuthErrorDetails): void {
+  const s = safeStorage();
+  if (!s) return;
+  try {
+    s.setItem(ERROR_KEY, JSON.stringify(details));
+  } catch { /* ignore */ }
+}
+
+export function consumeOAuthError(): OAuthErrorDetails | null {
+  const s = safeStorage();
+  if (!s) return null;
+  try {
+    const v = s.getItem(ERROR_KEY);
+    if (v) {
+      s.removeItem(ERROR_KEY);
+      return JSON.parse(v) as OAuthErrorDetails;
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
+
 /**
  * After a successful Google OAuth exchange, decide which branded dialog to
  * show and audit the identity link idempotently.
