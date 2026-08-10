@@ -227,9 +227,14 @@ function collectDeepLinkParams(url: URL): URLSearchParams {
 // drive the rest (profile sync, FCM token registration, redirects).
 let listenerInstalled = false;
 let listenerRegistered = false;
+
+// Idempotency: avoid processing the same authorization code twice.
+const processedCodes = new Set<string>();
+
 export function isNativeAuthListenerInstalled(): boolean { return listenerInstalled; }
 export function isNativeAuthListenerRegistered(): boolean { return listenerRegistered; }
 export async function installNativeAuthDeepLinkListener(): Promise<void> {
+
   if (listenerInstalled) {
     console.info("[native-auth] listener already installed — skipping");
     return;
