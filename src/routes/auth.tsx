@@ -7,6 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { PasswordField } from "@/components/ui/PasswordField";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import { consumeAuthOrigin } from "@/lib/authOrigin";
+import { consumeOAuthError } from "@/lib/googleAuthResult";
+
 // BUILD_TYPE import removed with the auth diagnostics button.
 import { openAuthDialog, maskEmail } from "@/lib/authDialog";
 
@@ -103,30 +105,53 @@ function AuthPage() {
   // back here after failing to complete the PKCE exchange.
   useEffect(() => {
     let flagged = false;
+    let errorDetails = null;
+
     try {
       if (typeof window !== "undefined") {
         const url = new URL(window.location.href);
         if (url.searchParams.get("oauth_error") === "1") flagged = true;
+        
+        // Use the new structured error store
+        errorDetails = consumeOAuthError();
+        if (errorDetails) flagged = true;
+
         if (window.sessionStorage.getItem("irth.oauth_error.v1") === "1") {
           flagged = true;
           window.sessionStorage.removeItem("irth.oauth_error.v1");
         }
+        
         if (flagged) {
           url.searchParams.delete("oauth_error");
           window.history.replaceState(null, "", url.toString());
         }
       }
     } catch { /* ignore */ }
+
     if (flagged) {
+      const reason = errorDetails?.reason || "UNKNOWN";
+      
+      // Never show "Google login failed" if session established but we just timed out on UI sync
+      if (reason === "TIMEOUT_WITH_VALID_SESSION" || reason === "POST_LOGIN_SYNC_FAILED") {
+        console.info("[auth-page] ignoring false-failure diagnostic:", reason);
+        return;
+      }
+
+      if (reason === "USER_CANCELLED") {
+        console.info("[auth-page] user cancelled Google picker — silent");
+        return;
+      }
+
       openAuthDialog({
         id: "google-oauth-bounce",
         tone: "error",
         title: "تعذّر تسجيل الدخول عبر Google",
-        body: "لم نتمكن من إكمال تسجيل الدخول عبر Google. تحقّق من اتصال الإنترنت ثم حاول مجدداً.",
+        body: errorDetails?.message || "لم نتمكن من إكمال تسجيل الدخول عبر Google. تحقّق من اتصال الإنترنت ثم حاول مجدداً.",
         primary: { label: "إعادة المحاولة" },
       });
     }
   }, []);
+
 
   async function requestResend(kind: ResendKind, email: string) {
     const authEmailMode = ((import.meta.env.VITE_AUTH_EMAIL_MODE as string | undefined) ?? "custom").toLowerCase();

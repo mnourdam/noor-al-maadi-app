@@ -24,6 +24,22 @@ export type GoogleAuthResultKind =
 
 const INTENT_KEY = "irth.google_auth_intent.v1";
 const RESULT_KEY = "irth.google_auth_result.v1";
+const ERROR_KEY = "irth.oauth_error_details.v1";
+
+export type OAuthErrorReason = 
+  | "USER_CANCELLED"
+  | "OAUTH_EXCHANGE_FAILED"
+  | "SESSION_NOT_ESTABLISHED"
+  | "POST_LOGIN_SYNC_FAILED"
+  | "TIMEOUT_WITH_VALID_SESSION"
+  | "UNKNOWN";
+
+export interface OAuthErrorDetails {
+  reason: OAuthErrorReason;
+  message?: string;
+  ts: number;
+}
+
 
 function safeStorage(): Storage | null {
   try {
@@ -108,6 +124,28 @@ export function consumeGoogleAuthResult(): GoogleAuthResultKind | null {
 }
 
 export const GOOGLE_AUTH_RESULT_STORAGE_KEY = RESULT_KEY;
+
+export function stashOAuthError(details: OAuthErrorDetails): void {
+  const s = safeStorage();
+  if (!s) return;
+  try {
+    s.setItem(ERROR_KEY, JSON.stringify(details));
+  } catch { /* ignore */ }
+}
+
+export function consumeOAuthError(): OAuthErrorDetails | null {
+  const s = safeStorage();
+  if (!s) return null;
+  try {
+    const v = s.getItem(ERROR_KEY);
+    if (v) {
+      s.removeItem(ERROR_KEY);
+      return JSON.parse(v) as OAuthErrorDetails;
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
 
 /**
  * After a successful Google OAuth exchange, decide which branded dialog to

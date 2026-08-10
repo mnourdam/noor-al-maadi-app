@@ -15,7 +15,9 @@ import {
   getAndClearGoogleAuthIntent,
   resolveGoogleAuthResult,
   stashGoogleAuthResult,
+  stashOAuthError,
 } from "@/lib/googleAuthResult";
+
 import { consumeAuthOrigin } from "@/lib/authOrigin";
 import { recordTrace } from "@/lib/diag-trace";
 import { getDurableAuthStorage } from "@/lib/nativeAuthStorage";
@@ -227,9 +229,14 @@ function collectDeepLinkParams(url: URL): URLSearchParams {
 // drive the rest (profile sync, FCM token registration, redirects).
 let listenerInstalled = false;
 let listenerRegistered = false;
+
+// Idempotency: avoid processing the same authorization code twice.
+const processedCodes = new Set<string>();
+
 export function isNativeAuthListenerInstalled(): boolean { return listenerInstalled; }
 export function isNativeAuthListenerRegistered(): boolean { return listenerRegistered; }
 export async function installNativeAuthDeepLinkListener(): Promise<void> {
+
   if (listenerInstalled) {
     console.info("[native-auth] listener already installed — skipping");
     return;
@@ -280,6 +287,22 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
         const code = params.get("code");
         const accessToken = params.get("access_token");
         const refreshToken = params.get("refresh_token");
+
+        // Idempotency check for codes
+        if (code) {
+          if (processedCodes.has(code)) {
+            console.info("[native-auth] ignoring duplicate appUrlOpen for code (already processed)");
+            recordTrace("native-auth", "duplicate-callback-ignored");
+            return;
+          }
+          processedCodes.add(code);
+          // Keep the set size bounded
+          if (processedCodes.size > 10) {
+            const first = processedCodes.values().next().value;
+            if (first !== undefined) processedCodes.delete(first);
+          }
+        }
+
         const linkType = params.get("type");
         isRecoveryLink = linkType === "recovery";
         // Recovery: lock the app into password-reset mode BEFORE the PKCE
@@ -288,12 +311,11 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
         // to `/reset-password` and the user cannot access the account.
         if (isRecoveryLink) {
           setRecoveryMode(true);
-          recordTrace("native-auth", "recovery-link-detected");
+          recordTrace("native-auth", "OAUTH_RECOVERY_LINK_DETECTED");
         }
         const errorDescription =
           params.get("error_description") || params.get("error");
-        if (code) recordTrace("native-auth", "code-detected");
-
+        if (code) recordTrace("native-auth", "CODE_DETECTED");
 
         // Sanity: log whether the PKCE verifier is present in this instance's
         // localStorage. If it's missing here, `exchangeCodeForSession` will
@@ -305,9 +327,16 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
           exchangeError = errorDescription;
           console.info("[native-auth] ignored because provider returned error:", errorDescription);
           console.error("[native-auth] provider error", errorDescription, "payload=", describeSearchParams(params));
+          
+          stashOAuthError({
+            reason: errorDescription.toLowerCase().includes("cancel") ? "USER_CANCELLED" : "OAUTH_EXCHANGE_FAILED",
+            message: errorDescription,
+            ts: Date.now()
+          });
         } else if (accessToken && refreshToken) {
           console.info("[native-auth] parsed hash tokens (implicit flow)");
           console.info("[native-auth] setSession from hash tokens");
+          recordTrace("native-auth", "IMPLICIT_FLOW_START");
           const { data, error } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken,
@@ -315,23 +344,27 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
           if (error) {
             exchangeError = error.message;
             console.error("[native-auth] setSession failed", error.message);
+            stashOAuthError({ reason: "OAUTH_EXCHANGE_FAILED", message: error.message, ts: Date.now() });
           } else {
             exchangedOk = !!data.session;
             console.info("[native-auth] setSession OK");
+            recordTrace("native-auth", "SESSION_VERIFIED");
           }
+
         } else if (code) {
           console.info("[native-auth] parsed code (len=", code.length, ")");
           console.info("[native-auth] exchanging code");
-          recordTrace("native-auth", "pkce-exchange-start");
+          recordTrace("native-auth", "CODE_EXCHANGE_STARTED");
           const nativeClient = getNativePkceSupabaseClient();
           const { data, error } = await nativeClient.auth.exchangeCodeForSession(code);
           if (error) {
             exchangeError = error.message;
             console.error("[native-auth] exchange failed:", error.message);
-            recordTrace("native-auth", "pkce-exchange-failure", error.message);
+            recordTrace("native-auth", "CODE_EXCHANGE_FAILED", error.message);
+            stashOAuthError({ reason: "OAUTH_EXCHANGE_FAILED", message: error.message, ts: Date.now() });
           } else {
             console.info("[native-auth] exchange success");
-            recordTrace("native-auth", "pkce-exchange-success");
+            recordTrace("native-auth", "CODE_EXCHANGE_SUCCESS");
             // The native PKCE client owns a separate storageKey, so the main
             // `supabase` client will NOT auto-hydrate. Copy the tokens across
             // explicitly.
@@ -344,15 +377,20 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
               if (setErr) {
                 exchangeError = setErr.message;
                 console.error("[native-auth] main setSession failed:", setErr.message);
+                recordTrace("native-auth", "MAIN_CLIENT_SESSION_SET_FAILED", setErr.message);
+                stashOAuthError({ reason: "SESSION_NOT_ESTABLISHED", message: setErr.message, ts: Date.now() });
               } else {
                 exchangedOk = true;
-                recordTrace("native-auth", "session-established");
+                recordTrace("native-auth", "MAIN_CLIENT_SESSION_SET_SUCCESS");
+                recordTrace("native-auth", "SESSION_VERIFIED");
               }
             } else {
               exchangeError = "الجلسة غير مكتملة";
               console.error("[native-auth] exchange returned no tokens");
+              stashOAuthError({ reason: "SESSION_NOT_ESTABLISHED", message: exchangeError, ts: Date.now() });
             }
           }
+
 
         } else {
           exchangeError = "الرابط لا يحتوي على رمز مصادقة";
@@ -391,34 +429,52 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
           // is already set; the guard would redirect anyway, but navigating
           // explicitly avoids a flash of home/profile.
           if (isRecoveryLink) {
-            recordTrace("native-auth", "recovery-navigate-reset");
+            recordTrace("native-auth", "OAUTH_RECOVERY_NAVIGATE_RESET");
             try {
               if (typeof window !== "undefined") {
                 window.location.replace("/reset-password");
               }
             } catch { /* ignore */ }
           } else {
-            try {
-              // Get the authenticated user (revalidates with Auth) so we
-              // see the merged `identities[]` from Supabase's auto-linker.
-              const { data: userRes } = await supabase.auth.getUser();
-              const intent = getAndClearGoogleAuthIntent();
-              const kind = await resolveGoogleAuthResult({
-                user: userRes.user,
-                intent,
-                supabase,
-              });
-              stashGoogleAuthResult(kind);
-            } catch { /* ignore */ }
+            recordTrace("native-auth", "AUTH_SUCCESS");
+            
+            // Post-login operations in background.
+            (async () => {
+              try {
+                recordTrace("native-auth", "POST_LOGIN_SYNC_STARTED");
+                const { data: userRes } = await supabase.auth.getUser();
+                const intent = getAndClearGoogleAuthIntent();
+                const kind = await resolveGoogleAuthResult({
+                  user: userRes.user,
+                  intent,
+                  supabase,
+                });
+                stashGoogleAuthResult(kind);
+                recordTrace("native-auth", "POST_LOGIN_SYNC_SUCCESS");
+              } catch (e) { 
+                recordTrace("native-auth", "POST_LOGIN_SYNC_FAILED", e instanceof Error ? e.message : String(e));
+                // Do NOT surface this as a login failure to the user.
+              }
+            })();
 
-
+            // Authoritative success check with a long mobile-friendly timeout
+            // but return immediately if session is verified.
             console.info("[native-auth] waitForSignedIn start");
-            const signedIn = await waitForSignedIn(3000);
+            const signedIn = await waitForSignedIn(8000);
             console.info("[native-auth] waitForSignedIn done result=", signedIn);
+            
+            if (!signedIn) {
+              // If we reach here, a valid session was set via setSession but
+              // onAuthStateChange didn't fire in time. We STILL consider it
+              // success since the tokens are in storage.
+              recordTrace("native-auth", "TIMEOUT_WITH_VALID_SESSION");
+            }
+
             try {
               if (typeof window !== "undefined") {
                 const dest = consumeAuthOrigin("/profile");
-                console.info("[native-auth] navigating to", dest);
+                console.info("[native-auth] NAVIGATION_STARTED to", dest);
+                recordTrace("native-auth", "NAVIGATION_STARTED", dest);
                 window.location.replace(dest);
               }
             } catch { /* ignore */ }
@@ -436,6 +492,7 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
             }
           } catch { /* ignore */ }
         }
+
       }
     });
     listenerRegistered = true;
