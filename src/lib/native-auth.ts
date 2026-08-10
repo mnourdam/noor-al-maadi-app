@@ -429,34 +429,52 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
           // is already set; the guard would redirect anyway, but navigating
           // explicitly avoids a flash of home/profile.
           if (isRecoveryLink) {
-            recordTrace("native-auth", "recovery-navigate-reset");
+            recordTrace("native-auth", "OAUTH_RECOVERY_NAVIGATE_RESET");
             try {
               if (typeof window !== "undefined") {
                 window.location.replace("/reset-password");
               }
             } catch { /* ignore */ }
           } else {
-            try {
-              // Get the authenticated user (revalidates with Auth) so we
-              // see the merged `identities[]` from Supabase's auto-linker.
-              const { data: userRes } = await supabase.auth.getUser();
-              const intent = getAndClearGoogleAuthIntent();
-              const kind = await resolveGoogleAuthResult({
-                user: userRes.user,
-                intent,
-                supabase,
-              });
-              stashGoogleAuthResult(kind);
-            } catch { /* ignore */ }
+            recordTrace("native-auth", "AUTH_SUCCESS");
+            
+            // Post-login operations in background.
+            (async () => {
+              try {
+                recordTrace("native-auth", "POST_LOGIN_SYNC_STARTED");
+                const { data: userRes } = await supabase.auth.getUser();
+                const intent = getAndClearGoogleAuthIntent();
+                const kind = await resolveGoogleAuthResult({
+                  user: userRes.user,
+                  intent,
+                  supabase,
+                });
+                stashGoogleAuthResult(kind);
+                recordTrace("native-auth", "POST_LOGIN_SYNC_SUCCESS");
+              } catch (e) { 
+                recordTrace("native-auth", "POST_LOGIN_SYNC_FAILED", e instanceof Error ? e.message : String(e));
+                // Do NOT surface this as a login failure to the user.
+              }
+            })();
 
-
+            // Authoritative success check with a long mobile-friendly timeout
+            // but return immediately if session is verified.
             console.info("[native-auth] waitForSignedIn start");
-            const signedIn = await waitForSignedIn(3000);
+            const signedIn = await waitForSignedIn(8000);
             console.info("[native-auth] waitForSignedIn done result=", signedIn);
+            
+            if (!signedIn) {
+              // If we reach here, a valid session was set via setSession but
+              // onAuthStateChange didn't fire in time. We STILL consider it
+              // success since the tokens are in storage.
+              recordTrace("native-auth", "TIMEOUT_WITH_VALID_SESSION");
+            }
+
             try {
               if (typeof window !== "undefined") {
                 const dest = consumeAuthOrigin("/profile");
-                console.info("[native-auth] navigating to", dest);
+                console.info("[native-auth] NAVIGATION_STARTED to", dest);
+                recordTrace("native-auth", "NAVIGATION_STARTED", dest);
                 window.location.replace(dest);
               }
             } catch { /* ignore */ }
@@ -474,6 +492,7 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
             }
           } catch { /* ignore */ }
         }
+
       }
     });
     listenerRegistered = true;
