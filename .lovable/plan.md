@@ -1,227 +1,31 @@
-# افتتاحيات الحملات + موسيقى الأقسام — الخطة النهائية (Rev 2، قبل التنفيذ)
+# Campaign Unlock Engine Audit & Fix
 
-كل ملاحظاتك الأربع + الملاحظات الأصغر مدمجة أدناه. ما لم يُذكر هنا يبقى كما في Rev 1.
+The user reported that completing "Yarmouk and Qadisiyyah" shows it as completed, but the next campaign "Madain and Nihawand" remains locked. The audit reveals that while the logical chain is correct, the React hooks responsible for calculating the lock map do not listen for the `irth:campaign-completions:changed` event. This causes the UI to remain stale until a manual refresh or a hard profile sync happens.
 
-## 1) قسم الحملة: حقل صريح، لا استنتاج
+## Analysis
+- `useProgressionState` correctly unions local, profile, and server completions.
+- `recordCampaignCompletion` correctly dispatches `irth:campaign-completions:changed`.
+- However, `useProgressionState` has no event listener for this signal, so it doesn't re-run its `useMemo` when local progress changes.
+- Additionally, I discovered that the `record_campaign_progress_v2` RPC dispatches `irth:campaign-progress:changed`, which is also not listened to by the progression hooks.
 
-**ملغى نهائيًا**: أي اشتقاق من `worldSlug` أو `era` أو `state`. لا خريطة تطبيع.
+## Proposed Changes
 
-القيم الثمانية المعتمدة (نهائية، مغلقة):
+### 1. Hardening React Hooks
+- Update `src/lib/campaigns/useCampaignProgression.ts` to include a `useEffect` that listens for both `irth:campaign-completions:changed` and `irth:campaign-progress:changed`.
+- Use a local `tick` state to trigger re-renders when these events fire.
 
-```ts
-export type CampaignSectionKey =
-  | "prophetic" | "rashidun" | "umayyad" | "abbasid"
-  | "andalus" | "crusades" | "mongols_mamluks" | "ottoman";
-```
+### 2. ID/Slug Consistency (Integrity Pass)
+- Audit `src/lib/campaigns/progression.ts` to ensure `completedCampaign` and `evaluateSpecial` consistently check both `id` and `slug` against the completion set.
 
-مصدر الحقيقة = نفس ما تستخدمه واجهة `/campaigns` للتقسيم اليوم: صفوف **Section Divider** (`src/lib/campaigns/entities.ts`) المرتّبة على `chronological_order`. لذلك:
+### 3. Cleanup & Optimization
+- Ensure `useQuery` for server completions has a short `staleTime` and is invalidated on completion events.
 
-- `CampaignSectionDivider.sectionKey?: CampaignSectionKey` — يُؤلَّف مرة واحدة على الفاصل (ثمانية فواصل فقط تحمله).
-- الحملة ترث `section_key` من الفاصل الذي تنتمي إليه في نفس التجميع الذي ترسمه الصفحة الآن — تجميع واحد، لا تصنيف ثانٍ.
-- `Campaign.sectionKey?: CampaignSectionKey` — **Override صريح اختياري** للحالات الشاذة (حملة زنكية داخل قسم الحروب الصليبية مثلًا). أولوية القرار: `campaign.sectionKey` ← `divider.sectionKey` ← `null`.
-- `null` ⇒ لا موسيقى قسم (الطبقة العامة كما اليوم). لا تخمين إطلاقًا.
-- دالة واحدة `resolveCampaignSection(campaign, dividerIndex)` في `src/lib/campaigns/sections.ts` هي المستهلك الوحيد؛ أي قراءة أخرى ممنوعة.
-- `era` / `worldSlug` / `state` لا تتغيّر ولا تُقرأ في هذا المسار.
+## Technical Details
+- The sequential lock logic in `computeSectionLockMap` depends on `completedCampaign(state, previousRegular)`.
+- If `state.completedCampaignIds` is stale, the `locked` status remains `true`.
+- Listening to custom events ensures the "World" and "Campaigns" pages update immediately after the chapter player records the completion.
 
-أدوات الإدارة: حقل اختيار للفاصل + Override في محرر الحملة، وتقرير «حملات بلا قسم» في `/admin/campaign-order`.
-
-## 2) دورة حياة الصوت — Campaign Context هو المالك
-
-المالك مكوّن واحد `CampaignAudioScope` يُركَّب في **layout مسار الحملة** (`src/routes/campaigns.tsx` → فرع `imported/$id`)، لا في صفحة الفصل.
-
-```text
-/campaigns (قائمة)          → layer=campaign، theme=null (الوضع الحالي حرفيًا)
-        │
-        ▼ فتح حملة
-/campaigns/imported/$id     → mount CampaignAudioScope
-                              resolveCampaignSection() → setCampaignTheme("abbasid")
-                              crossfade 1500ms من global/الثيم السابق
-        │
-        ▼ CampaignIntroGate يفتح الافتتاحية (نفس الشجرة، overlay)
-StoryPlayer (introMode)     → لا لمس للصوت إطلاقًا. الموسيقى مستمرة كما هي.
-        │
-        ▼ «ابدأ الحملة» أو «تخطي والبدء»
-/campaigns/imported/$id/chapter/$c
-                            → نفس الـScope (لم يُفكَّك) ⇒ setCampaignTheme نفس القيمة ⇒ no-op تام
-                              لا إعادة تشغيل، لا فجوة، لا إعادة تحميل للمصدر
-        │
-        ▼ الانتقال إلى حملة أخرى من نفس القسم
-                            → themeId متطابق ⇒ no-op، الصوت يستمر بلا انقطاع
-        ▼ حملة من قسم آخر
-                            → crossfade إلى الملف الجديد (لا تراكب، مؤقّت واحد)
-        ▼ مغادرة سياق الحملة كليًا (خروج من layout)
-                            → unmount ⇒ setCampaignTheme(null) + العودة إلى global بـcrossfade
-```
-
-- الافتتاحية **لا تملك** الصوت ولا تبدأه ولا توقفه؛ هي مستهلك سلبي. لذلك يستحيل أن تُعرض بلا موسيقى قسمها.
-- إن فُتحت الافتتاحية عبر Deep Link مباشر، فالـScope يُركَّب قبلها في نفس الشجرة (layout أعلى)، فالترتيب مضمون.
-- API الجديد على `audioManager` (إضافي فقط): `setCampaignTheme(themeId: string | null)` — يُبدّل مصدر مسار طبقة `campaign` بـcrossfade، no-op عند التطابق. `setAmbienceLayer` كما هو.
-- الملفات: `public/audio/sections/<section_key>.mp3` (mono 64kbps) local-first. ملف مفقود ⇒ `failed` مرة واحدة + صمت، بلا أخطاء.
-- الكتم / مستويات الصوت / الوضع الصامت / Android ultra-stable: تُطبَّق من المسار الحالي بلا استثناء.
-
-## 3) `intro_version`
-
-الربط على الحملة:
-
-```ts
-intro_story_id?: string | null;
-intro_version?: number;   // default 1
-```
-
-السجل يحمل `intro_version int not null default 1`، والمفتاح يصبح `(user_id, campaign_id, intro_version)`.
-
-قرار العرض:
-- يوجد سجل بنفس `campaign_id` **و** نفس `intro_version` بحالة `completed`/`skipped` ⇒ دخول مباشر.
-- `intro_version` أعلى من كل سجلات اللاعب ⇒ افتتاحية جديدة، تُعرض مرة واحدة.
-- تغيير `intro_story_id` بلا رفع الإصدار ⇒ **لا** إعادة عرض (قرار مقصود).
-- رفع الإصدار = فعل إداري يدوي بحت؛ لا شيء في النظام يرفعه تلقائيًا (لا تعديل نص، ولا استبدال صورة، ولا إعادة استيراد).
-- السجلات القديمة تبقى؛ لا حذف، فالتاريخ محفوظ.
-
-## 4) Local-first للتسجيل
-
-قاعدة صارمة: **لا انتظار للشبكة قبل أي انتقال**.
-
-عند «تخطي والبدء» أو «ابدأ الحملة»:
-1. `resolvingRef` يمنع النقر المكرر (حارس متزامن قبل أي await).
-2. كتابة السجل المحلي فورًا (متزامنة، مقسّمة بالهوية عبر `physicalKey`).
-3. `navigate()` فورًا — نفس الإطار، لا Promise شبكي في الطريق.
-4. إدراج مهمة Outbox (`src/lib/offline/outbox.ts`) للمزامنة.
-5. عند عودة الاتصال: `upsert` idempotent على `(user_id, campaign_id, intro_version)`، «الأقوى يفوز» بترتيب `completed > skipped > started` حتى لا تتراجع الحالة.
-
-`last_scene_index`: كتابة محلية فورية عند كل مشهد، ومزامنة **debounced ~4s + عند الإغلاق/الخروج/إخفاء الصفحة فقط** ⇒ كتابة خادمية واحدة تقريبًا لكل افتتاحية بدل ثماني.
-
-## 5) Kill Switch خادمي حقيقي
-
-جدول `app_config` (key/value jsonb، قراءة عامة للمنشور، كتابة للأدمن فقط) هو المرجع:
-
-- `campaign_intros.enabled`, `campaign_audio_themes.enabled`.
-- يُقرأ مرة عند الإقلاع، يُخزَّن في كاش محلي مع TTL ويدخل Offline Snapshot.
-- أوفلاين / فشل القراءة ⇒ آخر قيمة معروفة، وإن لم توجد فالافتراضي `false` للميزتين الجديدتين (فشل آمن).
-- `VITE_…` يبقى Build-flag للطوارئ فقط. مفتاح localStorage يبقى **أداة تطوير محلية لا غير**، ولا يستطيع تفعيل ميزة أطفأها الخادم.
-- الإطفاء الخادمي: لا استعلام، لا قراءة سجل، لا `setCampaignTheme` ⇒ السلوك الحالي حرفيًا.
-
-## 6) جلب الافتتاحية: محلي أولًا، بمعزل عن `list_stories_v3`
-
-ترتيب القراءة الإلزامي (Always Read Local First):
-
-```text
-الحملة → النسخة المحلية (Snapshot) → تشغيل فوري
-```
-
-الشبكة ليست في مسار التشغيل إطلاقًا. `get_campaign_intro_story(p_story_id uuid)` — دالة SECURITY DEFINER مستقلة — تُستخدم **فقط** في مسار المزامنة الخلفية (وكحل أخير لحملة جديدة لم تدخل Snapshot بعد):
-- تُرجع القصة + مشاهدها + وسائطها **فقط** إذا `story_kind = 'campaign_intro'` و`status = 'published'`.
-- تتجاهل `unlock_spec` تمامًا (الافتتاحية ليست محتوى مقفولًا)، ولا تكتب تقدمًا ولا تمنح مكافآت.
-- تعمل للضيف والمسجَّل، ولا تسرّب أي قصة عادية (فحص النوع أولًا).
-- غير موجودة / مسودة / محذوفة / غير متاحة محليًا وبلا شبكة ⇒ **الحملة تُفتح مباشرة** + تشخيص، بلا شاشة انتظار وبلا أي خطأ للاعب.
-
-## 6.b) Offline-first كامل للافتتاحيات (إلزامي)
-
-الافتتاحية جزء من Offline Snapshot مثل الحملات تمامًا، لا محتوى on-demand.
-
-**التعبئة**
-- Snapshot المحتوى يضم كل الافتتاحيات المنشورة: JSON (القصة + المشاهد + مراجع الوسائط) + كل الصور/الصوت المرتبط، مع `intro_version` و`checksum` لكل أصل.
-- الوسائط تُخزَّن في Cache Storage تحت مساحة اسم `campaign-intros/v<intro_version>/…`؛ الـJSON داخل Snapshot الحالي (`src/lib/offline-snapshot.ts`) كقسم جديد `campaignIntros` — إضافة فقط، بلا كسر للنسخ القديمة.
-- الحجم يبقى ضمن ميزانية APK الحالية: صور الافتتاحيات تمر بنفس خط `story-covers`/`campaign-key-art` (WebP، أبعاد محدودة)، ويُنفَّذ سكربت `scripts/build-campaign-intro-pack.mjs` قبل كل إصدار.
-
-**التشغيل**
-- `resolveIntro()` يقرأ من الطبقة المحلية بشكل متزامن؛ لا `await` شبكي، لا Spinner، لا Skeleton.
-- شرط العرض: الـJSON موجود محليًا **و** كل وسائط المشهد الأول متاحة محليًا. غير ذلك ⇒ الحملة تُفتح مباشرة (لا شاشة تحميل، لا محاولة جلب أثناء الدخول).
-
-**التحديث (Content Sync، خلفي بالكامل)**
-1. المزامنة الدورية تقارن `intro_version` + `checksum` المحلي بالخادم.
-2. عند وجود أحدث: تنزيل إلى مساحة اسم **جانبية** (`…/v<new>/`) بلا لمس النسخة العاملة.
-3. تحقق سلامة كامل (checksum لكل أصل + اكتمال كل مشاهد الـJSON).
-4. **تبديل ذرّي** للمؤشر المحلي إلى الإصدار الجديد ثم تنظيف القديم.
-5. فشل/انقطاع في أي خطوة ⇒ إسقاط المسودة الجزئية والاستمرار بالنسخة السابقة بلا انقطاع ولا تلف. لا تبديل جزئي أبدًا.
-6. لا يوجد تحديث ⇒ تُستخدم النسخة المحلية دائمًا.
-- التبديل لا يقاطع افتتاحية قيد التشغيل؛ يُطبَّق عند التشغيل التالي.
-
-**بوابة البناء (Build Gate) — فشل صريح لا تحذير**
-
-`scripts/verify-offline-snapshot.mjs` + `scripts/verify-apk-snapshot.mjs` يضيفان فحصًا إلزاميًا قبل أي إصدار APK:
-
-```text
-حملة status='published'  +  intro_story_id مضبوط
-+ الافتتاحية (JSON أو أي أصل وسائط) غير موجودة في Offline Pack
-=> exit 1  ·  BUILD FAILED
-```
-
-- الفحص يشمل: وجود سجل القصة، تطابق `intro_version`، وجود كل ملف وسائط مُشار إليه، وصحة `checksum` لكل ملف.
-- التقرير يذكر بالاسم كل حملة مخالفة (id + العنوان + السبب) — لا رسالة عامة.
-- لا يوجد `--force` ولا تجاوز بيئي. الحملات `draft` أو التي بلا `intro_story_id` خارج الفحص تمامًا.
-- نفس الفحص يعمل في CI (`.github/workflows/build-android.yml`) قبل خطوة Gradle.
-
-**توافق الإصدارات (Forward-compat / Rollback)**
-
-- كل من Snapshot و`campaign_intro` يحمل `schema_version` رقميًا؛ التطبيق يعلن `SUPPORTED_INTRO_SCHEMA` و`SUPPORTED_SNAPSHOT_SCHEMA` في `src/lib/build-info.ts`.
-- قراءة أي سجل بـ`schema_version > SUPPORTED_*` ⇒ **تجاهل آمن**: يُتخطّى السجل ويُستخدم آخر إصدار مدعوم متاح محليًا؛ وإن لم يوجد ⇒ الحملة تُفتح مباشرة بلا افتتاحية. لا Crash، لا مسح، لا كتابة فوق البيانات الأحدث (نسخة APK أحدث لاحقًا تجدها سليمة).
-- المزامنة ترفض تنزيل أي إصدار أعلى من المدعوم بدل محاولة تحليله.
-- التخزين مفهرس بالإصدار (`…/v<n>/`)، فتعايش إصدارين متوازيين آمن؛ التنظيف يحذف الأقدم فقط، لا الأحدث غير المفهوم.
-
-
-
-
-## 7) استبعاد `campaign_intro` من كل سطح Stories
-
-ليس القوائم فقط، بل: `list_stories_v3` · البحث · عدّادات `/stories` والفلاتر · إحصائيات العوالم والقصص · Journey · Related Stories · Achievements المرتبطة بالقصص · Offline covers pack · Export العام. الاستبعاد يُطبَّق في **الدوال الخادمية نفسها** (`status='published' AND story_kind='standalone'`) لا في الواجهة، فلا يمكن نسيان سطح.
-
-زر «إعادة مشاهدة الافتتاحية» يظهر فقط عند: الميزة مفعّلة خادميًا + القصة موجودة ومنشورة من النوع الصحيح + وسائطها متاحة (محليًا أو عبر الشبكة). غير ذلك ⇒ الزر غائب تمامًا. الإعادة لا تكتب سجلًا ولا تغيّر إصدارًا ولا تمنح شيئًا.
-
-## 8) Migration واحدة
-
-```sql
-alter table public.stories add column if not exists story_kind text not null default 'standalone'
-  check (story_kind in ('standalone','campaign_intro'));
-
-create table public.campaign_intro_states (
-  user_id uuid not null,
-  campaign_id text not null,
-  intro_version int not null default 1,
-  intro_story_id uuid not null,
-  status text not null check (status in ('started','completed','skipped')),
-  last_scene_index int not null default 0,
-  first_started_at timestamptz not null default now(),
-  resolved_at timestamptz,
-  primary key (user_id, campaign_id, intro_version)
-);
-grant select, insert, update, delete on public.campaign_intro_states to authenticated;
-grant all on public.campaign_intro_states to service_role;
-alter table public.campaign_intro_states enable row level security;
--- كل السياسات: user_id = auth.uid()  (بلا anon)
-
-create table public.app_config (
-  key text primary key,
-  value jsonb not null,
-  updated_at timestamptz not null default now()
-);
-grant select on public.app_config to anon, authenticated;
-grant all on public.app_config to service_role;
-alter table public.app_config enable row level security;
--- select للجميع، الكتابة عبر has_role(auth.uid(),'admin') فقط
-```
-
-`intro_story_id` / `intro_version` / `section_key` تُخزَّن داخل `admin_campaigns.data` (اختيارية، بلا Migration للحملات).
-
-## 9) الملفات
-
-جديدة: `src/lib/campaigns/sections.ts` · `src/lib/audio/campaignThemes.ts` · `src/lib/campaigns/intro/{types,resolve,state,sync,flags}.ts` · `src/lib/campaigns/intro/offline-pack.ts` · `scripts/build-campaign-intro-pack.mjs` · `src/components/campaigns/{CampaignAudioScope,CampaignIntroGate}.tsx` · `src/lib/config/appConfig.ts` · اختبارات `tests/campaigns/{intro-state,section-resolution,intro-offline}.test.ts`, `tests/audio/section-lifecycle.test.ts`.
-
-معدَّلة (إضافات فقط): `src/lib/audioManager.ts` · `src/components/AudioInitializer.tsx` · `src/routes/campaigns.tsx` (تركيب الـScope) · `campaigns.imported.$id.index.tsx` · `campaigns.imported.$id.chapter.$chapter.tsx` · `src/types/campaign.ts` · `src/lib/campaigns/entities.ts` · `StoryPlayer.tsx` (وضع intro) · دوال/واجهات إدارة القصص والحملات · `src/lib/identity/reset.ts` · `src/lib/offline-snapshot.ts` (قسم `campaignIntros`) · `scripts/verify-offline-snapshot.mjs` · `src/lib/offline/outbox.ts`.
-
-## 10) القبول (إضافة على قائمة Rev 1)
-
-13. لا يوجد أي قراءة لـ`worldSlug`/`era` في مسار حل القسم (اختبار ثابت على الاستيراد).
-14. الموسيقى تبدأ عند فتح صفحة الحملة، وتستمر بلا انقطاع ولا إعادة تشغيل عبر: الافتتاحية → الفصل → فصل آخر؛ ولا تتوقف إلا عند مغادرة سياق الحملة.
-15. رفع `intro_version` يعيد العرض مرة واحدة فقط؛ تعديل نص/صورة بلا رفع الإصدار لا يعيده.
-16. الانتقال بعد التخطي يحدث في نفس الإطار مع الشبكة مقطوعة، والسجل يُزامَن لاحقًا مرة واحدة.
-17. الافتتاحية الواحدة تنتج ≤ 2 كتابة خادمية إجمالًا.
-18. إطفاء `app_config` خادميًا يعطّل الميزة حتى لو كان مفتاح localStorage مفعّلًا.
-19. `get_campaign_intro_story` ترفض أي `story_kind='standalone'` وأي مسودة.
-20. مقارنة عدّادات `/stories` قبل/بعد إدخال افتتاحيات = صفر فرق.
-21. فتح حملة في وضع Offline يعرض الافتتاحية فورًا بلا أي شاشة انتظار.
-22. **صفر طلبات شبكة** أثناء تشغيل افتتاحية موجودة محليًا (اختبار يعترض `fetch`/`XHR` ويؤكد العدد = 0).
-23. تعديل افتتاحية من لوحة الإدارة يُنزَّل في Content Sync التالي، ولا تُستبدل النسخة المحلية إلا بعد اكتمال التنزيل والتحقق.
-24. مقاطعة/فشل التنزيل ⇒ النسخة السابقة تبقى صالحة وتعمل، ولا يبقى أي أثر جزئي.
-25. `verify-offline-snapshot` يفشل إذا نقص أصل من أصول أي افتتاحية منشورة.
-26. حملة منشورة بـ`intro_story_id` وافتتاحيتها ناقصة من الحزمة ⇒ سكربت التحقق يُرجع exit 1 ويوقف بناء APK (اختبار سلبي مقصود).
-27. سجل افتتاحية/Snapshot بـ`schema_version` أعلى من المدعوم ⇒ يُتجاهل بأمان، يُستخدم آخر إصدار مدعوم، بلا Crash وبلا تلف، والبيانات الأحدث تبقى سليمة بعد الترقية.
+## Verification Plan
+- [ ] Verify `useProgressionState` re-renders when `window.dispatchEvent` is called manually in the console.
+- [ ] Verify that `recordChapterProgress` (which dispatches the event) triggers a refresh of the lock map.
+- [ ] Confirm no regression in era-based grouping logic.
