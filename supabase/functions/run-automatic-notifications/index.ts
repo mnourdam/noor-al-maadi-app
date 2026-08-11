@@ -304,25 +304,26 @@ async function runDailyFact(admin: any, baseUrl: string, serviceKey: string, dry
   }
 
 
-  // Pick the least-recently-sent enabled fact.
-  const { data: facts, error } = await admin
+// Optimized Deterministic Selection (Shuffle-Bag v1)
+  // We fetch ALL enabled facts once to perform deterministic category/item cycling.
+  // This is safe because daily_facts count is small (~240 rows).
+  const { data: allFacts, error } = await admin
     .from("daily_facts")
     .select("*")
-    .eq("enabled", true)
-    .order("last_sent_at", { ascending: true, nullsFirst: true })
-    .limit(1);
+    .eq("enabled", true);
 
   if (error) {
     if (!dryRun) await releaseRun(admin, jobKey, runDate);
     return { job: jobKey, error: error.message };
   }
-  const fact = facts?.[0];
+  
+  const fact = selectDailyFact(allFacts || [], runDate);
   if (!fact) {
     if (!dryRun) await releaseRun(admin, jobKey, runDate);
     return { job: jobKey, skipped: "no_facts_available" };
   }
 
-  if (dryRun) return { job: jobKey, would_send: fact };
+  if (dryRun) return { job: jobKey, would_send: fact, category: inferCategory(fact) };
 
   const send = await invokeSendNotification(baseUrl, serviceKey, {
     title: fact.title,
@@ -341,9 +342,9 @@ async function runDailyFact(admin: any, baseUrl: string, serviceKey: string, dry
     admin, jobKey, runDate,
     send.ok ? "success" : "failed",
     send.body?.notification_id ?? null,
-    { fact_id: fact.id, send },
+    { fact_id: fact.id, category: inferCategory(fact), send },
   );
-  return { job: jobKey, sent: send.ok, notification_id: send.body?.notification_id ?? null };
+  return { job: jobKey, sent: send.ok, fact_id: fact.id, category: inferCategory(fact), notification_id: send.body?.notification_id ?? null };
 }
 
 // ---------- Job 3: come-back reminder (24h inactivity) ----------
