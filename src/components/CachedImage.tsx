@@ -11,8 +11,8 @@ export type CachedImageProps = Omit<ImgHTMLAttributes<HTMLImageElement>, "src"> 
   fallback?: ReactNode;
 };
 
-export function CachedImage({ src, fallback = null, alt = "", ...rest }: CachedImageProps) {
+export function CachedImage({ src, fallback = null, alt = "", decoding = "async", ...rest }: CachedImageProps) {
   const resolved = useCachedImageSrc(src ?? null);
   if (!resolved) return <>{fallback}</>;
-  return <img src={resolved} alt={alt} {...rest} />;
+  return <img src={resolved} alt={alt} decoding={decoding} {...rest} />;
 }

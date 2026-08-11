@@ -1339,3 +1339,49 @@ body[data-app-scope="player"] [data-allow-select="true"] * {
     min-width: max-content;
   }
 }
+
+/* === Phase 1 Android Performance Optimization === */
+
+/* Disable GPU-heavy effects on low-end devices (perf-lite)
+   Maintains visual identity with simpler fallbacks. */
+html.perf-lite {
+  /* No backdrop-blur: replace with solid card background mix */
+  .backdrop-blur,
+  .backdrop-blur-sm,
+  .backdrop-blur-md,
+  .backdrop-blur-lg,
+  .backdrop-blur-xl {
+    backdrop-filter: none !important;
+    background-color: color-mix(in oklab, var(--color-surface) 95%, black) !important;
+  }
+
+  .glass {
+    backdrop-filter: none !important;
+    background-color: color-mix(in oklab, var(--color-surface) 90%, black) !important;
+    border: 1px solid oklch(0.82 0.14 82 / 0.2);
+  }
+
+  /* No infinite Ken Burns zoom */
+  .animate-ken-burns {
+    animation-play-state: paused !important;
+    transform: scale(1.08) !important; /* Static zoom state */
+  }
+
+  /* Reduce complex glows and blurs */
+  .blur-3xl {
+    filter: blur(16px) !important; /* Smaller blur radius */
+    opacity: 0.1 !important;
+  }
+
+  /* Tone down embers */
+  .ember {
+    display: none !important;
+  }
+
+  /* Reduce particle twinkle frequency or hide */
+  .particle-field::before,
+  .particle-field::after {
+    animation-duration: 12s !important;
+    opacity: 0.3 !important;
+  }
+}
