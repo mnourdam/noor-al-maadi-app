@@ -115,15 +115,15 @@ export function isSpecialCampaign(c: CampaignLike | null | undefined): boolean {
   return false;
 }
 
-function matchesId(set: ReadonlySet<string> | undefined, c: CampaignLike, id: string): boolean {
-  if (!set) return false;
+function matchesId(set: ReadonlySet<string> | undefined, id: string | null | undefined): boolean {
+  if (!set || !id) return false;
   return set.has(id);
 }
 
 function completedCampaign(state: ProgressionState, c: CampaignLike): boolean {
   return (
-    state.completedCampaignIds.has(c.id) ||
-    (!!c.slug && state.completedCampaignIds.has(c.slug))
+    matchesId(state.completedCampaignIds, c.id) ||
+    matchesId(state.completedCampaignIds, c.slug)
   );
 }
 
@@ -141,10 +141,10 @@ function evaluateSpecial(c: CampaignLike, state: ProgressionState): CampaignLock
   if (rule.campaignId && !state.completedCampaignIds.has(rule.campaignId)) {
     missing.push("إنهاء حملة مرتبطة");
   }
-  if (rule.storyId && !matchesId(state.completedStoryIds, c, rule.storyId)) {
+  if (rule.storyId && !matchesId(state.completedStoryIds, rule.storyId)) {
     missing.push("إكمال قصة مرتبطة");
   }
-  if (rule.achievementId && !matchesId(state.unlockedAchievementIds, c, rule.achievementId)) {
+  if (rule.achievementId && !matchesId(state.unlockedAchievementIds, rule.achievementId)) {
     missing.push("الحصول على إنجاز معيّن");
   }
   if (typeof rule.level === "number" && (state.level ?? 0) < rule.level) {
