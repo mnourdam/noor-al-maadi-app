@@ -159,22 +159,33 @@ export async function signInWithGoogleNative(): Promise<{ ok: boolean; error?: s
     }
     recordTrace("native-auth", "signInWithOAuth-url", `len=${oauthUrl.length}`);
 
-    const verifier = readLocalStorageValue(NATIVE_CODE_VERIFIER_KEY);
-    const verifierLen = verifier?.length ?? 0;
-    recordTrace("native-auth", "pkce-verifier-present", `after signInWithOAuth:len=${verifierLen}`);
+    // Atomic storage verification: ensure PKCE verifier is durable before opening browser
+    let verifier = readLocalStorageValue(NATIVE_CODE_VERIFIER_KEY);
     if (!verifier) {
-      return { ok: false, error: "تعذر حفظ رمز الأمان لتسجيل الدخول عبر Google. أعد المحاولة." };
+      // Best-effort read from memory fallback via durable storage adapter
+      verifier = await getDurableAuthStorage().getItem(NATIVE_CODE_VERIFIER_KEY);
+    }
+    
+    const verifierLen = verifier?.length ?? 0;
+    recordTrace("native-auth", "pkce-verifier-present", `before browser-open:len=${verifierLen}`);
+    
+    if (!verifier || verifierLen < 10) {
+      console.error("[native-auth] PKCE verifier missing or invalid after signInWithOAuth");
+      recordTrace("native-auth", "pkce-verifier-missing-critical");
+      return { ok: false, error: "تعذر تأمين رمز الدخول عبر Google. يرجى المحاولة مرة أخرى." };
     }
 
-    console.info("[native-auth] opening custom tab", sanitizeOAuthUrl(oauthUrl));
+    console.info("[native-auth] PKCE verifier verified. opening custom tab", sanitizeOAuthUrl(oauthUrl));
     const open = await tracedAwait(
       "browser-open",
       () => Browser.open({ url: oauthUrl, presentationStyle: "fullscreen" }),
       5000,
     );
     if (!open.ok) {
-      return { ok: false, error: `browser-open:${open.error}` };
+      recordTrace("native-auth", "browser-open-failed", open.error);
+      return { ok: false, error: `تعذر فتح نافذة تسجيل الدخول: ${open.error}` };
     }
+
     return { ok: true };
   } catch (e) {
     console.error("[native-auth] unexpected", e);
