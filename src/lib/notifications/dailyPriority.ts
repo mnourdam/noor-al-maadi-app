@@ -7,14 +7,10 @@
  *
  * Rule: Today-in-History always wins. If the current day has at least one
  * enabled Today-in-History event, the daily fact is NOT sent that day.
- *
- * The day is resolved from UTC month/day — the exact same clock used by
- * `src/lib/today-in-history.ts` (UI) and the scheduler edge function, so a
- * server/device timezone difference can never produce a double send.
- *
- * This rule applies ONLY to these two types. Story unlocks, achievements
- * and personal notifications are never suppressed by it.
  */
+
+import { Database } from "@/integrations/supabase/types";
+import { selectDailyFact } from "./dailyFactEngine";
 
 export interface DailyPriorityInput {
   /** Number of ENABLED today_in_history events matching today's UTC month/day. */
@@ -22,14 +18,30 @@ export interface DailyPriorityInput {
 }
 
 export type DailyFactDecision =
-  | { send: true }
-  | { send: false; reason: "suppressed_by_today_in_history" };
+  | { send: true; fact: Database["public"]["Tables"]["daily_facts"]["Row"] | null }
+  | { send: false; reason: "suppressed_by_today_in_history" | "no_facts_available" };
 
-export function decideDailyFact(input: DailyPriorityInput): DailyFactDecision {
+/**
+ * Decides whether to send a daily fact and picks which one to send using
+ * the deterministic selection engine.
+ */
+export function decideDailyFact(
+  input: DailyPriorityInput,
+  facts: Database["public"]["Tables"]["daily_facts"]["Row"][] = [],
+  date: Date = new Date()
+): DailyFactDecision {
   if (input.todayInHistoryEventCount > 0) {
     return { send: false, reason: "suppressed_by_today_in_history" };
   }
-  return { send: true };
+
+  const { runDate } = dailyKeyParts(date);
+  const fact = selectDailyFact(facts, runDate);
+
+  if (!fact) {
+    return { send: false, reason: "no_facts_available" };
+  }
+
+  return { send: true, fact };
 }
 
 /** Canonical day key shared by scheduler + client (UTC). */
@@ -44,6 +56,8 @@ export function dailyKeyParts(date: Date = new Date()): { month: number; day: nu
 /** Total number of daily "informational" notifications planned for a day. */
 export function plannedDailyCards(todayInHistoryEventCount: number): number {
   const tih = Math.min(todayInHistoryEventCount, 4); // TIH_MAX_SLOTS
+  // Note: facts passed as empty here because plannedDailyCards is only used 
+  // for slot counting in legacy contexts; actual selection happens in the edge function.
   const fact = decideDailyFact({ todayInHistoryEventCount }).send ? 1 : 0;
   return tih + fact;
 }
