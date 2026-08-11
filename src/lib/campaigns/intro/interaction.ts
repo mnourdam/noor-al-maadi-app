@@ -207,12 +207,17 @@ export class IntroPlaybackMachine {
 
   /** External hold (e.g. while a scene card is being exported). */
   pauseExternal(): void {
-    this.pause();
+    if (this.state !== "playing") return;
+    this.remainingMs = this.getRemainingMs();
+    this.clearTimer();
+    this.state = "paused";
+    this.emit();
   }
 
   /** Release an external hold; a no-op unless currently paused. */
   resumeExternal(): void {
-    this.resume();
+    if (this.state !== "paused" || this.pointerActive) return;
+    this.enterPlaying();
   }
 
   destroy(): void {
