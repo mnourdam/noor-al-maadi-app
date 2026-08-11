@@ -9,7 +9,7 @@
 // No new storage, no new tables.
 // ============================================================
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { useProfile } from "@/lib/profile";
