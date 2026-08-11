@@ -146,7 +146,8 @@ export class IntroPlaybackMachine {
     this.swipeArmed = false;
     this.downAt = this.opts.now();
     this.downX = x;
-    this.pause();
+    this.state = "paused";
+    this.emit();
   }
 
   pointerMove(x: number): void {
@@ -166,6 +167,7 @@ export class IntroPlaybackMachine {
     });
     if (gesture.kind === "hold") {
       this.resume();
+      this.emit(); // ensure React sees the state change
       return gesture;
     }
     // A swipe never also counts as a tap: classifyGesture returns one.
@@ -179,6 +181,7 @@ export class IntroPlaybackMachine {
     this.pointerActive = false;
     this.swipeArmed = false;
     this.resume();
+    this.emit();
   }
 
   /** Programmatic navigation (auto-advance, keyboard, debug). */

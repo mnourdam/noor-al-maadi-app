@@ -63,6 +63,7 @@ export function StoryPlayer({
   const [phase, setPhase] = useState<Phase>("playing");
   const [idx, setIdx] = useState(Math.min(initialSceneIndex, Math.max(0, ordered.length - 1)));
   const [paused, setPaused] = useState(false);
+  const [isLongPressing, setIsLongPressing] = useState(false);
   const [rewardShown, setRewardShown] = useState(false);
   const [grantedXp, setGrantedXp] = useState<number | null>(null);
   const [grantedDinars, setGrantedDinars] = useState<number | null>(null);
@@ -102,7 +103,7 @@ export function StoryPlayer({
   // --- Auto advance ----------------------------------------------
   useEffect(() => {
     // Disable auto-advance during export or when paused.
-    if (phase !== "playing" || !autoAdvance || paused || exportLockScene !== null) return;
+    if (phase !== "playing" || !autoAdvance || paused || isLongPressing || exportLockScene !== null) return;
     const t = window.setTimeout(() => {
       void goNext();
     }, dwellMs);
@@ -112,8 +113,8 @@ export function StoryPlayer({
 
   // --- Sync long-press halo with pause state ---------------------
   useEffect(() => {
-    if (!paused) setLongPressPulse(false);
-  }, [paused]);
+    if (!paused && !isLongPressing) setLongPressPulse(false);
+  }, [paused, isLongPressing]);
 
   // --- Reflection save contract (unchanged from P4 reader) -------
   const saveReflection = useCallback(
@@ -238,7 +239,7 @@ export function StoryPlayer({
     touchRef.current = { x: e.clientX, y: e.clientY, t: performance.now() };
     if (longPressTimer.current) clearTimeout(longPressTimer.current);
     longPressTimer.current = window.setTimeout(() => {
-      setPaused(true);
+      setIsLongPressing(true);
       setLongPressPulse(true);
     }, 350);
   };
@@ -250,10 +251,16 @@ export function StoryPlayer({
     }
     const start = touchRef.current;
     touchRef.current = null;
+    
+    if (isLongPressing) {
+      setIsLongPressing(false);
+      setLongPressPulse(false);
+      return;
+    }
+
     if ((isReflectionScene || exportLockScene !== null) && phase === "playing") return; // ignore taps during lock
     if (paused) {
       setPaused(false);
-      setLongPressPulse(false);
       return;
     }
 
@@ -261,7 +268,7 @@ export function StoryPlayer({
     const dx = e.clientX - start.x;
     const dy = e.clientY - start.y;
     const dt = performance.now() - start.t;
-    if (dt > 350) return; // was a long-press; already resolved
+    if (dt > 350 || isLongPressing) return; // was a long-press; already resolved
     if (Math.abs(dy) > 80 && dy > 0 && Math.abs(dy) > Math.abs(dx)) {
       onExit();
       return;
@@ -321,12 +328,24 @@ export function StoryPlayer({
   // was retired; kept as intentional void reference for future overlays.
   void story.era;
 
+  const onPointerCancel = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+    touchRef.current = null;
+    setIsLongPressing(false);
+    setLongPressPulse(false);
+  };
+
   return (
     <div
       className="fixed inset-0 z-[200] select-none bg-black text-white"
       dir="rtl"
       onPointerDown={onPointerDown}
       onPointerUp={onPointerUp}
+      onPointerCancel={onPointerCancel}
+      onPointerLeave={onPointerCancel}
     >
       {/* Top HUD */}
       <div
@@ -337,13 +356,13 @@ export function StoryPlayer({
           total={ordered.length}
           activeIndex={activeIdx}
           activeMs={autoAdvance ? dwellMs : 999_999}
-          paused={paused || phase !== "playing" || exportLockScene !== null}
+          paused={paused || isLongPressing || phase !== "playing" || exportLockScene !== null}
           epoch={progressEpoch}
         />
         <div className="flex items-center justify-between px-4 pt-2 pb-3">
           <div className="pointer-events-none flex min-w-0 items-center gap-2">
             <span className="truncate text-[12px] text-white/80">{story.title_ar}</span>
-            {paused && phase === "playing" && (
+            {(paused || isLongPressing) && phase === "playing" && (
               <Pause className="size-3.5 text-gold" aria-label="متوقفة" />
             )}
           </div>
@@ -382,7 +401,7 @@ export function StoryPlayer({
 
       {/* Touch feedback — subtle radial flash at tap point + pause halo. */}
       <TapFeedback flash={tapFlash} />
-      <PauseHalo active={longPressPulse && paused && phase === "playing"} />
+      <PauseHalo active={(longPressPulse || isLongPressing) && (paused || isLongPressing) && phase === "playing"} />
 
       {(phase === "playing" || phase === "reward") && scene && (
         <TransitionShell scene={scene}>
@@ -390,7 +409,7 @@ export function StoryPlayer({
             scene={scene}
             media={media}
             epoch={scene.id}
-            paused={paused || phase !== "playing" || exportLockScene !== null}
+            paused={paused || isLongPressing || phase !== "playing" || exportLockScene !== null}
             onReflectionSubmit={saveReflection}
             reflectionReadOnly={alreadyCompleted}
             reflectionInitialText={
