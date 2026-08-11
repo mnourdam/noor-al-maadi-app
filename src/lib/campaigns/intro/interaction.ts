@@ -146,7 +146,8 @@ export class IntroPlaybackMachine {
     this.swipeArmed = false;
     this.downAt = this.opts.now();
     this.downX = x;
-    this.pause();
+    this.state = "paused";
+    this.emit();
   }
 
   pointerMove(x: number): void {
@@ -166,6 +167,7 @@ export class IntroPlaybackMachine {
     });
     if (gesture.kind === "hold") {
       this.resume();
+      this.emit(); // ensure React sees the state change
       return gesture;
     }
     // A swipe never also counts as a tap: classifyGesture returns one.
@@ -179,6 +181,7 @@ export class IntroPlaybackMachine {
     this.pointerActive = false;
     this.swipeArmed = false;
     this.resume();
+    this.emit();
   }
 
   /** Programmatic navigation (auto-advance, keyboard, debug). */
@@ -204,12 +207,17 @@ export class IntroPlaybackMachine {
 
   /** External hold (e.g. while a scene card is being exported). */
   pauseExternal(): void {
-    this.pause();
+    if (this.state !== "playing") return;
+    this.remainingMs = this.getRemainingMs();
+    this.clearTimer();
+    this.state = "paused";
+    this.emit();
   }
 
   /** Release an external hold; a no-op unless currently paused. */
   resumeExternal(): void {
-    this.resume();
+    if (this.state !== "paused" || this.pointerActive) return;
+    this.enterPlaying();
   }
 
   destroy(): void {
