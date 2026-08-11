@@ -29,8 +29,20 @@ export function useProgressionState(): ProgressionState {
   const { profile } = useProfile();
   const achievements = useAchievementViews();
 
+  // Unified tick to trigger re-renders on custom completion/progress events.
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const handler = () => setTick((t) => t + 1);
+    window.addEventListener("irth:campaign-completions:changed", handler);
+    window.addEventListener("irth:campaign-progress:changed", handler);
+    return () => {
+      window.removeEventListener("irth:campaign-completions:changed", handler);
+      window.removeEventListener("irth:campaign-progress:changed", handler);
+    };
+  }, []);
+
   const { data: serverCompleted } = useQuery({
-    queryKey: ["campaign-completions", "union", profile.campaignsCompleted.length],
+    queryKey: ["campaign-completions", "union", profile.campaignsCompleted.length, tick],
     queryFn: () => unionCompletedIds(profile.campaignsCompleted),
     staleTime: 30_000,
   });
@@ -48,7 +60,7 @@ export function useProgressionState(): ProgressionState {
       unlockedAchievementIds,
       level: levelFor(profile.points).level,
     };
-  }, [profile.campaignsCompleted, profile.storiesRead, profile.points, serverCompleted, achievements]);
+  }, [profile.campaignsCompleted, profile.storiesRead, profile.points, serverCompleted, achievements, tick]);
 }
 
 type DividerLike = {
