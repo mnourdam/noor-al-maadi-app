@@ -118,21 +118,20 @@ async function bootMainApp(root: HTMLElement) {
   }
 
   try {
-    // Install Google-OAuth deep-link listener BEFORE first render so an OS
-    // resume that delivers `app.lovable.irth://auth/callback?...` is captured.
-    console.info("[native-auth] boot: requesting listener install");
+    // Phase 5 Hardening: Safe Unified Bootstrap
+    // We register the listener and check for Cold Boot launch URL before the router boots.
+    // This ensures that even if the OS delivered the intent before we were ready, we recover it.
     void import("./lib/native-auth").then((m) => {
-      console.info("[native-auth] boot: calling installNativeAuthDeepLinkListener");
+      console.info("[IrthAuth] BOOT_SEQUENCE_START");
       return m.installNativeAuthDeepLinkListener();
-    }).then(() => {
-      console.info("[native-auth] boot: App.addListener(appUrlOpen) registered");
     }).catch((err) => {
-      console.error("[native-auth] boot: install threw", err);
+      console.error("[IrthAuth] BOOT_SEQUENCE_FAILED", err);
     });
 
     const router = getRouter();
     createRoot(root).render(<RouterProvider router={router} />);
   } catch (err) {
+
     // eslint-disable-next-line no-console
     console.error("[android:mount-failed]", (err as Error)?.stack ?? err);
     root.innerHTML = `

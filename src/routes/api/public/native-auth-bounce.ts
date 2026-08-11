@@ -110,20 +110,26 @@ export const Route = createFileRoute("/api/public/native-auth-bounce")({
     // The intent:// URL is understood by Chrome as an OS hand-off, so it
     // never renders ERR_CONNECTION_CLOSED even when the app is briefly slow.
     function launch(){
-      try { window.location.href = intent; } catch(_){}
+      try { 
+        console.log('[native-bounce] launching intent');
+        window.location.href = intent; 
+      } catch(_){}
     }
     if (document.readyState === 'complete' || document.readyState === 'interactive') {
-      setTimeout(launch, 60);
+      setTimeout(launch, 200);
     } else {
-      window.addEventListener('DOMContentLoaded', function(){ setTimeout(launch, 60); });
+      window.addEventListener('DOMContentLoaded', function(){ setTimeout(launch, 200); });
     }
-    // If we're still here after ~1.4s the app didn't take over (rare — user
-    // uninstalled the APK, or the intent-filter is off). Reveal the manual
-    // button so they can either retry or bail cleanly.
+    // If we're still here after ~2s the app didn't take over.
+    // Reveal the manual button.
     setTimeout(function(){
       var el = document.getElementById('manual');
-      if (el) el.style.display = 'block';
-    }, 1400);
+      if (el) {
+        el.style.display = 'block';
+        console.log('[native-bounce] reveal manual button');
+      }
+    }, 2500);
+
   } catch(_){}
 })();
 </script>
