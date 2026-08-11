@@ -246,271 +246,215 @@ const processedCodes = new Set<string>();
 
 export function isNativeAuthListenerInstalled(): boolean { return listenerInstalled; }
 export function isNativeAuthListenerRegistered(): boolean { return listenerRegistered; }
-export async function installNativeAuthDeepLinkListener(): Promise<void> {
 
-  if (listenerInstalled) {
-    console.info("[native-auth] listener already installed — skipping");
+/** Unified handler for all native auth callbacks (appUrlOpen + getLaunchUrl) */
+export async function handleNativeAuthCallback(url: string | null | undefined): Promise<void> {
+  if (!url) {
+    console.info("[IrthAuth] CALLBACK_IGNORED reason=empty_url");
     return;
   }
-  listenerInstalled = true;
-  console.info("[native-auth] listener installed");
+  
+  if (!url.startsWith(`${NATIVE_DEEP_LINK_SCHEME}://`)) {
+    console.info("[IrthAuth] CALLBACK_IGNORED reason=wrong_scheme", url.slice(0, 30));
+    return;
+  }
+
+  console.info("[IrthAuth] CALLBACK_ACCEPTED", sanitizeOAuthUrl(url));
+  recordTrace("native-auth", "callback-accepted");
+  
+  let exchangedOk = false;
+  let exchangeError: string | null = null;
+  let isRecoveryLink = false;
+
   try {
-    const { App } = await import("@capacitor/app");
-    await App.addListener("appUrlOpen", async (event: { url: string }) => {
-      console.info("[native-auth] appUrlOpen fired");
-      recordTrace("native-auth", "app-url-open");
-      recordTrace("deep-link", "appUrlOpen-fired");
-      const url = event?.url ?? "";
-      console.info("[native-auth] url=", url ? sanitizeOAuthUrl(url) : "(empty)");
-      if (!url) {
-        console.info("[native-auth] ignored because url was empty");
-        recordTrace("deep-link", "ignored-empty-url");
+    const u = new URL(url);
+    const params = collectDeepLinkParams(u);
+    const code = params.get("code");
+    const accessToken = params.get("access_token");
+    const refreshToken = params.get("refresh_token");
+
+    // Idempotency: avoid processing the same authorization code twice
+    if (code) {
+      if (processedCodes.has(code)) {
+        console.info("[IrthAuth] CALLBACK_DUPLICATE_IGNORED", `code_len=${code.length}`);
+        recordTrace("native-auth", "callback-duplicate-ignored");
         return;
       }
-      if (!url.startsWith(`${NATIVE_DEEP_LINK_SCHEME}://`)) {
-        console.info(`[native-auth] ignored because url did not start with ${NATIVE_DEEP_LINK_SCHEME}://`);
-        recordTrace("deep-link", "ignored-wrong-scheme");
-        return;
+      processedCodes.add(code);
+      if (processedCodes.size > 20) {
+        const first = processedCodes.values().next().value;
+        if (first !== undefined) processedCodes.delete(first);
       }
+    }
 
-      let exchangedOk = false;
-      let exchangeError: string | null = null;
-      let isRecoveryLink = false;
-      try {
-        const u = new URL(url);
-        const params = collectDeepLinkParams(u);
-        recordTrace("deep-link", "parsed", `scheme=${u.protocol.replace(":", "")};host=${u.host};path=${u.pathname}`);
-        console.info("[app-url-open]", {
-          ts: new Date().toISOString(),
-          platform: "android",
-          stage: "deep-link-received",
-          scheme: u.protocol.replace(":", ""),
-          host: u.host,
-          hasCode: params.has("code"),
-          hasState: params.has("state"),
-          hasAccessToken: params.has("access_token"),
-          hasError: params.has("error") || params.has("error_description"),
-          nativeMarker: params.get("native") === "1",
-        });
-        console.info("[native-auth] appUrlOpen sanitized:", sanitizeOAuthUrl(url));
-        console.info("[native-auth] appUrlOpen payload shape:", describeSearchParams(params));
+    const linkType = params.get("type");
+    isRecoveryLink = linkType === "recovery";
+    if (isRecoveryLink) {
+      setRecoveryMode(true);
+      recordTrace("native-auth", "OAUTH_RECOVERY_LINK_DETECTED");
+    }
 
-        const code = params.get("code");
-        const accessToken = params.get("access_token");
-        const refreshToken = params.get("refresh_token");
+    const errorDescription = params.get("error_description") || params.get("error");
+    logPkceVerifierState("before exchange");
 
-        // Idempotency check for codes
-        if (code) {
-          if (processedCodes.has(code)) {
-            console.info("[native-auth] ignoring duplicate appUrlOpen for code (already processed)");
-            recordTrace("native-auth", "duplicate-callback-ignored");
-            return;
-          }
-          processedCodes.add(code);
-          // Keep the set size bounded
-          if (processedCodes.size > 10) {
-            const first = processedCodes.values().next().value;
-            if (first !== undefined) processedCodes.delete(first);
-          }
-        }
-
-        const linkType = params.get("type");
-        isRecoveryLink = linkType === "recovery";
-        // Recovery: lock the app into password-reset mode BEFORE the PKCE
-        // exchange so that even if `onAuthStateChange` fires SIGNED_IN before
-        // we navigate, the root RecoveryModeGuard force-redirects any route
-        // to `/reset-password` and the user cannot access the account.
-        if (isRecoveryLink) {
-          setRecoveryMode(true);
-          recordTrace("native-auth", "OAUTH_RECOVERY_LINK_DETECTED");
-        }
-        const errorDescription =
-          params.get("error_description") || params.get("error");
-        if (code) recordTrace("native-auth", "CODE_DETECTED");
-
-        // Sanity: log whether the PKCE verifier is present in this instance's
-        // localStorage. If it's missing here, `exchangeCodeForSession` will
-        // fail — meaning the OAuth start and the callback ran against
-        // different Supabase client instances / storages.
-        logPkceVerifierState("before exchange");
-
-        if (errorDescription) {
-          exchangeError = errorDescription;
-          console.info("[native-auth] ignored because provider returned error:", errorDescription);
-          console.error("[native-auth] provider error", errorDescription, "payload=", describeSearchParams(params));
-          
-          stashOAuthError({
-            reason: errorDescription.toLowerCase().includes("cancel") ? "USER_CANCELLED" : "OAUTH_EXCHANGE_FAILED",
-            message: errorDescription,
-            ts: Date.now()
+    if (errorDescription) {
+      exchangeError = errorDescription;
+      console.error("[IrthAuth] OAUTH_ERROR", errorDescription);
+      stashOAuthError({
+        reason: errorDescription.toLowerCase().includes("cancel") ? "USER_CANCELLED" : "OAUTH_EXCHANGE_FAILED",
+        message: errorDescription,
+        ts: Date.now()
+      });
+    } else if (accessToken && refreshToken) {
+      console.info("[IrthAuth] IMPLICIT_FLOW_START");
+      recordTrace("native-auth", "IMPLICIT_FLOW_START");
+      const { data, error } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
+      if (error) {
+        exchangeError = error.message;
+        stashOAuthError({ reason: "OAUTH_EXCHANGE_FAILED", message: error.message, ts: Date.now() });
+      } else {
+        exchangedOk = !!data.session;
+        recordTrace("native-auth", "SESSION_VERIFIED");
+      }
+    } else if (code) {
+      console.info("[IrthAuth] EXCHANGE_START");
+      recordTrace("native-auth", "EXCHANGE_START");
+      const nativeClient = getNativePkceSupabaseClient();
+      const { data, error } = await nativeClient.auth.exchangeCodeForSession(code);
+      if (error) {
+        exchangeError = error.message;
+        console.error("[IrthAuth] EXCHANGE_FAILED", error.message);
+        recordTrace("native-auth", "EXCHANGE_FAILED", error.message);
+        stashOAuthError({ reason: "OAUTH_EXCHANGE_FAILED", message: error.message, ts: Date.now() });
+      } else {
+        console.info("[IrthAuth] EXCHANGE_SUCCESS");
+        recordTrace("native-auth", "EXCHANGE_SUCCESS");
+        const session = data.session;
+        if (session?.access_token && session?.refresh_token) {
+          const { error: setErr } = await supabase.auth.setSession({
+            access_token: session.access_token,
+            refresh_token: session.refresh_token,
           });
-        } else if (accessToken && refreshToken) {
-          console.info("[native-auth] parsed hash tokens (implicit flow)");
-          console.info("[native-auth] setSession from hash tokens");
-          recordTrace("native-auth", "IMPLICIT_FLOW_START");
-          const { data, error } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          });
-          if (error) {
-            exchangeError = error.message;
-            console.error("[native-auth] setSession failed", error.message);
-            stashOAuthError({ reason: "OAUTH_EXCHANGE_FAILED", message: error.message, ts: Date.now() });
+          if (setErr) {
+            exchangeError = setErr.message;
+            recordTrace("native-auth", "MAIN_SESSION_BRIDGE_FAILED", setErr.message);
           } else {
-            exchangedOk = !!data.session;
-            console.info("[native-auth] setSession OK");
-            recordTrace("native-auth", "SESSION_VERIFIED");
-          }
-
-        } else if (code) {
-          console.info("[native-auth] parsed code (len=", code.length, ")");
-          console.info("[native-auth] exchanging code");
-          recordTrace("native-auth", "CODE_EXCHANGE_STARTED");
-          const nativeClient = getNativePkceSupabaseClient();
-          const { data, error } = await nativeClient.auth.exchangeCodeForSession(code);
-          if (error) {
-            exchangeError = error.message;
-            console.error("[native-auth] exchange failed:", error.message);
-            recordTrace("native-auth", "CODE_EXCHANGE_FAILED", error.message);
-            stashOAuthError({ reason: "OAUTH_EXCHANGE_FAILED", message: error.message, ts: Date.now() });
-          } else {
-            console.info("[native-auth] exchange success");
-            recordTrace("native-auth", "CODE_EXCHANGE_SUCCESS");
-            // The native PKCE client owns a separate storageKey, so the main
-            // `supabase` client will NOT auto-hydrate. Copy the tokens across
-            // explicitly.
-            const session = data.session;
-            if (session?.access_token && session?.refresh_token) {
-              const { error: setErr } = await supabase.auth.setSession({
-                access_token: session.access_token,
-                refresh_token: session.refresh_token,
-              });
-              if (setErr) {
-                exchangeError = setErr.message;
-                console.error("[native-auth] main setSession failed:", setErr.message);
-                recordTrace("native-auth", "MAIN_CLIENT_SESSION_SET_FAILED", setErr.message);
-                stashOAuthError({ reason: "SESSION_NOT_ESTABLISHED", message: setErr.message, ts: Date.now() });
-              } else {
-                exchangedOk = true;
-                recordTrace("native-auth", "MAIN_CLIENT_SESSION_SET_SUCCESS");
-                recordTrace("native-auth", "SESSION_VERIFIED");
-              }
-            } else {
-              exchangeError = "الجلسة غير مكتملة";
-              console.error("[native-auth] exchange returned no tokens");
-              stashOAuthError({ reason: "SESSION_NOT_ESTABLISHED", message: exchangeError, ts: Date.now() });
-            }
-          }
-
-
-        } else {
-          exchangeError = "الرابط لا يحتوي على رمز مصادقة";
-          console.info("[native-auth] ignored because deep link had no code / token / error");
-          console.warn("[native-auth] deep link had no code/token/error payload=", describeSearchParams(params));
-        }
-
-        if (exchangedOk) {
-          const { data: sess } = await supabase.auth.getSession();
-          console.info("[native-auth] getSession after exchange hasUser=", Boolean(sess.session?.user?.id));
-          if (!sess.session) {
-            exchangedOk = false;
-            exchangeError = exchangeError ?? "لم يتم حفظ الجلسة داخل التطبيق";
-          }
-        }
-      } catch (e) {
-        exchangeError = e instanceof Error ? e.message : String(e);
-        console.error("[native-auth] deep-link handler crashed:", exchangeError);
-      } finally {
-        try {
-          console.info("[native-auth] browser closing");
-          const { Browser } = await import("@capacitor/browser");
-          await Browser.close();
-          console.info("[native-auth] browser closed");
-          recordTrace("native-auth", "browser-close");
-        } catch (closeErr) {
-          console.warn(
-            "[native-auth] browser close failed:",
-            closeErr instanceof Error ? closeErr.message : String(closeErr),
-          );
-        }
-
-        if (exchangedOk) {
-          // Password recovery: do NOT surface Google-auth dialogs and force
-          // the user into the mandatory reset-password screen. RecoveryMode
-          // is already set; the guard would redirect anyway, but navigating
-          // explicitly avoids a flash of home/profile.
-          if (isRecoveryLink) {
-            recordTrace("native-auth", "OAUTH_RECOVERY_NAVIGATE_RESET");
-            try {
-              if (typeof window !== "undefined") {
-                window.location.replace("/reset-password");
-              }
-            } catch { /* ignore */ }
-          } else {
-            recordTrace("native-auth", "AUTH_SUCCESS");
-            
-            // Post-login operations in background.
-            (async () => {
-              try {
-                recordTrace("native-auth", "POST_LOGIN_SYNC_STARTED");
-                const { data: userRes } = await supabase.auth.getUser();
-                const intent = getAndClearGoogleAuthIntent();
-                const kind = await resolveGoogleAuthResult({
-                  user: userRes.user,
-                  intent,
-                  supabase,
-                });
-                stashGoogleAuthResult(kind);
-                recordTrace("native-auth", "POST_LOGIN_SYNC_SUCCESS");
-              } catch (e) { 
-                recordTrace("native-auth", "POST_LOGIN_SYNC_FAILED", e instanceof Error ? e.message : String(e));
-                // Do NOT surface this as a login failure to the user.
-              }
-            })();
-
-            // Authoritative success check with a long mobile-friendly timeout
-            // but return immediately if session is verified.
-            console.info("[native-auth] waitForSignedIn start");
-            const signedIn = await waitForSignedIn(8000);
-            console.info("[native-auth] waitForSignedIn done result=", signedIn);
-            
-            if (!signedIn) {
-              // If we reach here, a valid session was set via setSession but
-              // onAuthStateChange didn't fire in time. We STILL consider it
-              // success since the tokens are in storage.
-              recordTrace("native-auth", "TIMEOUT_WITH_VALID_SESSION");
-            }
-
-            try {
-              if (typeof window !== "undefined") {
-                const dest = consumeAuthOrigin("/profile");
-                console.info("[native-auth] NAVIGATION_STARTED to", dest);
-                recordTrace("native-auth", "NAVIGATION_STARTED", dest);
-                window.location.replace(dest);
-              }
-            } catch { /* ignore */ }
+            exchangedOk = true;
+            console.info("[IrthAuth] MAIN_SESSION_READY");
+            recordTrace("native-auth", "MAIN_SESSION_READY");
           }
         } else {
-          // Failed exchange — clear recovery lock so a fresh link retry
-          // is possible from /auth.
-          if (isRecoveryLink) setRecoveryMode(false);
-          console.info("[native-auth] not navigating — exchange did not succeed");
-          try {
-            if (typeof window !== "undefined") {
-              console.warn("[native-auth] surfacing OAuth failure to user; exchangeError=", exchangeError ? "(present)" : "(none)");
-              try { window.sessionStorage.setItem("irth.oauth_error.v1", "1"); } catch { /* ignore */ }
-              window.location.replace("/auth?oauth_error=1");
-            }
-          } catch { /* ignore */ }
+          exchangeError = "الجلسة غير مكتملة";
         }
-
       }
-    });
-    listenerRegistered = true;
+    } else {
+      exchangeError = "الرابط غير صالح";
+    }
+
+    // TIERED COMPLETION: Only close browser AFTER verifying session
+    if (exchangedOk) {
+      const { data: sess } = await supabase.auth.getSession();
+      if (!sess.session) {
+        exchangedOk = false;
+        exchangeError = "تعذر تأكيد الجلسة النهائية";
+      }
+    }
   } catch (e) {
-    console.error("[native-auth] listener install failed", e);
+    exchangeError = e instanceof Error ? e.message : String(e);
+    console.error("[IrthAuth] CALLBACK_CRASH", exchangeError);
+  }
+
+  // BROWSER CLOSURE & NAVIGATION
+  try {
+    const { Browser } = await import("@capacitor/browser");
+    await Browser.close();
+    console.info("[IrthAuth] BROWSER_CLOSE");
+    recordTrace("native-auth", "browser-close");
+  } catch (err) {
+    console.warn("[native-auth] Browser.close failed", err);
+  }
+
+  if (exchangedOk) {
+    console.info("[IrthAuth] AUTH_COMPLETE");
+    if (isRecoveryLink) {
+      if (typeof window !== "undefined") window.location.replace("/reset-password");
+    } else {
+      // Post-login sync in background
+      (async () => {
+        try {
+          const { data: userRes } = await supabase.auth.getUser();
+          const intent = getAndClearGoogleAuthIntent();
+          const kind = await resolveGoogleAuthResult({
+            user: userRes.user,
+            intent,
+            supabase,
+          });
+          stashGoogleAuthResult(kind);
+        } catch { /* ignore */ }
+      })();
+
+      const signedIn = await waitForSignedIn(8000);
+      if (!signedIn) recordTrace("native-auth", "TIMEOUT_WITH_VALID_SESSION");
+      if (typeof window !== "undefined") {
+        const dest = consumeAuthOrigin("/profile");
+        console.info("[IrthAuth] NAVIGATING to", dest);
+        window.location.replace(dest);
+      }
+    }
+  } else {
+    console.error("[IrthAuth] AUTH_FAILED", exchangeError);
+    if (isRecoveryLink) setRecoveryMode(false);
+    if (typeof window !== "undefined") {
+      try { window.sessionStorage.setItem("irth.oauth_error.v1", "1"); } catch { /* ignore */ }
+      window.location.replace("/auth?oauth_error=1");
+    }
   }
 }
+
+export async function installNativeAuthDeepLinkListener(): Promise<void> {
+  if (listenerInstalled) {
+    console.info("[native-auth] listener already installed — checking launch URL");
+    try {
+      const { App } = await import("@capacitor/app");
+      const launch = await App.getLaunchUrl();
+      if (launch?.url) {
+        console.info("[IrthAuth] CALLBACK_LAUNCH_URL caught in double-install check");
+        void handleNativeAuthCallback(launch.url);
+      }
+    } catch { /* ignore */ }
+    return;
+  }
+  
+  listenerInstalled = true;
+  console.info("[IrthAuth] LISTENER_INSTALLING");
+  
+  try {
+    const { App } = await import("@capacitor/app");
+    
+    // 1. Capture Warm-Resume events
+    await App.addListener("appUrlOpen", async (event: { url: string }) => {
+      console.info("[IrthAuth] CALLBACK_APP_URL_OPEN fired");
+      void handleNativeAuthCallback(event.url);
+    });
+
+    // 2. Capture Cold-Boot events (Recovery Path)
+    const launch = await App.getLaunchUrl();
+    if (launch?.url) {
+      console.info("[IrthAuth] CALLBACK_LAUNCH_URL caught during boot");
+      recordTrace("native-auth", "cold-boot-intent-captured");
+      void handleNativeAuthCallback(launch.url);
+    }
+    
+    listenerRegistered = true;
+    console.info("[IrthAuth] LISTENER_READY");
+  } catch (e) {
+    console.error("[IrthAuth] LISTENER_FAILED", e);
+  }
+}
+
 
 function logPkceVerifierState(stage: string): void {
   try {
