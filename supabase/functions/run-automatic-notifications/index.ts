@@ -17,6 +17,62 @@
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
+// Deterministic seeded shuffle for Deno/Supabase environments.
+function seededRandom(seed: number) {
+  const m = 0x80000000;
+  const a = 1103515245;
+  const c = 12345;
+  let state = seed % m;
+  return function () {
+    state = (a * state + c) % m;
+    return state / (m - 1);
+  };
+}
+
+function shuffle<T>(array: T[], seed: number): T[] {
+  const result = [...array];
+  const rng = seededRandom(seed);
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+function inferCategory(fact: any): string {
+  const body = fact.body || '';
+  if (body.includes('مدينة') || body.includes('عاصمة')) return 'مدن';
+  if (body.includes('معركة') || body.includes('غزوة')) return 'معارك';
+  if (body.includes('شخصية') || body.includes('لقب') || body.includes('رضي الله عنه')) return 'شخصيات';
+  if (body.includes('جامعة') || body.includes('جامع') || body.includes('بيت الحكمة') || body.includes('قبة الصخرة') || body.includes('الأزهر') || body.includes('بيمارستان')) return 'آثار';
+  if (body.includes('مكتبة') || body.includes('القرآن') || body.includes('الورق') || body.includes('مجلد') || body.includes('مخطوط')) return 'مخطوطات';
+  if (body.includes('قيل') || body.includes('قال')) return 'أقوال العلماء';
+  return 'حقائق تاريخية';
+}
+
+function selectDailyFact(facts: any[], runDate: string): any | null {
+  if (!facts.length) return null;
+  const totalDays = Math.floor(new Date(runDate).getTime() / (1000 * 60 * 60 * 24));
+  const categoriesMap: Record<string, any[]> = {};
+  facts.forEach((f) => {
+    const category = inferCategory(f);
+    if (!categoriesMap[category]) categoriesMap[category] = [];
+    categoriesMap[category].push(f);
+  });
+  const availableCategories = Object.keys(categoriesMap).sort();
+  if (!availableCategories.length) return null;
+  const catCycleIndex = totalDays % availableCategories.length;
+  const catShuffleSeed = Math.floor(totalDays / availableCategories.length);
+  const shuffledCategories = shuffle(availableCategories, catShuffleSeed);
+  const selectedCategory = shuffledCategories[catCycleIndex];
+  const categoryFacts = categoriesMap[selectedCategory];
+  const sortedFacts = [...categoryFacts].sort((a, b) => (a.id || '').localeCompare(b.id || ''));
+  const itemCycleIndex = totalDays % sortedFacts.length;
+  const itemShuffleSeed = Math.floor(totalDays / sortedFacts.length) + 12345;
+  const shuffledItems = shuffle(sortedFacts, itemShuffleSeed);
+  return shuffledItems[itemCycleIndex];
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
