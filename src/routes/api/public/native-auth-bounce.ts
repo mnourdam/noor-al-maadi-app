@@ -31,7 +31,8 @@ export const Route = createFileRoute("/api/public/native-auth-bounce")({
         const intentUrl =
           `intent://auth/callback${cleanSearch}` +
           `#Intent;scheme=app.lovable.irth;package=app.lovable.irth;` +
-          `S.browser_fallback_url=${encodeURIComponent(fallbackUrl.toString())};end`;
+          `S.browser_fallback_url=${encodeURIComponent(fallbackUrl.toString())};S.browser_fallback_mode=1;end`;
+
 
         console.info("[native-bounce-hit]", {
           ts: new Date().toISOString(),
