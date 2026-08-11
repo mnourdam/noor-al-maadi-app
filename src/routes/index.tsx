@@ -122,14 +122,16 @@ function HomeFull() {
     perfMark("home mounted", { perfLite });
     // First paint marker — fires after React commits and the browser paints.
     requestAnimationFrame(() => requestAnimationFrame(() => perfMark("first paint")));
+    
     // Home interactive — input handlers + carousel state are wired.
+    // Increased deferral for low-priority markers to avoid competition with LCP images.
     const interactiveHandle = scheduleIdle(() => {
       perfMark("home interactive");
       perfMark("idle tasks started");
       // Pre-decode neighbor hero images so the next swap is instant, but
       // only once the main thread is idle.
-      scheduleIdle(() => { perfMark("idle tasks finished"); }, 3000);
-    }, 1500);
+      scheduleIdle(() => { perfMark("idle tasks finished"); }, 4000);
+    }, 2000);
     return () => { interactiveHandle.cancel(); };
   }, [perfLite]);
 
@@ -144,10 +146,10 @@ function HomeFull() {
       setUnread(n);
     };
 
-    // Defer initial recount past first paint — notification badge is not
+    // Defer initial recount deeper past first paint — notification badge is not
     // part of the LCP and forcing it onto the boot path competes for the
     // network and main thread on low-end Android.
-    const idle = scheduleIdle(() => { void recount(); }, 1500);
+    const idle = scheduleIdle(() => { void recount(); }, 3000);
     const unsubRealtime = subscribeToMyNotifications(() => { void recount(); });
     const onLocal = () => { void recount(); };
     window.addEventListener("irth:notifications:updated", onLocal);

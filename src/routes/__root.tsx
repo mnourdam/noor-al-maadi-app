@@ -230,8 +230,8 @@ function RootComponent() {
       requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number;
     }).requestIdleCallback;
     const idleHandle = idle
-      ? idle(startOfflineSync, { timeout: 3000 })
-      : window.setTimeout(startOfflineSync, 1200);
+      ? idle(startOfflineSync, { timeout: 5000 })
+      : window.setTimeout(startOfflineSync, 2000);
 
 
     const onOnline = () => {
