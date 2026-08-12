@@ -25,6 +25,12 @@
 2.  **Unified Writer:** Ensure that when a campaign is marked as completed, all relevant stores are updated in a single logical transaction, and events are dispatched to trigger unlock re-evaluation.
 3.  **Slug/ID Normalization:** Enforce normalization in `src/lib/campaigns/progression.ts` and `src/lib/campaigns/completions.ts`.
 
+## Technical Details
+- `src/lib/identity/reset.ts`: Centralize `resetForIdentityChange` logic.
+- `src/lib/profile.tsx`: Ensure `logout` triggers a clean re-hydration.
+- `src/lib/native-auth.ts`: Implement a promise-based `authReady` signal for the main client.
+- `src/lib/campaigns/progression.ts`: Implement `isCampaignCompletedCanonical(idOrSlug)`.
+
 ## Verification Plan
 1.  **Bug 2:** Test User -> Logout -> Guest flow. Verify zero data leakage for XP, Dinars, etc., and that the UI is truly Guest.
 2.  **Bug 3:** Test Guest -> Google Login flow. Verify no "Connection Error" flashes and that profile hydration only starts after the session is ready.
