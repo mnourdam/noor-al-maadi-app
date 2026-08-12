@@ -59,14 +59,19 @@ export function localCompletedIds(): Set<string> {
   for (const cid of Object.keys(sticky)) ids.add(cid);
 
   // RECOVERY: The canonical projection must recognize old progression data.
-  // `irth_campaign_progress` was the legacy store.
+  // `irth_campaign_progress` was the legacy store. A campaign is considered
+  // completed ONLY if it has an explicit `completed: true` flag.
   if (isBrowser()) {
     try {
       const legacy = window.localStorage.getItem("irth_campaign_progress");
       if (legacy) {
-        const parsed = JSON.parse(legacy);
-        if (Array.isArray(parsed)) {
-          for (const id of parsed) if (id) ids.add(String(id));
+        const parsed = JSON.parse(legacy) as Record<string, { completed?: boolean }>;
+        if (parsed && typeof parsed === "object") {
+          for (const [id, data] of Object.entries(parsed)) {
+            if (id && data?.completed === true) {
+              ids.add(String(id));
+            }
+          }
         }
       }
     } catch { /* ignore */ }
