@@ -110,6 +110,8 @@ export async function recordCampaignCompletion(p: {
     try {
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("irth:campaign-completions:changed"));
+        // Force immediate unlock re-evaluation
+        window.dispatchEvent(new CustomEvent("irth:campaign-progress:changed"));
       }
     } catch { /* ignore */ }
   }
