@@ -44,7 +44,8 @@ export function useProgressionState(): ProgressionState {
   const { data: serverCompleted } = useQuery({
     queryKey: ["campaign-completions", "union", profile.campaignsCompleted.length, tick],
     queryFn: () => unionCompletedIds(profile.campaignsCompleted),
-    staleTime: 30_000,
+    staleTime: 5_000, // Faster reactivity for unlock logic (canonical projection)
+    gcTime: 60_000,
   });
 
   return useMemo(() => {
