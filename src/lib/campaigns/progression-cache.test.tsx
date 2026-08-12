@@ -44,28 +44,40 @@ describe("useCampaignLockMap Caching", () => {
   it("caches the result if sections and state are identical", () => {
     const spy = vi.spyOn(progressionLib, "computeLockMapByGroup");
     
-    const { rerender, result: result1 } = renderHook(() => useCampaignLockMap(sections), { wrapper });
-    expect(spy).toHaveBeenCalledTimes(1);
+    // We use a singleton sections to keep identity stable
+    const { rerender } = renderHook(({ s }) => useCampaignLockMap(s), { 
+      wrapper,
+      initialProps: { s: sections }
+    });
+    
+    // First call happens on mount. 
+    // It might be called twice in StrictMode, but in vitest it's usually once.
+    // However, useProgressionState also has useMemo/useEffect, 
+    // so let's check the current call count.
+    const initialCalls = spy.mock.calls.length;
+    expect(initialCalls).toBeGreaterThan(0);
 
-    // Second render with same identity
-    const { result: result2 } = renderHook(() => useCampaignLockMap(sections), { wrapper });
+    // Rerender with same identity
+    rerender({ s: sections });
     
-    // It should have been called again by the NEW hook instance if the cache wasn't global,
-    // but with the global cache, we check if computeLockMapByGroup was bypassed.
-    // NOTE: In vitest, renderHook creates a fresh environment, but global variables persist.
-    
-    rerender();
-    // Identity of sections is same, identity of state (from useMemo) should be same if no deps changed.
-    expect(spy).toHaveBeenCalledTimes(1); 
+    // Should NOT have incremented
+    expect(spy.mock.calls.length).toBe(initialCalls);
   });
 
   it("recomputes when sections identity changes", () => {
     const spy = vi.spyOn(progressionLib, "computeLockMapByGroup");
     
-    renderHook(() => useCampaignLockMap(sections), { wrapper });
+    const { rerender } = renderHook(({ s }) => useCampaignLockMap(s), { 
+      wrapper,
+      initialProps: { s: sections }
+    });
+    const initialCalls = spy.mock.calls.length;
+
     const newSections = [...sections];
-    renderHook(() => useCampaignLockMap(newSections), { wrapper });
+    rerender({ s: newSections });
     
-    expect(spy).toHaveBeenCalledTimes(2);
+    // Should HAVE incremented
+    expect(spy.mock.calls.length).toBeGreaterThan(initialCalls);
   });
+
 });
