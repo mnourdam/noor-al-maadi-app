@@ -23,7 +23,7 @@ import { withBoundedTimeout } from "./boot/withTimeout";
 import { recordStartupMark } from "./boot/startup-timeline";
 import { resetForIdentityChange } from "./identity/reset";
 import { getActiveUserId } from "./identity/owner";
-26: import { waitForAuthReady } from "./identity/guard";
+import { waitForAuthReady } from "./identity/guard";
 
 
 interface AccountCtx {
