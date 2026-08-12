@@ -52,6 +52,17 @@ export async function listPublishedGames(): Promise<GameRow[]> {
   return (data ?? []) as unknown as GameRow[];
 }
 
+/** Synchronous local-first list of published games from OfflineSnapshot. */
+export function localListPublishedGames(): GameRow[] {
+  try {
+    const { localPublishedGames } = require("@/lib/local-first-store");
+    return localPublishedGames() as GameRow[];
+  } catch {
+    return [];
+  }
+}
+
+
 export async function listPublishedGamesByMode(
   mode: GameMode,
 ): Promise<GameRow[]> {

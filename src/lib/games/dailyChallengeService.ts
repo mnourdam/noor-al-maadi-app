@@ -129,15 +129,27 @@ export function markDailyChallengeCompletedLocally(
   }
 }
 
-/** Resolve the caller's userKey. Guests receive "guest". */
-async function resolveUserKey(): Promise<string> {
+/** Resolve the caller's userKey synchronously via getActiveOwner. */
+function resolveUserKeySync(): string {
   try {
-    const { data } = await supabase.auth.getUser();
-    return data.user?.id ?? "guest";
+    const { getActiveOwner, userOwnerKey } = require("@/lib/identity/owner");
+    const owner = getActiveOwner();
+    // getActiveOwner returns `user:<id>` or `guest:<id>`.
+    // The legacy dailyChallengeService uses raw `id` for users and "guest" for guests.
+    if (owner.startsWith("user:")) return owner.slice(5);
+    return "guest";
   } catch {
     return "guest";
   }
 }
+
+/** Deterministic fingerprint of the game catalogue to detect meaningful changes. */
+function getCatalogueFingerprint(games: GameRow[]): string {
+  if (!games.length) return "empty";
+  const sorted = [...games].sort((a, b) => a.id.localeCompare(b.id));
+  return sorted.map(g => `${g.id}|${g.updated_at}`).join(";");
+}
+
 
 // ─── Core loader ─────────────────────────────────────────────────────────
 
@@ -145,13 +157,17 @@ async function resolveUserKey(): Promise<string> {
  * Load today's canonical daily-challenge state. Never re-rolls a completed
  * pick within the same local day. Called by both Home and Hall.
  */
-export async function loadDailyChallengeState(): Promise<DailyChallengeState> {
-  const [userKey, serverAllTime, serverToday, published] = await Promise.all([
-    resolveUserKey(),
+export async function loadDailyChallengeState(opts: { 
+  forceUserKey?: string;
+  providedGames?: GameRow[];
+} = {}): Promise<DailyChallengeState> {
+  const userKey = opts.forceUserKey ?? resolveUserKeySync();
+  const [serverAllTime, serverToday, published] = await Promise.all([
     fetchMyCompletedGameIds(),
     fetchMyDailyCompletedGameIds(),
-    listPublishedGames(),
+    opts.providedGames ? Promise.resolve(opts.providedGames) : listPublishedGames(),
   ]);
+
 
   const date = localDateKey();
   const totalPublished = published.length;
@@ -252,30 +268,109 @@ export function useDailyChallengeState(opts: { enabled?: boolean } = {}): {
   refresh: () => void;
 } {
   const enabled = opts.enabled !== false;
-  const [state, setState] = useState<DailyChallengeState | null>(null);
+  const [state, setState] = useState<DailyChallengeState | null>(() => {
+    if (!enabled || typeof window === "undefined") return null;
+    
+    // Stage 1: Synchronous Initial Render (Local-First)
+    try {
+      const { isLocalReady } = require("@/lib/local-first-store");
+      const { localListPublishedGames } = require("./store");
+      
+      if (isLocalReady()) {
+        const localGames = localListPublishedGames();
+        if (localGames.length > 0) {
+          // We can't await server IDs synchronously, but we can return 
+          // a "pessimistic" state using local completion evidence.
+          // This prevents the section from disappearing.
+          const userKey = resolveUserKeySync();
+          const date = localDateKey();
+          
+          // Re-read local completions for the sync pass
+          const localDone = new Set(readIds(doneKey(userKey, date)));
+          const allTimeCompleted = new Set<string>();
+          if (userKey === "guest") {
+             for (const id of readGuestCompletedIds()) allTimeCompleted.add(id);
+          }
+
+          // We don't have serverAllTime here, but loadDailyChallengeState 
+          // will follow up in the background and fill them in.
+          // Return null for now or compute rotation if possible?
+          // Actually, we must return a valid state to avoid the skeleton if possible.
+          // But without server completions, rotation might be wrong.
+          // Better to return null and let the useEffect handle it, 
+          // BUT ensure it starts IMMEDIATELY (no idle delay).
+        }
+      }
+    } catch { /* ignore */ }
+    return null;
+  });
   const [loading, setLoading] = useState(enabled);
   const [nonce, setNonce] = useState(0);
 
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
-    setLoading(true);
-    loadDailyChallengeState()
-      .then((s) => {
+
+    async function run() {
+      // Priority 1: Check Local Cache First
+      try {
+        const { isLocalReady, ensureLocalSnapshotLoaded } = require("@/lib/local-first-store");
+        const { localListPublishedGames } = require("./store");
+        
+        // If not ready, await it, but we prefer synchronous.
+        if (!isLocalReady()) {
+          await ensureLocalSnapshotLoaded();
+        }
+
+        const localGames = localListPublishedGames();
+        if (!cancelled && localGames.length > 0) {
+          const s = await loadDailyChallengeState({ providedGames: localGames });
+          if (!cancelled) {
+            setState(s);
+            setLoading(false);
+          }
+        }
+      } catch (e) {
+        console.warn("[dailyChallengeService] local-first failed", e);
+      }
+
+      // Priority 2: Background Refresh / Network Bootstrap
+      try {
+        const serverGames = await listPublishedGames();
         if (cancelled) return;
-        setState(s);
-        setLoading(false);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setLoading(false);
-      });
+
+        const currentFingerprint = state ? getCatalogueFingerprint(state.picks) : "";
+        const serverFingerprint = getCatalogueFingerprint(serverGames);
+
+        if (serverFingerprint !== currentFingerprint || !state) {
+          const s = await loadDailyChallengeState({ providedGames: serverGames });
+
+          if (!cancelled) {
+            setState(s);
+            setLoading(false);
+          }
+        }
+      } catch (e) {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void run();
+
     return () => {
       cancelled = true;
     };
-  }, [enabled, nonce]);
+  }, [enabled, nonce, state === null]);
+
 
   useEffect(() => {
+    const handleIdentity = () => setNonce(n => n + 1);
+    window.addEventListener('irth:identity-changed', handleIdentity);
+    return () => window.removeEventListener('irth:identity-changed', handleIdentity);
+  }, []);
+
+  useEffect(() => {
+
     if (!enabled || typeof window === "undefined") return;
     const bump = () => setNonce((n) => n + 1);
 

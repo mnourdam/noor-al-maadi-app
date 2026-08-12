@@ -177,13 +177,33 @@ function ChallengeCard({
 
 export function DailyChallengesSection() {
   const androidStable = isAndroidUltraStableMode();
-  const { state } = useDailyChallengeState({ enabled: !androidStable });
+  const { state, loading } = useDailyChallengeState({ enabled: !androidStable });
 
   if (androidStable) return null;
+
+  // Layout Stability: Skeleton only when no data is available (Fresh Install)
+  if (!state && loading) {
+    return (
+      <section className="mt-6 px-5 sm:px-6 md:px-8">
+        <div className="mb-3">
+          <div className="h-4 w-24 animate-pulse rounded bg-gold/10" />
+          <div className="mt-2 h-6 w-40 animate-pulse rounded bg-gold/10" />
+          <div className="mt-1 h-4 w-60 animate-pulse rounded bg-gold/10" />
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 md:gap-5">
+          <div className="h-[180px] animate-pulse rounded-3xl border border-gold/10 bg-white/5" />
+          <div className="h-[180px] animate-pulse rounded-3xl border border-gold/10 bg-white/5" />
+        </div>
+      </section>
+    );
+  }
+
   if (!state) return null;
 
   const { picks, completedIds, todaysPicksDone, allEligibleExhausted } = state;
-  if (!picks.length && !allEligibleExhausted) return null;
+  // If we have picks, render them. If we exhausted, show message.
+  // picks.length can be 0 if allEligibleExhausted is true.
+
 
   return (
     <section className="mt-6 px-5 sm:px-6 md:px-8">

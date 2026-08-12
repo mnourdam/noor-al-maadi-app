@@ -396,6 +396,13 @@ export function localAtlasEntities(): Row[] { return atlasPublished; }
 export function localPublishedCampaigns(): Row[] { return campaignsAll; }
 /** Raw section-divider rows (organizational only). */
 export function localCampaignDividerRows(): Row[] { return campaignDividerRows; }
+
+/** Raw published games (used for Daily Challenges rotation). */
+export function localPublishedGames(): Row[] {
+  if (!_snapshot?.collections?.games) return [];
+  return (_snapshot.collections.games as Row[]).filter(g => g && g.status === 'published');
+}
+
 export function localCampaignByIdOrSlug(idOrSlug: string): Row | null {
   if (!idOrSlug) return null;
   return campaignsById.get(idOrSlug) ?? campaignsBySlug.get(idOrSlug) ?? null;
