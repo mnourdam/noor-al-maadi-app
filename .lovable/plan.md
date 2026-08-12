@@ -1,38 +1,48 @@
-# Tablet Responsive Fix: Daily Challenges Section
+# Plan: Daily Challenges Hardening (Local-First)
 
-Refactor the Home screen Daily Challenges and Daily Mission sections to correctly utilize tablet real estate, moving away from compressed asymmetric grids to a fluid, balanced layout that scales from 600px to 1280px without breaking mobile.
+Implement a systemic fix for the Daily Challenges delay by decoupling it from the network/auth boot chain and enabling local-first rendering via `OfflineSnapshot`.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> - This fix standardizes the Daily Challenges section to a balanced 2-column layout on tablets and a 3-column layout on wide landscapes, replacing the asymmetric 3/2 split which was causing compression.
-> - Mobile layout remains strictly identical to current approved design.
+> This plan modifies the data loading strategy for Daily Challenges to prioritize local storage while keeping background refreshes. Completion and reward logic remain untouched.
 
 ## Proposed Changes
 
-### 1. Home Components (Responsive Hardening)
+### 1. Data Access Layer
+#### `src/lib/games/store.ts`
+- Add `localListPublishedGames()` to read from `OfflineSnapshot` via `local-first-store.ts`.
+- Ensure it returns an empty array if the snapshot is not yet loaded, allowing the system to fall back to the network.
 
+### 2. Service Layer
+#### `src/lib/games/dailyChallengeService.ts`
+- **Identity Decoupling**: Replace `resolveUserKey()` (which calls `supabase.auth.getUser()`) with `getActiveOwner()` from `identity/owner.ts`.
+- **Race/Starvation Prevention**: Refactor `loadDailyChallengeState` to accept an optional `games` array.
+- **Local-First Loading**: Implement a two-stage load in the hook:
+    1. Synchronous check: If `isLocalReady()` and data exists, render immediately.
+    2. Background Refresh: Start a network fetch and update state only if different.
+
+### 3. UI Layer
 #### `src/components/home/DailyChallengesSection.tsx`
-- Remove the `sm:grid-cols-5` + `col-span-3`/`col-span-2` asymmetric layout which causes severe compression on mid-sized viewports.
-- Implement a fluid `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3` pattern.
-- Ensure the "Primary" vs "Secondary" variants maintain visual hierarchy while allowing equal width distribution.
+- Remove `if (!state) return null;`.
+- Implement a lightweight skeleton/loading state when neither local nor network data is ready (Fresh Install case).
+- Ensure the section renders immediately to prevent layout shifts.
 
-#### `src/components/home/DailyQuestCard.tsx`
-- Add a `max-w-4xl` and `mx-auto` (optional, based on design balance) or ensure it matches the width constraints of the challenge section below it to maintain vertical alignment.
-
-### 2. Global Styles / Layout
-
-#### `src/routes/index.tsx`
-- Audit `Recent Discoveries` and `Worlds` sections to ensure they share the same fluid breakpoints (`sm`, `md`, `lg`).
+### 4. Coordination
+#### `src/lib/games/local-first-store.ts` (if needed)
+- Export a helper to specifically access the `games` collection if not already clean.
 
 ## Technical Details
 
-- **Breakpoints:**
-  - `sm` (640px+): Switch to 2 columns for challenges.
-  - `lg` (1024px+): Switch to 3 columns if 3+ items exist, or keep 2 larger columns.
-- **Grid Strategy:**
-  - Use `grid-cols-1 sm:grid-cols-2` for the two main challenges.
-  - Remove `sm:col-span-3` and `sm:col-span-2` which were the root cause of the "stuck to the right" and "compressed" behavior.
-- **Container Strategy:**
-  - Ensure `px-5 sm:px-6 md:px-8` matches across all Home sections.
-  - Use `max-w-screen-2xl mx-auto` for the parent `AppShell` or main `Home` content to prevent extreme stretching on ultra-wide desktop while fixing the "tablet gap" by allowing content to grow naturally to that max.
+- **Auth Source**: `getActiveOwner()` returns `guest:<id>` or `user:<id>` synchronously by reading localStorage/session-cache at boot.
+- **Starvation Fix**: Moving initialization out of `scheduleIdle` and removing the async `getUser()` dependency ensures the challenge block starts as soon as the Home component mounts.
+- **Sync Strategy**: 
+    - Render with Cache.
+    - Fetch from Server.
+    - If Server data > Cache (new games added), update and persist.
+    - If Offline, stay with Cache.
+
+## Constraints & Risk
+- **Risk**: Slight layout shift if the local snapshot is empty but network returns data quickly.
+- **Mitigation**: A stable skeleton with the same height as the title/subtitle block.
+- **Identity Safety**: `getActiveOwner()` is already used for partitioned storage, ensuring guest/user isolation is preserved.
