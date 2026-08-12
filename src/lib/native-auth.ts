@@ -346,8 +346,8 @@ export async function handleNativeAuthCallback(url: string | null | undefined): 
             exchangedOk = true;
             console.info("[IrthAuth] MAIN_SESSION_READY");
             recordTrace("native-auth", "MAIN_SESSION_READY");
-            setAuthReady(true); // Signal readiness immediately after bridging verified session
-          }
+            // setAuthReady(true) removed here — readiness must wait for Identity Switch (resetForIdentityChange)
+            // to ensure Main session user === active OwnerKey user.
         } else {
           exchangeError = "الجلسة غير مكتملة";
         }
