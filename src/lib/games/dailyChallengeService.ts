@@ -344,6 +344,7 @@ export function useDailyChallengeState(opts: { enabled?: boolean } = {}): {
 
         if (serverFingerprint !== currentFingerprint || !state) {
           const s = await loadDailyChallengeState({ providedGames: serverGames });
+
           if (!cancelled) {
             setState(s);
             setLoading(false);
