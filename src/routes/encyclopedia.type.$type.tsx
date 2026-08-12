@@ -5,6 +5,7 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { AppShell, Screen } from "@/components/AppShell";
 import { AndroidPlainTextInput } from "@/components/AndroidPlainTextInput";
 import { ProgressiveEntityGrid } from "@/components/encyclopedia/ProgressiveEntityGrid";
+import { VirtualizedEntityGrid } from "@/components/encyclopedia/VirtualizedEntityGrid";
 import {
   browseEncyclopedia,
   primeEncyclopediaIndex,
@@ -234,10 +235,11 @@ function TypeBrowsePage() {
               {total === 0 ? "لا توجد عناصر في هذا القسم بعد." : "لا توجد عناصر مطابقة."}
             </p>
           ) : (
-            <ProgressiveEntityGrid
+            <VirtualizedEntityGrid
               entities={filtered}
               highlight={q || undefined}
               resetKey={`${type}|${q}|${era}|${sort}`}
+              scrollKey={`enc-type-${type}-${q}-${era}-${sort}`}
             />
           )}
         </div>

@@ -37,6 +37,7 @@ import {
   useEncyclopediaIndex,
 } from "@/lib/encyclopedia/index-store";
 import { ProgressiveEntityGrid } from "@/components/encyclopedia/ProgressiveEntityGrid";
+import { VirtualizedEntityGrid } from "@/components/encyclopedia/VirtualizedEntityGrid";
 
 import { iconForType } from "@/lib/encyclopedia-icons";
 import { HighlightedText } from "@/components/HighlightedText";
@@ -464,10 +465,11 @@ function EncyclopediaHubFull() {
                 لا توجد نتائج مطابقة.
               </p>
             ) : (
-              <ProgressiveEntityGrid
+              <VirtualizedEntityGrid
                 entities={results}
                 highlight={q ? query : undefined}
                 resetKey={`${q}|${era}`}
+                scrollKey={`enc-search-${q}-${era}`}
                 renderCard={(e) => (
                   <div className="relative">
                     {topMatch === e.id && (
