@@ -194,9 +194,16 @@ export async function unionCompletedIds(
   profileCompleted: readonly string[] | undefined,
 ): Promise<Set<string>> {
   const out = new Set<string>();
+  
+  // 1) Immediate Local Evidence (Local Sticky + Legacy Mirror)
   for (const id of localCompletedIds()) out.add(id);
+  
+  // 2) Profile Projection (Union with Local)
   for (const id of profileCompleted ?? []) if (id) out.add(id);
+  
+  // 3) Server Ledger (Stable Source of Truth)
   const server = await fetchServerCompletedIds();
   for (const id of server) out.add(id);
+  
   return out;
 }
