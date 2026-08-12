@@ -2,101 +2,84 @@ import { createFileRoute } from '@tanstack/react-router';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { fetchPublishedCampaigns } from '@/lib/supabaseCampaigns';
-import { buildProgressLookup } from '@/lib/campaignRecommendationService';
-import { getCampaignProgress } from '@/lib/importedCampaignProgress';
+import { useCampaignLockMap, useProgressionState } from '@/lib/campaigns/useCampaignProgression';
+import { groupFeedIntoSections, buildFeed, dividersFromRows } from '@/lib/campaignDividers';
 import { useEffect, useState, useMemo } from 'react';
-import { useProfile } from '@/lib/profile';
-import { unionCompletedIds } from '@/lib/campaigns/completions';
 
 export const Route = createFileRoute('/')({
-  component: AuditTool,
+  component: FinalAuditTool,
 });
 
-function AuditTool() {
-  const { profile } = useProfile();
+function FinalAuditTool() {
   const userId = "ed51f39a-c187-4a2b-afdc-f7a060413fd3";
-  
   const { data: campaigns = [], isSuccess: campaignsReady } = useQuery({
-    queryKey: ["audit-campaigns"],
+    queryKey: ["audit-campaigns-final"],
     queryFn: fetchPublishedCampaigns,
   });
 
-  const [cloudMap, setCloudMap] = useState<Map<string, Set<string>>>(new Map());
-  const [unionIds, setUnionIds] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState(true);
+  const { data: rawDividers } = useQuery({
+    queryKey: ["audit-dividers"],
+    queryFn: async () => {
+      const { data } = await supabase.from("admin_campaigns").select("*").like("id", "div_%");
+      return data || [];
+    }
+  });
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const [{ data: progressRows }, unionSet] = await Promise.all([
-          supabase.from("user_campaign_progress").select("campaign_id,chapter_id,completed_at").eq("user_id", userId),
-          unionCompletedIds(profile.campaignsCompleted)
-        ]);
+  const progression = useProgressionState();
+  
+  const sections = useMemo(() => {
+    if (!campaignsReady || !campaigns.length) return [];
+    const feed = buildFeed(campaigns as any, dividersFromRows(rawDividers as any));
+    return groupFeedIntoSections(feed);
+  }, [campaigns, campaignsReady, rawDividers]);
 
-        if (cancelled) return;
-        
-        const nextMap = new Map<string, Set<string>>();
-        for (const r of (progressRows ?? []) as any[]) {
-          if (!r.campaign_id || !r.chapter_id || !r.completed_at) continue;
-          let s = nextMap.get(r.campaign_id);
-          if (!s) { s = new Set(); nextMap.set(r.campaign_id, s); }
-          s.add(r.chapter_id);
-        }
-        setCloudMap(nextMap);
-        setUnionIds(unionSet);
-      } finally {
-        setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [userId, profile.campaignsCompleted]);
+  const lockMap = useCampaignLockMap(sections as any);
 
   const audit = useMemo(() => {
-    if (!campaignsReady || !campaigns.length || loading) return null;
+    if (!campaignsReady || !progression.hydrated) return { status: "hydrating", progression };
     
     const yarmoukId = 'great-conquests-yarmouk-qadisiyyah';
     const madainId = 'madain-and-nihawand';
     
-    const progressLookup = buildProgressLookup(cloudMap);
-    const yarmoukLookup = progressLookup(yarmoukId);
-    const localStore = getCampaignProgress(yarmoukId);
-    
-    const yarmoukRow = campaigns.find(c => c.id === yarmoukId);
-    const madainRow = campaigns.find(c => c.id === madainId);
+    const yarmoukLock = lockMap.get(yarmoukId);
+    const madainLock = lockMap.get(madainId);
+    const yarmoukCompleted = progression.completedCampaignIds.has(yarmoukId);
 
-    // Progression Engine logic for Mada'in
-    const yarmoukIsCompleted = unionIds.has(yarmoukId) || unionIds.has(yarmoukRow?.slug || '');
-    
     return {
-      report: "FORENSIC HYDRATION AUDIT",
+      report: "FINAL PROGRESSION AUDIT",
       identity: { userId },
+      progression: {
+        hydrated: progression.hydrated,
+        completedCount: progression.completedCampaignIds.size,
+        yarmoukCompleted,
+      },
       yarmouk: {
         id: yarmoukId,
-        inUnionCompletedIds: yarmoukIsCompleted,
-        lookupCompletedFlag: yarmoukLookup.completedFlag,
-        lookupCompletedChapters: Array.from(yarmoukLookup.completedChapterIds),
-        localStoreCompleted: localStore.completed,
-        localStoreChaptersCount: Object.keys(localStore.chapters || {}).length,
-        cloudProgressCount: cloudMap.get(yarmoukId)?.size || 0
+        locked: yarmoukLock?.locked,
+        reason: yarmoukLock?.reason
       },
       madain: {
         id: madainId,
-        status: madainRow?.status,
-        locked: !yarmoukIsCompleted,
-        prerequisiteId: 'great-conquests-yarmouk-qadisiyyah (sequential next)',
+        locked: madainLock?.locked,
+        reason: madainLock?.reason,
+        prerequisiteSatisfied: yarmoukCompleted
       },
-      env: {
-        isCapacitor: !!(window as any).Capacitor,
-        userAgent: navigator.userAgent
+      integrity: {
+        campaignsCount: campaigns.length,
+        lockMapSize: lockMap.size
       }
     };
-  }, [campaigns, campaignsReady, cloudMap, loading, unionIds, userId, profile.campaignsCompleted]);
+  }, [campaignsReady, progression, lockMap, campaigns.length]);
 
   return (
     <div style={{ padding: '20px', backgroundColor: '#050505', color: '#00ff41', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
-      <h1>Forensic Audit: Android vs Web</h1>
-      <pre id="audit-projection-result">{JSON.stringify(audit, null, 2)}</pre>
+      <h1>Final Progression Audit: ed51f39a-c187-4a2b-afdc-f7a060413fd3</h1>
+      <pre id="audit-result">{JSON.stringify(audit, null, 2)}</pre>
+      <div style={{ marginTop: '20px', border: '1px solid #00ff41', padding: '10px' }}>
+        <h3>Hydration Status: {progression.hydrated ? '✅ COMPLETE' : '⏳ PENDING'}</h3>
+        <h3>Yarmouk: {progression.completedCampaignIds.has('great-conquests-yarmouk-qadisiyyah') ? '✅ COMPLETED' : '❌ NOT COMPLETED'}</h3>
+        <h3>Mada'in Lock: {audit.madain?.locked ? '🔒 LOCKED' : '🔓 UNLOCKED'}</h3>
+      </div>
     </div>
   );
 }
