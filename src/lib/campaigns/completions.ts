@@ -186,7 +186,9 @@ export async function fetchServerCompletedIds(): Promise<Set<string>> {
     if (error || !Array.isArray(data)) return new Set();
     const ids = new Set<string>();
     for (const row of data as Array<{ campaign_id?: string | null }>) {
-      if (row?.campaign_id) ids.add(row.campaign_id);
+      if (row?.campaign_id) {
+        normalizeIdentifier(row.campaign_id).forEach(v => ids.add(v));
+      }
     }
     return ids;
   } catch { return new Set(); }
