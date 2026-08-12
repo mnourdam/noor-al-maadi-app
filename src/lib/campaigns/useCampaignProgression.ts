@@ -108,9 +108,11 @@ export function useCampaignLockMap(
       globalLockMapCache.sections === sections &&
       globalLockMapCache.state === state
     ) {
+      console.log("[useCampaignLockMap] Cache hit");
       return globalLockMapCache.result;
     }
 
+    console.log("[useCampaignLockMap] Cache miss - computing...");
     // 2. Compute the entries for the lock map calculation.
     const entries: { campaign: CampaignLike; groupKey: string }[] = [];
     (sections ?? []).forEach((s, i) => {
@@ -128,6 +130,7 @@ export function useCampaignLockMap(
     return result;
   }, [sections, state]);
 }
+
 
 
 /** Single-campaign lock status; needs the full feed for era ordering. */
