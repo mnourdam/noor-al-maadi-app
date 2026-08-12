@@ -1,37 +1,38 @@
-# Identity, Auth, and Progression Lifecycle Hardening
+# Tablet Responsive Fix: Daily Challenges Section
 
-## Bug 2: Identity Isolation / Logout (Critical)
-**Root Cause:** The logout flow in `ProfileProvider` only resets in-memory state to defaults without forcing an immediate re-hydration from the Guest namespace, and the transition lifecycle between identities is not atomic across all stores.
+Refactor the Home screen Daily Challenges and Daily Mission sections to correctly utilize tablet real estate, moving away from compressed asymmetric grids to a fluid, balanced layout that scales from 600px to 1280px without breaking mobile.
 
-**Implementation:**
-1.  **Atomic Identity Reset:** Enhance `src/lib/identity/reset.ts` to be the central orchestrator for identity changes.
-2.  **ProfileProvider Fix:** Update `logout` in `src/lib/profile.tsx` to use the atomic reset and ensure immediate re-hydration.
-3.  **Strict Namespacing:** Verify that all personal data keys (XP, Dinars, Level, etc.) are included in `APP_ROOTS` and not in `SHARED_PREFIXES` in `src/lib/identity/partition.ts`.
+## User Review Required
 
-## Bug 3: Google Auth Readiness Sync
-**Root Cause:** A race condition where authenticated queries (like `get_my_profile`) start before the Supabase session is fully bridged and the identity namespace has switched.
+> [!IMPORTANT]
+> - This fix standardizes the Daily Challenges section to a balanced 2-column layout on tablets and a 3-column layout on wide landscapes, replacing the asymmetric 3/2 split which was causing compression.
+> - Mobile layout remains strictly identical to current approved design.
 
-**Implementation:**
-1.  **Auth Readiness State:** Add a `readiness` state to `src/lib/identity/guard.ts` or a new `src/lib/identity/state.ts`.
-2.  **Bridging Hardening:** Update `handleNativeAuthCallback` in `src/lib/native-auth.ts` to signal when the session bridge is complete AND the namespace has switched.
-3.  **Query Guarding:** Update authenticated hooks (via `useAccount` or similar) to wait for `auth_ready` before triggering fetches.
-4.  **Error Handling:** Improve classification of "Connection Errors" to distinguish between true network failure and auth race conditions.
+## Proposed Changes
 
-## Bug 1: Canonical Campaign Completion Projection
-**Root Cause:** Mismatch between UI (using `irth_campaign_progress`) and Unlock Engine (using a union of ledgers), coupled with potential ID vs. Slug normalization issues.
+### 1. Home Components (Responsive Hardening)
 
-**Implementation:**
-1.  **Canonical Projection:** Create a single authority for "is this campaign completed?" that normalizes ID/Slug and checks all valid sources (Local Progress, Sticky Ledger, Server Ledger, Profile).
-2.  **Unified Writer:** Ensure that when a campaign is marked as completed, all relevant stores are updated in a single logical transaction, and events are dispatched to trigger unlock re-evaluation.
-3.  **Slug/ID Normalization:** Enforce normalization in `src/lib/campaigns/progression.ts` and `src/lib/campaigns/completions.ts`.
+#### `src/components/home/DailyChallengesSection.tsx`
+- Remove the `sm:grid-cols-5` + `col-span-3`/`col-span-2` asymmetric layout which causes severe compression on mid-sized viewports.
+- Implement a fluid `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3` pattern.
+- Ensure the "Primary" vs "Secondary" variants maintain visual hierarchy while allowing equal width distribution.
+
+#### `src/components/home/DailyQuestCard.tsx`
+- Add a `max-w-4xl` and `mx-auto` (optional, based on design balance) or ensure it matches the width constraints of the challenge section below it to maintain vertical alignment.
+
+### 2. Global Styles / Layout
+
+#### `src/routes/index.tsx`
+- Audit `Recent Discoveries` and `Worlds` sections to ensure they share the same fluid breakpoints (`sm`, `md`, `lg`).
 
 ## Technical Details
-- `src/lib/identity/reset.ts`: Centralize `resetForIdentityChange` logic.
-- `src/lib/profile.tsx`: Ensure `logout` triggers a clean re-hydration.
-- `src/lib/native-auth.ts`: Implement a promise-based `authReady` signal for the main client.
-- `src/lib/campaigns/progression.ts`: Implement `isCampaignCompletedCanonical(idOrSlug)`.
 
-## Verification Plan
-1.  **Bug 2:** Test User -> Logout -> Guest flow. Verify zero data leakage for XP, Dinars, etc., and that the UI is truly Guest.
-2.  **Bug 3:** Test Guest -> Google Login flow. Verify no "Connection Error" flashes and that profile hydration only starts after the session is ready.
-3.  **Bug 1:** Test the Yarmouk -> Mada'in unlock path using an old completion record. Verify the unlock engine recognizes the completion immediately.
+- **Breakpoints:**
+  - `sm` (640px+): Switch to 2 columns for challenges.
+  - `lg` (1024px+): Switch to 3 columns if 3+ items exist, or keep 2 larger columns.
+- **Grid Strategy:**
+  - Use `grid-cols-1 sm:grid-cols-2` for the two main challenges.
+  - Remove `sm:col-span-3` and `sm:col-span-2` which were the root cause of the "stuck to the right" and "compressed" behavior.
+- **Container Strategy:**
+  - Ensure `px-5 sm:px-6 md:px-8` matches across all Home sections.
+  - Use `max-w-screen-2xl mx-auto` for the parent `AppShell` or main `Home` content to prevent extreme stretching on ultra-wide desktop while fixing the "tablet gap" by allowing content to grow naturally to that max.
