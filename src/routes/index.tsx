@@ -14,7 +14,7 @@ export const Route = createFileRoute('/')({
 
 function AuditTool() {
   const { profile } = useProfile();
-  const userId = profile?.id || "ed51f39a-c187-4a2b-afdc-f7a060413fd3";
+  const userId = "ed51f39a-c187-4a2b-afdc-f7a060413fd3";
   
   const { data: campaigns = [], isSuccess: campaignsReady } = useQuery({
     queryKey: ["audit-campaigns"],
@@ -70,7 +70,7 @@ function AuditTool() {
     
     return {
       report: "FORENSIC HYDRATION AUDIT",
-      identity: { userId, profileEmail: profile.email },
+      identity: { userId },
       yarmouk: {
         id: yarmoukId,
         inUnionCompletedIds: yarmoukIsCompleted,
@@ -91,7 +91,7 @@ function AuditTool() {
         userAgent: navigator.userAgent
       }
     };
-  }, [campaigns, campaignsReady, cloudMap, loading, unionIds, userId, profile]);
+  }, [campaigns, campaignsReady, cloudMap, loading, unionIds, userId, profile.campaignsCompleted]);
 
   return (
     <div style={{ padding: '20px', backgroundColor: '#050505', color: '#00ff41', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
