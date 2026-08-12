@@ -346,6 +346,7 @@ export async function handleNativeAuthCallback(url: string | null | undefined): 
             exchangedOk = true;
             console.info("[IrthAuth] MAIN_SESSION_READY");
             recordTrace("native-auth", "MAIN_SESSION_READY");
+            setAuthReady(true); // Signal readiness immediately after bridging verified session
           }
         } else {
           exchangeError = "الجلسة غير مكتملة";
