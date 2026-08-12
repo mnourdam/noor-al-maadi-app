@@ -9,11 +9,12 @@ export const getAccountForensics = createServerFn({ method: "POST" })
     const audit: any = { timestamp: new Date().toISOString(), targetEmail: email };
 
     try {
+      const db = supabaseAdmin as any;
       // 1. Resolve User ID
-      const { data: users, error: userError } = await supabaseAdmin.auth.admin.listUsers();
+      const { data: users, error: userError } = await db.auth.admin.listUsers();
       if (userError) throw new Error("User list error: " + userError.message);
       
-      const user = users?.users.find(u => u.email === email);
+      const user = (users?.users || []).find((u: any) => u.email === email);
       if (!user) {
         return { error: "User not found: " + email };
       }
@@ -22,10 +23,10 @@ export const getAccountForensics = createServerFn({ method: "POST" })
       audit.userId = userId;
 
       // 2. Fetch Campaign Definitions
-      const { data: campaigns } = await supabaseAdmin
-        .from('campaigns_public' as any)
+      const { data: campaigns } = await db
+        .from('campaigns_public')
         .select('*')
-        .in('slug' as any, ['great-conquests-yarmouk-qadisiyyah', 'great-conquests-madain-nihawand']);
+        .in('slug', ['great-conquests-yarmouk-qadisiyyah', 'great-conquests-madain-nihawand']);
 
       const campaignList = (campaigns || []) as any[];
       const yarmouk = campaignList.find(c => c.slug === 'great-conquests-yarmouk-qadisiyyah');
@@ -35,17 +36,17 @@ export const getAccountForensics = createServerFn({ method: "POST" })
       if (yarmouk) {
         // 3. Inspect Completion Data
         const [completions, profile, legacy, chapters, userChapters] = await Promise.all([
-          supabaseAdmin.from('user_campaign_completions' as any).select('*').eq('user_id', userId).eq('campaign_id', yarmouk.id),
-          supabaseAdmin.from('profiles' as any).select('*').eq('id', userId).maybeSingle(),
-          supabaseAdmin.from('user_campaign_progress' as any).select('*').eq('user_id', userId).eq('campaign_id', yarmouk.id),
-          supabaseAdmin.from('chapters' as any).select('*').eq('campaign_id', yarmouk.id).order('order_index' as any, { ascending: true }),
-          supabaseAdmin.from('user_chapter_progress' as any).select('*').eq('user_id', userId)
+          db.from('user_campaign_completions').select('*').eq('user_id', userId).eq('campaign_id', yarmouk.id),
+          db.from('profiles').select('*').eq('id', userId).maybeSingle(),
+          db.from('user_campaign_progress').select('*').eq('user_id', userId).eq('campaign_id', yarmouk.id),
+          db.from('chapters').select('*').eq('campaign_id', yarmouk.id).order('order_index', { ascending: true }),
+          db.from('user_chapter_progress').select('*').eq('user_id', userId)
         ]);
 
         const chapterList = (chapters.data || []) as any[];
         const yarmoukChapterIds = new Set(chapterList.map(c => c.id) || []);
         const userChapterList = (userChapters.data || []) as any[];
-        const yarmoukUserChapters = userChapterList.filter(uc => yarmoukChapterIds.has(uc.chapter_id)) || [];
+        const yarmoukUserChapters = userChapterList.filter((uc: any) => yarmoukChapterIds.has(uc.chapter_id)) || [];
         const profileRow = (profile.data || {}) as any;
 
         audit.yarmoukAudit = {
@@ -58,10 +59,10 @@ export const getAccountForensics = createServerFn({ method: "POST" })
           },
           legacyProgress: legacy.data,
           chaptersCount: chapterList.length,
-          completedChaptersCount: yarmoukUserChapters.filter(uc => uc.completed).length,
+          completedChaptersCount: yarmoukUserChapters.filter((uc: any) => uc.completed).length,
           chapterDetail: chapterList.map(ch => ({
             title: ch.title,
-            completed: yarmoukUserChapters.find(uc => uc.chapter_id === ch.id)?.completed || false
+            completed: yarmoukUserChapters.find((uc: any) => uc.chapter_id === ch.id)?.completed || false
           }))
         };
       }
