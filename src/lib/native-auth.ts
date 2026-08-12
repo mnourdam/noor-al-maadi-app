@@ -348,6 +348,7 @@ export async function handleNativeAuthCallback(url: string | null | undefined): 
             recordTrace("native-auth", "MAIN_SESSION_READY");
             // setAuthReady(true) removed here — readiness must wait for Identity Switch (resetForIdentityChange)
             // to ensure Main session user === active OwnerKey user.
+          }
         } else {
           exchangeError = "الجلسة غير مكتملة";
         }
