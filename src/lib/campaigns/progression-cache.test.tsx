@@ -50,19 +50,20 @@ describe("useCampaignLockMap Caching", () => {
       initialProps: { s: sections }
     });
     
-    // First call happens on mount. 
-    // It might be called twice in StrictMode, but in vitest it's usually once.
-    // However, useProgressionState also has useMemo/useEffect, 
-    // so let's check the current call count.
+    // The hook might re-run several times during initial mount due to 
+    // internal dependencies in useProgressionState (profile, etc).
+    // We capture the state AFTER mount is settled.
     const initialCalls = spy.mock.calls.length;
     expect(initialCalls).toBeGreaterThan(0);
 
-    // Rerender with same identity
+    // Rerender with same identity. 
+    // This should NOT trigger a recompute because globalLockMapCache 
+    // will hit on the same `sections` and `state`.
     rerender({ s: sections });
     
-    // Should NOT have incremented
     expect(spy.mock.calls.length).toBe(initialCalls);
   });
+
 
   it("recomputes when sections identity changes", () => {
     const spy = vi.spyOn(progressionLib, "computeLockMapByGroup");
