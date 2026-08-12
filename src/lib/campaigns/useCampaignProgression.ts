@@ -103,8 +103,6 @@ export function useCampaignLockMap(
 
   return useMemo(() => {
     // 1. Check if the sections identity and state have changed.
-    // ProgressionState is carefully constructed with useMemo in useProgressionState,
-    // and its dependencies include the 'tick' which handles completion events.
     if (
       globalLockMapCache &&
       globalLockMapCache.sections === sections &&
@@ -130,6 +128,7 @@ export function useCampaignLockMap(
     return result;
   }, [sections, state]);
 }
+
 
 /** Single-campaign lock status; needs the full feed for era ordering. */
 export function useCampaignLockStatus(
