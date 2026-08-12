@@ -59,7 +59,7 @@ export const getAccountForensics = createServerFn({ method: "POST" })
           chapterStatus: yarmoukChapters.map(ch => ({
             id: ch.id,
             slug: ch.slug,
-            completed: !!relevantChapterProgress.find(cp => cp.chapter_id === ch.id && cp.completed)
+            completed: !!relevantChapterProgress.find((cp: any) => cp.chapter_id === ch.id && cp.completed)
           }))
         };
       }
