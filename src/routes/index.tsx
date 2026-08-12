@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { fetchPublishedCampaigns } from '@/lib/supabaseCampaigns';
 import { buildProgressLookup, pickCampaignRecommendation } from '@/lib/campaignRecommendationService';
-import { getCampaignProgress } from '@/lib/campaigns/entities';
+import { getCampaignProgress } from '@/lib/importedCampaignProgress';
 import { useEffect, useState, useMemo } from 'react';
 
 export const Route = createFileRoute('/')({
@@ -54,19 +54,11 @@ function AuditTool() {
     if (!campaignsReady || !campaigns.length || cloudLoading) return null;
     
     const yarmoukId = 'great-conquests-yarmouk-qadisiyyah';
-    const madainId = 'great-conquests-madain-nihawand';
+    const madainId = 'madain-and-nihawand';
     
     const progressLookup = buildProgressLookup(cloudMap);
     const yarmoukProgress = progressLookup(yarmoukId);
-    
-    // Fallback if entities.ts doesn't have it (likely in a dedicated progress module we missed)
-    let localProgress: any = {};
-    try {
-       // @ts-ignore
-       localProgress = typeof getCampaignProgress === 'function' ? getCampaignProgress(yarmoukId) : {};
-    } catch {
-       localProgress = { error: 'getCampaignProgress not available' };
-    }
+    const localProgress = getCampaignProgress(yarmoukId);
     
     const rec = pickCampaignRecommendation({
       campaigns,
@@ -82,7 +74,10 @@ function AuditTool() {
         completedFlag: yarmoukProgress.completedFlag,
         completedChapters: Array.from(yarmoukProgress.completedChapterIds),
         hasAnyActivity: yarmoukProgress.hasAnyActivity,
-        localStore: localProgress
+        localStore: {
+          completed: localProgress.completed,
+          chaptersCount: Object.keys(localProgress.chapters || {}).length
+        }
       },
       recommendation: rec ? {
         type: rec.type,
@@ -94,7 +89,7 @@ function AuditTool() {
         id: madainRow.id,
         status: madainRow.status,
         // @ts-ignore
-        prerequisiteId: madainRow.prerequisite_campaign_id || madainRow.unlock?.campaignId
+        prerequisiteId: madainRow.unlock?.campaignId || madainRow.prerequisite_campaign_id
       } : 'NOT_FOUND',
       yarmoukRow: yarmoukRow ? {
         id: yarmoukRow.id,
@@ -105,7 +100,7 @@ function AuditTool() {
 
   return (
     <div style={{ padding: '20px', backgroundColor: '#111', color: '#0f0', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
-      <h1>Forensic Projection Audit v3</h1>
+      <h1>Forensic Projection Audit v4</h1>
       <pre id="audit-projection-result">{JSON.stringify(audit, null, 2)}</pre>
     </div>
   );
