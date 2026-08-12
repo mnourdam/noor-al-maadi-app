@@ -364,6 +364,13 @@ export function useDailyChallengeState(opts: { enabled?: boolean } = {}): {
 
 
   useEffect(() => {
+    const handleIdentity = () => setNonce(n => n + 1);
+    window.addEventListener('irth:identity-changed', handleIdentity);
+    return () => window.removeEventListener('irth:identity-changed', handleIdentity);
+  }, []);
+
+  useEffect(() => {
+
     if (!enabled || typeof window === "undefined") return;
     const bump = () => setNonce((n) => n + 1);
 
