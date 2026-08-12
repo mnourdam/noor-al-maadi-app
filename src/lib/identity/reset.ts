@@ -24,7 +24,7 @@ import {
   userOwnerKey,
   type OwnerKey,
 } from "./owner";
-import { IDENTITY_CHANGED_EVENT } from "./guard";
+import { IDENTITY_CHANGED_EVENT, setAuthReady } from "./guard";
 
 let queryClient: QueryClient | null = null;
 
