@@ -22,6 +22,7 @@ import { consumeAuthOrigin } from "@/lib/authOrigin";
 import { recordTrace } from "@/lib/diag-trace";
 import { getDurableAuthStorage } from "@/lib/nativeAuthStorage";
 import { setRecoveryMode } from "@/lib/recoveryMode";
+24: import { setAuthReady } from "./identity/guard";
 
 // Published bounce endpoint that returns an HTML page which immediately
 // redirects Chrome Custom Tab to the APK's custom-scheme deep link (with an
