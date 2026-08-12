@@ -68,7 +68,7 @@ interface CollectionDef {
 
 
 export const COLLECTIONS: CollectionDef[] = [
-  { key: "encyclopedia_entities", table: "encyclopedia_entities",
+  { key: "encyclopedia_entities", table: "encyclopedia_entities", columns: "id,slug,entity_type,title,subtitle,summary,metadata,enabled,created_at,updated_at,body,aliases,timeline_order,timeline_year,timeline_start_year,image_url,image_path,image_credit,image_source",
     filter: (q) => q.eq("enabled", true), required: true,
     label: "الموسوعة (شخصيات، دول، مدن، معارك، أحداث)" },
   { key: "admin_campaigns", table: "campaigns_public",
