@@ -64,6 +64,7 @@ import type { ContentRegistryItem } from "@/types/contentRegistry";
 import { useEncyclopediaSupabaseList } from "@/lib/encyclopedia-source";
 import { useLatestMuseumAcquisitions } from "@/lib/playerDiscoveries";
 import { listCampaigns } from "@/lib/campaignStorage";
+import { VirtualizedEntityGrid } from "@/components/encyclopedia/VirtualizedEntityGrid";
 
 import { CollectibleRevealDialog, type CollectibleRevealItem } from "@/components/CollectibleRevealDialog";
 import { classifyArtifact, fetchCampaignArtifactRefSet } from "@/lib/museumVisibility";
@@ -765,14 +766,38 @@ function CollectionPage() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-[repeat(auto-fill,minmax(13rem,1fr))]">
-            {currentEntities.map(({ e, open }) => {
+          <VirtualizedEntityGrid
+            entities={[
+              ...currentEntities.map(({ e }) => e),
+              ...currentImported.map(i => ({
+                id: i.id,
+                slug: i.id,
+                entity_type: current.type,
+                title: i.name,
+                subtitle: i.subtitle ?? current.label,
+                summary: i.description,
+                metadata: {
+                  rarity: registryItemRarity(i),
+                  kind: i.category,
+                  period: i.historicalPeriod
+                }
+              } as any))
+            ]}
+            resetKey={`${section}|${rarityFilter}`}
+            scrollKey={`museum-${section}-${rarityFilter}`}
+            renderCard={(e) => {
+              const isImported = currentImported.some(i => i.id === e.id);
+              if (isImported) {
+                const item = currentImported.find(i => i.id === e.id)!;
+                return <ImportedCard item={item} setReveal={setReveal} />;
+              }
+              const openData = currentEntities.find(ce => ce.e.id === e.id);
+              const open = openData?.open ?? false;
               const rarity = rarityFromMetadata(e.metadata, defaultRarity(current.type));
               const GlyphIcon = current.glyphIcon;
               const ua = userUnlockedAt.get(`${current.type}:${e.slug}`) ?? null;
               return (
                 <Card
-                  key={`enc-${e.id ?? e.slug}`}
                   unlocked={open}
                   rarity={rarity}
                   icon={<GlyphIcon className="size-6" />}
@@ -783,12 +808,8 @@ function CollectionPage() {
                   unlockedAt={ua}
                 />
               );
-            })}
-
-            {currentImported.map(item => (
-              <ImportedCard key={`imp-${item.id}`} item={item} setReveal={setReveal} />
-            ))}
-          </div>
+            }}
+          />
         )}
 
         {totalDone === 0 && (
