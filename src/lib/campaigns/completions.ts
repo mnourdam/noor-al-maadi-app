@@ -54,7 +54,25 @@ function writeLocalSticky(m: Record<string, LocalStickyRecord>): void {
  * union projection still sees it.
  */
 export function localCompletedIds(): Set<string> {
-  return new Set(Object.keys(readLocalSticky()));
+  const ids = new Set<string>();
+  const sticky = readLocalSticky();
+  for (const cid of Object.keys(sticky)) ids.add(cid);
+
+  // RECOVERY: The canonical projection must recognize old progression data.
+  // `irth_campaign_progress` was the legacy store.
+  if (isBrowser()) {
+    try {
+      const legacy = window.localStorage.getItem("irth_campaign_progress");
+      if (legacy) {
+        const parsed = JSON.parse(legacy);
+        if (Array.isArray(parsed)) {
+          for (const id of parsed) if (id) ids.add(String(id));
+        }
+      }
+    } catch { /* ignore */ }
+  }
+
+  return ids;
 }
 
 async function currentUserId(): Promise<string | null> {
@@ -92,6 +110,8 @@ export async function recordCampaignCompletion(p: {
     try {
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("irth:campaign-completions:changed"));
+        // Force immediate unlock re-evaluation
+        window.dispatchEvent(new CustomEvent("irth:campaign-progress:changed"));
       }
     } catch { /* ignore */ }
   }
@@ -176,9 +196,16 @@ export async function unionCompletedIds(
   profileCompleted: readonly string[] | undefined,
 ): Promise<Set<string>> {
   const out = new Set<string>();
+  
+  // 1) Immediate Local Evidence (Local Sticky + Legacy Mirror)
   for (const id of localCompletedIds()) out.add(id);
+  
+  // 2) Profile Projection (Union with Local)
   for (const id of profileCompleted ?? []) if (id) out.add(id);
+  
+  // 3) Server Ledger (Stable Source of Truth)
   const server = await fetchServerCompletedIds();
   for (const id of server) out.add(id);
+  
   return out;
 }

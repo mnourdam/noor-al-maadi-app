@@ -22,6 +22,7 @@ import { consumeAuthOrigin } from "@/lib/authOrigin";
 import { recordTrace } from "@/lib/diag-trace";
 import { getDurableAuthStorage } from "@/lib/nativeAuthStorage";
 import { setRecoveryMode } from "@/lib/recoveryMode";
+import { setAuthReady } from "./identity/guard";
 
 // Published bounce endpoint that returns an HTML page which immediately
 // redirects Chrome Custom Tab to the APK's custom-scheme deep link (with an
@@ -345,6 +346,7 @@ export async function handleNativeAuthCallback(url: string | null | undefined): 
             exchangedOk = true;
             console.info("[IrthAuth] MAIN_SESSION_READY");
             recordTrace("native-auth", "MAIN_SESSION_READY");
+            setAuthReady(true); // Signal readiness immediately after bridging verified session
           }
         } else {
           exchangeError = "الجلسة غير مكتملة";

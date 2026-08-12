@@ -9,6 +9,44 @@
 
 import { getActiveOwner, getActiveUserId, getIdentityEpoch, type OwnerKey } from "./owner";
 
+/**
+ * AUTH READINESS CONTRACT
+ * authenticated queries must wait for `auth_ready` before starting Profile Hydration.
+ * Readiness means: session bridge complete + main client session verified + namespace switched.
+ */
+let authReady = false;
+let authReadyPromise: Promise<void> | null = null;
+let authReadyResolve: (() => void) | null = null;
+
+function ensureAuthReadyPromise() {
+  if (authReadyPromise) return;
+  authReadyPromise = new Promise((resolve) => {
+    authReadyResolve = resolve;
+  });
+}
+
+export function setAuthReady(ready: boolean) {
+  if (ready === authReady) return;
+  authReady = ready;
+  if (ready) {
+    ensureAuthReadyPromise();
+    authReadyResolve?.();
+  } else {
+    authReadyPromise = null;
+    authReadyResolve = null;
+  }
+}
+
+export function isAuthReady(): boolean {
+  return authReady;
+}
+
+export async function waitForAuthReady(): Promise<void> {
+  if (authReady) return;
+  ensureAuthReadyPromise();
+  return authReadyPromise!;
+}
+
 export interface IdentityToken {
   owner: OwnerKey;
   epoch: number;

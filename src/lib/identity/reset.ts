@@ -24,7 +24,7 @@ import {
   userOwnerKey,
   type OwnerKey,
 } from "./owner";
-import { IDENTITY_CHANGED_EVENT } from "./guard";
+import { IDENTITY_CHANGED_EVENT, setAuthReady } from "./guard";
 
 let queryClient: QueryClient | null = null;
 
@@ -57,9 +57,12 @@ export async function resetForIdentityChange(opts: {
 }): Promise<{ changed: boolean; owner: OwnerKey; previous: OwnerKey }> {
   const next = opts.nextUserId ? userOwnerKey(opts.nextUserId) : guestOwnerKey();
   const previous = getActiveOwner();
-  if (previous === next) return { changed: false, owner: next, previous };
+  if (previous === next) {
+    if (opts.nextUserId) setAuthReady(true);
+    return { changed: false, owner: next, previous };
+  }
 
-  // 1) Stop the previous identity's realtime traffic before anything else,
+  if (opts.nextUserId) setAuthReady(false); // Reset readiness during switch
   //    so no late payload can be delivered mid-swap.
   try {
     const { supabase } = await import("@/integrations/supabase/client");
@@ -83,8 +86,9 @@ export async function resetForIdentityChange(opts: {
       import("@/lib/stories/unlock-cache"),
       import("@/lib/emblems/avatar-persistence"),
       import("@/lib/tutorial/persistence"),
+      import("@/lib/profile"), // Ensure ProfileProvider's in-memory scalars are reset
     ]);
-    const [unlock, avatar, tutorial] = mods;
+    const [unlock, avatar, tutorial, profileMod] = mods;
     if (unlock.status === "fulfilled") {
       try { (unlock.value as { clearUnlockCache?: () => void }).clearUnlockCache?.(); } catch { /* ignore */ }
     }
@@ -93,6 +97,10 @@ export async function resetForIdentityChange(opts: {
     }
     if (tutorial.status === "fulfilled") {
       try { (tutorial.value as { invalidateOnboardingCache?: () => void }).invalidateOnboardingCache?.(); } catch { /* ignore */ }
+    }
+    if (profileMod.status === "fulfilled") {
+      // ProfileProvider uses irth:identity-changed to re-hydrate, 
+      // but we can also trigger any exported cleanup if added.
     }
   } catch { /* ignore */ }
 
@@ -105,6 +113,13 @@ export async function resetForIdentityChange(opts: {
     try {
       window.dispatchEvent(new CustomEvent(IDENTITY_CHANGED_EVENT, { detail }));
     } catch { /* ignore */ }
+  }
+
+  // 5) Auth readiness signal.
+  if (opts.nextUserId) {
+    setAuthReady(true);
+  } else {
+    setAuthReady(false);
   }
 
   return { changed: true, owner: next, previous: res.previous };

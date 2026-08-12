@@ -23,6 +23,7 @@ import { withBoundedTimeout } from "./boot/withTimeout";
 import { recordStartupMark } from "./boot/startup-timeline";
 import { resetForIdentityChange } from "./identity/reset";
 import { getActiveUserId } from "./identity/owner";
+import { waitForAuthReady } from "./identity/guard";
 
 
 interface AccountCtx {
@@ -158,6 +159,10 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     } catch { /* ignore */ }
 
     (async () => {
+      // 0) AUTH READINESS CONTRACT: authenticated queries must wait for readiness.
+      await waitForAuthReady();
+      if (isStale()) return;
+
       const started = performance.now();
       androidMark("account.hydrate.start", { userId: user.id.slice(0, 8) });
       recordStartupMark("server-reconciliation-started");
