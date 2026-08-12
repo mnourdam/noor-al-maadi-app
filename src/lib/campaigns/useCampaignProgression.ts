@@ -26,7 +26,7 @@ import {
 } from "@/lib/campaigns/progression";
 
 export function useProgressionState(): ProgressionState {
-  const { profile } = useProfile();
+  const { profile, hydrated: profileHydrated } = useProfile();
   const achievements = useAchievementViews();
 
   // Unified tick to trigger re-renders on custom completion/progress events.
@@ -35,33 +35,40 @@ export function useProgressionState(): ProgressionState {
     const handler = () => setTick((t) => t + 1);
     window.addEventListener("irth:campaign-completions:changed", handler);
     window.addEventListener("irth:campaign-progress:changed", handler);
+    window.addEventListener("irth:identity-changed", handler);
     return () => {
       window.removeEventListener("irth:campaign-completions:changed", handler);
       window.removeEventListener("irth:campaign-progress:changed", handler);
+      window.removeEventListener("irth:identity-changed", handler);
     };
   }, []);
 
-  const { data: serverCompleted } = useQuery({
-    queryKey: ["campaign-completions", "union", profile.campaignsCompleted.length, tick],
+  const { data: serverCompleted, isLoading: serverLoading } = useQuery({
+    queryKey: ["campaign-completions", "union", profile.campaignsCompleted.length, tick, profileHydrated],
     queryFn: () => unionCompletedIds(profile.campaignsCompleted),
-    staleTime: 5_000, // Faster reactivity for unlock logic (canonical projection)
+    staleTime: 5_000, 
     gcTime: 60_000,
   });
 
   return useMemo(() => {
+    // If the server ledger is still loading and we have no local evidence,
+    // we return an empty but "pending" state.
     const completed = new Set<string>(profile.campaignsCompleted);
     for (const id of localCompletedIds()) completed.add(id);
     for (const id of serverCompleted ?? []) completed.add(id);
+
     const unlockedAchievementIds = new Set<string>(
       achievements.filter((a) => a.unlockedAt).map((a) => a.id),
     );
+
     return {
       completedCampaignIds: completed,
       completedStoryIds: new Set<string>(profile.storiesRead),
       unlockedAchievementIds,
       level: levelFor(profile.points).level,
+      hydrated: profileHydrated && !serverLoading,
     };
-  }, [profile.campaignsCompleted, profile.storiesRead, profile.points, serverCompleted, achievements, tick]);
+  }, [profile.campaignsCompleted, profile.storiesRead, profile.points, serverCompleted, achievements, tick, profileHydrated, serverLoading]);
 }
 
 type DividerLike = {

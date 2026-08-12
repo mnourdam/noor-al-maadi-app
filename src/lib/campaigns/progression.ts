@@ -91,6 +91,8 @@ export interface ProgressionState {
   completedStoryIds?: ReadonlySet<string>;
   unlockedAchievementIds?: ReadonlySet<string>;
   level?: number;
+  /** True when the primary completion evidence has finished hydration. */
+  hydrated?: boolean;
 }
 
 export type CampaignLockKind = "open" | "sequential" | "special";
@@ -167,6 +169,11 @@ export function computeSectionLockMap(
   state: ProgressionState,
 ): Map<string, CampaignLockStatus> {
   const out = new Map<string, CampaignLockStatus>();
+  
+  // If not hydrated, we could optionally return a "loading" or "locked-by-hydration"
+  // state here. However, per rules, we just ensure that the lock map will 
+  // recalculate once the server data arrives.
+  
   let previousRegular: CampaignLike | null = null;
 
   for (const c of campaigns) {

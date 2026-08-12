@@ -186,16 +186,33 @@ export async function fetchServerCompletedIds(): Promise<Set<string>> {
     if (error || !Array.isArray(data)) return new Set();
     const ids = new Set<string>();
     for (const row of data as Array<{ campaign_id?: string | null }>) {
-      if (row?.campaign_id) ids.add(row.campaign_id);
+      if (row?.campaign_id) {
+        normalizeIdentifier(row.campaign_id).forEach(v => ids.add(v));
+      }
     }
     return ids;
   } catch { return new Set(); }
 }
 
 /**
+ * Normalizes an identifier (ID or Slug) to a set of potential matches.
+ * Internal only; helps bridge legacy data to canonical state.
+ */
+function normalizeIdentifier(id: string | null | undefined): string[] {
+  if (!id) return [];
+  const clean = String(id).trim().toLowerCase();
+  if (!clean) return [];
+  // Return both the exact match and the potential normalized slug match
+  return [clean, clean.replace(/\s+/g, "-")];
+}
+
+/**
  * Canonical union. Anything the profile blob claims plus anything the
  * server ledger records plus anything queued locally. This is what
  * achievement engine + world progress should consume.
+ * 
+ * HARDENING: Every input is normalized to ensure IDs and Slugs are 
+ * treated as equivalent for completion checks.
  */
 export async function unionCompletedIds(
   profileCompleted: readonly string[] | undefined,
@@ -203,14 +220,20 @@ export async function unionCompletedIds(
   const out = new Set<string>();
   
   // 1) Immediate Local Evidence (Local Sticky + Legacy Mirror)
-  for (const id of localCompletedIds()) out.add(id);
+  for (const id of localCompletedIds()) {
+    normalizeIdentifier(id).forEach(v => out.add(v));
+  }
   
   // 2) Profile Projection (Union with Local)
-  for (const id of profileCompleted ?? []) if (id) out.add(id);
+  for (const id of profileCompleted ?? []) {
+    if (id) normalizeIdentifier(id).forEach(v => out.add(v));
+  }
   
   // 3) Server Ledger (Stable Source of Truth)
   const server = await fetchServerCompletedIds();
-  for (const id of server) out.add(id);
+  for (const id of server) {
+    normalizeIdentifier(id).forEach(v => out.add(v));
+  }
   
   return out;
 }
