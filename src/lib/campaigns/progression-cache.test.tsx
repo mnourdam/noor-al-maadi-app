@@ -1,5 +1,7 @@
+/** @vitest-environment jsdom */
 import { describe, it, expect, vi } from "vitest";
-import { renderHook, act } from "@testing-library/react";
+import { renderHook } from "@testing-library/react";
+
 import { useCampaignLockMap } from "./useCampaignProgression";
 import * as progressionLib from "./progression";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
