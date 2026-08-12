@@ -54,7 +54,25 @@ function writeLocalSticky(m: Record<string, LocalStickyRecord>): void {
  * union projection still sees it.
  */
 export function localCompletedIds(): Set<string> {
-  return new Set(Object.keys(readLocalSticky()));
+  const ids = new Set<string>();
+  const sticky = readLocalSticky();
+  for (const cid of Object.keys(sticky)) ids.add(cid);
+
+  // RECOVERY: The canonical projection must recognize old progression data.
+  // `irth_campaign_progress` was the legacy store.
+  if (isBrowser()) {
+    try {
+      const legacy = window.localStorage.getItem("irth_campaign_progress");
+      if (legacy) {
+        const parsed = JSON.parse(legacy);
+        if (Array.isArray(parsed)) {
+          for (const id of parsed) if (id) ids.add(String(id));
+        }
+      }
+    } catch { /* ignore */ }
+  }
+
+  return ids;
 }
 
 async function currentUserId(): Promise<string | null> {
