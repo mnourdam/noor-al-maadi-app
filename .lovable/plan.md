@@ -1,6 +1,6 @@
 # Plan: Daily Challenges Hardening (Local-First)
 
-Implement a systemic fix for the Daily Challenges delay by decoupling it from the network/auth boot chain and enabling local-first rendering via `OfflineSnapshot`.
+Implement a systemic fix for the Daily Challenges delay by decoupling it from the network/auth boot chain and enabling local-first rendering via `OfflineSnapshot` with layout stability.
 
 ## User Review Required
 
@@ -11,38 +11,34 @@ Implement a systemic fix for the Daily Challenges delay by decoupling it from th
 
 ### 1. Data Access Layer
 #### `src/lib/games/store.ts`
-- Add `localListPublishedGames()` to read from `OfflineSnapshot` via `local-first-store.ts`.
-- Ensure it returns an empty array if the snapshot is not yet loaded, allowing the system to fall back to the network.
+- Implement `localListPublishedGames()`: Synchronously returns published games from `local-first-store.ts`.
+- Returns `[]` if snapshot is missing/invalid.
 
 ### 2. Service Layer
 #### `src/lib/games/dailyChallengeService.ts`
-- **Identity Decoupling**: Replace `resolveUserKey()` (which calls `supabase.auth.getUser()`) with `getActiveOwner()` from `identity/owner.ts`.
-- **Race/Starvation Prevention**: Refactor `loadDailyChallengeState` to accept an optional `games` array.
-- **Local-First Loading**: Implement a two-stage load in the hook:
-    1. Synchronous check: If `isLocalReady()` and data exists, render immediately.
-    2. Background Refresh: Start a network fetch and update state only if different.
+- **Identity Decoupling**: Replace `resolveUserKey()` with `getActiveOwner()` from `identity/owner.ts`.
+- **Meaningful Comparison**: Implement a fingerprint/checksum check for the Game Catalogue. Only trigger persistence and re-render if the catalogue content (IDs + `updated_at`) actually changes.
+- **Local-First Loading**:
+    1. Synchronous Mount: Check `localListPublishedGames()`. If valid content exists, compute rotation and render immediately.
+    2. Parallel Background Refresh: Start network fetch. Compare results with meaningful fingerprint. Update and persist only if changed.
 
 ### 3. UI Layer
 #### `src/components/home/DailyChallengesSection.tsx`
 - Remove `if (!state) return null;`.
-- Implement a lightweight skeleton/loading state when neither local nor network data is ready (Fresh Install case).
-- Ensure the section renders immediately to prevent layout shifts.
+- **Layout Stability**: Implement a stable Skeleton that matches the expected height of two challenge cards (approx. 320px-400px depending on breakpoint) to prevent layout shifts.
+- Skeleton only appears on Fresh Install where no local snapshot exists yet.
 
 ### 4. Coordination
-#### `src/lib/games/local-first-store.ts` (if needed)
-- Export a helper to specifically access the `games` collection if not already clean.
+#### `src/lib/local-first-store.ts`
+- Ensure `isLocalReady()` and the games collection are accessible for synchronous reads.
 
 ## Technical Details
 
-- **Auth Source**: `getActiveOwner()` returns `guest:<id>` or `user:<id>` synchronously by reading localStorage/session-cache at boot.
-- **Starvation Fix**: Moving initialization out of `scheduleIdle` and removing the async `getUser()` dependency ensures the challenge block starts as soon as the Home component mounts.
-- **Sync Strategy**: 
-    - Render with Cache.
-    - Fetch from Server.
-    - If Server data > Cache (new games added), update and persist.
-    - If Offline, stay with Cache.
+- **Auth Source**: `getActiveOwner()` is used for synchronous partitioning. `irth:identity-changed` listener already handles state reset for User A -> User B transitions.
+- **Starvation Fix**: Initialization is moved to the component mount, bypassing `scheduleIdle`.
+- **Fingerprint**: `JSON.stringify(rows.map(r => [r.id, r.updated_at]))` or similar stable sorting to detect content drift beyond simple length checks.
 
 ## Constraints & Risk
-- **Risk**: Slight layout shift if the local snapshot is empty but network returns data quickly.
-- **Mitigation**: A stable skeleton with the same height as the title/subtitle block.
-- **Identity Safety**: `getActiveOwner()` is already used for partitioned storage, ensuring guest/user isolation is preserved.
+- **Risk**: Snapshot loading race.
+- **Mitigation**: `ensureLocalSnapshotLoaded()` is awaited only in the background refresh path; the initial render uses the synchronous `isLocalReady()` check.
+
