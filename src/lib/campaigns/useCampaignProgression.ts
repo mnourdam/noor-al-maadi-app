@@ -78,6 +78,18 @@ type DividerLike = {
   era?: string;
 } | null;
 
+/**
+ * Performance layer: In-memory cache for the computed lock map.
+ * This prevents re-computing the full feed map (200+ campaigns)
+ * on every single Campaign Route mount when the inputs are identical.
+ */
+interface LockMapCache {
+  sections: any;
+  state: ProgressionState;
+  result: Map<string, CampaignLockStatus>;
+}
+let globalLockMapCache: LockMapCache | null = null;
+
 /** Lock map for the full campaigns feed (era groups in authored order). */
 export function useCampaignLockMap(
   sections:
@@ -88,16 +100,48 @@ export function useCampaignLockMap(
     | undefined,
 ): Map<string, CampaignLockStatus> {
   const state = useProgressionState();
+
   return useMemo(() => {
+    // 1. Check if the sections identity and state have changed.
+    // We stringify the state for the cache key because useMemo in useProgressionState
+    // produces a new object even if values are identical across some hook mounts.
+    const stateKey = JSON.stringify({
+      completedCampaignIds: Array.from(state.completedCampaignIds).sort(),
+      completedStoryIds: Array.from(state.completedStoryIds ?? []).sort(),
+      unlockedAchievementIds: Array.from(state.unlockedAchievementIds ?? []).sort(),
+      level: state.level,
+      hydrated: state.hydrated
+    });
+
+    if (
+      globalLockMapCache &&
+      globalLockMapCache.sections === sections &&
+      (globalLockMapCache as any).stateKey === stateKey
+    ) {
+      return globalLockMapCache.result;
+    }
+
+    // 2. Compute the entries for the lock map calculation.
     const entries: { campaign: CampaignLike; groupKey: string }[] = [];
     (sections ?? []).forEach((s, i) => {
       for (const c of s.campaigns ?? []) {
         entries.push({ campaign: c, groupKey: deriveCampaignGroupKey(c, s.divider ?? null, i) });
       }
     });
-    return computeLockMapByGroup(entries, state);
+
+    // 3. Perform the calculation.
+    const result = computeLockMapByGroup(entries, state);
+
+    // 4. Update the singleton cache for the next caller.
+    globalLockMapCache = { sections, state, result };
+    (globalLockMapCache as any).stateKey = stateKey;
+
+    return result;
   }, [sections, state]);
 }
+
+
+
 
 /** Single-campaign lock status; needs the full feed for era ordering. */
 export function useCampaignLockStatus(
@@ -113,3 +157,4 @@ export function useCampaignLockStatus(
   if (!campaignId) return OPEN_STATUS;
   return map.get(campaignId) ?? OPEN_STATUS;
 }
+
