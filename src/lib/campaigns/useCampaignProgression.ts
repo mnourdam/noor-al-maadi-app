@@ -103,16 +103,24 @@ export function useCampaignLockMap(
 
   return useMemo(() => {
     // 1. Check if the sections identity and state have changed.
+    // We stringify the state for the cache key because useMemo in useProgressionState
+    // produces a new object even if values are identical across some hook mounts.
+    const stateKey = JSON.stringify({
+      completedCampaignIds: Array.from(state.completedCampaignIds).sort(),
+      completedStoryIds: Array.from(state.completedStoryIds ?? []).sort(),
+      unlockedAchievementIds: Array.from(state.unlockedAchievementIds ?? []).sort(),
+      level: state.level,
+      hydrated: state.hydrated
+    });
+
     if (
       globalLockMapCache &&
       globalLockMapCache.sections === sections &&
-      globalLockMapCache.state === state
+      (globalLockMapCache as any).stateKey === stateKey
     ) {
-      console.log("[useCampaignLockMap] Cache hit");
       return globalLockMapCache.result;
     }
 
-    console.log("[useCampaignLockMap] Cache miss - computing...");
     // 2. Compute the entries for the lock map calculation.
     const entries: { campaign: CampaignLike; groupKey: string }[] = [];
     (sections ?? []).forEach((s, i) => {
@@ -126,10 +134,12 @@ export function useCampaignLockMap(
 
     // 4. Update the singleton cache for the next caller.
     globalLockMapCache = { sections, state, result };
+    (globalLockMapCache as any).stateKey = stateKey;
 
     return result;
   }, [sections, state]);
 }
+
 
 
 
