@@ -26,6 +26,10 @@ function FinalAuditTool() {
   });
 
   const progression = useProgressionState();
+
+  useEffect(() => {
+    (window as any).__supabase = supabase;
+  }, []);
   
   const sections = useMemo(() => {
     if (!campaignsReady || !campaigns.length) return [];
