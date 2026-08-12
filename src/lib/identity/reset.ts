@@ -115,6 +115,13 @@ export async function resetForIdentityChange(opts: {
     } catch { /* ignore */ }
   }
 
+  // 5) Auth readiness signal.
+  if (opts.nextUserId) {
+    setAuthReady(true);
+  } else {
+    setAuthReady(false);
+  }
+
   return { changed: true, owner: next, previous: res.previous };
 }
 
