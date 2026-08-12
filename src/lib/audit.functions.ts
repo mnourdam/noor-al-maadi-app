@@ -25,7 +25,7 @@ export const getAccountForensics = createServerFn({ method: "POST" })
       const { data: campaigns } = await supabaseAdmin
         .from('campaigns_public' as any)
         .select('*')
-        .in('slug', ['great-conquests-yarmouk-qadisiyyah', 'great-conquests-madain-nihawand']);
+        .in('slug' as any, ['great-conquests-yarmouk-qadisiyyah', 'great-conquests-madain-nihawand']);
 
       const campaignList = (campaigns || []) as any[];
       const yarmouk = campaignList.find(c => c.slug === 'great-conquests-yarmouk-qadisiyyah');
@@ -46,14 +46,15 @@ export const getAccountForensics = createServerFn({ method: "POST" })
         const yarmoukChapterIds = new Set(chapterList.map(c => c.id) || []);
         const userChapterList = (userChapters.data || []) as any[];
         const yarmoukUserChapters = userChapterList.filter(uc => yarmoukChapterIds.has(uc.chapter_id)) || [];
+        const profileRow = (profile.data || {}) as any;
 
         audit.yarmoukAudit = {
           serverCompletions: completions.data,
           profileData: {
-            campaigns_completed_count: profile.data?.campaigns_completed,
-            campaigns_completed_list: profile.data?.campaignsCompleted, // check both variants
-            xp: profile.data?.xp,
-            dinars: profile.data?.dinars
+            campaigns_completed_count: profileRow.campaigns_completed,
+            campaigns_completed_list: profileRow.campaignsCompleted,
+            xp: profileRow.xp,
+            dinars: profileRow.dinars
           },
           legacyProgress: legacy.data,
           chaptersCount: chapterList.length,
