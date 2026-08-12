@@ -453,7 +453,11 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     profile,
     hydrated,
     login: (name) => update((p) => ({ ...p, name: name.trim() || "صديق التاريخ", loggedIn: true })),
-    logout: () => setProfile(initial),
+    logout: () => {
+      import("@/lib/identity/reset").then(({ resetForIdentityChange }) => {
+        resetForIdentityChange({ nextUserId: null, reason: "sign-out" });
+      });
+    },
     addPoints: (n) => update((p) => addPointsTo(p, n)),
     openStory: (id) => update((p) => p.storiesOpened.includes(id) ? p : { ...p, storiesOpened: [...p.storiesOpened, id] }),
     finishStory: (id, missionId) => update((p) => {
