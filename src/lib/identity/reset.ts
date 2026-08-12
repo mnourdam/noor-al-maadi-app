@@ -58,12 +58,14 @@ export async function resetForIdentityChange(opts: {
   const next = opts.nextUserId ? userOwnerKey(opts.nextUserId) : guestOwnerKey();
   const previous = getActiveOwner();
   if (previous === next) {
+    // If we're already the correct user, ensure readiness is signaled.
     if (opts.nextUserId) setAuthReady(true);
     return { changed: false, owner: next, previous };
   }
 
-  if (opts.nextUserId) setAuthReady(false); // Reset readiness during switch
-  //    so no late payload can be delivered mid-swap.
+  // PRE-READINESS RESET: Drop readiness during switch so no late payload
+  // belonging to the previous identity can be delivered mid-swap.
+  setAuthReady(false);
   try {
     const { supabase } = await import("@/integrations/supabase/client");
     await supabase.removeAllChannels();
