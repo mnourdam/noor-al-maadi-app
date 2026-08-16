@@ -48,6 +48,17 @@ export async function getBaselineContent(): Promise<BaselineContent | null> {
       _memoryBaseline = data;
       _parseTimeMs = now() - start;
       console.info(`[baseline] parsed 4.8MB in ${_parseTimeMs.toFixed(1)}ms`);
+      
+      // Diagnostic attachment for the acceptance test
+      if (typeof window !== "undefined") {
+        (window as any).irth_baseline_report = {
+          parseTimeMs: _parseTimeMs,
+          version: _memoryBaseline.version,
+          games: _memoryBaseline.collections.games.length,
+          stories: _memoryBaseline.collections.stories.length
+        };
+      }
+      
       return _memoryBaseline;
     }
     throw new Error("Invalid baseline schema");
