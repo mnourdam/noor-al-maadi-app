@@ -16,7 +16,9 @@
  * admin-only data, no PII (profiles, referrals, audit logs, emails).
  */
 import { supabase } from "@/integrations/supabase/client";
+import { isLocalReady, localDataVersion } from "./local-first-store";
 import { ATLAS_PUBLIC_COLUMNS } from "./atlas-entities";
+
 
 import {
   loadSnapshot,
