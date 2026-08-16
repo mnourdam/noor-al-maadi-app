@@ -69,7 +69,7 @@ export function EncyclopediaHero(props: EncyclopediaHeroProps) {
           it is visually hidden until the image is ready. */}
       <div className={showImage ? "contents" : "hidden"} aria-hidden={!showImage}>
         <header
-          className="mt-4 relative overflow-hidden rounded-[28px] border border-gold/25 shadow-[0_30px_80px_-40px_rgba(212,175,90,0.45)] min-h-[380px] p-6"
+          className="mt-4 relative overflow-hidden rounded-[28px] border border-gold/25 shadow-[0_30px_80px_-40px_rgba(212,175,90,0.45)] min-h-[380px] md:min-h-[440px] p-6"
         >
           <div className="absolute inset-0" aria-hidden="true">
             <SafeHeroImage
