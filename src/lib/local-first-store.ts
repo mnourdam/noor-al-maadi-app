@@ -172,7 +172,17 @@ function indexDailyFacts(rows: Row[]) {
 
 function indexStories(rows: Row[]) {
   storiesById.clear(); storiesBySlug.clear();
-  storiesAll = rows.filter((r) => r && r.status === "published");
+  // Filter for published status and EXCLUDE campaign intros.
+  // We use the library-filter helper to ensure consistency with Phase 2 rules.
+  const { isCampaignIntroRow, introStoryIdsFromCampaigns } = require("./stories/library-filter");
+  const introIds = introStoryIdsFromCampaigns(campaignsAll);
+  
+  storiesAll = rows.filter((r) => 
+    r && 
+    r.status === "published" && 
+    !isCampaignIntroRow(r, introIds)
+  );
+  
   for (const r of storiesAll) {
     if (r.id) storiesById.set(String(r.id), r);
     if (r.slug) storiesBySlug.set(String(r.slug), r);
