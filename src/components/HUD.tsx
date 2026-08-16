@@ -11,6 +11,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { PersonalInboxBell } from "./notifications/PersonalInboxBell";
 import { HeartsPopover, DinarsPopover, XPPopover, StreakPopover } from "./HUDStatPopovers";
 import { AnimatedNumber } from "./motion/MotionPrimitives";
+import { getReconciliationState, subscribeReconciliation } from "@/lib/boot/reconciliation";
+import { Skeleton } from "./ui/skeleton";
 
 
 type BumpKey = "dinars" | "points" | "hearts";
@@ -23,8 +25,13 @@ export function HUD() {
   const { profile } = useProfile();
   const [, force] = useState(0);
   const [unread, setUnread] = useState(0);
+  const [reco, setReco] = useState(getReconciliationState());
   const androidStable = isAndroidUltraStableMode();
   const disableGlobalFocusBlur = isAndroidFocusABDisabled("disableGlobalFocusBlur");
+
+  useEffect(() => {
+    return subscribeReconciliation(setReco);
+  }, []);
 
   useEffect(() => {
     const id = androidStable ? null : setInterval(() => force((n) => n + 1), 1_000);
@@ -64,6 +71,7 @@ export function HUD() {
 
 
   const now = Date.now();
+  const isLoadingHearts = profile.loggedIn && (reco === "loading-server" || reco === "loading-local");
   const hearts = getEffectiveHearts(profile, now);
   const next = msUntilNextHeart(profile, now);
 
@@ -106,17 +114,27 @@ export function HUD() {
               key={heartShake}
               className={`flex items-center gap-0.5 rounded-lg px-1 py-1 -mx-1 -my-1 transition hover:bg-white/5 active:bg-white/10 ${heartShake ? "hud-shake" : ""}`}
             >
-              {Array.from({ length: HEART_MAX }).map((_, i) => (
-                <Heart
-                  key={i}
-                  className={`size-3.5 ${i < hearts ? "fill-red-500 text-red-500" : "text-white/20"}`}
-                  strokeWidth={1.8}
-                />
-              ))}
-              {hearts < HEART_MAX && (
-                <span className="ms-1 text-[10px] tabular-nums text-muted-foreground" aria-label="القلب التالي خلال">
-                  {formatHeartTimer(next)}
-                </span>
+              {isLoadingHearts ? (
+                <div className="flex gap-0.5 items-center">
+                  {Array.from({ length: HEART_MAX }).map((_, i) => (
+                    <Skeleton key={i} className="size-3.5 rounded-full bg-white/10" />
+                  ))}
+                </div>
+              ) : (
+                <>
+                  {Array.from({ length: HEART_MAX }).map((_, i) => (
+                    <Heart
+                      key={i}
+                      className={`size-3.5 ${i < hearts ? "fill-red-500 text-red-500" : "text-white/20"}`}
+                      strokeWidth={1.8}
+                    />
+                  ))}
+                  {hearts < HEART_MAX && (
+                    <span className="ms-1 text-[10px] tabular-nums text-muted-foreground" aria-label="القلب التالي خلال">
+                      {formatHeartTimer(next)}
+                    </span>
+                  )}
+                </>
               )}
             </button>
           </PopoverTrigger>
