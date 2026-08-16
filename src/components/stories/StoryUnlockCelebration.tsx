@@ -173,14 +173,22 @@ export function StoryUnlockCelebration() {
   // survives reload, sign-out/sign-in and device changes.
   const persistSeen = useMemo(() => (ids: string[]) => {
     const uid = userIdRef.current;
-    if (!uid || ids.length === 0) return;
+    if (ids.length === 0) return;
+    
+    // 1. Mark as seen locally IMMEDIATELY (Authority for current device)
+    const seen = readMap(SEEN_KEY);
+    for (const id of ids) seen[id] = true;
+    writeMap(SEEN_KEY, seen);
+
+    // 2. Server sync in background
+    if (!uid) return;
     void import("@/lib/stories/unlock-notices")
       .then((m) => m.markUnlockNoticesSeen(uid, ids))
       .catch(() => {});
   }, []);
 
   useEffect(() => {
-    if (!scope || !ledgerReady) return;
+    if (!ownerKey || !ledgerReady || !storageReady.current) return;
     const scan = () => {
       try {
         const caches = queryClient.getQueryCache().findAll({ queryKey: ["stories-summary"] });
@@ -195,9 +203,8 @@ export function StoryUnlockCelebration() {
             rows.push(r);
           }
         }
-        const fresh = detectTransitions(scope, rows);
+        const fresh = detectTransitions(rows);
         if (fresh.length > 0) {
-          persistSeen(fresh.map((f) => f.id));
           setQueue((q) => [...q, ...fresh.filter((f) => !q.some((x) => x.id === f.id))]);
         }
       } catch { /* celebration must never break the app */ }
@@ -208,7 +215,7 @@ export function StoryUnlockCelebration() {
       if (ev.type === "updated" && ev.query.queryKey?.[0] === "stories-summary") scan();
     });
     return () => unsub();
-  }, [queryClient, scope, ledgerReady, persistSeen]);
+  }, [queryClient, ownerKey, ledgerReady, persistSeen]);
 
   const current = queue[0] ?? null;
   // Any interaction (open now / later / close) permanently retires the notice.
