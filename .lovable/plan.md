@@ -1,49 +1,56 @@
-# Plan: Persistent Transactional Help for Ordering Questions (Revised)
+# Plan: Persistent Transactional Help for Ordering Questions (Final)
 
-Implement attempt-scoped, identity-partitioned, and fingerprint-validated persistence for "Arrange Events" (ordering) question help. This ensures that purchased hints (pinned items) are preserved across retries and exit/resume cycles, and that players are never charged twice for the same reveal.
+Implement attempt-scoped, identity-partitioned, and fingerprint-validated persistence for "Arrange Events" (ordering) question help. This ensures that purchased hints (pinned items) are preserved across retries and exit/resume cycles, and that players are never charged twice for the same reveal, even in crash scenarios.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> - **Attempt Lifecycle:** Help state is tied to a `fingerprint` (activity ID + content hash). It survives wrong answers, retries, and app restarts. It is cleared ONLY upon successful completion or if the question content changes.
-> - **Transactional Safety:** Uses the "select -> persist intent -> debit -> commit" pattern to ensure crash-safety.
-> - **UX Fairness:** Help button is disabled if no eligible useful items remain. At least one item always remains unpinned to keep the puzzle interactive.
+> - **Crash-Safe Recovery:** Uses a "Select -> Persist Intent -> Debit -> Commit" flow. If a crash occurs after debit but before commit, the next mount will automatically complete the reveal of the *same* item without a second charge.
+> - **Attempt Lifecycle:** Help state is tied to a `fingerprint` (activity content hash). It survives wrong answers and app restarts, clearing ONLY upon success or content change.
+> - **UX Fairness:** Help button disables if no useful items remain, and at least one item is always left for the player to solve manually.
 
 ## Technical Details
 
-### 1. Help Persistence Layer
+### 1. Help Persistence & Recovery Layer
 Create `src/lib/campaigns/ordering-help.ts`:
-- **Storage Key:** `irth.campaign.ordering.help.v2` (Personal partitioned).
 - **Logical Key:** `campaignId:chapterId:activityId`.
-- **Content Fingerprint:** A hash of `activity.id` + `activity.correctOrder` to prevent stale data if content updates.
+- **Personal Partitioned Storage:** `irth.campaign.ordering.help.v2`.
+- **Fingerprint:** Hash of `activity.id` + `activity.correctOrder`.
+- **Data Shape:**
+  ```ts
+  {
+    pinnedIds: string[];
+    pending?: { itemId: string; txId: string; at: string };
+    fingerprint: string;
+  }
+  ```
 - **Functions:**
-  - `getOrderingHelp(key, fingerprint)`: Returns `pinnedIds` if fingerprint matches.
-  - `purchaseOrderingHelp(key, fingerprint, answerItemIds, payCallback)`: 
+  - `getOrderingState(key, fingerprint)`: Returns current state; validates fingerprint.
+  - `purchaseOrderingHelp(key, fingerprint, currentOrder, payCallback)`:
     1. Filter eligible items (not pinned && not currently correct).
     2. Check if total reveals < Total - 1.
-    3. Randomly select without replacement.
-    4. Atomic transaction: update local store with intent -> `payCallback()` -> commit.
-  - `clearOrderingHelp(key)`: Purge history on success.
+    3. Randomly select `itemId`.
+    4. **Intent:** Save `{ pending: { itemId, txId: uuid, at: now } }` to storage.
+    5. **Debit:** Call `payCallback(txId)`.
+    6. **Commit:** Move `itemId` to `pinnedIds` and clear `pending`.
+  - `recoverPendingOrderingHelp(key, fingerprint, checkPaidCallback, commitCallback)`:
+    1. If `pending` exists, call `checkPaid(txId)`.
+    2. If paid: move `itemId` to `pinnedIds` and call `commitCallback`.
+    3. If not paid: clear `pending`.
 
 ### 2. Activity Renderer Refactor
 Modify `src/components/imported-campaign/ActivityRenderer.tsx`:
-- **State Initialization:**
-  - Load `pinnedIds` during initial state setup (lazy initializer for `useState`) to prevent UI flash.
-  - Apply `pin()` logic to the initial `shuffle` immediately.
-- **Selection Logic (`useHint`):**
-  - Use `purchaseOrderingHelp` with current UI `order` to filter out already correct items.
-  - Update `pinnedIds` state and UI `order` on success.
-- **Visuals:** 
-  - `pin()` function handles multiple `pinnedIds`.
-  - Pinned items are non-draggable (`GripVertical` hidden/disabled).
+- **State Initialization:** Load `pinnedIds` in `useState` initializer from `getOrderingState`.
+- **Mount Effect:** Call `recoverPendingOrderingHelp` to handle any crashes.
+- **Selection Logic (`useHint`):** Use `purchaseOrderingHelp` to manage the transaction.
+- **Visuals:** Pinned items are non-draggable and fixed at `correctIndexOf(id)`.
 
 ### 3. Lifecycle Integration
 - **Chapter Player:** Call `clearOrderingHelp` in `onResolve` (correct branch).
-- **Economy:** Uses `useProfile().spendDinars(20)` via the existing `pay` callback.
+- **Economy:** Existing `useProfile().spendDinars(20)` returns true on success. For recovery, we'll need a way to check if a specific `txId` was already deducted (or use a simplified recovery if global economy doesn't track `txId` yet).
 
 ## Impact & Verification
-- **Duplicate Reveal:** Impossible (filtered by `pinnedIds`).
-- **Useless Reveal:** Impossible (filtered by `currentlyCorrect`).
-- **Crash Safety:** PASS (Intent-based transaction).
-- **Identity Isolation:** PASS (Partition engine).
-- **Content Integrity:** PASS (Fingerprint check).
+- **Double Debit:** Prevented by stable `txId` / Intent check.
+- **Useless Reveal:** Prevented by `currentlyCorrect` exclusion.
+- **Crash Safety:** Intent-based recovery handles mid-purchase kills.
+- **Content Integrity:** Fingerprint ensures pins match current activity version.
