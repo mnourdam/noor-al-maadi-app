@@ -96,13 +96,11 @@ export function StoryUnlockCelebration() {
     const update = (uid: string | null) => {
       if (!alive) return;
       userIdRef.current = uid;
-      // Import dynamically to avoid early boot circular issues
-      import("@/lib/identity/owner").then(({ getActiveOwner }) => {
-        if (!alive) return;
-        const current = getActiveOwner();
-        setOwnerKey(current);
-        storageReady.current = true;
-      });
+      // Use synchronous resolution from owner.ts
+      const { getActiveOwner } = require("@/lib/identity/owner");
+      const current = getActiveOwner();
+      setOwnerKey(current);
+      storageReady.current = true;
     };
 
     void supabase.auth.getSession().then(({ data }) => update(data.session?.user?.id ?? null));
