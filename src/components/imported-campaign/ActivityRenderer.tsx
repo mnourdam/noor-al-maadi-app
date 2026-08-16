@@ -590,15 +590,6 @@ function SortableArrangeRow({
   index: number;
   label: string;
   disabled: boolean;
-  pinned: boolean;
-  onMove: (from: number, to: number) => void;
-  canMoveUp: boolean;
-  canMoveDown: boolean;
-}) {
-  id: string;
-  index: number;
-  label: string;
-  disabled: boolean;
   /** Revealed by a paid hint: locked in place and shown in green. */
   pinned?: boolean;
   onMove: (dir: -1 | 1) => void;
