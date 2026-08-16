@@ -492,17 +492,6 @@ export async function generateAndStoreSnapshot(): Promise<OfflineSnapshot> {
 }
 
 
-  if (typeof window !== "undefined") {
-    if ("requestIdleCallback" in window) {
-      (window as any).requestIdleCallback(() => void warmTask(), { timeout: 10000 });
-    } else {
-      setTimeout(() => void warmTask(), 5000);
-    }
-  }
-
-  return snap;
-}
-
 /**
  * Priority-first image cache warm-up. Order:
  *   1. Story priority media (cover / first scene / first document / first reveal)
