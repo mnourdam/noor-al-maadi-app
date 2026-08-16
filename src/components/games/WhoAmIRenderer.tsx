@@ -1,13 +1,19 @@
-import { useEffect, useRef, useState } from "react";
-import { Lightbulb, Check, Sparkles, ScrollText, UserCircle2, ShieldQuestion } from "lucide-react";
+import { useEffect, useRef, useState, useMemo } from "react";
+import { Lightbulb, Check, Sparkles, ScrollText, UserCircle2, ShieldQuestion, HelpCircle, Coins } from "lucide-react";
 import type { WhoAmIStage } from "@/lib/games/types";
 import { AndroidSafeInput } from "@/components/AndroidSafeTextInput";
 import { isAndroidNativeApp } from "@/lib/androidFreezeDiagnostics";
 import { sfx } from "./sfx";
+import { useRegisterHelpOption } from "./help/GameHelpContext";
+import { getRevealedState, purchaseWhoAmIHelp } from "@/lib/games/who-am-i-help";
+import { letterClass } from "@/lib/games/answer-normalize";
+
 
 import { AttemptsChip } from "./AttemptsChip";
 
 interface Props {
+  gameId?: string;
+  retryNonce?: number;
   stage: WhoAmIStage;
   onComplete: (score: number) => void;
   onWrong?: () => void;
@@ -16,20 +22,23 @@ interface Props {
 }
 
 
+
 function normalize(s: string): string {
   return s.trim().toLowerCase().replace(/[ًٌٍَُِّْـ]/g, "").replace(/[إأآ]/g, "ا").replace(/[ى]/g, "ي").replace(/[ة]/g, "ه");
 }
 
 const POTENTIAL_BY_REVEAL = [100, 70, 50] as const;
 
-export function WhoAmIRenderer({ stage, onComplete, onWrong, attemptsLeft, maxAttempts }: Props) {
+export function WhoAmIRenderer({ gameId, retryNonce = 0, stage, onComplete, onWrong, attemptsLeft, maxAttempts }: Props) {
   const [revealed, setRevealed] = useState(1);
   const [guess, setGuess] = useState("");
   const guessRef = useRef<HTMLInputElement | null>(null);
   const [done, setDone] = useState(false);
   const [wrong, setWrong] = useState(false);
+  const [helpVersion, setHelpVersion] = useState(0);
 
   useEffect(() => { setRevealed(1); setGuess(""); setDone(false); setWrong(false); }, [stage]);
+
 
   const accepted = [stage.answer, ...(stage.acceptable ?? [])].map(normalize);
   const potential = POTENTIAL_BY_REVEAL[Math.min(revealed, 3) - 1];
@@ -61,6 +70,73 @@ export function WhoAmIRenderer({ stage, onComplete, onWrong, attemptsLeft, maxAt
     }
   };
 
+  // ── Help system integration ──────────────────────────────────────────
+  const helpState = useMemo(() => {
+    if (!gameId) return { revealedWords: [], revealedLetters: {} };
+    return getRevealedState(gameId, retryNonce);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameId, retryNonce, helpVersion]);
+
+  const words = useMemo(() => stage.answer.trim().split(/\s+/), [stage.answer]);
+
+  useRegisterHelpOption("whoami_reveal", gameId && !done ? {
+    icon: words.length > 1 ? <ScrollText className="h-4 w-4" /> : <HelpCircle className="h-4 w-4" />,
+    label: words.length > 1 ? "كشف كلمة" : "كشف حروف",
+    description: words.length > 1 ? "اكشف إحدى كلمات الاسم مقابل 20 دينار." : "اكشف بعض حروف الاسم مقابل 20 دينار.",
+    cost: 20,
+    getAvailable: () => {
+      if (words.length > 1) {
+        return helpState.revealedWords.length < words.length - 1;
+      }
+      return (helpState.revealedLetters[0]?.length ?? 0) === 0;
+    },
+    perform: ({ pay }) => {
+      const ok = purchaseWhoAmIHelp(gameId!, retryNonce, stage.answer, { pay });
+      if (ok) {
+        setHelpVersion(v => v + 1);
+        sfx("gold_unlock");
+      }
+      return ok;
+    }
+  } : null);
+
+  const renderVisualHelp = () => {
+    if (words.length > 1) {
+      return (
+        <div className="flex flex-wrap gap-2 justify-center mb-4 dir-rtl" dir="rtl">
+          {words.map((word, i) => {
+            const isRevealed = helpState.revealedWords.includes(i);
+            return (
+              <span key={i} className={`px-2 py-1 rounded border ${isRevealed ? "border-amber-500/50 text-amber-100 bg-amber-500/10" : "border-slate-800 text-slate-600 bg-slate-900/40"}`}>
+                {isRevealed ? word : "••••••"}
+              </span>
+            );
+          })}
+        </div>
+      );
+    } else {
+      const word = words[0];
+      const revealedPositions = helpState.revealedLetters[0] ?? [];
+      if (revealedPositions.length === 0) return null;
+
+      return (
+        <div className="flex gap-1.5 justify-center mb-4 dir-rtl text-lg font-bold tracking-widest" dir="rtl">
+          {Array.from(word).map((ch, i) => {
+            const isRevealed = revealedPositions.includes(i);
+            const isSpace = letterClass(ch) === "";
+            if (isSpace) return <span key={i} className="w-2" />;
+            return (
+              <span key={i} className={`${isRevealed ? "text-amber-200" : "text-slate-700"}`}>
+                {isRevealed ? ch : "•"}
+              </span>
+            );
+          })}
+        </div>
+      );
+    }
+  };
+
+
   return (
     <div className="relative overflow-hidden irth-title-card p-5 sm:p-6">
       {/* Dossier header */}
@@ -90,6 +166,10 @@ export function WhoAmIRenderer({ stage, onComplete, onWrong, attemptsLeft, maxAt
           )}
         </div>
       </div>
+
+      {/* Visual Help (Revealed words/letters) */}
+      {!done && renderVisualHelp()}
+
 
       {/* Hints — revealed one by one */}
       <ul className="space-y-3">
