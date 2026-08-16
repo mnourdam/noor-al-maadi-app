@@ -208,7 +208,18 @@ function RootComponent() {
     // WebViews. Defer to idle (with a hard timeout so it always runs) so the
     // first screen paints first. Offline content availability is unchanged —
     // routes already await `ensureLocalSnapshotLoaded()` when they need rows.
-    const startOfflineSync = () => {
+    const startOfflineSync = async () => {
+      // Phase 2: Priority Bootstrap
+      try {
+        const { getBaselineContent, seedBaselineToPersistentStore } = await import("../lib/offline-baseline-resolver");
+        // 1. Load bundled baseline into memory immediately (fast parse)
+        await getBaselineContent();
+        // 2. Start IndexedDB seeding in background (non-blocking)
+        void seedBaselineToPersistentStore();
+      } catch (e) {
+        console.warn("[offline-sync] baseline bootstrap failed:", e);
+      }
+
       import("../lib/offline-snapshot").then((m) => m.bootstrapOfflineSync()).catch(() => {});
       // The Encyclopedia is the most-visited surface in the app. Build its
       // shared index in the background now (it shares the same singleton

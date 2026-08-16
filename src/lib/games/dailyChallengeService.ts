@@ -315,14 +315,14 @@ export function useDailyChallengeState(opts: { enabled?: boolean } = {}): {
       // Priority 1: Check Local Cache First
       try {
         const { isLocalReady, ensureLocalSnapshotLoaded } = require("@/lib/local-first-store");
-        const { localListPublishedGames } = require("./store");
+        const { getLocalPublishedGames } = require("../offline-baseline-resolver");
         
         // If not ready, await it, but we prefer synchronous.
         if (!isLocalReady()) {
           await ensureLocalSnapshotLoaded();
         }
 
-        const localGames = localListPublishedGames();
+        const localGames = getLocalPublishedGames();
         if (!cancelled && localGames.length > 0) {
           const s = await loadDailyChallengeState({ providedGames: localGames });
           if (!cancelled) {
