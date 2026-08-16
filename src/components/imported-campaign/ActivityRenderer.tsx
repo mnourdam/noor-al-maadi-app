@@ -688,7 +688,7 @@ function DecisionRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
 // ---------- Match Pairs ----------
 function MatchPairsRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
   const pairs = activity.pairs ?? [];
-  const rights = useMemo(() => shuffle(pairs.map(p => p.right)), [pairs]);
+  const rights = useMemo(() => utilsShuffle(pairs.map(p => p.right)), [pairs]);
   const [mapping, setMapping] = useState<Record<string, string>>({});
   const [resolved, setResolved] = useState(alreadyDone ?? false);
   const [feedback, setFeedback] = useState<"ok" | "err" | null>(alreadyDone ? "ok" : null);
