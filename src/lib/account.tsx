@@ -101,8 +101,8 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         reason: event === "SIGNED_OUT" ? "sign-out" : event === "SIGNED_IN" ? "sign-in" : "auth-listener",
       }).then((res) => {
         if (!res.changed) return;
+        autoPushEnabled.current = false;
         if (!u) {
-          autoPushEnabled.current = false;
           setAccount(null);
           setLastSyncAt(null);
         }
@@ -360,7 +360,8 @@ export function AccountProvider({ children }: { children: ReactNode }) {
 
   // ============ Debounced auto-push while signed in ============
   useEffect(() => {
-    if (!user || !autoPushEnabled.current) return;
+    const isReady = ["reconciled", "offline-local", "failed"].includes(getReconciliationState());
+    if (!user || !autoPushEnabled.current || !isReady) return;
     if (androidStable) return;
     if (pushTimer.current) clearTimeout(pushTimer.current);
     pushTimer.current = setTimeout(() => {
