@@ -488,22 +488,9 @@ export async function generateAndStoreSnapshot(): Promise<OfflineSnapshot> {
   } catch { /* ignore */ }
 
 
-  
-  if (import.meta.env.DEV && typeof window === "undefined") {
-    try {
-      const { writeBundledSnapshotFile } = await import("./offline-snapshot-write.functions");
-      await writeBundledSnapshotFile({ data: { json: JSON.stringify(snap, null, 2) } });
-    } catch { /* ignore */ }
-  }
-  
-  const warmTask = async () => {
-    try {
-      const { warmSnapshotImageCache } = await import("./offline-snapshot-warm-bridge");
-      await warmSnapshotImageCache(snap.collections);
-    } catch (err) {
-      console.warn("[snapshot] background warming failed:", err);
-    }
-  };
+  return snap;
+}
+
 
   if (typeof window !== "undefined") {
     if ("requestIdleCallback" in window) {
