@@ -357,20 +357,57 @@ function TrueFalseRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
 // progress — the player still has to order everything else.
 const ARRANGE_HINT_COST = 20;
 
-function ArrangeEventsRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
+function ArrangeEventsRenderer({ activity, onResolve, alreadyDone, campaignId }: RendererProps & { campaignId?: string }) {
   const correctOrder = activity.correctOrder ?? activity.options ?? [];
+  const chapterId = (activity as any).chapterId ?? "default";
+  const logicalKey = campaignId ? activityKey(campaignId, chapterId, activity.id) : `activity:${activity.id}`;
+  const fingerprint = useMemo(() => getOrderingFingerprint(activity), [activity]);
+
   // Stable item ids so dnd-kit can track items even when labels repeat.
   const items = useMemo(
     () => correctOrder.map((label, i) => ({ id: `evt-${i}`, label })),
     [correctOrder],
   );
-  const [order, setOrder] = useState<string[]>(() => shuffle(items.map((it) => it.id)));
+
+  /** `evt-<i>` — i is the item's correct final position. */
+  const correctIndexOf = (id: string) => Number(id.replace("evt-", ""));
+
+  const [pinnedIds, setPinnedIds] = useState<string[]>(() => {
+    const saved = getOrderingState(logicalKey, fingerprint);
+    return saved?.pinnedIds ?? [];
+  });
+
+  const [order, setOrder] = useState<string[]>(() => {
+    const initial = shuffle(items.map((it) => it.id));
+    // Apply pins to initial shuffle immediately to prevent flash
+    const saved = getOrderingState(logicalKey, fingerprint);
+    if (!saved || saved.pinnedIds.length === 0) return initial;
+
+    let current = [...initial];
+    for (const pid of saved.pinnedIds) {
+      const target = correctIndexOf(pid);
+      current = current.filter((id) => id !== pid);
+      current.splice(Math.min(target, current.length), 0, pid);
+    }
+    return current;
+  });
+
   const [resolved, setResolved] = useState(alreadyDone ?? false);
   const [feedback, setFeedback] = useState<"ok" | "err" | null>(alreadyDone ? "ok" : null);
-  const [pinnedId, setPinnedId] = useState<string | null>(null);
-  const [hintUsed, setHintUsed] = useState(false);
   const [hintError, setHintError] = useState<string | null>(null);
   const { profile, spendDinars } = useProfile();
+
+  // Recovery flow for crashes between debit and commit
+  useEffect(() => {
+    recoverPendingOrderingHelp(
+      logicalKey,
+      fingerprint,
+      () => true, // Best-effort: assume if we have a pending tx, it was intended/paid
+      (itemId) => {
+        setPinnedIds((prev) => [...new Set([...prev, itemId])]);
+      }
+    );
+  }, [logicalKey, fingerprint]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -381,21 +418,23 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone }: RendererPro
   if (!correctOrder.length) return <FallbackRenderer activity={activity} onResolve={onResolve} alreadyDone={alreadyDone} />;
 
   const labelById = (id: string) => items.find((it) => it.id === id)?.label ?? "";
-  /** `evt-<i>` — i is the item's correct final position. */
-  const correctIndexOf = (id: string) => Number(id.replace("evt-", ""));
 
-  /** Keeps a revealed item glued to its correct slot after any move. */
+  /** Keeps revealed items glued to their correct slots after any move. */
   const pin = (next: string[]): string[] => {
-    if (!pinnedId) return next;
-    const target = correctIndexOf(pinnedId);
-    const without = next.filter((id) => id !== pinnedId);
-    without.splice(Math.min(target, without.length), 0, pinnedId);
-    return without;
+    let current = [...next];
+    // Sort pins by target index to ensure stable insertion
+    const sortedPins = [...pinnedIds].sort((a, b) => correctIndexOf(a) - correctIndexOf(b));
+    for (const pid of sortedPins) {
+      const target = correctIndexOf(pid);
+      current = current.filter((id) => id !== pid);
+      current.splice(Math.min(target, current.length), 0, pid);
+    }
+    return current;
   };
 
   const move = (idx: number, dir: -1 | 1) => {
     if (resolved) return;
-    if (order[idx] === pinnedId) return;
+    if (pinnedIds.includes(order[idx])) return;
     const j = idx + dir;
     if (j < 0 || j >= order.length) return;
     setOrder(pin(arrayMove(order, idx, j)));
@@ -406,7 +445,7 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone }: RendererPro
     if (resolved) return;
     const { active, over } = e;
     if (!over || active.id === over.id) return;
-    if (String(active.id) === pinnedId) return;
+    if (pinnedIds.includes(String(active.id))) return;
     const from = order.indexOf(String(active.id));
     const to = order.indexOf(String(over.id));
     if (from < 0 || to < 0) return;
@@ -415,20 +454,41 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone }: RendererPro
   };
 
   const useHint = () => {
-    if (resolved || hintUsed) return;
-    // Reveal the first item that is currently in the wrong slot.
-    const wrongId = order.find((id, i) => correctIndexOf(id) !== i);
-    if (!wrongId) { setHintUsed(true); return; }
-    if (!spendDinars(ARRANGE_HINT_COST)) {
-      setHintError(`تحتاج ${ARRANGE_HINT_COST} دينارًا لاستخدام التلميح.`);
+    if (resolved) return;
+
+    const result = purchaseOrderingHelp(
+      logicalKey,
+      fingerprint,
+      order,
+      correctIndexOf,
+      { pay: (txId) => spendDinars(ARRANGE_HINT_COST) }
+    );
+
+    if (!result) {
+      // Check if it was a balance issue or just no eligible items
+      const state = getOrderingState(logicalKey, fingerprint);
+      const eligibleCount = order.filter(id => {
+        const isPinned = state?.pinnedIds.includes(id) ?? false;
+        const isCorrect = correctIndexOf(id) === order.indexOf(id);
+        return !isPinned && !isCorrect;
+      }).length;
+
+      if (eligibleCount === 0 || (state?.pinnedIds.length ?? 0) >= order.length - 1) {
+        setHintError("لم يبقَ عناصر مفيدة للكشف عنها.");
+      } else {
+        setHintError(`تحتاج ${ARRANGE_HINT_COST} دينارًا لاستخدام التلميح.`);
+      }
       return;
     }
+
     setHintError(null);
-    setHintUsed(true);
-    setPinnedId(wrongId);
-    const target = correctIndexOf(wrongId);
-    const without = order.filter((id) => id !== wrongId);
-    without.splice(Math.min(target, without.length), 0, wrongId);
+    const newPinnedId = result.itemId;
+    setPinnedIds((prev) => [...prev, newPinnedId]);
+    
+    // Update order immediately
+    const target = correctIndexOf(newPinnedId);
+    const without = order.filter((id) => id !== newPinnedId);
+    without.splice(Math.min(target, without.length), 0, newPinnedId);
     setOrder(without);
     setFeedback(null);
   };
@@ -443,7 +503,8 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone }: RendererPro
       onResolve(true);
     } else {
       setFeedback("err");
-      gameSfx("wrong", `activity:${activity.id}`); onResolve(false);
+      gameSfx("wrong", `activity:${activity.id}`); 
+      onResolve(false);
     }
   };
 
@@ -457,14 +518,14 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone }: RendererPro
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         <SortableContext items={order} strategy={verticalListSortingStrategy}>
           <ol className="space-y-2">
-            {order.map((id, i) => (
-              <SortableArrangeRow
-                key={id}
-                id={id}
-                index={i}
-                label={labelById(id)}
-                disabled={resolved || id === pinnedId}
-                pinned={id === pinnedId}
+             {order.map((id, i) => (
+               <SortableArrangeRow
+                 key={id}
+                 id={id}
+                 index={i}
+                 label={labelById(id)}
+                 disabled={resolved || pinnedIds.includes(id)}
+                 pinned={pinnedIds.includes(id)}
                 onMove={(dir) => move(i, dir)}
                 canMoveUp={i > 0}
                 canMoveDown={i < order.length - 1}
