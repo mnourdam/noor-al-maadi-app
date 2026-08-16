@@ -33,10 +33,12 @@ async function generateBaseline() {
   const queries = {
     games: "SELECT json_agg(t) FROM (SELECT * FROM public.games WHERE status = 'published' ORDER BY id ASC) t;",
     stories: "SELECT json_agg(t) FROM (SELECT * FROM public.stories WHERE status = 'published' ORDER BY id ASC) t;",
+    collections: "SELECT json_agg(t) FROM (SELECT * FROM public.story_collections ORDER BY display_order ASC) t;",
   };
 
   await streamPsqlToFile(queries.games, 'tmp/games.json');
   await streamPsqlToFile(queries.stories, 'tmp/stories.json');
+  await streamPsqlToFile(queries.collections, 'tmp/collections.json');
   
   // Also fetch campaign intros to know what to exclude
   const campaignQuery = "SELECT json_agg(intro_id) FROM (SELECT data->>'intro_story_id' as intro_id FROM public.admin_campaigns WHERE data->>'intro_story_id' IS NOT NULL) t;";
@@ -44,6 +46,7 @@ async function generateBaseline() {
 
   const games = JSON.parse(fs.readFileSync('tmp/games.json', 'utf8') || '[]');
   const stories = JSON.parse(fs.readFileSync('tmp/stories.json', 'utf8') || '[]');
+  const storyCollections = JSON.parse(fs.readFileSync('tmp/collections.json', 'utf8') || '[]');
   const introIdsFromCampaigns = JSON.parse(fs.readFileSync('tmp/intros.json', 'utf8') || '[]');
   const introSet = new Set(introIdsFromCampaigns.filter(id => !!id));
 
@@ -70,7 +73,7 @@ async function generateBaseline() {
   const scenes = JSON.parse(fs.readFileSync('tmp/scenes.json', 'utf8') || '[]');
   const media = JSON.parse(fs.readFileSync('tmp/media.json', 'utf8') || '[]');
 
-  console.log(`Fetched ${games.length} games, ${libraryStories.length} library stories, ${scenes.length} scenes, ${media.length} media.`);
+  console.log(`Fetched ${games.length} games, ${libraryStories.length} library stories, ${storyCollections.length} collections, ${scenes.length} scenes, ${media.length} media.`);
 
   const baseline = {
     version: Date.now(),
@@ -79,7 +82,8 @@ async function generateBaseline() {
       games,
       stories: libraryStories,
       story_scenes: scenes,
-      story_media: media
+      story_media: media,
+      story_collections: storyCollections
     }
   };
 
