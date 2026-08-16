@@ -36,6 +36,14 @@ import {
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { shuffle } from "@/lib/utils";
+import {
+  getOrderingFingerprint,
+  getOrderingState,
+  purchaseOrderingHelp,
+  recoverPendingOrderingHelp,
+} from "@/lib/campaigns/ordering-help";
+import { activityKey } from "@/lib/campaignLedger";
 
 
 export interface ResolveMeta {
@@ -540,11 +548,11 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone, campaignId }:
           <button
             type="button"
             onClick={useHint}
-            disabled={hintUsed}
+            disabled={pinnedIds.length >= order.length - 1}
             className="inline-flex items-center gap-1 rounded-lg border border-amber-300/30 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-200 disabled:opacity-40"
           >
             <Lightbulb className="size-3" />
-            {hintUsed ? "تم استخدام التلميح" : `إظهار تلميح — ${ARRANGE_HINT_COST} دينارًا`}
+            {pinnedIds.length > 0 ? `إظهار تلميح إضافي — ${ARRANGE_HINT_COST} دينارًا` : `إظهار تلميح — ${ARRANGE_HINT_COST} دينارًا`}
           </button>
           <span className="text-[10px] text-muted-foreground">
             رصيدك: {(profile?.dinars ?? 0).toLocaleString("en-US")} دينار
@@ -552,8 +560,8 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone, campaignId }:
         </div>
       )}
       {hintError && <p className="mt-2 text-[11px] text-rose-300">{hintError}</p>}
-      {pinnedId && (
-        <p className="mt-2 text-[11px] text-emerald-300/80">ثُبِّت عنصر واحد في مكانه الصحيح — رتّب البقية بنفسك.</p>
+      {pinnedIds.length > 0 && (
+        <p className="mt-2 text-[11px] text-emerald-300/80">ثُبِّت {pinnedIds.length === 1 ? 'عنصر واحد' : `${pinnedIds.length} عناصر`} في {pinnedIds.length === 1 ? 'مكانه الصحيح' : 'أماكنها الصحيحة'} — رتّب البقية بنفسك.</p>
       )}
 
       <HintRow hint={activity.hint} />
