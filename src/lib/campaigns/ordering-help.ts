@@ -33,7 +33,7 @@ function getHelpStore(): Store {
   const owner = getActiveOwner();
   if (!owner || typeof window === "undefined") return {};
   try {
-    const raw = window.localStorage.getItem(`${owner.id}:${STORAGE_KEY}`);
+    const raw = window.localStorage.getItem(`${owner}:${STORAGE_KEY}`);
     return raw ? JSON.parse(raw) : {};
   } catch {
     return {};
@@ -43,7 +43,7 @@ function getHelpStore(): Store {
 function saveHelpStore(store: Store) {
   const owner = getActiveOwner();
   if (!owner || typeof window === "undefined") return;
-  window.localStorage.setItem(`${owner.id}:${STORAGE_KEY}`, JSON.stringify(store));
+  window.localStorage.setItem(`${owner}:${STORAGE_KEY}`, JSON.stringify(store));
 }
 
 export function getOrderingState(logicalKey: string, fingerprint: string): OrderingHelpState | null {
