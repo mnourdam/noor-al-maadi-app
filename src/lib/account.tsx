@@ -18,7 +18,7 @@ import { useProfile, type ProfileState } from "./profile";
 import { pushPublicStats } from "./social";
 import { androidMark, androidMeasure, isAndroidUltraStableMode, recordAndroidAction } from "./androidFreezeDiagnostics";
 import { flushOutbox } from "./offline/flush";
-import { setReconciliationState } from "./boot/reconciliation";
+import { getReconciliationState, setReconciliationState } from "./boot/reconciliation";
 import { withBoundedTimeout } from "./boot/withTimeout";
 import { recordStartupMark } from "./boot/startup-timeline";
 import { resetForIdentityChange } from "./identity/reset";
