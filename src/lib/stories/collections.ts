@@ -22,6 +22,19 @@ export function useStoryCollections() {
 
   useEffect(() => {
     async function load() {
+      // 1. Try local/baseline first
+      try {
+        const { getBaselineContent } = await import("../offline-baseline-resolver");
+        const baseline = await getBaselineContent();
+        if (baseline?.collections?.story_collections) {
+          setCollections(baseline.collections.story_collections as StoryCollection[]);
+          setLoading(false);
+        }
+      } catch (e) { /* ignore */ }
+
+      // 2. Fetch fresh from server if online
+      if (typeof navigator !== "undefined" && navigator.onLine === false) return;
+
       try {
         const { data, error } = await supabase
           .from("story_collections")

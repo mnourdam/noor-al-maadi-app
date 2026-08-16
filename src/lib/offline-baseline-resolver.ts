@@ -115,6 +115,9 @@ export async function seedBaselineToPersistentStore(): Promise<void> {
     newSnapshot.collections.stories = collections.stories;
     newSnapshot.collections.story_scenes = collections.story_scenes;
     newSnapshot.collections.story_media = collections.story_media;
+    if (collections.story_collections) {
+      (newSnapshot.collections as any).story_collections = collections.story_collections;
+    }
     
     // Update counts
     newSnapshot.content_counts.games = collections.games.length;
