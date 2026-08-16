@@ -700,12 +700,10 @@ function hasRequiredSnapshotContent(snap: OfflineSnapshot | null | undefined): s
 export async function bootstrapOfflineSync(opts: { maxAgeMs?: number } = {}): Promise<void> {
   const maxAge = opts.maxAgeMs ?? 6 * 60 * 60 * 1000; // 6h
   try {
-    // Phase 2: Priority Bootstrap
+    // Phase 2: Priority Bootstrap (Memory baseline -> IDB Seed)
     try {
       const { getBaselineContent, seedBaselineToPersistentStore } = await import("./offline-baseline-resolver");
-      // 1. Load bundled baseline into memory immediately (fast parse)
       await getBaselineContent();
-      // 2. Start IndexedDB seeding in background (non-blocking)
       void seedBaselineToPersistentStore();
     } catch (e) {
       console.warn("[offline-sync] baseline bootstrap failed:", e);
@@ -719,52 +717,57 @@ export async function bootstrapOfflineSync(opts: { maxAgeMs?: number } = {}): Pr
         local = bundled;
       }
     }
-    // Hydrate the in-memory local-first index immediately so player routes
-    // can read content synchronously on first paint, even without network.
+
+    // Phase 3: Immediate memory hydration for fast paint
     try {
       const { applyLocalSnapshot, ensureLocalSnapshotLoaded } = await import("./local-first-store");
-      if (hasRequiredSnapshotContent(local)) applyLocalSnapshot(local);
-      else await ensureLocalSnapshotLoaded();
+      if (hasRequiredSnapshotContent(local)) {
+        applyLocalSnapshot(local);
+      } else {
+        await ensureLocalSnapshotLoaded();
+      }
     } catch { /* ignore */ }
-
 
     const online = typeof navigator === "undefined" || navigator.onLine !== false;
     if (!online) return;
 
+    // Background Sync Strategy
     const stale =
       !local ||
       local.schema_version !== SNAPSHOT_SCHEMA_VERSION ||
       Date.now() - new Date(local.generated_at).getTime() > maxAge;
-    if (!stale) return;
+    
+    if (!stale) {
+      // Even if not stale, check the manifest for deltas (lightweight)
+      const { checkManifestUpdates } = await import("./offline-manifest");
+      const { upToDate } = await checkManifestUpdates();
+      if (upToDate) return;
+    }
 
-    // Lightweight in-tab debounce so multiple route mounts don't refetch.
+    // Lightweight in-tab debounce
     try {
       const last = Number(sessionStorage.getItem(SYNC_LOCK_KEY) ?? "0");
       if (Date.now() - last < 60 * 1000) return;
       sessionStorage.setItem(SYNC_LOCK_KEY, String(Date.now()));
     } catch { /* ignore */ }
 
-    // Fire-and-forget — UI is already rendered from local/bundled.
-    // Prefer incremental sync when we already have a baseline snapshot.
-    const refresh = local?.collections
-      ? refreshSnapshotIncremental()
-      : generateAndStoreSnapshot();
-    void refresh.catch((e) =>
-      console.warn("[offline-sync] background refresh failed:", e),
+    // Phase 3: Background Server Convergence (Atomic)
+    void generateAndStoreSnapshot().catch((e) =>
+      console.warn("[offline-sync] background convergence failed:", e),
     );
 
-    // Warm the image cache from whatever content we already have locally
-    // so covers/thumbnails survive going offline mid-session. Priority
-    // story media go first via `warmSnapshotImageCache`.
+    // Warm high-priority images from the current snapshot
     void (async () => {
       const snap = local ?? (await loadSnapshot());
-      if (!snap?.collections) return;
-      await warmSnapshotImageCache(snap.collections);
+      if (snap?.collections) {
+        await warmSnapshotImageCache(snap.collections);
+      }
     })();
   } catch (e) {
     console.warn("[offline-sync] bootstrap failed:", e);
   }
 }
+
 
 export const REQUIRED_COLLECTION_KEYS: OfflineCollectionKey[] = COLLECTIONS
   .filter((c) => c.required)
