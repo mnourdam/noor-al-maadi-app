@@ -1,7 +1,11 @@
 /**
  * Baseline content schema and types.
  */
-import { Row } from "@/integrations/supabase/types";
+import { Database } from "@/integrations/supabase/types";
+
+type TableName = keyof Database["public"]["Tables"];
+type Row<T extends TableName> = Database["public"]["Tables"][T]["Row"];
+
 
 export interface BaselineContent {
   version: number;
