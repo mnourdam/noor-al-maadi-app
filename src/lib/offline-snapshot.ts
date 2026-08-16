@@ -722,6 +722,17 @@ function hasRequiredSnapshotContent(snap: OfflineSnapshot | null | undefined): s
 export async function bootstrapOfflineSync(opts: { maxAgeMs?: number } = {}): Promise<void> {
   const maxAge = opts.maxAgeMs ?? 6 * 60 * 60 * 1000; // 6h
   try {
+    // Phase 2: Priority Bootstrap
+    try {
+      const { getBaselineContent, seedBaselineToPersistentStore } = await import("./offline-baseline-resolver");
+      // 1. Load bundled baseline into memory immediately (fast parse)
+      await getBaselineContent();
+      // 2. Start IndexedDB seeding in background (non-blocking)
+      void seedBaselineToPersistentStore();
+    } catch (e) {
+      console.warn("[offline-sync] baseline bootstrap failed:", e);
+    }
+
     let local = await loadSnapshot();
     if (!hasRequiredSnapshotContent(local)) {
       const bundled = await loadBundledSnapshot();
