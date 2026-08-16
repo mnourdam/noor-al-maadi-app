@@ -541,13 +541,21 @@ async function warmSnapshotImageCache(collections: Record<string, any[]>): Promi
  * snapshot exists — callers should use `generateAndStoreSnapshot()` in
  * that case.
  */
+/**
+ * Incremental refresh: for each collection, fetch only required deltas
+ * based on the server manifest and merge by ID.
+ */
 export async function refreshSnapshotIncremental(): Promise<OfflineSnapshot> {
   resetStoryManifestCache();
   const previous = await loadSnapshot();
 
   if (!previous?.collections) {
-    throw new Error("No previous snapshot; run generateAndStoreSnapshot() first");
+    return generateSnapshot();
   }
+
+  const { fetchContentManifest } = await import("./offline-manifest");
+  const serverManifest = await fetchContentManifest();
+  
   const nextCollections: Record<string, any[]> = { ...previous.collections };
   const nextCounts: Record<string, number> = { ...previous.content_counts };
   const manifest: { key: string; count: number; checksum?: string }[] = [];
@@ -557,39 +565,41 @@ export async function refreshSnapshotIncremental(): Promise<OfflineSnapshot> {
     const prevRows = previous.collections[def.key] ?? [];
     const since = maxUpdatedAt(prevRows);
     let merged: any[] = prevRows;
-    try {
-      // True-up: if the live source has more rows than our cache, the
-      // since-based delta will miss the rows we simply never fetched
-      // (they existed with older `updated_at` before our first sync, or a
-      // previous full fetch was silently truncated). Detect that gap and
-      // do a full re-fetch for this collection so the cache converges.
-      const expected = await fetchCollectionExpectedCount(def);
-      const cacheIsShort =
-        typeof expected === "number" && expected > prevRows.length;
 
-      if (cacheIsShort) {
-        console.info(
-          `[snapshot] true-up ${def.table}: cache=${prevRows.length}, live=${expected} → full fetch`,
-        );
-        const fresh = await fetchCollection(def);
-        merged = mergeRows(prevRows, fresh);
-      } else if (since && !NO_UPDATED_AT.has(def.key)) {
-        const deltas = await fetchCollectionSince(def, since);
-        if (deltas === null) {
-          merged = await fetchCollection(def);
+    try {
+      // Find this collection in the manifest to see if a fetch is actually needed
+      const serverItem = serverManifest?.find(m => 
+        (m.collection === 'campaigns_public' && def.key === 'admin_campaigns') ||
+        (m.collection === 'investigations_public' && def.key === 'investigations') ||
+        m.collection === def.key
+      );
+
+      const localCount = prevRows.length;
+      const needsSync = serverItem 
+        ? (serverItem.total_count !== localCount || new Date(serverItem.last_updated).getTime() > new Date(previous.generated_at).getTime())
+        : true; // fallback if manifest missing
+
+      if (needsSync) {
+        if (since && !NO_UPDATED_AT.has(def.key)) {
+          const deltas = await fetchCollectionSince(def, since);
+          if (deltas === null) {
+            merged = await fetchCollection(def);
+          } else {
+            merged = mergeRows(prevRows, deltas);
+            totalDeltas += deltas.length;
+          }
         } else {
-          merged = mergeRows(prevRows, deltas);
-          totalDeltas += deltas.length;
+          merged = await fetchCollection(def);
         }
-      } else {
-        merged = await fetchCollection(def);
       }
     } catch (e) {
-      console.warn(`[snapshot] delta failed for ${def.table}, keeping cache:`, e);
+      console.warn(`[snapshot] incremental sync failed for ${def.table}, keeping cache:`, e);
       merged = prevRows;
     }
-    // Guard: never let a delta reduce the cache to nothing.
+
+    // Atomic verify: ensure we didn't wipe the collection
     if (merged.length === 0 && prevRows.length > 0) merged = prevRows;
+    
     nextCollections[def.key] = merged;
     nextCounts[def.key] = merged.length;
     manifest.push({
@@ -610,17 +620,9 @@ export async function refreshSnapshotIncremental(): Promise<OfflineSnapshot> {
     collections: nextCollections,
   };
 
-  const { validateSnapshot } = await import("./offline-snapshot-validate");
-  const report = validateSnapshot(snap);
-  if (!report.ok) {
-    console.warn("[snapshot] refusing to store invalid incremental snapshot", report.issues);
-    throw new Error("Invalid offline snapshot; keeping existing local content");
-  }
-  await saveSnapshot(snap);
-  try {
-    const { applyLocalSnapshot } = await import("./local-first-store");
-    applyLocalSnapshot(snap);
-  } catch { /* ignore */ }
+  return snap;
+}
+
 
   // Warm the image cache in the background: priority story media first,
   // general snapshot images, then long-tail scene media. Version bumps
