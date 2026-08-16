@@ -21,7 +21,29 @@ export function useStoryCollections() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const onBaseline = (e: any) => {
+      const baseline = e.detail;
+      if (baseline?.collections?.story_collections) {
+        setCollections(baseline.collections.story_collections as StoryCollection[]);
+        setLoading(false);
+      }
+    };
+    window.addEventListener("irth:baseline-loaded", onBaseline);
+
     async function load() {
+      // 1. Try local/baseline first
+      try {
+        const { getBaselineContent } = await import("../offline-baseline-resolver");
+        const baseline = await getBaselineContent();
+        if (baseline?.collections?.story_collections) {
+          setCollections(baseline.collections.story_collections as StoryCollection[]);
+          setLoading(false);
+        }
+      } catch (e) { /* ignore */ }
+
+      // 2. Fetch fresh from server if online
+      if (typeof navigator !== "undefined" && navigator.onLine === false) return;
+
       try {
         const { data, error } = await supabase
           .from("story_collections")
@@ -37,6 +59,10 @@ export function useStoryCollections() {
       }
     }
     load();
+
+    return () => {
+      window.removeEventListener("irth:baseline-loaded", onBaseline);
+    };
   }, []);
 
   return { collections, loading };

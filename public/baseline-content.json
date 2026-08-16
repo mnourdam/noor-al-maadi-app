@@ -1,6 +1,6 @@
 {
-  "version": 1786857132770,
-  "generated_at": "2026-08-16T05:12:12.770Z",
+  "version": 1786857572635,
+  "generated_at": "2026-08-16T05:19:32.635Z",
   "collections": {
     "games": [
       {
@@ -101754,6 +101754,179 @@
         "updated_at": "2026-08-14T16:51:00.595361+00:00",
         "owner_scope": "story",
         "collection_id": null
+      }
+    ],
+    "story_collections": [
+      {
+        "id": "collection_dawn_of_revelation",
+        "slug": "dawn-of-revelation",
+        "title_ar": "فجر الوحي",
+        "title_en": "Dawn of Revelation",
+        "summary_ar": null,
+        "summary_en": null,
+        "cover_media_id": null,
+        "display_order": 1,
+        "metadata": {},
+        "created_at": "2026-07-24T13:16:33.530474+00:00",
+        "updated_at": "2026-07-24T13:16:33.530474+00:00"
+      },
+      {
+        "id": "collection_fall_of_baghdad",
+        "slug": "fall-of-baghdad",
+        "title_ar": "سقوط بغداد",
+        "title_en": "The Fall of Baghdad",
+        "summary_ar": "سلسلة قصصية تستكشف بغداد قبيل الغزو المغولي، وأيام حصارها وسقوطها، ومصير مؤسساتها العلمية، وما بقي من المدينة بعد الكارثة.",
+        "summary_en": "A narrative collection exploring Baghdad before the Mongol invasion, the siege and fall of the city, the fate of its scholarly institutions, and what endured after the catastrophe.",
+        "cover_media_id": null,
+        "display_order": 2,
+        "metadata": {},
+        "created_at": "2026-07-25T15:31:32.909373+00:00",
+        "updated_at": "2026-07-27T11:12:51.951392+00:00"
+      },
+      {
+        "id": "collection_fall_of_andalus",
+        "slug": "fall-of-al-andalus",
+        "title_ar": "سقوط الأندلس",
+        "title_en": "The Fall of Al-Andalus",
+        "summary_ar": "سلسلة قصصية تستكشف مملكة غرناطة قبل الحرب الأخيرة، وشخصياتها ومعالمها وصراعاتها ووثائقها، ثم مصير المسلمين والإرث الذي بقي بعد زوال الحكم الإسلامي.",
+        "summary_en": "A narrative collection exploring Granada before the final war, its people, landmarks, conflicts, and documents, followed by the fate of its Muslims and the legacy that endured after Islamic rule ended.",
+        "cover_media_id": null,
+        "display_order": 3,
+        "metadata": {},
+        "created_at": "2026-07-27T11:31:27.522675+00:00",
+        "updated_at": "2026-07-28T05:35:42.711989+00:00"
+      },
+      {
+        "id": "collection_jerusalem_crusades",
+        "slug": "jerusalem-before-and-after-the-crusades",
+        "title_ar": "القدس... قبل وبعد الحروب الصليبية",
+        "title_en": "Jerusalem Before and After the Crusades",
+        "summary_ar": "سلسلة قصصية تستكشف القدس قبل استعادتها، وشخصية صلاح الدين، والمسجد الأقصى، ومشروع توحيد مصر والشام، ومعركة حطين، ووثائق المدينة، وحياة أهلها، ثم إرث القدس عبر العصور.",
+        "summary_en": "A narrative collection exploring Jerusalem before its recovery, Saladin, Al-Aqsa Mosque, the unification of Egypt and Syria, the Battle of Hattin, the city’s defining documents, the lives of its people, and Jerusalem’s legacy across the centuries.",
+        "cover_media_id": null,
+        "display_order": 4,
+        "metadata": {},
+        "created_at": "2026-07-28T05:42:23.28775+00:00",
+        "updated_at": "2026-07-28T06:24:41.704008+00:00"
+      },
+      {
+        "id": "collection_fall_of_constantinople",
+        "slug": "fall-of-constantinople",
+        "title_ar": "سقوط القسطنطينية",
+        "title_en": "The Fall of Constantinople",
+        "summary_ar": "سلسلة قصصية تستكشف القسطنطينية قبل سقوطها، وشخصية محمد الفاتح، وأسوار المدينة، والمدفع العملاق، وحصار سنة 1453م، ومراسيم ما بعد الفتح، وحياة السكان، ثم إرث إسطنبول بين القارتين.",
+        "summary_en": "A narrative collection exploring Constantinople before its fall, Sultan Mehmed II, the city walls, the giant cannon, the siege of 1453, post-conquest decrees, civilian life, and Istanbul’s enduring legacy between two continents.",
+        "cover_media_id": null,
+        "display_order": 5,
+        "metadata": {},
+        "created_at": "2026-07-28T06:31:20.884361+00:00",
+        "updated_at": "2026-07-28T07:15:04.700369+00:00"
+      },
+      {
+        "id": "collection_conquest_of_mecca",
+        "slug": "conquest-of-mecca",
+        "title_ar": "فتح مكة",
+        "title_en": "The Conquest of Mecca",
+        "summary_ar": "سلسلة قصصية تستكشف مكة قبل الفتح، وشخصيات الحدث، والكعبة المشرفة، وبنود صلح الحديبية ونقضه، وفتح مكة، وإعلان الأمان، وحياة أهل المدينة، ثم إرث مكة بوصفها قلب العالم الإسلامي.",
+        "summary_en": "A narrative collection exploring Mecca before the conquest, the people who shaped the event, the Kaaba, the terms and breaking of the Treaty of Hudaybiyyah, the conquest itself, the proclamation of safety, the lives of Mecca’s people, and the city’s enduring legacy at the heart of the Islamic world.",
+        "cover_media_id": null,
+        "display_order": 6,
+        "metadata": {},
+        "created_at": "2026-07-28T07:27:19.136439+00:00",
+        "updated_at": "2026-07-28T09:09:20.708822+00:00"
+      },
+      {
+        "id": "collection_prophetic_hijra",
+        "slug": "prophetic-hijra",
+        "title_ar": "الهجرة النبوية",
+        "title_en": "The Prophetic Hijra",
+        "summary_ar": "سلسلة قصصية تتتبع مكة قبل الهجرة، والنبي محمد ﷺ، وأبا بكر الصديق، وغار ثور، ومؤامرة دار الندوة، ومطاردة سراقة بن مالك، ورحلة الهجرة، وصحيفة المدينة، واستقبال الأنصار للمهاجرين، وتحول يثرب إلى المدينة، ثم إرث الهجرة التي غيّرت العالم.",
+        "summary_en": "A narrative collection following Mecca before the Hijra, Prophet Muhammad, Abu Bakr al-Siddiq, the Cave of Thawr, the Dar al-Nadwa plot, Suraqa ibn Malik's pursuit, the journey of migration, the Constitution of Medina, the Ansar's reception of the emigrants, Yathrib's transformation into Medina, and the enduring legacy of the Hijra.",
+        "cover_media_id": null,
+        "display_order": 7,
+        "metadata": {},
+        "created_at": "2026-07-28T13:26:43.300134+00:00",
+        "updated_at": "2026-07-28T14:57:39.859121+00:00"
+      },
+      {
+        "id": "collection_badr",
+        "slug": "badr",
+        "title_ar": "غزوة بدر الكبرى",
+        "title_en": "The Battle of Badr",
+        "summary_ar": "سلسلة قصصية تبدأ بالمدينة قبل بدر، ثم تتتبع الشخصيات والطرق والقرارات التي قادت إلى يوم الفرقان، وتعرض المعركة وأسرى بدر وأثرها في ميزان القوى وإرثها في التاريخ الإسلامي.",
+        "summary_en": "A narrative collection beginning with Medina before Badr, then following the people, routes, and decisions that led to the Day of Criterion, the battle itself, the captives of Badr, its effect on the balance of power, and its enduring legacy in Islamic history.",
+        "cover_media_id": null,
+        "display_order": 8,
+        "metadata": {},
+        "created_at": "2026-08-05T11:59:15.862891+00:00",
+        "updated_at": "2026-08-05T13:34:33.611835+00:00"
+      },
+      {
+        "id": "collection_last_days_of_ottoman_caliphate",
+        "slug": "last-days-of-the-ottoman-caliphate",
+        "title_ar": "الأيام الأخيرة للخلافة العثمانية",
+        "title_en": "The Last Days of the Ottoman Caliphate",
+        "summary_ar": "سلسلة قصصية تبدأ بتولي السلطان عبد الحميد الثاني الحكم، وتتابع مشروعه الإصلاحي والجامعة الإسلامية والضغوط الأوروبية والمشروع الصهيوني وصعود الاتحاد والترقي وخلع السلطان، ثم الحرب العالمية الأولى وسقوط السلطنة وإلغاء الخلافة سنة 1924.",
+        "summary_en": "A narrative collection beginning with Sultan Abdul Hamid II's accession and following his reform program, Pan-Islamic policy, European pressure, Zionist diplomacy, the rise of the Committee of Union and Progress, the sultan's deposition, the First World War, the abolition of the sultanate, and the end of the caliphate in 1924.",
+        "cover_media_id": null,
+        "display_order": 9,
+        "metadata": {
+          "perspective": "Ottoman Sunni historical perspective",
+          "editorial_note": "The collection distinguishes documented history from propaganda while treating the Ottoman state as a Sunni caliphate resisting fragmentation and colonial intervention."
+        },
+        "created_at": "2026-08-06T11:30:15.396203+00:00",
+        "updated_at": "2026-08-06T14:01:54.45539+00:00"
+      },
+      {
+        "id": "collection_mongols_from_storm_to_ayn_jalut",
+        "slug": "mongols-from-storm-to-ayn-jalut",
+        "title_ar": "المغول... من الإعصار إلى عين جالوت",
+        "title_en": "The Mongols: From the Storm to Ayn Jalut",
+        "summary_ar": "سلسلة قصصية تبدأ بولادة القوة المغولية في سهوب آسيا، ثم خوارزم ومدن ما وراء النهر وبغداد والشام، وتصل في خاتمتها إلى قطز ومعركة عين جالوت التي كسرت صورة استحالة هزيمة المغول.",
+        "summary_en": "A narrative collection beginning with the rise of Mongol power in the Asian steppe, then Khwarazm, Transoxiana, Baghdad and Syria, culminating in Qutuz and the Battle of Ayn Jalut, where the image of Mongol invincibility was broken.",
+        "cover_media_id": null,
+        "display_order": 10,
+        "metadata": {
+          "perspective": "Islamic-world historical perspective with careful treatment of Mongol, Mamluk, and modern academic sources",
+          "editorial_note": "Finale collection tracing Mongol expansion from the Inner Asian steppe through Khwarazm, Baghdad and Syria, culminating in the Mamluk victory at Ayn Jalut."
+        },
+        "created_at": "2026-08-07T14:45:57.152815+00:00",
+        "updated_at": "2026-08-07T18:13:15.886628+00:00"
+      },
+      {
+        "id": "collection_mediterranean_when_the_sea_became_a_battlefield",
+        "slug": "mediterranean-when-the-sea-became-a-battlefield",
+        "title_ar": "البحر المتوسط... حين أصبح البحر ساحة حرب",
+        "title_en": "The Mediterranean: When the Sea Became a Battlefield",
+        "summary_ar": "سلسلة قصصية تتتبع تحول البحر المتوسط في القرن السادس عشر إلى ساحة صراع بين العثمانيين وآل هابسبورغ وإسبانيا والبندقية وفرسان القديس يوحنا وقوى شمال إفريقيا، من عروج وخير الدين بربروس إلى بروزة والجزائر ومالطة وليبانتو وإعادة بناء الأسطول، ثم تنتهي بالسؤال الأوسع: هل امتلك أحد هذا البحر فعلًا؟",
+        "summary_en": "A narrative collection tracing the sixteenth-century Mediterranean as a contested arena among the Ottomans, Habsburg Spain, Venice, the Knights of St John, North African powers, and wider maritime networks, from Oruç and Hayreddin Barbarossa through Preveza, Algiers, Malta, Lepanto, reconstruction, and finally the larger question of whether anyone truly owned the sea.",
+        "cover_media_id": null,
+        "display_order": 11,
+        "metadata": {
+          "perspective": "Mediterranean history through Ottoman, North African, Iberian, Habsburg, Italian, Venetian, Papal, Maltese, commercial, logistical, and technological perspectives, avoiding a single-civilization ownership narrative.",
+          "editorial_note": "The collection follows the transformation of the sixteenth-century Mediterranean through people, ports, fleets, fortified islands, sieges, logistics, storms, technologies, battles, reconstruction, commerce, and the changing geography of global maritime power.",
+          "series_complete": true
+        },
+        "created_at": "2026-08-07T18:29:59.796184+00:00",
+        "updated_at": "2026-08-08T13:46:09.774122+00:00"
+      },
+      {
+        "id": "collection_almoravids_desert_to_andalus",
+        "slug": "almoravids-men-of-the-desert-who-crossed-to-andalus",
+        "title_ar": "المرابطون... رجال الصحراء الذين عبروا إلى الأندلس",
+        "title_en": "The Almoravids: Men of the Desert Who Crossed into al-Andalus",
+        "summary_ar": "سلسلة من 18 قصة تتتبع نشأة المرابطين في البيئة الصحراوية لصنهاجة، ودعوة عبد الله بن ياسين، وصعود أبي بكر بن عمر ويوسف بن تاشفين، وتأسيس مراكش وشبكات التجارة والذهب، ثم تدخلهم في الأندلس والزلاقة وإنهاء عصر الطوائف، والحكم المرابطي في الأندلس، وعهد علي بن يوسف، وظهور الموحدين، وسقوط مراكش سنة 1147، وصولًا إلى تقييم إرث الدولة التي ربطت الصحراء بالأندلس.",
+        "summary_en": "An 18-story collection tracing the Almoravids from the Saharan Sanhaja world and the reform movement associated with Abd Allah ibn Yasin through Abu Bakr ibn Umar, Yusuf ibn Tashfin, Marrakesh, trans-Saharan trade, intervention in al-Andalus, al-Zallaqa, the end of the Taifa order, Almoravid rule in al-Andalus, the reign of Ali ibn Yusuf, the rise of the Almohads, the fall of Marrakesh in 1147, and a concluding assessment of the state that linked the Sahara to al-Andalus.",
+        "cover_media_id": null,
+        "display_order": 12,
+        "metadata": {
+          "perspective": "A historically grounded Sunni-framed narrative of the Almoravids through Maghrebi, Saharan, Andalusi, political, military, economic, urban, and scholarly perspectives, with explicit caution around legendary or late details.",
+          "editorial_note": "The collection begins in the Saharan Sanhaja world before the Almoravid state, follows reform, state formation, Marrakesh, trans-Saharan economy, intervention in al-Andalus, al-Zallaqa, political consolidation, Almoravid society and scholarship, the reign of Ali ibn Yusuf, the Almohad challenge, the fall of Marrakesh, and a balanced conclusion on the Almoravid legacy.",
+          "series_complete": true,
+          "planned_story_count": 18
+        },
+        "created_at": "2026-08-08T14:01:37.950967+00:00",
+        "updated_at": "2026-08-11T20:27:31.12785+00:00"
       }
     ]
   }

@@ -94,10 +94,13 @@ export async function fetchStoryAccess(storyId: string): Promise<StoryAccessBund
   try {
     const {
       ensureLocalSnapshotLoaded,
-      localStoryById,
-      localStoryScenes,
     } = await import("@/lib/local-first-store");
+    const { getLocalLibraryStories } = await import("../offline-baseline-resolver");
     await ensureLocalSnapshotLoaded();
+    
+    // We need to resolve the story by ID. local-first-store handles indexing,
+    // but Phase 2 requires we respect the Memory/Persistent/Bundled hierarchy.
+    const { localStoryById } = await import("@/lib/local-first-store");
     const story = localStoryById(storyId);
     if (!story) return { ok: false, reason: "offline_and_not_cached" };
     // Campaign intros are never readable through the library reader, even
@@ -130,6 +133,7 @@ export async function fetchStoryAccess(storyId: string): Promise<StoryAccessBund
     }
 
     if (!unlocked) return { ok: false, reason: "locked" };
+    const { localStoryScenes } = await import("@/lib/local-first-store");
     const scenes = localStoryScenes(String((story as any).id));
     return {
       ok: true,

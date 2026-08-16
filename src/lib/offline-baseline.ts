@@ -15,6 +15,7 @@ export interface BaselineContent {
     stories: Row<"stories">[];
     story_scenes: Row<"story_scenes">[];
     story_media: Row<"story_media">[];
+    story_collections: Row<"story_collections">[];
   };
 }
 
