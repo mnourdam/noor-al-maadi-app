@@ -79,9 +79,12 @@ export async function checkManifestUpdates(): Promise<ManifestComparison> {
   };
 
   for (const s of server) {
-    const localKey = SERVER_TO_LOCAL[s.collection];
-    if (!localKey) continue;
-
+  for (const s of server) {
+    // Map server manifest collection names to local snapshot collection keys
+    const localKey = (s.collection === 'campaigns_public' ? 'admin_campaigns' : 
+                      s.collection === 'investigations_public' ? 'investigations' : 
+                      s.collection);
+    
     const localCount = local.content_counts[localKey] ?? 0;
     
     // 1. Check for count changes (new additions or removals)
@@ -91,9 +94,7 @@ export async function checkManifestUpdates(): Promise<ManifestComparison> {
     }
 
     // 2. Check for timestamp changes
-    // Note: This requires the local snapshot to store the max(updated_at) per collection
-    // in the future. For now, we can use the snapshot's generated_at as a proxy 
-    // or rely on count changes for basic triggers.
+    // generated_at serves as the upper bound for the current snapshot.
     const serverDate = new Date(s.last_updated).getTime();
     const snapshotDate = new Date(local.generated_at).getTime();
 
@@ -101,6 +102,7 @@ export async function checkManifestUpdates(): Promise<ManifestComparison> {
       needsUpdate.push(localKey);
     }
   }
+
 
   return {
     upToDate: needsUpdate.length === 0,
