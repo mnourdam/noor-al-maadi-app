@@ -85,6 +85,13 @@ export function isPersonalKey(key: string): boolean {
   if (!key) return false;
   if (key.includes(OWNER_SEPARATOR)) return false; // already physical
   if (!APP_ROOTS.some((r) => key.startsWith(r))) return false;
+
+  // EXCEPTION: These specific Story keys are Logical Keys that belong to the player
+  // but were previously being double-scoped in the component. We treat them
+  // as personal so the partition engine handles the physical scoping.
+  const personalStoryKeys = ["irth.stories.lockstate.", "irth.stories.unlock-celebrated."];
+  if (personalStoryKeys.some((pk) => key.startsWith(pk))) return true;
+
   if (SHARED_PREFIXES.some((p) => key.startsWith(p))) return false;
   return true;
 }

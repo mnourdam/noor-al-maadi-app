@@ -26,8 +26,9 @@ import { OverlayDismissRegistration } from "@/lib/navigation/overlay-registratio
 import { supabase } from "@/integrations/supabase/client";
 import type { StorySummary } from "@/lib/stories/summary";
 
-const STATE_PREFIX = "irth.stories.lockstate.v1:";
-const SEEN_PREFIX = "irth.stories.unlock-celebrated.v1:";
+const STATE_KEY = "irth.stories.lockstate.v1";
+const SEEN_KEY = "irth.stories.unlock-celebrated.v1";
+const MIGRATED_SCOPE_KEY = "irth.stories.celebration-migrated.v1";
 
 interface Unlocked {
   id: string;
@@ -58,94 +59,134 @@ function writeMap(key: string, value: Record<string, boolean>): void {
  * Diff the freshest `stories-summary` results against the persisted lock
  * state for this player scope and return stories that just unlocked.
  */
-function detectTransitions(scope: string, rows: StorySummary[]): Unlocked[] {
+function detectTransitions(rows: StorySummary[]): Unlocked[] {
   if (rows.length === 0) return [];
-  const stateKey = `${STATE_PREFIX}${scope}`;
-  const seenKey = `${SEEN_PREFIX}${scope}`;
-  const prev = readMap(stateKey);
-  const seen = readMap(seenKey);
+  const prev = readMap(STATE_KEY);
+  const seen = readMap(SEEN_KEY);
   const out: Unlocked[] = [];
 
   for (const r of rows) {
     if (!r?.id) continue;
     const was = prev[r.id];
     const now = !!r.unlocked;
+    
+    // Safety: only trigger for genuine transitions: locked (false) -> unlocked (true)
+    // If was is undefined (first boot), we establish state but don't notify.
     if (was === false && now && !seen[r.id]) {
-      seen[r.id] = true;
       out.push({ id: r.id, title: r.title_ar ?? "قصة جديدة" });
     }
     prev[r.id] = now;
   }
 
-  writeMap(stateKey, prev);
-  if (out.length > 0) writeMap(seenKey, seen);
+  writeMap(STATE_KEY, prev);
   return out;
 }
 
 export function StoryUnlockCelebration() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const [scope, setScope] = useState<string | null>(null);
+  const [ownerKey, setOwnerKey] = useState<string | null>(null);
   const [queue, setQueue] = useState<Unlocked[]>([]);
   const userIdRef = useRef<string | null>(null);
+  const storageReady = useRef(false);
 
-  // Player scope: auth uid when signed in, otherwise the guest bucket.
-  // Nothing is scanned before the identity is known, so a celebration
-  // can never be attributed to the wrong player.
+  // Player identity monitoring.
   useEffect(() => {
     let alive = true;
-    void supabase.auth.getSession().then(({ data }) => {
-      if (alive) {
-        userIdRef.current = data.session?.user?.id ?? null;
-        setScope(data.session?.user?.id ?? "guest");
-      }
-    });
+    const update = (uid: string | null) => {
+      if (!alive) return;
+      userIdRef.current = uid;
+      // Use synchronous resolution from owner.ts
+      const { getActiveOwner } = require("@/lib/identity/owner");
+      const current = getActiveOwner();
+      setOwnerKey(current);
+      storageReady.current = true;
+    };
+
+    void supabase.auth.getSession().then(({ data }) => update(data.session?.user?.id ?? null));
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      userIdRef.current = session?.user?.id ?? null;
-      setScope(session?.user?.id ?? "guest");
+      update(session?.user?.id ?? null);
       setQueue([]);
     });
     return () => { alive = false; sub.subscription.unsubscribe(); };
   }, []);
 
-  // Durable ledger: merge the server-side "already announced" set into the
-  // local seen map before any scanning happens for a signed-in player.
+  // Durable ledger & Legacy Migration
   const [ledgerReady, setLedgerReady] = useState(false);
   useEffect(() => {
-    if (!scope) return;
+    if (!ownerKey) return;
     let alive = true;
     setLedgerReady(false);
     (async () => {
+      // 1. Legacy Migration (Double-scoped -> Partitioned)
+      const s = ls();
+      if (s && s.getItem(MIGRATED_SCOPE_KEY) !== "true") {
+        const legacyStateRoot = `irth.stories.lockstate.v1:`;
+        const legacySeenRoot = `irth.stories.unlock-celebrated.v1:`;
+        
+        // Use a partition-bypass read for the legacy physical key
+        const readLegacyPhysical = (logicalPrefix: string, owner: string) => {
+          try {
+            const physicalKey = `${logicalPrefix}${owner}::owner=${owner}`;
+            const raw = s.getItem(physicalKey);
+            return raw ? JSON.parse(raw) : null;
+          } catch { return null; }
+        };
+
+        const legacyState = readLegacyPhysical(legacyStateRoot, ownerKey);
+        const legacySeen = readLegacyPhysical(legacySeenRoot, ownerKey);
+
+        if (legacyState || legacySeen) {
+          if (legacyState) {
+            const current = readMap(STATE_KEY);
+            writeMap(STATE_KEY, { ...legacyState, ...current });
+          }
+          if (legacySeen) {
+            const current = readMap(SEEN_KEY);
+            writeMap(SEEN_KEY, { ...legacySeen, ...current });
+          }
+        }
+        try { s.setItem(MIGRATED_SCOPE_KEY, "true"); } catch {}
+      }
+
+      // 2. Server Ledger Sync
       const uid = userIdRef.current;
       if (uid) {
         try {
           const { fetchSeenUnlockNotices } = await import("@/lib/stories/unlock-notices");
           const ids = await fetchSeenUnlockNotices(uid);
           if (ids.length > 0) {
-            const seenKey = `${SEEN_PREFIX}${scope}`;
-            const seen = readMap(seenKey);
+            const seen = readMap(SEEN_KEY);
             for (const id of ids) seen[id] = true;
-            writeMap(seenKey, seen);
+            writeMap(SEEN_KEY, seen);
           }
-        } catch { /* offline: local ledger still applies */ }
+        } catch { /* offline */ }
       }
       if (alive) setLedgerReady(true);
     })();
     return () => { alive = false; };
-  }, [scope]);
+  }, [ownerKey]);
 
   // Persist "announced" durably the moment a celebration is shown, so it
   // survives reload, sign-out/sign-in and device changes.
   const persistSeen = useMemo(() => (ids: string[]) => {
     const uid = userIdRef.current;
-    if (!uid || ids.length === 0) return;
+    if (ids.length === 0) return;
+    
+    // 1. Mark as seen locally IMMEDIATELY (Authority for current device)
+    const seen = readMap(SEEN_KEY);
+    for (const id of ids) seen[id] = true;
+    writeMap(SEEN_KEY, seen);
+
+    // 2. Server sync in background
+    if (!uid) return;
     void import("@/lib/stories/unlock-notices")
       .then((m) => m.markUnlockNoticesSeen(uid, ids))
       .catch(() => {});
   }, []);
 
   useEffect(() => {
-    if (!scope || !ledgerReady) return;
+    if (!ownerKey || !ledgerReady || !storageReady.current) return;
     const scan = () => {
       try {
         const caches = queryClient.getQueryCache().findAll({ queryKey: ["stories-summary"] });
@@ -160,9 +201,8 @@ export function StoryUnlockCelebration() {
             rows.push(r);
           }
         }
-        const fresh = detectTransitions(scope, rows);
+        const fresh = detectTransitions(rows);
         if (fresh.length > 0) {
-          persistSeen(fresh.map((f) => f.id));
           setQueue((q) => [...q, ...fresh.filter((f) => !q.some((x) => x.id === f.id))]);
         }
       } catch { /* celebration must never break the app */ }
@@ -173,7 +213,7 @@ export function StoryUnlockCelebration() {
       if (ev.type === "updated" && ev.query.queryKey?.[0] === "stories-summary") scan();
     });
     return () => unsub();
-  }, [queryClient, scope, ledgerReady, persistSeen]);
+  }, [queryClient, ownerKey, ledgerReady, persistSeen]);
 
   const current = queue[0] ?? null;
   // Any interaction (open now / later / close) permanently retires the notice.
