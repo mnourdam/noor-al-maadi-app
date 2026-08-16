@@ -723,12 +723,16 @@ export async function bootstrapOfflineSync(opts: { maxAgeMs?: number } = {}): Pr
     // Phase 3: Immediate memory hydration for fast paint
     try {
       const { applyLocalSnapshot, ensureLocalSnapshotLoaded } = await import("./local-first-store");
+      // Hydrate memory immediately so UI isn't empty on first paint
       if (hasRequiredSnapshotContent(local)) {
         applyLocalSnapshot(local);
       } else {
         await ensureLocalSnapshotLoaded();
       }
-    } catch { /* ignore */ }
+    } catch (e) {
+      console.warn("[offline-sync] initial hydration failed:", e);
+    }
+
 
     const online = typeof navigator === "undefined" || navigator.onLine !== false;
     if (!online) return;
