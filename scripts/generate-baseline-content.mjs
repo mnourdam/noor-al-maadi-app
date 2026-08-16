@@ -2,57 +2,66 @@ import fs from 'fs';
 import path from 'path';
 import { spawn } from 'child_process';
 
-async function streamPsqlToJson(query) {
+async function streamPsqlToFile(query, tempFile) {
   return new Promise((resolve, reject) => {
-    const psql = spawn('psql', ['-t', '-c', query]);
-    let data = '';
-    psql.stdout.on('data', (chunk) => {
-      data += chunk;
-    });
+    // -A removes alignment, -t removes headers, -q is quiet
+    const psql = spawn('psql', ['-Atq', '-c', query]);
+    const writeStream = fs.createWriteStream(tempFile);
+    
+    psql.stdout.pipe(writeStream);
+    
     psql.stderr.on('data', (chunk) => {
       console.error('psql error:', chunk.toString());
     });
+    
     psql.on('close', (code) => {
       if (code !== 0) {
         reject(new Error(`psql process exited with code ${code}`));
         return;
       }
-      try {
-        const trimmed = data.trim();
-        resolve(JSON.parse(trimmed || '[]'));
-      } catch (e) {
-        console.error('Failed to parse JSON from psql output. Data length:', data.length);
-        reject(e);
-      }
+      resolve();
     });
   });
 }
 
 async function generateBaseline() {
-  console.log('Generating Baseline Content via streaming psql...');
+  console.log('Generating Baseline Content via safe file streaming...');
 
-  // 1. Fetch Published Games
-  const games = await streamPsqlToJson("SELECT json_agg(t) FROM (SELECT * FROM public.games WHERE status = 'published' ORDER BY id ASC) t;");
-  console.log(`Fetched ${games.length} published games.`);
+  const tempDir = path.join(process.cwd(), 'tmp');
+  if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir);
 
-  // 2. Fetch Published Stories (Excluding Campaign Intros)
-  const stories = await streamPsqlToJson("SELECT json_agg(t) FROM (SELECT * FROM public.stories WHERE status = 'published' ORDER BY id ASC) t;");
-  
+  const queries = {
+    games: "SELECT json_agg(t) FROM (SELECT * FROM public.games WHERE status = 'published' ORDER BY id ASC) t;",
+    stories: "SELECT json_agg(t) FROM (SELECT * FROM public.stories WHERE status = 'published' ORDER BY id ASC) t;",
+  };
+
+  await streamPsqlToFile(queries.games, 'tmp/games.json');
+  await streamPsqlToFile(queries.stories, 'tmp/stories.json');
+
+  const games = JSON.parse(fs.readFileSync('tmp/games.json', 'utf8') || '[]');
+  const stories = JSON.parse(fs.readFileSync('tmp/stories.json', 'utf8') || '[]');
+
   const libraryStories = stories.filter(s => {
     const isIntro = s.metadata?.kind === 'campaign_intro' || s.category === 'event';
     return !isIntro;
   });
   console.log(`Fetched ${stories.length} stories, keeping ${libraryStories.length} library stories.`);
 
-  // 3. Fetch Scenes for these stories
   const storyIds = libraryStories.map(s => s.id);
   const storyIdsList = storyIds.map(id => `'${id}'`).join(',');
-  const scenes = await streamPsqlToJson(`SELECT json_agg(t) FROM (SELECT * FROM public.story_scenes WHERE story_id IN (${storyIdsList}) ORDER BY story_id ASC, scene_index ASC) t;`);
-  console.log(`Fetched ${scenes.length} scenes for library stories.`);
 
-  // 4. Fetch Verified Media for these stories
-  const media = await streamPsqlToJson(`SELECT json_agg(t) FROM (SELECT * FROM public.story_media WHERE story_id IN (${storyIdsList}) AND verified = true) t;`);
-  console.log(`Fetched ${media.length} verified media records.`);
+  const queries2 = {
+    scenes: `SELECT json_agg(t) FROM (SELECT * FROM public.story_scenes WHERE story_id IN (${storyIdsList}) ORDER BY story_id ASC, scene_index ASC) t;`,
+    media: `SELECT json_agg(t) FROM (SELECT * FROM public.story_media WHERE story_id IN (${storyIdsList}) AND verified = true) t;`
+  };
+
+  await streamPsqlToFile(queries2.scenes, 'tmp/scenes.json');
+  await streamPsqlToFile(queries2.media, 'tmp/media.json');
+
+  const scenes = JSON.parse(fs.readFileSync('tmp/scenes.json', 'utf8') || '[]');
+  const media = JSON.parse(fs.readFileSync('tmp/media.json', 'utf8') || '[]');
+
+  console.log(`Fetched ${games.length} games, ${libraryStories.length} library stories, ${scenes.length} scenes, ${media.length} media.`);
 
   const baseline = {
     version: Date.now(),
