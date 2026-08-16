@@ -21,6 +21,15 @@ export function useStoryCollections() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const onBaseline = (e: any) => {
+      const baseline = e.detail;
+      if (baseline?.collections?.story_collections) {
+        setCollections(baseline.collections.story_collections as StoryCollection[]);
+        setLoading(false);
+      }
+    };
+    window.addEventListener("irth:baseline-loaded", onBaseline);
+
     async function load() {
       // 1. Try local/baseline first
       try {
@@ -50,6 +59,10 @@ export function useStoryCollections() {
       }
     }
     load();
+
+    return () => {
+      window.removeEventListener("irth:baseline-loaded", onBaseline);
+    };
   }, []);
 
   return { collections, loading };
