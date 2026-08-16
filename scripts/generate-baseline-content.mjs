@@ -1,48 +1,20 @@
 import { createClient } from '@supabase/supabase-js';
 import fs from 'fs';
 import path from 'path';
-
-// Use environment variables for Supabase connection
-const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseKey = process.env.sb_publishable_weJU0PgNA9b3rdVc2HaHTg_pjvSRzFY;
-
-if (!supabaseUrl || !supabaseKey) {
-  console.error('Missing Supabase credentials');
-  process.exit(1);
-}
-
-const supabase = createClient(supabaseUrl, supabaseKey);
+import { execSync } from 'child_process';
 
 async function generateBaseline() {
-  console.log('Generating Baseline Content...');
+  console.log('Generating Baseline Content via psql...');
 
   // 1. Fetch Published Games
-  const { data: games, error: gamesError } = await supabase
-    .from('games')
-    .select('*')
-    .eq('status', 'published')
-    .order('id', { ascending: true });
-
-  if (gamesError) {
-    console.error('Error fetching games:', gamesError);
-    process.exit(1);
-  }
+  const gamesJson = execSync(`psql -t -c "SELECT json_agg(t) FROM (SELECT * FROM public.games WHERE status = 'published' ORDER BY id ASC) t;"`).toString().trim();
+  const games = JSON.parse(gamesJson || '[]');
   console.log(`Fetched ${games.length} published games.`);
 
   // 2. Fetch Published Stories (Excluding Campaign Intros)
-  // We use the category filter as discussed in audit ('event' usually covers intros, but we'll check metadata too)
-  const { data: stories, error: storiesError } = await supabase
-    .from('stories')
-    .select('*')
-    .eq('status', 'published')
-    .order('id', { ascending: true });
-
-  if (storiesError) {
-    console.error('Error fetching stories:', storiesError);
-    process.exit(1);
-  }
-
-  // Filter out campaign intros based on metadata kind
+  const storiesJson = execSync(`psql -t -c "SELECT json_agg(t) FROM (SELECT * FROM public.stories WHERE status = 'published' ORDER BY id ASC) t;"`).toString().trim();
+  const stories = JSON.parse(storiesJson || '[]');
+  
   const libraryStories = stories.filter(s => {
     const isIntro = s.metadata?.kind === 'campaign_intro' || s.category === 'event';
     return !isIntro;
@@ -51,30 +23,14 @@ async function generateBaseline() {
 
   // 3. Fetch Scenes for these stories
   const storyIds = libraryStories.map(s => s.id);
-  const { data: scenes, error: scenesError } = await supabase
-    .from('story_scenes')
-    .select('*')
-    .in('story_id', storyIds)
-    .order('story_id', { ascending: true })
-    .order('scene_index', { ascending: true });
-
-  if (scenesError) {
-    console.error('Error fetching scenes:', scenesError);
-    process.exit(1);
-  }
+  const storyIdsList = storyIds.map(id => `'${id}'`).join(',');
+  const scenesJson = execSync(`psql -t -c "SELECT json_agg(t) FROM (SELECT * FROM public.story_scenes WHERE story_id IN (${storyIdsList}) ORDER BY story_id ASC, scene_index ASC) t;"`).toString().trim();
+  const scenes = JSON.parse(scenesJson || '[]');
   console.log(`Fetched ${scenes.length} scenes for library stories.`);
 
   // 4. Fetch Verified Media for these stories
-  const { data: media, error: mediaError } = await supabase
-    .from('story_media')
-    .select('*')
-    .in('story_id', storyIds)
-    .eq('verified', true);
-
-  if (mediaError) {
-    console.error('Error fetching media:', mediaError);
-    process.exit(1);
-  }
+  const mediaJson = execSync(`psql -t -c "SELECT json_agg(t) FROM (SELECT * FROM public.story_media WHERE story_id IN (${storyIdsList}) AND verified = true) t;"`).toString().trim();
+  const media = JSON.parse(mediaJson || '[]');
   console.log(`Fetched ${media.length} verified media records.`);
 
   const baseline = {
