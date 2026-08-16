@@ -481,13 +481,24 @@ export async function generateAndStoreSnapshot(): Promise<OfflineSnapshot> {
     };
 
     if (typeof window !== "undefined") {
+      // Re-expose/update diagnostic global on every successful sync
+      const { localDataVersion, isLocalReady } = await import("./local-first-store");
+      (window as any).irth = {
+        localDataVersion,
+        isLocalReady,
+        generateAndStoreSnapshot
+      };
+
       if ("requestIdleCallback" in window) {
         (window as any).requestIdleCallback(() => void warmTask(), { timeout: 10000 });
       } else {
         setTimeout(() => void warmTask(), 5000);
       }
     }
-  } catch { /* ignore */ }
+  } catch (e) {
+    console.warn("[snapshot] background post-commit failed:", e);
+  }
+
 
 
   return snap;
