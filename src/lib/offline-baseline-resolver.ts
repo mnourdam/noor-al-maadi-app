@@ -154,20 +154,25 @@ export async function seedBaselineToPersistentStore(): Promise<void> {
  */
 export function getLocalLibraryStories(): any[] {
   // We need to be careful with 'require' in TanStack Start's SSR environment.
-  // We use local-first-store as the primary source of truth for in-memory content.
   const lfs = require("./local-first-store");
-  const introIds = introStoryIdsFromCampaigns(lfs.localPublishedCampaigns());
+  const publishedCampaigns = lfs.localPublishedCampaigns();
+  const { isCampaignIntroRow, introStoryIdsFromCampaigns } = require("./stories/library-filter");
+  const introIds = introStoryIdsFromCampaigns(publishedCampaigns);
   
   // 1. Memory / Persistent (local-first-store)
   if (lfs.isLocalReady()) {
     const all = lfs.localStoriesAll() || [];
+    // localStoriesAll already filters published + library in its indexer,
+    // but we apply it again defensively to match the contract.
     const library = all.filter((s: any) => !isCampaignIntroRow(s, introIds));
     if (library.length > 0) return library;
   }
 
   // 2. Bundled Fallback
   if (_memoryBaseline) {
-    return _memoryBaseline.collections.stories.filter(s => !isCampaignIntroRow(s, introIds));
+    return _memoryBaseline.collections.stories.filter(s => 
+      s.status === 'published' && !isCampaignIntroRow(s, introIds)
+    );
   }
 
   return [];
