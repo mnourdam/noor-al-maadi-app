@@ -73,7 +73,7 @@ function CinematicPageBackdropImpl({ image, alt = "", height = 380 }: Props) {
   return createPortal(
     <div
       aria-hidden={alt ? undefined : true}
-      className="pointer-events-none fixed inset-x-0 top-0 z-10 mx-auto w-full max-w-md"
+      className="pointer-events-none fixed inset-x-0 top-0 z-10 mx-auto w-full max-w-md md:max-w-3xl xl:max-w-5xl"
       style={{ height }}
     >
       {/* Artwork band — hides overflow so parallax translate stays inside. */}

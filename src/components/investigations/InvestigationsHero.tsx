@@ -13,8 +13,8 @@ export function InvestigationsHero({
   subtitle?: string;
 }) {
   return (
-    <header className="relative -mx-5 -mt-6 mb-4 overflow-hidden">
-      <div className="relative h-[280px] w-full">
+    <header className="relative -mx-5 -mt-6 mb-4 overflow-hidden md:mx-0 md:rounded-3xl md:border md:border-gold/25 md:shadow-elegant">
+      <div className="relative h-[280px] md:h-[320px] w-full">
         {/* The plate itself is dissolved with a long alpha mask, so there is
             never a straight edge or a black rectangle over the painting. */}
         <img
