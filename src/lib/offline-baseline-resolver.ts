@@ -57,6 +57,8 @@ export async function getBaselineContent(): Promise<BaselineContent | null> {
           games: _memoryBaseline.collections.games.length,
           stories: _memoryBaseline.collections.stories.length
         };
+        // Also emit an event for components waiting for baseline
+        window.dispatchEvent(new CustomEvent("irth:baseline-loaded", { detail: _memoryBaseline }));
       }
       
       return _memoryBaseline;
