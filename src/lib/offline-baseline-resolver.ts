@@ -70,7 +70,8 @@ export async function seedBaselineToPersistentStore(): Promise<void> {
     const baseline = await getBaselineContent();
     if (!baseline) return;
 
-    const { loadSnapshot, saveSnapshot, type OfflineSnapshot, SNAPSHOT_SCHEMA_VERSION } = await import("./offline-storage");
+    const { loadSnapshot, saveSnapshot, SNAPSHOT_SCHEMA_VERSION } = await import("./offline-storage");
+    type OfflineSnapshot = import("./offline-storage").OfflineSnapshot;
     const existing = await loadSnapshot();
 
     // Versioning check: only overwrite if baseline is newer or version mismatch
