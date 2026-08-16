@@ -467,7 +467,26 @@ export async function generateAndStoreSnapshot(): Promise<OfflineSnapshot> {
   try {
     const { applyLocalSnapshot } = await import("./local-first-store");
     applyLocalSnapshot(snap);
+    
+    // Background Task: Warm the image cache.
+    // Order: Priority story media -> General images -> Tail media.
+    const warmTask = async () => {
+      try {
+        await warmSnapshotImageCache(snap.collections);
+      } catch (err) {
+        console.warn("[snapshot] background warming failed:", err);
+      }
+    };
+
+    if (typeof window !== "undefined") {
+      if ("requestIdleCallback" in window) {
+        (window as any).requestIdleCallback(() => void warmTask(), { timeout: 10000 });
+      } else {
+        setTimeout(() => void warmTask(), 5000);
+      }
+    }
   } catch { /* ignore */ }
+
 
   
   if (import.meta.env.DEV && typeof window === "undefined") {
