@@ -360,7 +360,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
 
   // ============ Debounced auto-push while signed in ============
   useEffect(() => {
-    const isReady = ["reconciled", "offline-local", "failed"].includes(getReconciliationState());
+    const isReady = ["reconciled", "offline-local"].includes(getReconciliationState());
     if (!user || !autoPushEnabled.current || !isReady) return;
     if (androidStable) return;
     if (pushTimer.current) clearTimeout(pushTimer.current);
