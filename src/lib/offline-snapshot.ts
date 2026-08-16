@@ -782,7 +782,7 @@ export async function bootstrapOfflineSync(opts: { maxAgeMs?: number } = {}): Pr
     })();
 
     // EXPOSE FOR DIAGNOSTICS: Attach irth global if window exists
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && import.meta.env.DEV) {
       (window as any).irth = {
         localDataVersion,
         isLocalReady,
