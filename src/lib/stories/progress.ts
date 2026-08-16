@@ -95,7 +95,7 @@ export async function fetchStoryAccess(storyId: string): Promise<StoryAccessBund
     const {
       ensureLocalSnapshotLoaded,
     } = await import("@/lib/local-first-store");
-    const { getLocalLibraryStories } = await import("./library-filter"); // Note: Using the filter-aware resolver below
+    const { getLocalLibraryStories } = await import("../offline-baseline-resolver");
     await ensureLocalSnapshotLoaded();
     
     // We need to resolve the story by ID. local-first-store handles indexing,
@@ -133,6 +133,7 @@ export async function fetchStoryAccess(storyId: string): Promise<StoryAccessBund
     }
 
     if (!unlocked) return { ok: false, reason: "locked" };
+    const { localStoryScenes } = await import("@/lib/local-first-store");
     const scenes = localStoryScenes(String((story as any).id));
     return {
       ok: true,
