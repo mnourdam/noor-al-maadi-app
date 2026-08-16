@@ -9,6 +9,7 @@
 // ============================================================
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { clearOrderingHelp } from "@/lib/campaigns/ordering-help";
 import { createFileRoute, Link, useParams, useNavigate, useSearch, notFound } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Zap, Coins, Sparkles, BookOpen, Scroll, ArrowRight, ArrowLeft, Check, Heart, X as XIcon } from "lucide-react";
@@ -35,6 +36,7 @@ import {
   claimActivityReward, claimChapterReward, claimCampaignReward,
   enqueueCollectionSync, setActivePosition,
   clearActivePositionIf, unlockIdsToCollectionItems,
+  activityKey,
 } from "@/lib/campaignLedger";
 import { upsertChapterProgress } from "@/lib/progressSync";
 import { recordTrace } from "@/lib/diag-trace";
@@ -296,6 +298,13 @@ function ImportedChapterPlayer() {
 
     const wasChapterComplete  = chProgress?.completed ?? false;
     const wasCampaignComplete = camProgress?.completed ?? false;
+    
+    // Clear ordering help history on success
+    if (activity.type === "arrange_events") {
+      const logicalKey = activityKey(campaign!.id, chapter!.id, activity.id);
+      clearOrderingHelp(logicalKey);
+    }
+
     const nextProgress = recordActivity(campaign!, chapter!, activity, true);
 
     const nextChapter   = nextProgress.chapters[chapter!.id];
