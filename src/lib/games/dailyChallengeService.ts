@@ -315,10 +315,12 @@ export function useDailyChallengeState(opts: { enabled?: boolean } = {}): {
       // Priority 1: Check Local Cache First
       try {
         const { isLocalReady, ensureLocalSnapshotLoaded } = require("@/lib/local-first-store");
-        const { getLocalPublishedGames } = require("../offline-baseline-resolver");
+        const { getLocalPublishedGames, getBaselineContent } = require("../offline-baseline-resolver");
         
         // If not ready, await it, but we prefer synchronous.
         if (!isLocalReady()) {
+          // Wait for baseline specifically first (Phase 2 core)
+          await getBaselineContent();
           await ensureLocalSnapshotLoaded();
         }
 
@@ -357,8 +359,13 @@ export function useDailyChallengeState(opts: { enabled?: boolean } = {}): {
 
     void run();
 
+    // Listen for baseline-loaded event to retry local path if it missed the first tick
+    const onBaseline = () => void run();
+    window.addEventListener("irth:baseline-loaded", onBaseline);
+
     return () => {
       cancelled = true;
+      window.removeEventListener("irth:baseline-loaded", onBaseline);
     };
   }, [enabled, nonce, state === null]);
 
