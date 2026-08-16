@@ -16,7 +16,9 @@
  * admin-only data, no PII (profiles, referrals, audit logs, emails).
  */
 import { supabase } from "@/integrations/supabase/client";
+import { isLocalReady, localDataVersion } from "./local-first-store";
 import { ATLAS_PUBLIC_COLUMNS } from "./atlas-entities";
+
 
 import {
   loadSnapshot,
@@ -413,6 +415,13 @@ export async function generateSnapshot(): Promise<OfflineSnapshot> {
   };
 }
 
+/**
+ * Sync the local store with the server.
+ * Strategy:
+ *   1. Fetch Server Manifest (lightweight)
+ *   2. Identify Deltas (Count or Max UpdatedAt change)
+ *   3. Atomic Converge: Fetch only required deltas, merge, validate, then commit swap.
+ */
 export async function generateAndStoreSnapshot(): Promise<OfflineSnapshot> {
   const previous = await loadSnapshot();
   
@@ -420,79 +429,81 @@ export async function generateAndStoreSnapshot(): Promise<OfflineSnapshot> {
   const { fetchContentManifest } = await import("./offline-manifest");
   const serverManifest = await fetchContentManifest();
   
-  // If we have a previous snapshot and a server manifest, check if anything actually changed.
   if (previous?.collections && serverManifest) {
     let changed = false;
     for (const s of serverManifest) {
-      const localCount = previous.content_counts[s.collection] ?? 0;
-      // We don't have per-collection timestamps in the snapshot JSON yet,
-      // but generated_at serves as a global ceiling.
+      // Map server collection name to local key
+      const localKey = (s.collection === 'campaigns_public' ? 'admin_campaigns' : 
+                        s.collection === 'investigations_public' ? 'investigations' : 
+                        s.collection);
+      
+      const localCount = previous.content_counts[localKey] ?? 0;
       const serverDate = new Date(s.last_updated).getTime();
       const localDate = new Date(previous.generated_at).getTime();
       
+      // If count differs or server has newer data, we need a sync
       if (s.total_count !== localCount || serverDate > localDate) {
         changed = true;
         break;
       }
     }
+    
     if (!changed) {
       console.info("[snapshot] background sync skipped: local content matches server manifest");
       return previous;
     }
   }
 
-  const snap = await generateSnapshot();
+  // Converge: generate a new snapshot by merging deltas into previous if available
+  const snap = await (previous?.collections ? refreshSnapshotIncremental() : generateSnapshot());
+  
   const { validateSnapshot } = await import("./offline-snapshot-validate");
   const report = validateSnapshot(snap);
   if (!report.ok) {
-    console.warn("[snapshot] refusing to store invalid live snapshot", report.issues);
+    console.warn("[snapshot] refusing to store invalid snapshot", report.issues);
     throw new Error("Invalid offline snapshot; keeping existing local content");
   }
 
-  if (previous?.collections) {
-    for (const def of COLLECTIONS) {
-      const prevRows = previous.collections[def.key] ?? [];
-      const nextRows = snap.collections[def.key] ?? [];
-      const merged = mergeRows(prevRows, nextRows);
-      
-      // If we only fetched a delta or a short page, merge keeps existing rows.
-      snap.collections[def.key] = merged;
-      snap.content_counts[def.key] = merged.length;
-    }
-  }
-
+  // Atomic Commit: persist to IndexedDB then swap into memory
   await saveSnapshot(snap);
   try {
     const { applyLocalSnapshot } = await import("./local-first-store");
     applyLocalSnapshot(snap);
-  } catch { /* ignore */ }
-  
-  if (import.meta.env.DEV && typeof window === "undefined") {
-    try {
-      const { writeBundledSnapshotFile } = await import("./offline-snapshot-write.functions");
-      await writeBundledSnapshotFile({ data: { json: JSON.stringify(snap, null, 2) } });
-    } catch { /* ignore */ }
-  }
-  
-  const warmTask = async () => {
-    try {
-      const { warmSnapshotImageCache } = await import("./offline-snapshot-warm-bridge");
-      await warmSnapshotImageCache(snap.collections);
-    } catch (err) {
-      console.warn("[snapshot] background warming failed:", err);
-    }
-  };
+    
+    // Background Task: Warm the image cache.
+    // Order: Priority story media -> General images -> Tail media.
+    const warmTask = async () => {
+      try {
+        await warmSnapshotImageCache(snap.collections);
+      } catch (err) {
+        console.warn("[snapshot] background warming failed:", err);
+      }
+    };
 
-  if (typeof window !== "undefined") {
-    if ("requestIdleCallback" in window) {
-      (window as any).requestIdleCallback(() => void warmTask(), { timeout: 10000 });
-    } else {
-      setTimeout(() => void warmTask(), 5000);
+    if (typeof window !== "undefined") {
+      // Re-expose/update diagnostic global on every successful sync
+      const { localDataVersion, isLocalReady } = await import("./local-first-store");
+      (window as any).irth = {
+        localDataVersion,
+        isLocalReady,
+        generateAndStoreSnapshot
+      };
+
+      if ("requestIdleCallback" in window) {
+        (window as any).requestIdleCallback(() => void warmTask(), { timeout: 10000 });
+      } else {
+        setTimeout(() => void warmTask(), 5000);
+      }
     }
+  } catch (e) {
+    console.warn("[snapshot] background post-commit failed:", e);
   }
+
+
 
   return snap;
 }
+
 
 /**
  * Priority-first image cache warm-up. Order:
@@ -538,13 +549,21 @@ async function warmSnapshotImageCache(collections: Record<string, any[]>): Promi
  * snapshot exists — callers should use `generateAndStoreSnapshot()` in
  * that case.
  */
+/**
+ * Incremental refresh: for each collection, fetch only required deltas
+ * based on the server manifest and merge by ID.
+ */
 export async function refreshSnapshotIncremental(): Promise<OfflineSnapshot> {
   resetStoryManifestCache();
   const previous = await loadSnapshot();
 
   if (!previous?.collections) {
-    throw new Error("No previous snapshot; run generateAndStoreSnapshot() first");
+    return generateSnapshot();
   }
+
+  const { fetchContentManifest } = await import("./offline-manifest");
+  const serverManifest = await fetchContentManifest();
+  
   const nextCollections: Record<string, any[]> = { ...previous.collections };
   const nextCounts: Record<string, number> = { ...previous.content_counts };
   const manifest: { key: string; count: number; checksum?: string }[] = [];
@@ -554,39 +573,41 @@ export async function refreshSnapshotIncremental(): Promise<OfflineSnapshot> {
     const prevRows = previous.collections[def.key] ?? [];
     const since = maxUpdatedAt(prevRows);
     let merged: any[] = prevRows;
-    try {
-      // True-up: if the live source has more rows than our cache, the
-      // since-based delta will miss the rows we simply never fetched
-      // (they existed with older `updated_at` before our first sync, or a
-      // previous full fetch was silently truncated). Detect that gap and
-      // do a full re-fetch for this collection so the cache converges.
-      const expected = await fetchCollectionExpectedCount(def);
-      const cacheIsShort =
-        typeof expected === "number" && expected > prevRows.length;
 
-      if (cacheIsShort) {
-        console.info(
-          `[snapshot] true-up ${def.table}: cache=${prevRows.length}, live=${expected} → full fetch`,
-        );
-        const fresh = await fetchCollection(def);
-        merged = mergeRows(prevRows, fresh);
-      } else if (since && !NO_UPDATED_AT.has(def.key)) {
-        const deltas = await fetchCollectionSince(def, since);
-        if (deltas === null) {
-          merged = await fetchCollection(def);
+    try {
+      // Find this collection in the manifest to see if a fetch is actually needed
+      const serverItem = serverManifest?.find(m => 
+        (m.collection === 'campaigns_public' && def.key === 'admin_campaigns') ||
+        (m.collection === 'investigations_public' && def.key === 'investigations') ||
+        m.collection === def.key
+      );
+
+      const localCount = prevRows.length;
+      const needsSync = serverItem 
+        ? (serverItem.total_count !== localCount || new Date(serverItem.last_updated).getTime() > new Date(previous.generated_at).getTime())
+        : true; // fallback if manifest missing
+
+      if (needsSync) {
+        if (since && !NO_UPDATED_AT.has(def.key)) {
+          const deltas = await fetchCollectionSince(def, since);
+          if (deltas === null) {
+            merged = await fetchCollection(def);
+          } else {
+            merged = mergeRows(prevRows, deltas);
+            totalDeltas += deltas.length;
+          }
         } else {
-          merged = mergeRows(prevRows, deltas);
-          totalDeltas += deltas.length;
+          merged = await fetchCollection(def);
         }
-      } else {
-        merged = await fetchCollection(def);
       }
     } catch (e) {
-      console.warn(`[snapshot] delta failed for ${def.table}, keeping cache:`, e);
+      console.warn(`[snapshot] incremental sync failed for ${def.table}, keeping cache:`, e);
       merged = prevRows;
     }
-    // Guard: never let a delta reduce the cache to nothing.
+
+    // Atomic verify: ensure we didn't wipe the collection
     if (merged.length === 0 && prevRows.length > 0) merged = prevRows;
+    
     nextCollections[def.key] = merged;
     nextCounts[def.key] = merged.length;
     manifest.push({
@@ -607,39 +628,9 @@ export async function refreshSnapshotIncremental(): Promise<OfflineSnapshot> {
     collections: nextCollections,
   };
 
-  const { validateSnapshot } = await import("./offline-snapshot-validate");
-  const report = validateSnapshot(snap);
-  if (!report.ok) {
-    console.warn("[snapshot] refusing to store invalid incremental snapshot", report.issues);
-    throw new Error("Invalid offline snapshot; keeping existing local content");
-  }
-  await saveSnapshot(snap);
-  try {
-    const { applyLocalSnapshot } = await import("./local-first-store");
-    applyLocalSnapshot(snap);
-  } catch { /* ignore */ }
-
-  // Warm the image cache in the background: priority story media first,
-  // general snapshot images, then long-tail scene media. Version bumps
-  // yield new URLs (via `?v=<processing_version>`) and thus a fresh
-  // fetch — invalidation happens exactly when processing_version moves.
-  // Warm the image cache in the background using idle time.
-  const warm = () => {
-    void warmSnapshotImageCache(nextCollections);
-  };
-  if (typeof window !== "undefined") {
-    if ("requestIdleCallback" in window) {
-      (window as any).requestIdleCallback(warm, { timeout: 4000 });
-    } else {
-      setTimeout(warm, 1500);
-    }
-  } else {
-    warm();
-  }
-
-  console.info(`[offline-sync] incremental: ${totalDeltas} row deltas across ${COLLECTIONS.length} collections`);
   return snap;
 }
+
 
 /** Load the bundled snapshot shipped in /public. */
 export async function loadBundledSnapshot(): Promise<OfflineSnapshot | null> {
@@ -722,12 +713,10 @@ function hasRequiredSnapshotContent(snap: OfflineSnapshot | null | undefined): s
 export async function bootstrapOfflineSync(opts: { maxAgeMs?: number } = {}): Promise<void> {
   const maxAge = opts.maxAgeMs ?? 6 * 60 * 60 * 1000; // 6h
   try {
-    // Phase 2: Priority Bootstrap
+    // Phase 2: Priority Bootstrap (Memory baseline -> IDB Seed)
     try {
       const { getBaselineContent, seedBaselineToPersistentStore } = await import("./offline-baseline-resolver");
-      // 1. Load bundled baseline into memory immediately (fast parse)
       await getBaselineContent();
-      // 2. Start IndexedDB seeding in background (non-blocking)
       void seedBaselineToPersistentStore();
     } catch (e) {
       console.warn("[offline-sync] baseline bootstrap failed:", e);
@@ -741,52 +730,71 @@ export async function bootstrapOfflineSync(opts: { maxAgeMs?: number } = {}): Pr
         local = bundled;
       }
     }
-    // Hydrate the in-memory local-first index immediately so player routes
-    // can read content synchronously on first paint, even without network.
+
+    // Phase 3: Immediate memory hydration for fast paint
     try {
       const { applyLocalSnapshot, ensureLocalSnapshotLoaded } = await import("./local-first-store");
-      if (hasRequiredSnapshotContent(local)) applyLocalSnapshot(local);
-      else await ensureLocalSnapshotLoaded();
-    } catch { /* ignore */ }
+      // Hydrate memory immediately so UI isn't empty on first paint
+      if (hasRequiredSnapshotContent(local)) {
+        applyLocalSnapshot(local);
+      } else {
+        await ensureLocalSnapshotLoaded();
+      }
+    } catch (e) {
+      console.warn("[offline-sync] initial hydration failed:", e);
+    }
 
 
     const online = typeof navigator === "undefined" || navigator.onLine !== false;
     if (!online) return;
 
+    // Background Sync Strategy
     const stale =
       !local ||
       local.schema_version !== SNAPSHOT_SCHEMA_VERSION ||
       Date.now() - new Date(local.generated_at).getTime() > maxAge;
-    if (!stale) return;
+    
+    if (!stale) {
+      // Even if not stale, check the manifest for deltas (lightweight)
+      const { checkManifestUpdates } = await import("./offline-manifest");
+      const { upToDate } = await checkManifestUpdates();
+      if (upToDate) return;
+    }
 
-    // Lightweight in-tab debounce so multiple route mounts don't refetch.
+    // Lightweight in-tab debounce
     try {
       const last = Number(sessionStorage.getItem(SYNC_LOCK_KEY) ?? "0");
       if (Date.now() - last < 60 * 1000) return;
       sessionStorage.setItem(SYNC_LOCK_KEY, String(Date.now()));
     } catch { /* ignore */ }
 
-    // Fire-and-forget — UI is already rendered from local/bundled.
-    // Prefer incremental sync when we already have a baseline snapshot.
-    const refresh = local?.collections
-      ? refreshSnapshotIncremental()
-      : generateAndStoreSnapshot();
-    void refresh.catch((e) =>
-      console.warn("[offline-sync] background refresh failed:", e),
+    // Phase 3: Background Server Convergence (Atomic)
+    void generateAndStoreSnapshot().catch((e) =>
+      console.warn("[offline-sync] background convergence failed:", e),
     );
 
-    // Warm the image cache from whatever content we already have locally
-    // so covers/thumbnails survive going offline mid-session. Priority
-    // story media go first via `warmSnapshotImageCache`.
+    // Warm high-priority images from the current snapshot
     void (async () => {
       const snap = local ?? (await loadSnapshot());
-      if (!snap?.collections) return;
-      await warmSnapshotImageCache(snap.collections);
+      if (snap?.collections) {
+        await warmSnapshotImageCache(snap.collections);
+      }
     })();
+
+    // EXPOSE FOR DIAGNOSTICS: Attach irth global if window exists
+    if (typeof window !== "undefined") {
+      (window as any).irth = {
+        localDataVersion,
+        isLocalReady,
+        generateAndStoreSnapshot
+      };
+    }
   } catch (e) {
     console.warn("[offline-sync] bootstrap failed:", e);
   }
 }
+
+
 
 export const REQUIRED_COLLECTION_KEYS: OfflineCollectionKey[] = COLLECTIONS
   .filter((c) => c.required)

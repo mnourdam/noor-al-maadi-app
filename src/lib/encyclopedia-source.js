@@ -1,0 +1,407 @@
+// ============================================================
+// Encyclopedia data source — local-first, network-refreshed.
+//
+// Player-facing encyclopedia, museum, atlas panels, and related-content
+// surfaces render from the offline snapshot first (memory/IndexedDB/
+// bundled JSON). Live reads are only a fallback when the local cache is
+// empty; normal freshness comes from the global background offline sync.
+// ============================================================
+import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { ensureLocalSnapshotLoaded, localEncyclopediaAll, localEncyclopediaById, localEncyclopediaBySlug, localEncyclopediaByType, } from "./local-first-store";
+/** Columns required to render + chronologically sort an entity. */
+export const ENCYCLOPEDIA_ENTITY_COLUMNS = "id,slug,entity_type,title,subtitle,summary,metadata,enabled,created_at,updated_at,body,aliases," +
+    "timeline_order,timeline_year,timeline_start_year," +
+    "image_url,image_path,image_credit,image_source";
+/** Mirror of admin migration normalizeSlug — keep in sync. */
+export function normalizeEntitySlug(raw) {
+    if (!raw)
+        return "";
+    const last = raw.split(".").pop() ?? raw;
+    return last.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "");
+}
+/** Types the Encyclopedia surfaces. Kept here so filters/UI agree. */
+export const SUPABASE_ENABLED_TYPES = new Set([
+    "figure",
+    "city",
+    "battle",
+    "state",
+    "landmark",
+    "artifact",
+    "event",
+    "scholar",
+]);
+export function isSupabaseEnabled(entityType) {
+    return SUPABASE_ENABLED_TYPES.has(entityType);
+}
+// ─────────────────────────────────────────────────────────────
+// Displayability — quality gate
+// ─────────────────────────────────────────────────────────────
+function bodyHasContent(body) {
+    if (!body)
+        return false;
+    if (typeof body === "string")
+        return body.trim().length >= 40;
+    if (typeof body !== "object")
+        return false;
+    const b = body;
+    if (typeof b.overview === "string" && b.overview.trim().length >= 40)
+        return true;
+    if (typeof b.introduction === "string" && b.introduction.trim().length >= 40)
+        return true;
+    if (Array.isArray(b.sections) && b.sections.length > 0)
+        return true;
+    if (Array.isArray(b.blocks) && b.blocks.length > 0)
+        return true;
+    if (Array.isArray(b.timeline) && b.timeline.length > 0)
+        return true;
+    if (Array.isArray(b.facts) && b.facts.length > 0)
+        return true;
+    return false;
+}
+/**
+ * True when the entity has been converted / merged into another canonical
+ * entity, or has been archived / soft-hidden as a duplicate. These rows
+ * must never appear in public lists, search, suggestions, or pickers —
+ * only the destination canonical entity should remain visible.
+ */
+export function isRedirectedOrArchivedEntity(e) {
+    if (!e)
+        return false;
+    const meta = (e.metadata && typeof e.metadata === "object")
+        ? e.metadata
+        : null;
+    if (!meta)
+        return false;
+    if (typeof meta.canonical_id === "string" && meta.canonical_id.trim().length > 0)
+        return true;
+    if (meta.archived === true)
+        return true;
+    if (meta.hidden_duplicate === true)
+        return true;
+    if (typeof meta.merged_into === "string" && meta.merged_into.trim().length > 0)
+        return true;
+    if (typeof meta.converted_to === "string" && meta.converted_to.trim().length > 0)
+        return true;
+    if (typeof meta.redirect_to === "string" && meta.redirect_to.trim().length > 0)
+        return true;
+    return false;
+}
+/**
+ * The Encyclopedia never shows empty cards, orphan records, or stubs.
+ * A row is displayable only when it is enabled, not a redirect/merge/archive
+ * stub, and has real content — either a substantial summary or a real body.
+ */
+export function isDisplayableEntity(e) {
+    if (!e || e.enabled === false)
+        return false;
+    // Converted/merged/archived rows must be hidden from every public surface.
+    if (isRedirectedOrArchivedEntity(e))
+        return false;
+    // Artifacts are always visible once published — content can be enriched over time.
+    if (e.entity_type === "artifact")
+        return true;
+    const summary = (e.summary ?? "").trim();
+    if (summary.length >= 40)
+        return true;
+    if (bodyHasContent(e.body))
+        return true;
+    return false;
+}
+/** Filter helper for lists. */
+export function filterDisplayable(list) {
+    return (list ?? []).filter((r) => isDisplayableEntity(r));
+}
+// ─────────────────────────────────────────────────────────────
+// Queries — Supabase only, no fallbacks.
+// ─────────────────────────────────────────────────────────────
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export function isUuid(s) {
+    return !!s && UUID_RE.test(s.trim());
+}
+function isOnline() {
+    return typeof navigator === "undefined" || navigator.onLine !== false;
+}
+/** Score how "rich" a row is; used only to disambiguate same-slug siblings. */
+export function entityRichness(e) {
+    let s = 0;
+    const b = e.body;
+    if (b && typeof b === "object") {
+        if (Array.isArray(b.sections))
+            s += b.sections.length * 4;
+        if (Array.isArray(b.timeline))
+            s += b.timeline.length * 3;
+        if (Array.isArray(b.facts))
+            s += b.facts.length;
+        if (Array.isArray(b.sources))
+            s += b.sources.length;
+        if (typeof b.overview === "string")
+            s += Math.min(5, Math.floor(b.overview.length / 200));
+    }
+    if (e.summary)
+        s += 1;
+    if (e.subtitle)
+        s += 1;
+    if (e.enabled)
+        s += 0.5;
+    return s;
+}
+export function pickCanonicalEntity(list, preferType) {
+    if (!list || list.length === 0)
+        return null;
+    return ([...list].sort((a, b) => {
+        const ra = entityRichness(a), rb = entityRichness(b);
+        if (ra !== rb)
+            return rb - ra;
+        if (preferType) {
+            const at = a.entity_type === preferType ? 1 : 0;
+            const bt = b.entity_type === preferType ? 1 : 0;
+            if (at !== bt)
+                return bt - at;
+        }
+        const ae = a.enabled ? 1 : 0, be = b.enabled ? 1 : 0;
+        if (ae !== be)
+            return be - ae;
+        return 0;
+    })[0] ?? null);
+}
+async function liveFetchById(id) {
+    const r = await supabase
+        .from("encyclopedia_entities")
+        .select("*")
+        .eq("id", id)
+        .eq("enabled", true)
+        .maybeSingle();
+    if (r.error)
+        throw r.error;
+    return (r.data ?? null);
+}
+async function liveFetchBySlug(slug, entityType) {
+    let q = supabase
+        .from("encyclopedia_entities")
+        .select("*")
+        .eq("slug", slug)
+        .eq("enabled", true);
+    if (entityType)
+        q = q.eq("entity_type", entityType);
+    const { data, error } = await q;
+    if (error)
+        throw error;
+    return pickCanonicalEntity(data ?? [], entityType ?? null);
+}
+async function liveFetchByType(entityType) {
+    const { data, error } = await supabase
+        .from("encyclopedia_entities")
+        .select("*")
+        .eq("entity_type", entityType)
+        .eq("enabled", true);
+    if (error)
+        throw error;
+    return data ?? [];
+}
+async function liveFetchAll() {
+    const PAGE = 1000;
+    const rows = [];
+    for (let from = 0;; from += PAGE) {
+        const { data, error } = await supabase
+            .from("encyclopedia_entities")
+            .select(ENCYCLOPEDIA_ENTITY_COLUMNS)
+            .eq("enabled", true)
+            .order("title")
+            .range(from, from + PAGE - 1);
+        if (error)
+            throw error;
+        const batch = (data ?? []);
+        rows.push(...batch);
+        if (batch.length < PAGE)
+            break;
+    }
+    return rows;
+}
+export async function fetchEncyclopediaAllLocalFirst() {
+    await ensureLocalSnapshotLoaded();
+    const local = localEncyclopediaAll();
+    if (local.length > 0)
+        return local;
+    if (!isOnline())
+        return [];
+    try {
+        return await liveFetchAll();
+    }
+    catch {
+        return [];
+    }
+}
+/**
+ * Fetch the current public live index without replacing local-first behavior.
+ * Public search uses this as an online authority so stale cached rows that were
+ * later archived/merged/disabled cannot keep rendering as duplicate results.
+ *
+ * PERFORMANCE: prefer `fetchEncyclopediaLivePublicIds` when only the
+ * authoritative id set is needed. This variant downloads every `body`
+ * (~12 MB / 2 round trips) and must never gate a player-facing first paint.
+ */
+export async function fetchEncyclopediaLivePublicAll() {
+    if (!isOnline())
+        return null;
+    try {
+        return await liveFetchAll();
+    }
+    catch {
+        return null;
+    }
+}
+/**
+ * Authoritative id set only — 49 KB / one round trip instead of the 12 MB
+ * full-row download. This is all the public search pipeline actually needs
+ * from the network: proof that a locally cached row still exists and is
+ * still enabled. Row *content* comes from the local snapshot.
+ */
+export async function fetchEncyclopediaLivePublicIds() {
+    if (!isOnline())
+        return null;
+    try {
+        // PostgREST caps a single response at 1000 rows regardless of the range
+        // header, so the page size MUST be 1000. With a larger PAGE the first
+        // batch comes back short of PAGE, the loop exits early, and every row
+        // past 1000 is treated as "no longer on the server" — which is exactly
+        // how the category counts collapsed (135 figures instead of 377).
+        const PAGE = 1000;
+        const ids = new Set();
+        for (let from = 0;; from += PAGE) {
+            const { data, error } = await supabase
+                .from("encyclopedia_entities")
+                .select("id")
+                .eq("enabled", true)
+                .range(from, from + PAGE - 1);
+            if (error)
+                throw error;
+            const batch = (data ?? []);
+            for (const row of batch)
+                if (row?.id)
+                    ids.add(row.id);
+            if (batch.length < PAGE)
+                break;
+        }
+        return ids.size > 0 ? ids : null;
+    }
+    catch {
+        return null;
+    }
+}
+export async function fetchEncyclopediaByTypeLocalFirst(entityType) {
+    if (!isSupabaseEnabled(entityType))
+        return [];
+    await ensureLocalSnapshotLoaded();
+    const local = localEncyclopediaByType(entityType);
+    if (local.length > 0)
+        return local;
+    if (!isOnline())
+        return [];
+    try {
+        return await liveFetchByType(entityType);
+    }
+    catch {
+        return [];
+    }
+}
+export async function fetchEncyclopediaByIdLocalFirst(id) {
+    await ensureLocalSnapshotLoaded();
+    const local = localEncyclopediaById(id);
+    if (local && local.enabled !== false)
+        return local;
+    if (!isOnline())
+        return null;
+    try {
+        return await liveFetchById(id);
+    }
+    catch {
+        return null;
+    }
+}
+export async function fetchEncyclopediaBySlugLocalFirst(rawId, entityType) {
+    const slug = normalizeEntitySlug(rawId);
+    if (!slug)
+        return null;
+    await ensureLocalSnapshotLoaded();
+    const local = localEncyclopediaBySlug(slug, entityType);
+    if (local && local.enabled !== false)
+        return local;
+    if (!isOnline())
+        return null;
+    try {
+        return await liveFetchBySlug(slug, entityType);
+    }
+    catch {
+        return null;
+    }
+}
+/** Fetch one enabled entity by (type, slug). Returns null on miss. */
+export function useEncyclopediaSupabaseEntity(entityType, rawId, options = {}) {
+    const slug = normalizeEntitySlug(rawId);
+    const enabled = (options.enabled ?? true) && !!slug && !!entityType && isSupabaseEnabled(entityType);
+    return useQuery({
+        queryKey: ["encyclopedia-entity", entityType, slug],
+        enabled,
+        staleTime: 60000,
+        retry: 1,
+        initialData: () => localEncyclopediaBySlug(slug, entityType),
+        queryFn: async () => {
+            return fetchEncyclopediaBySlugLocalFirst(slug, entityType);
+        },
+    });
+}
+/** Fetch one enabled entity by UUID — used by atlas → encyclopedia links. */
+export function useEncyclopediaSupabaseEntityById(rawId) {
+    const id = (rawId ?? "").trim();
+    const enabled = isUuid(id);
+    return useQuery({
+        queryKey: ["encyclopedia-entity-by-id", id],
+        enabled,
+        staleTime: 60000,
+        retry: 1,
+        initialData: () => localEncyclopediaById(id),
+        queryFn: async () => {
+            return fetchEncyclopediaByIdLocalFirst(id);
+        },
+    });
+}
+/** Fetch one enabled entity by slug across types; picks the richest match. */
+export function useEncyclopediaSupabaseEntityBySlug(rawId) {
+    const slug = normalizeEntitySlug(rawId);
+    return useQuery({
+        queryKey: ["encyclopedia-entity-by-slug", slug],
+        enabled: !!slug,
+        staleTime: 60000,
+        retry: 1,
+        initialData: () => localEncyclopediaBySlug(slug),
+        queryFn: async () => {
+            return fetchEncyclopediaBySlugLocalFirst(slug);
+        },
+    });
+}
+/** Bulk fetch all enabled entities of a type. */
+export function useEncyclopediaSupabaseList(entityType) {
+    const enabled = isSupabaseEnabled(entityType);
+    const query = useQuery({
+        queryKey: ["encyclopedia-list", entityType],
+        enabled,
+        staleTime: 60000,
+        retry: 1,
+        initialData: () => {
+            const rows = localEncyclopediaByType(entityType);
+            return rows.length > 0 ? rows : undefined;
+        },
+        queryFn: async () => {
+            return fetchEncyclopediaByTypeLocalFirst(entityType);
+        },
+    });
+    const bySlug = useMemo(() => {
+        const m = new Map();
+        for (const r of query.data ?? [])
+            m.set(r.slug, r);
+        return m;
+    }, [query.data]);
+    return { ...query, bySlug };
+}
