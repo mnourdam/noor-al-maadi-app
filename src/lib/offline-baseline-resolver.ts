@@ -83,6 +83,7 @@ export async function seedBaselineToPersistentStore(): Promise<void> {
 
     const { loadSnapshot, saveSnapshot, SNAPSHOT_SCHEMA_VERSION } = await import("./offline-storage");
     type OfflineSnapshot = import("./offline-storage").OfflineSnapshot;
+    
     const existing = await loadSnapshot();
 
     // Versioning check: only overwrite if baseline is newer or version mismatch
@@ -131,6 +132,10 @@ export async function seedBaselineToPersistentStore(): Promise<void> {
 
     _indexedDbSeedTimeMs = now() - start;
     console.info(`[baseline] seeded IndexedDB in ${_indexedDbSeedTimeMs.toFixed(1)}ms`);
+    
+    if (typeof window !== "undefined" && (window as any).irth_baseline_report) {
+      (window as any).irth_baseline_report.seedTimeMs = _indexedDbSeedTimeMs;
+    }
   } catch (e) {
     console.warn("[baseline] seeding failed:", e);
   } finally {
@@ -145,13 +150,14 @@ export async function seedBaselineToPersistentStore(): Promise<void> {
  * Guaranteed to exclude campaign intros.
  */
 export function getLocalLibraryStories(): any[] {
-  const { isLocalReady, localPublishedCampaigns } = require("./local-first-store");
-  const introIds = introStoryIdsFromCampaigns(localPublishedCampaigns());
+  // We need to be careful with 'require' in TanStack Start's SSR environment.
+  // We use local-first-store as the primary source of truth for in-memory content.
+  const lfs = require("./local-first-store");
+  const introIds = introStoryIdsFromCampaigns(lfs.localPublishedCampaigns());
   
   // 1. Memory / Persistent (local-first-store)
-  if (isLocalReady()) {
-    const { storiesAll } = require("./local-first-store");
-    const all = storiesAll || [];
+  if (lfs.isLocalReady()) {
+    const all = lfs.localStoriesAll() || [];
     const library = all.filter((s: any) => !isCampaignIntroRow(s, introIds));
     if (library.length > 0) return library;
   }
@@ -168,11 +174,11 @@ export function getLocalLibraryStories(): any[] {
  * Synchronous local list of published games, following the Phase 2 priority.
  */
 export function getLocalPublishedGames(): GameRow[] {
-  const { isLocalReady, localPublishedGames } = require("./local-first-store");
+  const lfs = require("./local-first-store");
   
   // 1. Memory / Persistent (local-first-store)
-  if (isLocalReady()) {
-    const games = localPublishedGames();
+  if (lfs.isLocalReady()) {
+    const games = lfs.localPublishedGames();
     if (games.length > 0) return games as GameRow[];
   }
 
