@@ -470,13 +470,6 @@ export function localTihAll(): Row[] {
 
 export function localDailyFacts(): Row[] { return dailyFactsAll; }
 
-export function localStoryScenes(storyId: string): Row[] {
-  return scenesByStory.get(storyId) ?? [];
-}
-
-export function localStoryById(storyId: string): Row | null {
-  return storiesById.get(storyId) ?? null;
-}
 
 export function localSnapshotInfo() {
   if (!_snapshot) return null;
