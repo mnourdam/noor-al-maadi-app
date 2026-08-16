@@ -88,8 +88,22 @@ function tierFor(level: number): Tier {
 // ------------------------------------------------------------
 function xpThreshold(level: number): number {
   if (level <= 1) return 0;
-  const raw = 50 * Math.pow(level - 1, 2.1);
-  return Math.round(raw / 10) * 10;
+  
+  // Levels 1-20: Classic curve (round( 50 * (L-1)^2.1 ))
+  const baseRaw = 50 * Math.pow(level - 1, 2.1);
+  const baseThreshold = Math.round(baseRaw / 10) * 10;
+  
+  if (level <= 20) {
+    return baseThreshold;
+  }
+  
+  // Levels 21-50: Balanced Curve (Base + 169.8 * (L-20)^2)
+  // Ensures smooth transition from L20 (24,230) to L21 (27,160)
+  // and reaches L50 at 329,990 XP.
+  const boostRaw = 169.8 * Math.pow(level - 20, 2);
+  const totalRaw = baseThreshold + boostRaw;
+  
+  return Math.round(totalRaw / 10) * 10;
 }
 
 // ------------------------------------------------------------
