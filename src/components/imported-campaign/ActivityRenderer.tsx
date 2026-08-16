@@ -724,7 +724,7 @@ function MatchPairsRenderer({ activity, onResolve, alreadyDone }: RendererProps)
               className="flex-1 rounded-md border border-white/10 bg-black/40 px-2 py-1 text-foreground outline-none"
             >
               <option value="" className="bg-[#0a0f1e]">— اختر —</option>
-              {rights.map(r => <option key={r} value={r} className="bg-[#0a0f1e]">{r}</option>)}
+              {rights.map((r: string) => <option key={r} value={r} className="bg-[#0a0f1e]">{r}</option>)}
             </select>
           </div>
         ))}
