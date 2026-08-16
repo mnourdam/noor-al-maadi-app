@@ -510,6 +510,8 @@ function GamePlayPage() {
             <GameStageRenderer
               mode={game.mode}
               stage={stage}
+              gameId={game.id}
+              retryNonce={retryNonce}
               onComplete={handleComplete}
               onWrong={handleWrong}
               attemptsLeft={attemptsLeft}
@@ -518,6 +520,7 @@ function GamePlayPage() {
             />
           </div>
         ) : !stage ? (
+
           <p className="text-sm text-slate-400">لا توجد مراحل في هذه اللعبة.</p>
         ) : null}
 

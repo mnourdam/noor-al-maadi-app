@@ -7,6 +7,8 @@ import { CrosswordRenderer } from "./CrosswordRenderer";
 import "./games-premium.css";
 
 export interface RendererCommonProps {
+  gameId?: string;
+  retryNonce?: number;
   onComplete: (score: number) => void;
   /** Notify parent that a single attempt failed (for attempt tracking). */
   onWrong?: () => void;
@@ -16,6 +18,7 @@ export interface RendererCommonProps {
   /** Crossword-only: try to spend dinars for a paid hint. Returns true on success. */
   onPaidHint?: (cost: number) => boolean;
 }
+
 
 interface Props extends RendererCommonProps {
   mode: GameMode;
