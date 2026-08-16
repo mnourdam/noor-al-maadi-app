@@ -413,6 +413,13 @@ export async function generateSnapshot(): Promise<OfflineSnapshot> {
   };
 }
 
+/**
+ * Sync the local store with the server.
+ * Strategy:
+ *   1. Fetch Server Manifest (lightweight)
+ *   2. Identify Deltas (Count or Max UpdatedAt change)
+ *   3. Atomic Converge: Fetch only required deltas, merge, validate, then commit swap.
+ */
 export async function generateAndStoreSnapshot(): Promise<OfflineSnapshot> {
   const previous = await loadSnapshot();
   
@@ -420,52 +427,48 @@ export async function generateAndStoreSnapshot(): Promise<OfflineSnapshot> {
   const { fetchContentManifest } = await import("./offline-manifest");
   const serverManifest = await fetchContentManifest();
   
-  // If we have a previous snapshot and a server manifest, check if anything actually changed.
   if (previous?.collections && serverManifest) {
     let changed = false;
     for (const s of serverManifest) {
-      const localCount = previous.content_counts[s.collection] ?? 0;
-      // We don't have per-collection timestamps in the snapshot JSON yet,
-      // but generated_at serves as a global ceiling.
+      // Map server collection name to local key
+      const localKey = (s.collection === 'campaigns_public' ? 'admin_campaigns' : 
+                        s.collection === 'investigations_public' ? 'investigations' : 
+                        s.collection);
+      
+      const localCount = previous.content_counts[localKey] ?? 0;
       const serverDate = new Date(s.last_updated).getTime();
       const localDate = new Date(previous.generated_at).getTime();
       
+      // If count differs or server has newer data, we need a sync
       if (s.total_count !== localCount || serverDate > localDate) {
         changed = true;
         break;
       }
     }
+    
     if (!changed) {
       console.info("[snapshot] background sync skipped: local content matches server manifest");
       return previous;
     }
   }
 
-  const snap = await generateSnapshot();
+  // Converge: generate a new snapshot by merging deltas into previous if available
+  const snap = await (previous?.collections ? refreshSnapshotIncremental() : generateSnapshot());
+  
   const { validateSnapshot } = await import("./offline-snapshot-validate");
   const report = validateSnapshot(snap);
   if (!report.ok) {
-    console.warn("[snapshot] refusing to store invalid live snapshot", report.issues);
+    console.warn("[snapshot] refusing to store invalid snapshot", report.issues);
     throw new Error("Invalid offline snapshot; keeping existing local content");
   }
 
-  if (previous?.collections) {
-    for (const def of COLLECTIONS) {
-      const prevRows = previous.collections[def.key] ?? [];
-      const nextRows = snap.collections[def.key] ?? [];
-      const merged = mergeRows(prevRows, nextRows);
-      
-      // If we only fetched a delta or a short page, merge keeps existing rows.
-      snap.collections[def.key] = merged;
-      snap.content_counts[def.key] = merged.length;
-    }
-  }
-
+  // Atomic Commit: persist to IndexedDB then swap into memory
   await saveSnapshot(snap);
   try {
     const { applyLocalSnapshot } = await import("./local-first-store");
     applyLocalSnapshot(snap);
   } catch { /* ignore */ }
+
   
   if (import.meta.env.DEV && typeof window === "undefined") {
     try {
