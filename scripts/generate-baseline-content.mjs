@@ -37,15 +37,24 @@ async function generateBaseline() {
 
   await streamPsqlToFile(queries.games, 'tmp/games.json');
   await streamPsqlToFile(queries.stories, 'tmp/stories.json');
+  
+  // Also fetch campaign intros to know what to exclude
+  const campaignQuery = "SELECT json_agg(intro_id) FROM (SELECT data->>'intro_story_id' as intro_id FROM public.admin_campaigns WHERE data->>'intro_story_id' IS NOT NULL) t;";
+  await streamPsqlToFile(campaignQuery, 'tmp/intros.json');
 
   const games = JSON.parse(fs.readFileSync('tmp/games.json', 'utf8') || '[]');
   const stories = JSON.parse(fs.readFileSync('tmp/stories.json', 'utf8') || '[]');
+  const introIdsFromCampaigns = JSON.parse(fs.readFileSync('tmp/intros.json', 'utf8') || '[]');
+  const introSet = new Set(introIdsFromCampaigns.filter(id => !!id));
 
   const libraryStories = stories.filter(s => {
-    const isIntro = s.metadata?.kind === 'campaign_intro' || s.category === 'event';
-    return !isIntro;
+    const kind = s.metadata?.kind;
+    const tags = Array.isArray(s.tags) ? s.tags : [];
+    const isIntroMarker = kind === 'campaign_intro' || tags.includes('campaign-intro');
+    const isLinkedIntro = introSet.has(s.id);
+    return !(isIntroMarker || isLinkedIntro);
   });
-  console.log(`Fetched ${stories.length} stories, keeping ${libraryStories.length} library stories.`);
+  console.log(`Fetched ${stories.length} stories, identified ${stories.length - libraryStories.length} intros, keeping ${libraryStories.length} library stories.`);
 
   const storyIds = libraryStories.map(s => s.id);
   const storyIdsList = storyIds.map(id => `'${id}'`).join(',');
