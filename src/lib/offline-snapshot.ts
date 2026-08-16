@@ -624,28 +624,6 @@ export async function refreshSnapshotIncremental(): Promise<OfflineSnapshot> {
 }
 
 
-  // Warm the image cache in the background: priority story media first,
-  // general snapshot images, then long-tail scene media. Version bumps
-  // yield new URLs (via `?v=<processing_version>`) and thus a fresh
-  // fetch — invalidation happens exactly when processing_version moves.
-  // Warm the image cache in the background using idle time.
-  const warm = () => {
-    void warmSnapshotImageCache(nextCollections);
-  };
-  if (typeof window !== "undefined") {
-    if ("requestIdleCallback" in window) {
-      (window as any).requestIdleCallback(warm, { timeout: 4000 });
-    } else {
-      setTimeout(warm, 1500);
-    }
-  } else {
-    warm();
-  }
-
-  console.info(`[offline-sync] incremental: ${totalDeltas} row deltas across ${COLLECTIONS.length} collections`);
-  return snap;
-}
-
 /** Load the bundled snapshot shipped in /public. */
 export async function loadBundledSnapshot(): Promise<OfflineSnapshot | null> {
   const urls = new Set<string>([BUNDLED_SNAPSHOT_URL]);
