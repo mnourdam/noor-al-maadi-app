@@ -66,19 +66,7 @@ export async function checkManifestUpdates(): Promise<ManifestComparison> {
   }
 
   const needsUpdate: string[] = [];
-  
-  // Mapping of server manifest collection names to local snapshot collection keys
-  const SERVER_TO_LOCAL: Record<string, string> = {
-    'encyclopedia_entities': 'encyclopedia_entities',
-    'admin_campaigns': 'admin_campaigns',
-    'investigations': 'investigations',
-    'stories': 'stories',
-    'story_scenes': 'story_scenes',
-    'story_media': 'story_media',
-    'atlas_entities': 'atlas_entities'
-  };
 
-  for (const s of server) {
   for (const s of server) {
     // Map server manifest collection names to local snapshot collection keys
     const localKey = (s.collection === 'campaigns_public' ? 'admin_campaigns' : 
@@ -102,7 +90,6 @@ export async function checkManifestUpdates(): Promise<ManifestComparison> {
       needsUpdate.push(localKey);
     }
   }
-
 
   return {
     upToDate: needsUpdate.length === 0,
