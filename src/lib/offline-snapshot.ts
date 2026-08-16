@@ -765,10 +765,20 @@ export async function bootstrapOfflineSync(opts: { maxAgeMs?: number } = {}): Pr
         await warmSnapshotImageCache(snap.collections);
       }
     })();
+
+    // EXPOSE FOR DIAGNOSTICS: Attach irth global if window exists
+    if (typeof window !== "undefined") {
+      (window as any).irth = {
+        localDataVersion,
+        isLocalReady,
+        generateAndStoreSnapshot
+      };
+    }
   } catch (e) {
     console.warn("[offline-sync] bootstrap failed:", e);
   }
 }
+
 
 
 export const REQUIRED_COLLECTION_KEYS: OfflineCollectionKey[] = COLLECTIONS
