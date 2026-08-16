@@ -36,7 +36,7 @@ import {
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { shuffle } from "@/lib/utils";
+import { shuffle as utilsShuffle } from "@/lib/utils";
 import {
   getOrderingFingerprint,
   getOrderingState,
@@ -386,7 +386,7 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone, campaignId }:
   });
 
   const [order, setOrder] = useState<string[]>(() => {
-    const initial = shuffle(items.map((it) => it.id));
+    const initial = utilsShuffle(items.map((it) => it.id));
     // Apply pins to initial shuffle immediately to prevent flash
     const saved = getOrderingState(logicalKey, fingerprint);
     if (!saved || saved.pinnedIds.length === 0) return initial;

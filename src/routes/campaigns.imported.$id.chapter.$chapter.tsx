@@ -36,6 +36,7 @@ import {
   claimActivityReward, claimChapterReward, claimCampaignReward,
   enqueueCollectionSync, setActivePosition,
   clearActivePositionIf, unlockIdsToCollectionItems,
+  activityKey,
 } from "@/lib/campaignLedger";
 import { upsertChapterProgress } from "@/lib/progressSync";
 import { recordTrace } from "@/lib/diag-trace";
