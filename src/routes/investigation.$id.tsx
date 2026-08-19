@@ -27,6 +27,8 @@ import { recordInvestigationCompletion, useCanonicalInvestigationProgress } from
 import { markInvestigationOpened, clearInvestigationOpened } from "@/lib/investigations/recommend";
 import { useStashCurrentAsOrigin } from "@/lib/navigation";
 import { audioManager } from "@/lib/audioManager";
+import { shuffleOptions } from "@/lib/campaigns/optionShuffle";
+
 
 
 
@@ -161,8 +163,16 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
     if (!step) return;
     if (step.type === "question" || step.type === "decision") {
       if (picked == null || answerState === "correct") return;
-      const correctIndex = step.correctAnswer;
-      const isCorrect = typeof correctIndex === "number" ? picked === correctIndex : true;
+
+      const shuffled = shuffleOptions(
+        step.prompt,
+        step.options,
+        step.correctAnswer ?? -1,
+        row.slug
+      );
+
+      const isCorrect = typeof step.correctAnswer === "number" ? picked === shuffled.correctIndex : true;
+
       if (isCorrect) {
         // Record this index exactly once. Set semantics guarantee that
         // repeated confirms, re-renders, or "wrong then correct" flows
@@ -174,6 +184,7 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
           return next;
         });
         setAnswerState("correct");
+
         // SFX parity with campaigns — reuse the existing library, no new assets.
         audioManager.playSfx("success", { dedupeKey: `inv:correct:${idx}`, dedupeMs: 600 });
       } else {
@@ -379,7 +390,9 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
               }}
               revealed={answerState !== "unanswered"}
               heartsOut={false}
+              attemptKey={row.slug}
             />
+
             </div>
 
             {stepNeedsAnswer && answerState === "incorrect" && (
@@ -444,14 +457,30 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
 }
 
 function StepCard({
-  step, picked, setPicked, revealed, heartsOut,
+  step, picked, setPicked, revealed, heartsOut, attemptKey,
 }: {
   step: InvestigationStep;
   picked: number | null;
   setPicked: (n: number) => void;
   revealed: boolean;
   heartsOut: boolean;
+  attemptKey: string | number;
 }) {
+  const shuffled = useMemo(() => {
+    if ((step.type === "question" || step.type === "decision") && step.options?.length > 0) {
+      return shuffleOptions(
+        step.prompt,
+        step.options,
+        step.correctAnswer ?? -1,
+        attemptKey
+      );
+    }
+    return null;
+  }, [step, attemptKey]);
+
+  const displayOptions = shuffled ? shuffled.options : (step.type === "question" || step.type === "decision" ? step.options : []);
+  const displayCorrectIndex = shuffled ? shuffled.correctIndex : (step.type === "question" || step.type === "decision" ? step.correctAnswer : undefined);
+
   if (step.type === "briefing") {
     return (
       <div className="rounded-2xl border border-gold/25 bg-surface p-4">
@@ -487,7 +516,8 @@ function StepCard({
   }
   // question / decision
   const isQuestion = step.type === "question";
-  const correctIndex = step.correctAnswer;
+  const correctIndex = displayCorrectIndex;
+
   return (
     <div className="rounded-2xl border border-gold/25 bg-surface p-4">
       <div className="inline-flex items-center gap-2 text-[10px] text-gold">
@@ -496,7 +526,7 @@ function StepCard({
       </div>
       <p className="font-display mt-2 text-[14px] font-bold leading-snug">{step.prompt}</p>
       <div className="mt-3 space-y-2">
-        {step.options.map((opt, i) => {
+        {displayOptions.map((opt, i) => {
           const isPicked = picked === i;
           const isCorrect = typeof correctIndex === "number" && i === correctIndex;
           let style = "border-white/10 bg-background/60";
