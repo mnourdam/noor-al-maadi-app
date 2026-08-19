@@ -286,96 +286,110 @@ export async function handleNativeAuthCallback(url: string | null | undefined): 
     const accessToken = params.get("access_token");
     const refreshToken = params.get("refresh_token");
 
-    // Idempotency: avoid processing the same authorization code twice
+    // 1. Synchronous Idempotency & In-Flight Guard
     if (code) {
       if (processedCodes.has(code)) {
-        console.info("[IrthAuth] CALLBACK_DUPLICATE_IGNORED", `code_len=${code.length}`);
-        recordTrace("native-auth", "callback-duplicate-ignored");
+        console.info("[IrthAuth] CALLBACK_ALREADY_PROCESSED", `code_len=${code.length}`);
+        recordTrace("native-auth", "callback-already-processed");
         return;
       }
-      processedCodes.add(code);
-      if (processedCodes.size > 20) {
-        const first = processedCodes.values().next().value;
-        if (first !== undefined) processedCodes.delete(first);
+      if (inFlightCodes.has(code)) {
+        console.info("[IrthAuth] CALLBACK_IN_FLIGHT_IGNORED", `code_len=${code.length}`);
+        recordTrace("native-auth", "callback-in-flight-ignored");
+        return;
       }
+      
+      // Mark as in-flight IMMEDIATELY before any async work
+      inFlightCodes.add(code);
     }
 
-    const linkType = params.get("type");
-    isRecoveryLink = linkType === "recovery";
-    if (isRecoveryLink) {
-      setRecoveryMode(true);
-      recordTrace("native-auth", "OAUTH_RECOVERY_LINK_DETECTED");
-    }
-
-    const errorDescription = params.get("error_description") || params.get("error");
-    logPkceVerifierState("before exchange");
-
-    if (errorDescription) {
-      exchangeError = errorDescription;
-      console.error("[IrthAuth] OAUTH_ERROR", errorDescription);
-      stashOAuthError({
-        reason: errorDescription.toLowerCase().includes("cancel") ? "USER_CANCELLED" : "OAUTH_EXCHANGE_FAILED",
-        message: errorDescription,
-        ts: Date.now()
-      });
-    } else if (accessToken && refreshToken) {
-      console.info("[IrthAuth] IMPLICIT_FLOW_START");
-      recordTrace("native-auth", "IMPLICIT_FLOW_START");
-      const { data, error } = await supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken,
-      });
-      if (error) {
-        exchangeError = error.message;
-        stashOAuthError({ reason: "OAUTH_EXCHANGE_FAILED", message: error.message, ts: Date.now() });
-      } else {
-        exchangedOk = !!data.session;
-        recordTrace("native-auth", "SESSION_VERIFIED");
+    try {
+      const linkType = params.get("type");
+      isRecoveryLink = linkType === "recovery";
+      if (isRecoveryLink) {
+        setRecoveryMode(true);
+        recordTrace("native-auth", "OAUTH_RECOVERY_LINK_DETECTED");
       }
-    } else if (code) {
-      console.info("[IrthAuth] EXCHANGE_START");
-      recordTrace("native-auth", "EXCHANGE_START");
-      const nativeClient = getNativePkceSupabaseClient();
-      const { data, error } = await nativeClient.auth.exchangeCodeForSession(code);
-      if (error) {
-        exchangeError = error.message;
-        console.error("[IrthAuth] EXCHANGE_FAILED", error.message);
-        recordTrace("native-auth", "EXCHANGE_FAILED", error.message);
-        stashOAuthError({ reason: "OAUTH_EXCHANGE_FAILED", message: error.message, ts: Date.now() });
-      } else {
-        console.info("[IrthAuth] EXCHANGE_SUCCESS");
-        recordTrace("native-auth", "EXCHANGE_SUCCESS");
-        const session = data.session;
-        if (session?.access_token && session?.refresh_token) {
-          const { error: setErr } = await supabase.auth.setSession({
-            access_token: session.access_token,
-            refresh_token: session.refresh_token,
-          });
-          if (setErr) {
-            exchangeError = setErr.message;
-            recordTrace("native-auth", "MAIN_SESSION_BRIDGE_FAILED", setErr.message);
-          } else {
-            exchangedOk = true;
-            console.info("[IrthAuth] MAIN_SESSION_READY");
-            recordTrace("native-auth", "MAIN_SESSION_READY");
-            // setAuthReady(true) removed here — readiness must wait for Identity Switch (resetForIdentityChange)
-            // to ensure Main session user === active OwnerKey user.
-          }
+
+      const errorDescription = params.get("error_description") || params.get("error");
+      logPkceVerifierState("before exchange");
+
+      if (errorDescription) {
+        exchangeError = errorDescription;
+        console.error("[IrthAuth] OAUTH_ERROR", errorDescription);
+        stashOAuthError({
+          reason: errorDescription.toLowerCase().includes("cancel") ? "USER_CANCELLED" : "OAUTH_EXCHANGE_FAILED",
+          message: errorDescription,
+          ts: Date.now()
+        });
+      } else if (accessToken && refreshToken) {
+        console.info("[IrthAuth] IMPLICIT_FLOW_START");
+        recordTrace("native-auth", "IMPLICIT_FLOW_START");
+        const { data, error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+        if (error) {
+          exchangeError = error.message;
+          stashOAuthError({ reason: "OAUTH_EXCHANGE_FAILED", message: error.message, ts: Date.now() });
         } else {
-          exchangeError = "الجلسة غير مكتملة";
+          exchangedOk = !!data.session;
+          recordTrace("native-auth", "SESSION_VERIFIED");
+        }
+      } else if (code) {
+        console.info("[IrthAuth] EXCHANGE_START");
+        recordTrace("native-auth", "EXCHANGE_START");
+        const nativeClient = getNativePkceSupabaseClient();
+        const { data, error } = await nativeClient.auth.exchangeCodeForSession(code);
+        if (error) {
+          exchangeError = error.message;
+          console.error("[IrthAuth] EXCHANGE_FAILED", error.message);
+          recordTrace("native-auth", "EXCHANGE_FAILED", error.message);
+          stashOAuthError({ reason: "OAUTH_EXCHANGE_FAILED", message: error.message, ts: Date.now() });
+        } else {
+          console.info("[IrthAuth] EXCHANGE_SUCCESS");
+          recordTrace("native-auth", "EXCHANGE_SUCCESS");
+          
+          // SUCCESS: Mark as processed to prevent any late duplicate calls from showing errors
+          processedCodes.add(code);
+          if (processedCodes.size > 20) {
+            const first = processedCodes.values().next().value;
+            if (first !== undefined) processedCodes.delete(first);
+          }
+
+          const session = data.session;
+          if (session?.access_token && session?.refresh_token) {
+            const { error: setErr } = await supabase.auth.setSession({
+              access_token: session.access_token,
+              refresh_token: session.refresh_token,
+            });
+            if (setErr) {
+              exchangeError = setErr.message;
+              recordTrace("native-auth", "MAIN_SESSION_BRIDGE_FAILED", setErr.message);
+            } else {
+              exchangedOk = true;
+              console.info("[IrthAuth] MAIN_SESSION_READY");
+              recordTrace("native-auth", "MAIN_SESSION_READY");
+            }
+          } else {
+            exchangeError = "الجلسة غير مكتملة";
+          }
+        }
+      } else {
+        exchangeError = "الرابط غير صالح";
+      }
+
+      // TIERED COMPLETION: Only close browser AFTER verifying session
+      if (exchangedOk) {
+        const { data: sess } = await supabase.auth.getSession();
+        if (!sess.session) {
+          exchangedOk = false;
+          exchangeError = "تعذر تأكيد الجلسة النهائية";
         }
       }
-    } else {
-      exchangeError = "الرابط غير صالح";
-    }
-
-    // TIERED COMPLETION: Only close browser AFTER verifying session
-    if (exchangedOk) {
-      const { data: sess } = await supabase.auth.getSession();
-      if (!sess.session) {
-        exchangedOk = false;
-        exchangeError = "تعذر تأكيد الجلسة النهائية";
-      }
+    } finally {
+      // Always clear in-flight status so a retry is possible if it failed
+      if (code) inFlightCodes.delete(code);
     }
   } catch (e) {
     exchangeError = e instanceof Error ? e.message : String(e);
