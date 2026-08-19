@@ -357,6 +357,12 @@ function HomeFull() {
     return out;
   }, [campaignSel, todayEvents, recentDiscoveries, heroBgs, campaignHeroBg]);
 
+  const loadingSlide = useMemo(() => ({
+    eyebrow: "جاري التحميل",
+    title: "جاري تحميل تقدم الحملات...",
+    subtitle: "يرجى الانتظار حتى تتم مزامنة رحلتك التاريخية.",
+  }), []);
+
   // Carousel
   const [slideIdx, setSlideIdx] = useState(0);
   const [dragX, setDragX] = useState(0);
