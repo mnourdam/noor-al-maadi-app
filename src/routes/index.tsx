@@ -732,7 +732,7 @@ function HomeFull() {
               transition: isDragging ? "none" : "transform 320ms cubic-bezier(.22,.61,.36,1)",
             }}
           >
-            {campaignRecReady ? (
+            {campaignRecReady && storyCols.length > 0 ? (
               <>
                 {slide ? (
                   <div key={`slide-${slideIdx}`} className="motion-hero-fade max-w-xl">
