@@ -587,6 +587,9 @@ function LegacyInvestigationGame({ inv }: { inv: NonNullable<ReturnType<typeof g
   }, [q, attemptKey]);
 
   const isLastQuestion = qIndex >= inv.questions.length - 1;
+  // Investigations never gate on hearts and never consume hearts.
+  const totalReward = useMemo(() => inv.reward, [inv.reward]);
+
 
   const onSubmit = () => {
     if (picked == null || reveals[q.id]) return;
