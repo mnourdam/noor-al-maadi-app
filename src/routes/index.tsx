@@ -275,25 +275,6 @@ function HomeFull() {
   };
 
 
-  // ===== Story recommendation =====
-  const { collections: storyCols } = useStoryCollections();
-  const { data: stories = [] } = useQuery({
-    queryKey: ["home-stories-summary", user?.id],
-    queryFn: () => listStoriesSummary(),
-    staleTime: 1000 * 60, // 1 min
-  });
-
-  const storyRec = useMemo(() => (
-    getStoryRecommendation(stories, storyCols)
-  ), [stories, storyCols]);
-
-  const { src: storyRecCover } = useStoryCoverSrc(
-    storyRec?.cover ?? null,
-    "3:4",
-    heroBgs[1] ?? ""
-  );
-
-
   // ===== Hero background pool =====
   // Deterministic initial value for SSR/first paint, randomized on mount.
   // The pool auto-includes any file dropped under src/assets/hero/.
@@ -307,6 +288,22 @@ function HomeFull() {
     }, 1200);
     return () => { idle.cancel(); };
   }, []);
+
+  // ===== Story recommendation =====
+  const { collections: storyCols } = useStoryCollections();
+  const { data: stories = [] } = useQuery({
+    queryKey: ["home-stories-summary", user?.id],
+    queryFn: () => listStoriesSummary(),
+    staleTime: 1000 * 60, // 1 min
+  });
+
+  const storyRec = useMemo(() => (
+    getStoryRecommendation(stories, storyCols)
+  ), [stories, storyCols]);
+
+  const storyRecCover = useStoryCoverSrc(
+    storyRec?.story ?? null
+  ) ?? heroBgs[1] ?? "";
   // ===== Campaign hero artwork (Single Source of Truth) =====
   // The resolver picks Key Art when present, else the rotating hero
   // pool. Never read `coverImage` here — all campaign artwork routes
@@ -366,7 +363,7 @@ function HomeFull() {
           label: ctaLabel,
           link: (
             <Link
-              to="/stories/$id"
+              to="/story/$id"
               params={{ id: story.id }}
               onClick={() => stashOrigin(`/stories/${story.id}`)}
               className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-bold text-primary-foreground"
