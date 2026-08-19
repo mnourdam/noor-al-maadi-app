@@ -561,6 +561,8 @@ function StepCard({
 // Legacy player (unchanged) — backward compatibility
 // ============================================================
 function LegacyInvestigationGame({ inv }: { inv: NonNullable<ReturnType<typeof getInvestigation>> }) {
+  const attemptKey = useMemo(() => inv.id, [inv.id]);
+
   const {
     profile, completeInvestigation, awardBadge, findArtifact, unlockCharacter,
     buyHint, hintsRevealed, addDinars, recordStreakActivity,
@@ -580,13 +582,16 @@ function LegacyInvestigationGame({ inv }: { inv: NonNullable<ReturnType<typeof g
   const [finished, setFinished] = useState(alreadyDone);
 
   const q = inv.questions[qIndex];
+  const shuffled = useMemo(() => {
+    return shuffleOptions(q.question, q.choices, q.correctIndex, attemptKey);
+  }, [q, attemptKey]);
+
   const isLastQuestion = qIndex >= inv.questions.length - 1;
-  // Investigations never gate on hearts and never consume hearts.
-  const totalReward = useMemo(() => inv.reward, [inv.reward]);
 
   const onSubmit = () => {
     if (picked == null || reveals[q.id]) return;
-    const correct = picked === q.correctIndex;
+    const correct = picked === shuffled.correctIndex;
+
     if (correct) setCorrectCount((c) => c + 1);
     setReveals((r) => ({ ...r, [q.id]: true }));
     if (correct) {
@@ -700,9 +705,10 @@ function LegacyInvestigationGame({ inv }: { inv: NonNullable<ReturnType<typeof g
             <div key={qIndex} className="animate-page-turn rounded-2xl border border-gold/25 bg-surface p-4">
               <p className="font-display text-[14px] font-bold leading-snug">{q.question}</p>
               <div className="mt-3 space-y-2">
-                {q.choices.map((c, i) => {
+                {shuffled.options.map((c, i) => {
                   const isPicked = picked === i;
-                  const isCorrect = i === q.correctIndex;
+                  const isCorrect = i === shuffled.correctIndex;
+
                   const revealedHere = reveals[q.id];
                   let style = "border-white/10 bg-background/60";
                   if (revealedHere) {
