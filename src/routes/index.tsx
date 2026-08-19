@@ -29,6 +29,10 @@ import { useTodayInHistoryEvent, type TodayInHistoryEvent } from "@/lib/today-in
 import { useRealCollectionStats, type UnifiedUnlock } from "@/lib/real-collection-stats";
 import { useUnifiedDiscoveryFeed, type DiscoveryItem } from "@/lib/playerDiscoveries";
 import { useHomeSummary } from "@/lib/stats/homeSummary";
+import { useStoryCollections } from "@/lib/stories/collections";
+import { getStoryRecommendation } from "@/lib/stories/recommendation";
+import { listStoriesSummary } from "@/lib/stories/summary";
+import { useStoryCoverSrc } from "@/lib/stories/covers";
 
 import { useCampaignRecommendation } from "@/lib/campaignRecommendationService";
 import { useCampaignArtworkUrl, sanitizedCoverImage } from "@/lib/campaignArtwork";
@@ -66,6 +70,7 @@ export const Route = createFileRoute("/")({
 // ============================================================
 type HeroSlide =
   | { kind: "campaign"; bg: string; eyebrow: string; title: string; subtitle: string; quote?: string; progress?: { done: number; total: number }; cta: { label: string; link: React.ReactNode } }
+  | { kind: "story"; bg: string; eyebrow: string; title: string; subtitle: string; progress?: number; cta: { label: string; link: React.ReactNode } }
   | { kind: "history"; bg: string; eyebrow: string; title: string; subtitle: string; cta?: { label: string; link: React.ReactNode } }
   | { kind: "discovery"; bg: string; eyebrow: string; title: string; subtitle: string; icon: string; cta: { label: string; link: React.ReactNode } }
   | { kind: "timeline"; bg: string; eyebrow: string; title: string; subtitle: string; cta: { label: string; link: React.ReactNode } };
@@ -270,6 +275,25 @@ function HomeFull() {
   };
 
 
+  // ===== Story recommendation =====
+  const { collections: storyCols } = useStoryCollections();
+  const { data: stories = [] } = useQuery({
+    queryKey: ["home-stories-summary", user?.id],
+    queryFn: () => listStoriesSummary(),
+    staleTime: 1000 * 60, // 1 min
+  });
+
+  const storyRec = useMemo(() => (
+    getStoryRecommendation(stories, storyCols)
+  ), [stories, storyCols]);
+
+  const { src: storyRecCover } = useStoryCoverSrc(
+    storyRec?.cover ?? null,
+    "3:4",
+    heroBgs[1] ?? ""
+  );
+
+
   // ===== Hero background pool =====
   // Deterministic initial value for SSR/first paint, randomized on mount.
   // The pool auto-includes any file dropped under src/assets/hero/.
@@ -325,6 +349,32 @@ function HomeFull() {
             <Play className="size-4 fill-current" />{ctaLabel}
           </Link>
         )},
+      });
+    }
+    if (storyRec) {
+      const { story, mode, progress } = storyRec;
+      const ctaLabel = mode === "resume" ? "أكمل القصة" : "ابدأ القصة";
+      const eyebrow = mode === "resume" ? "أكمل من حيث توقفت" : "قصة جديدة بانتظارك";
+      out.push({
+        kind: "story",
+        bg: storyRecCover,
+        eyebrow,
+        title: story.title_ar,
+        subtitle: story.summary_ar ?? "اكتشف فصلاً جديداً من تاريخنا.",
+        progress,
+        cta: {
+          label: ctaLabel,
+          link: (
+            <Link
+              to="/stories/$id"
+              params={{ id: story.id }}
+              onClick={() => stashOrigin(`/stories/${story.id}`)}
+              className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-bold text-primary-foreground"
+            >
+              <BookOpen className="size-4" />{ctaLabel}
+            </Link>
+          )
+        },
       });
     }
     todayEvents.forEach((ev, i) => {
