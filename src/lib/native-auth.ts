@@ -86,6 +86,12 @@ async function tracedAwait<T>(
 }
 
 export async function signInWithGoogleNative(): Promise<{ ok: boolean; error?: string }> {
+  if (oauthFlowActive) {
+    console.warn("[native-auth] OAUTH_FLOW_ALREADY_ACTIVE — ignoring duplicate tap");
+    return { ok: false, error: "هناك عملية تسجيل دخول قيد التنفيذ بالفعل." };
+  }
+
+  oauthFlowActive = true;
   recordTrace("native-auth", "native-auth-start");
   console.info("[native-auth] branch=NATIVE redirectTo=", NATIVE_REDIRECT_URL);
   try {
@@ -196,6 +202,10 @@ export async function signInWithGoogleNative(): Promise<{ ok: boolean; error?: s
       e instanceof Error ? e.message : String(e),
     );
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  } finally {
+    // Reset flow active state. If browser opened, the callback will handle the next state.
+    // If it failed before opening, we must allow retry.
+    oauthFlowActive = false;
   }
 }
 
@@ -244,6 +254,8 @@ let listenerRegistered = false;
 
 // Idempotency: avoid processing the same authorization code twice.
 const processedCodes = new Set<string>();
+const inFlightCodes = new Set<string>();
+let oauthFlowActive = false;
 
 export function isNativeAuthListenerInstalled(): boolean { return listenerInstalled; }
 export function isNativeAuthListenerRegistered(): boolean { return listenerRegistered; }
