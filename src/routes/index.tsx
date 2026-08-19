@@ -29,6 +29,10 @@ import { useTodayInHistoryEvent, type TodayInHistoryEvent } from "@/lib/today-in
 import { useRealCollectionStats, type UnifiedUnlock } from "@/lib/real-collection-stats";
 import { useUnifiedDiscoveryFeed, type DiscoveryItem } from "@/lib/playerDiscoveries";
 import { useHomeSummary } from "@/lib/stats/homeSummary";
+import { useStoryCollections } from "@/lib/stories/collections";
+import { getStoryRecommendation } from "@/lib/stories/recommendation";
+import { listStoriesSummary } from "@/lib/stories/summary";
+import { useStoryCoverSrc } from "@/lib/stories/covers";
 
 import { useCampaignRecommendation } from "@/lib/campaignRecommendationService";
 import { useCampaignArtworkUrl, sanitizedCoverImage } from "@/lib/campaignArtwork";
@@ -66,6 +70,7 @@ export const Route = createFileRoute("/")({
 // ============================================================
 type HeroSlide =
   | { kind: "campaign"; bg: string; eyebrow: string; title: string; subtitle: string; quote?: string; progress?: { done: number; total: number }; cta: { label: string; link: React.ReactNode } }
+  | { kind: "story"; bg: string; eyebrow: string; title: string; subtitle: string; progress?: number; cta: { label: string; link: React.ReactNode } }
   | { kind: "history"; bg: string; eyebrow: string; title: string; subtitle: string; cta?: { label: string; link: React.ReactNode } }
   | { kind: "discovery"; bg: string; eyebrow: string; title: string; subtitle: string; icon: string; cta: { label: string; link: React.ReactNode } }
   | { kind: "timeline"; bg: string; eyebrow: string; title: string; subtitle: string; cta: { label: string; link: React.ReactNode } };
@@ -283,6 +288,22 @@ function HomeFull() {
     }, 1200);
     return () => { idle.cancel(); };
   }, []);
+
+  // ===== Story recommendation =====
+  const { collections: storyCols } = useStoryCollections();
+  const { data: stories = [] } = useQuery({
+    queryKey: ["home-stories-summary", user?.id],
+    queryFn: () => listStoriesSummary(),
+    staleTime: 1000 * 60, // 1 min
+  });
+
+  const storyRec = useMemo(() => (
+    getStoryRecommendation(stories, storyCols)
+  ), [stories, storyCols]);
+
+  const storyRecCover = useStoryCoverSrc(
+    storyRec?.story ?? null
+  ) ?? heroBgs[1] ?? "";
   // ===== Campaign hero artwork (Single Source of Truth) =====
   // The resolver picks Key Art when present, else the rotating hero
   // pool. Never read `coverImage` here — all campaign artwork routes
@@ -325,6 +346,32 @@ function HomeFull() {
             <Play className="size-4 fill-current" />{ctaLabel}
           </Link>
         )},
+      });
+    }
+    if (storyRec) {
+      const { story, mode, progress } = storyRec;
+      const ctaLabel = mode === "resume" ? "أكمل القصة" : "ابدأ القصة";
+      const eyebrow = mode === "resume" ? "أكمل من حيث توقفت" : "قصة جديدة بانتظارك";
+      out.push({
+        kind: "story",
+        bg: storyRecCover,
+        eyebrow,
+        title: story.title_ar,
+        subtitle: story.summary_ar ?? "اكتشف فصلاً جديداً من تاريخنا.",
+        progress,
+        cta: {
+          label: ctaLabel,
+          link: (
+            <Link
+              to="/story/$id"
+              params={{ id: story.id }}
+              onClick={() => stashOrigin(`/stories/${story.id}`)}
+              className="shadow-gold inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3 text-sm font-bold text-primary-foreground"
+            >
+              <BookOpen className="size-4" />{ctaLabel}
+            </Link>
+          )
+        },
       });
     }
     todayEvents.forEach((ev, i) => {
@@ -685,12 +732,13 @@ function HomeFull() {
               transition: isDragging ? "none" : "transform 320ms cubic-bezier(.22,.61,.36,1)",
             }}
           >
-            {campaignRecReady ? (
+            {campaignRecReady && storyCols.length > 0 ? (
               <>
                 {slide ? (
                   <div key={`slide-${slideIdx}`} className="motion-hero-fade max-w-xl">
                     <div className="flex items-center gap-2 text-[11px] text-gold">
                       {slide.kind === "campaign" && <Crown className="size-3.5" />}
+                      {slide.kind === "story" && <BookOpen className="size-3.5" />}
                       {slide.kind === "history" && <Calendar className="size-3.5" />}
                       {slide.kind === "discovery" && <Gem className="size-3.5" />}
                       {slide.kind === "timeline" && <Hourglass className="size-3.5" />}
@@ -707,6 +755,14 @@ function HomeFull() {
                           <div className="h-full bg-gradient-gold transition-all" style={{ width: `${Math.round((slide.progress.done / slide.progress.total) * 100)}%` }} />
                         </div>
                         <span className="text-[11px] text-white/70">{slide.progress.done}/{slide.progress.total} فصل</span>
+                      </div>
+                    )}
+                    {slide.kind === "story" && slide.progress !== undefined && slide.progress > 0 && (
+                      <div className="mt-5 flex items-center gap-3">
+                        <div className="h-[3px] flex-1 overflow-hidden rounded-full bg-white/15">
+                          <div className="h-full bg-gradient-gold transition-all" style={{ width: `${Math.round(slide.progress * 100)}%` }} />
+                        </div>
+                        <span className="text-[11px] text-white/70">{Math.round(slide.progress * 100)}%</span>
                       </div>
                     )}
                     {slide.cta && (
