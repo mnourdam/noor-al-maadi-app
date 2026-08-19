@@ -30,6 +30,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchPublishedCampaigns } from "@/lib/supabaseCampaigns";
+import { isReconciliationTerminal, subscribeReconciliation } from "@/lib/boot/reconciliation";
 import { campaignSortKey, sortCampaignsChronological } from "@/lib/campaignChronology";
 import { getCampaignProgress } from "@/lib/importedCampaignProgress";
 import type {
@@ -362,6 +363,14 @@ export function useCampaignRecommendation(
 ): { recommendation: CampaignRecommendationResult; ready: boolean } {
   const worldCampaignIds = opts?.worldCampaignIds ?? null;
 
+  // reconciliation trust state
+  const [reconReady, setReconReady] = useState(isReconciliationTerminal());
+  useEffect(() => {
+    return subscribeReconciliation(() => {
+      setReconReady(isReconciliationTerminal());
+    });
+  }, []);
+
   const { data: campaigns = [], isSuccess } = useQuery({
     queryKey: ["campaign-recommendation-source"],
     queryFn: fetchPublishedCampaigns,
@@ -401,5 +410,5 @@ export function useCampaignRecommendation(
     });
   }, [campaigns, worldCampaignIds, cloudCampaign, progressTick]);
 
-  return { recommendation, ready: isSuccess };
+  return { recommendation, ready: isSuccess && reconReady };
 }
