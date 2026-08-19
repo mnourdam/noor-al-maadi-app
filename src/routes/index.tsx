@@ -738,6 +738,7 @@ function HomeFull() {
                   <div key={`slide-${slideIdx}`} className="motion-hero-fade max-w-xl">
                     <div className="flex items-center gap-2 text-[11px] text-gold">
                       {slide.kind === "campaign" && <Crown className="size-3.5" />}
+                      {slide.kind === "story" && <BookOpen className="size-3.5" />}
                       {slide.kind === "history" && <Calendar className="size-3.5" />}
                       {slide.kind === "discovery" && <Gem className="size-3.5" />}
                       {slide.kind === "timeline" && <Hourglass className="size-3.5" />}
@@ -754,6 +755,14 @@ function HomeFull() {
                           <div className="h-full bg-gradient-gold transition-all" style={{ width: `${Math.round((slide.progress.done / slide.progress.total) * 100)}%` }} />
                         </div>
                         <span className="text-[11px] text-white/70">{slide.progress.done}/{slide.progress.total} فصل</span>
+                      </div>
+                    )}
+                    {slide.kind === "story" && slide.progress !== undefined && slide.progress > 0 && (
+                      <div className="mt-5 flex items-center gap-3">
+                        <div className="h-[3px] flex-1 overflow-hidden rounded-full bg-white/15">
+                          <div className="h-full bg-gradient-gold transition-all" style={{ width: `${Math.round(slide.progress * 100)}%` }} />
+                        </div>
+                        <span className="text-[11px] text-white/70">{Math.round(slide.progress * 100)}%</span>
                       </div>
                     )}
                     {slide.cta && (
