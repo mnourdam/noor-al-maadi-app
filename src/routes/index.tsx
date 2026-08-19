@@ -236,7 +236,7 @@ function HomeFull() {
   // so both surfaces can never disagree on "what should the player
   // do next?".  All decision logic lives in
   // `src/lib/campaignRecommendationService.ts`.
-  const { recommendation: campaignRec } = useCampaignRecommendation();
+  const { recommendation: campaignRec, ready: campaignRecReady } = useCampaignRecommendation();
   const campaignSel = useMemo<CampaignSelection | null>(() => {
     if (!campaignRec) return null;
     const { campaign, chapter, progress, priority } = campaignRec;
@@ -356,6 +356,12 @@ function HomeFull() {
     // LC1 scope cut: Timeline Journey hero slide hidden until content audit completes.
     return out;
   }, [campaignSel, todayEvents, recentDiscoveries, heroBgs, campaignHeroBg]);
+
+  const loadingSlide = useMemo(() => ({
+    eyebrow: "جاري التحميل",
+    title: "جاري تحميل تقدم الحملات...",
+    subtitle: "يرجى الانتظار حتى تتم مزامنة رحلتك التاريخية.",
+  }), []);
 
   // Carousel
   const [slideIdx, setSlideIdx] = useState(0);
@@ -679,50 +685,66 @@ function HomeFull() {
               transition: isDragging ? "none" : "transform 320ms cubic-bezier(.22,.61,.36,1)",
             }}
           >
-            {slide && (
-              <div key={`slide-${slideIdx}`} className="motion-hero-fade max-w-xl">
-                <div className="flex items-center gap-2 text-[11px] text-gold">
-                  {slide.kind === "campaign" && <Crown className="size-3.5" />}
-                  {slide.kind === "history" && <Calendar className="size-3.5" />}
-                  {slide.kind === "discovery" && <Gem className="size-3.5" />}
-                  {slide.kind === "timeline" && <Hourglass className="size-3.5" />}
-                  <span className="tracking-[0.25em]">{slide.eyebrow}</span>
-                </div>
-                <h1 className="font-display mt-3 text-4xl font-bold leading-[1.15] text-white drop-shadow-[0_4px_18px_oklch(0_0_0/0.6)]">
-                  {slide.kind === "discovery" && <span className="me-2 text-3xl">{slide.icon}</span>}
-                  {slide.title}
-                </h1>
-                <p className="mt-3 line-clamp-3 text-sm text-white/75">{slide.subtitle}</p>
-                {slide.kind === "campaign" && slide.progress && (
-                  <div className="mt-5 flex items-center gap-3">
-                    <div className="h-[3px] flex-1 overflow-hidden rounded-full bg-white/15">
-                      <div className="h-full bg-gradient-gold transition-all" style={{ width: `${Math.round((slide.progress.done / slide.progress.total) * 100)}%` }} />
+            {campaignRecReady ? (
+              <>
+                {slide ? (
+                  <div key={`slide-${slideIdx}`} className="motion-hero-fade max-w-xl">
+                    <div className="flex items-center gap-2 text-[11px] text-gold">
+                      {slide.kind === "campaign" && <Crown className="size-3.5" />}
+                      {slide.kind === "history" && <Calendar className="size-3.5" />}
+                      {slide.kind === "discovery" && <Gem className="size-3.5" />}
+                      {slide.kind === "timeline" && <Hourglass className="size-3.5" />}
+                      <span className="tracking-[0.25em]">{slide.eyebrow}</span>
                     </div>
-                    <span className="text-[11px] text-white/70">{slide.progress.done}/{slide.progress.total} فصل</span>
+                    <h1 className="font-display mt-3 text-4xl font-bold leading-[1.15] text-white drop-shadow-[0_4px_18px_oklch(0_0_0/0.6)]">
+                      {slide.kind === "discovery" && <span className="me-2 text-3xl">{slide.icon}</span>}
+                      {slide.title}
+                    </h1>
+                    <p className="mt-3 line-clamp-3 text-sm text-white/75">{slide.subtitle}</p>
+                    {slide.kind === "campaign" && slide.progress && (
+                      <div className="mt-5 flex items-center gap-3">
+                        <div className="h-[3px] flex-1 overflow-hidden rounded-full bg-white/15">
+                          <div className="h-full bg-gradient-gold transition-all" style={{ width: `${Math.round((slide.progress.done / slide.progress.total) * 100)}%` }} />
+                        </div>
+                        <span className="text-[11px] text-white/70">{slide.progress.done}/{slide.progress.total} فصل</span>
+                      </div>
+                    )}
+                    {slide.cta && (
+                      <div className="mt-6 flex items-center gap-3">
+                        {slide.cta.link}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="motion-hero-fade max-w-xl">
+                    <div className="flex items-center gap-2 text-[11px] text-gold">
+                      <Lock className="size-3.5" />
+                      <span className="tracking-[0.25em]">قريبًا · حملة جديدة</span>
+                    </div>
+                    <h1 className="font-display mt-3 text-4xl font-bold leading-[1.15] text-white">حملة قادمة</h1>
+                    <p className="mt-3 line-clamp-3 text-sm text-white/75">
+                      لقد أتممت كل الحملات الحالية. ترقّب الحملات القادمة قريبًا.
+                    </p>
+                    <div className="mt-6">
+                      <Link to="/campaigns" className="glass inline-flex items-center gap-2 rounded-full border border-gold/40 px-5 py-2.5 text-xs text-gold">
+                        استعرض كل الحملات <ChevronLeft className="size-4" />
+                      </Link>
+                    </div>
                   </div>
                 )}
-                {slide.cta && (
-                  <div className="mt-6 flex items-center gap-3">
-                    {slide.cta.link}
-                  </div>
-                )}
-              </div>
-            )}
-            {!slide && (
-              <div className="motion-hero-fade max-w-xl">
+              </>
+            ) : (
+              <div key="slide-loading" className="motion-hero-fade max-w-xl">
                 <div className="flex items-center gap-2 text-[11px] text-gold">
-                  <Lock className="size-3.5" />
-                  <span className="tracking-[0.25em]">قريبًا · حملة جديدة</span>
+                  <Hourglass className="size-3.5 animate-spin" />
+                  <span className="tracking-[0.25em]">{loadingSlide.eyebrow}</span>
                 </div>
-                <h1 className="font-display mt-3 text-4xl font-bold leading-[1.15] text-white">حملة قادمة</h1>
+                <h1 className="font-display mt-3 text-4xl font-bold leading-[1.15] text-white">
+                  {loadingSlide.title}
+                </h1>
                 <p className="mt-3 line-clamp-3 text-sm text-white/75">
-                  لقد أتممت كل الحملات الحالية. ترقّب الحملات القادمة قريبًا.
+                  {loadingSlide.subtitle}
                 </p>
-                <div className="mt-6">
-                  <Link to="/campaigns" className="glass inline-flex items-center gap-2 rounded-full border border-gold/40 px-5 py-2.5 text-xs text-gold">
-                    استعرض كل الحملات <ChevronLeft className="size-4" />
-                  </Link>
-                </div>
               </div>
             )}
 
@@ -746,7 +768,7 @@ function HomeFull() {
       </section>
 
       {/* ============ 2. CONTINUE / START JOURNEY — primary action ============ */}
-      {campaignSel && !campaignSel.isComplete && campaignSel.nextChapter && (
+      {campaignRecReady && campaignSel && !campaignSel.isComplete && campaignSel.nextChapter && (
         <Reveal>
           <ContinueJourneyCard sel={campaignSel} />
         </Reveal>
