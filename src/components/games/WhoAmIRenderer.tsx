@@ -79,6 +79,23 @@ export function WhoAmIRenderer({ gameId, retryNonce = 0, stage, onComplete, onWr
 
   const words = useMemo(() => stage.answer.trim().split(/\s+/), [stage.answer]);
 
+  // V11 Preview Diagnostics: Who Am I State Snapshot
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.hostname.includes("lovable.app") && gameId) {
+      console.log("[IRTH_WHOAMI_HELP_STATE]", {
+        gameId,
+        done,
+        wordsLength: words.length,
+        revealedWordsIsArray: Array.isArray(helpState.revealedWords),
+        revealedWordsLength: helpState.revealedWords.length,
+        revealedLettersIsNull: helpState.revealedLetters === null,
+        revealedLettersType: typeof helpState.revealedLetters,
+        revealedLetters0IsArray: Array.isArray(helpState.revealedLetters?.[0]),
+        revealedEntries: Object.keys(helpState.revealedLetters).length
+      });
+    }
+  }, [gameId, done, words.length, helpState]);
+
   useRegisterHelpOption("whoami_reveal", gameId && !done ? {
     icon: words.length > 1 ? <ScrollText className="h-4 w-4" /> : <HelpCircle className="h-4 w-4" />,
     label: words.length > 1 ? "كشف كلمة" : "كشف حروف",
