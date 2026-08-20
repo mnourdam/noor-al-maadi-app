@@ -4,17 +4,7 @@ import {
 } from "react";
 
 /**
- * Unified Help framework for every mini-game (timed challenges and beyond).
- *
- * The host route (games.$mode.$slug.tsx) wraps the play surface with
- * <GameHelpProvider>, renders a single "مساعدة" button next to the timer,
- * and registers the built-in "add 2 minutes" option. Per-game renderers
- * (Crossword, future modes) can register additional options through
- * `useRegisterHelpOption("id", spec)` — they appear in the same dialog.
- *
- * Insufficient dinars is handled by the dialog uniformly. Renderers never
- * deduct dinars themselves: they call `pay()` inside `perform` and abort
- * when it returns false.
+ * Unified Help framework for every mini-game.
  */
 export interface HelpOptionSpec {
   icon: ReactNode;
@@ -31,61 +21,91 @@ export interface HelpOption extends HelpOptionSpec {
   id: string;
 }
 
-interface Ctx {
-  register: (id: string, spec: HelpOptionSpec) => () => void;
+interface StateCtx {
   options: HelpOption[];
+  version: number;
 }
 
-const GameHelpCtx = createContext<Ctx | null>(null);
+interface ActionsCtx {
+  register: (id: string, spec: HelpOptionSpec) => () => void;
+}
+
+// Split contexts to prevent re-registration loops
+const GameHelpStateCtx = createContext<StateCtx | null>(null);
+const GameHelpActionsCtx = createContext<ActionsCtx | null>(null);
 
 export function GameHelpProvider({ children }: { children: ReactNode }) {
   const mapRef = useRef<Map<string, HelpOptionSpec>>(new Map());
   const [version, setVersion] = useState(0);
 
   const register = useCallback((id: string, spec: HelpOptionSpec) => {
+    // Idempotency check: only increment version if identity changed
+    const existing = mapRef.current.get(id);
+    if (existing === spec) return () => {};
+
     mapRef.current.set(id, spec);
     setVersion((v) => v + 1);
+    
     return () => {
-      mapRef.current.delete(id);
-      setVersion((v) => v + 1);
+      if (mapRef.current.get(id) === spec) {
+        mapRef.current.delete(id);
+        setVersion((v) => v + 1);
+      }
     };
   }, []);
 
   const options = useMemo<HelpOption[]>(
     () => Array.from(mapRef.current.entries()).map(([id, spec]) => ({ id, ...spec })),
-    // version drives recomputation on register/unregister
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [version],
+    [version]
   );
 
-  const value = useMemo<Ctx>(() => ({ register, options }), [register, options]);
-  return <GameHelpCtx.Provider value={value}>{children}</GameHelpCtx.Provider>;
+  const stateValue = useMemo(() => ({ options, version }), [options, version]);
+  const actionsValue = useMemo(() => ({ register }), [register]);
+
+  return (
+    <GameHelpActionsCtx.Provider value={actionsValue}>
+      <GameHelpStateCtx.Provider value={stateValue}>
+        {children}
+      </GameHelpStateCtx.Provider>
+    </GameHelpActionsCtx.Provider>
+  );
 }
 
-export function useGameHelp(): Ctx | null {
-  return useContext(GameHelpCtx);
+/**
+ * Unified hook for UI consumers (Dialog) who need options and version.
+ */
+export function useGameHelp() {
+  const state = useContext(GameHelpStateCtx);
+  const actions = useContext(GameHelpActionsCtx);
+  if (!state || !actions) return null;
+  return { ...state, ...actions };
 }
 
 /**
  * Register a help option for the lifetime of the calling component.
- * Pass `spec=null` to skip registration (e.g. once the game is complete).
- * The spec is read through a ref so callbacks always see fresh state
- * without re-registering on every render.
+ * Pass `spec=null` to skip registration.
  */
 export function useRegisterHelpOption(id: string, spec: HelpOptionSpec | null) {
-  const ctx = useGameHelp();
+  const actions = useContext(GameHelpActionsCtx);
   const specRef = useRef<HelpOptionSpec | null>(spec);
   specRef.current = spec;
+  
   const isActive = spec !== null;
+  
+  // Create a stable wrapper once and keep it in a ref.
+  // This wrapper will always exist for the life of this component instance
+  // but only be registered when isActive is true.
+  const wrapperRef = useRef<HelpOptionSpec>({
+    get icon() { return specRef.current?.icon ?? null; },
+    get label() { return specRef.current?.label ?? ""; },
+    get description() { return specRef.current?.description ?? ""; },
+    get cost() { return specRef.current?.cost ?? 0; },
+    getAvailable: () => specRef.current?.getAvailable?.() ?? true,
+    perform: (h) => specRef.current?.perform(h) ?? false,
+  });
+
   useEffect(() => {
-    if (!ctx || !isActive) return;
-    return ctx.register(id, {
-      get icon() { try { return specRef.current?.icon ?? null; } catch { return null; } },
-      get label() { try { return specRef.current?.label ?? ""; } catch { return ""; } },
-      get description() { try { return specRef.current?.description ?? ""; } catch { return ""; } },
-      get cost() { try { return specRef.current?.cost ?? 0; } catch { return 0; } },
-      getAvailable: () => { try { return specRef.current?.getAvailable?.() ?? true; } catch { return false; } },
-      perform: (h) => { try { return specRef.current?.perform(h) ?? false; } catch { return false; } },
-    } as HelpOptionSpec);
-  }, [ctx, id, isActive]);
+    if (!actions || !isActive) return;
+    return actions.register(id, wrapperRef.current);
+  }, [actions, id, isActive]);
 }

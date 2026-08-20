@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Coins, HelpCircle, X } from "lucide-react";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -16,32 +16,15 @@ interface Props {
 }
 
 /**
- * Unified, premium Help dialog used across every mini-game. Lists every
- * option registered through GameHelpContext; opens an "insufficient dinars"
- * sub-dialog when the player cannot afford a chosen option.
+ * Unified, premium Help dialog used across every mini-game.
  */
 export function GameHelpDialog({ open, onOpenChange, dinars, spendDinars, builtinOptions = [] }: Props) {
   const ctx = useGameHelp();
-  let options: HelpOption[] = [];
-  try {
-    options = [...builtinOptions, ...(ctx?.options ?? [])];
-  } catch {
-    options = [...builtinOptions];
-  }
+  
+  const options = useMemo(() => {
+    return [...builtinOptions, ...(ctx?.options ?? [])];
+  }, [builtinOptions, ctx?.options]);
 
-  // V11 Preview Diagnostics: Registry Snapshot
-  if (typeof window !== "undefined" && window.location.hostname.includes("lovable.app") && open) {
-    const snapshot = options.map((opt, i) => ({
-      index: i,
-      id: opt?.id,
-      type: typeof opt,
-      label: opt?.label,
-      cost: opt?.cost,
-      hasGetAvailable: typeof opt?.getAvailable === "function",
-      hasPerform: typeof opt?.perform === "function"
-    }));
-    console.log("[IRTH_HELP_REGISTRY]", snapshot);
-  }
   const [insufficientOpen, setInsufficientOpen] = useState(false);
   const [pendingCost, setPendingCost] = useState<number>(0);
 
@@ -78,17 +61,11 @@ export function GameHelpDialog({ open, onOpenChange, dinars, spendDinars, builti
             <ul className="space-y-2">
               {options.map((opt, idx) => {
                 let available = true;
-                
-                // V11 Preview Diagnostics: Trace evaluation
-                if (typeof window !== "undefined" && window.location.hostname.includes("lovable.app") && open) {
-                  console.log(`[IRTH_HELP_EVALUATING] index=${idx} id=${opt?.id}`);
-                }
-
                 try { available = opt.getAvailable?.() ?? true; } catch { available = true; }
                 const affordable = dinars >= opt.cost;
                 const disabled = !available;
                 return (
-                  <li key={opt.id}>
+                  <li key={opt.id || idx}>
                     <button
                       type="button"
                       disabled={disabled}

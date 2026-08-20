@@ -19,7 +19,7 @@ import { GameStageRenderer } from "@/components/games/GameStageRenderer";
 import { GameTimer, type GameTimerHandle } from "@/components/games/GameTimer";
 import { GameHelpProvider } from "@/components/games/help/GameHelpContext";
 import { GameHelpDialog } from "@/components/games/help/GameHelpDialog";
-import { HelpErrorBoundary } from "@/components/games/help/HelpErrorBoundary";
+
 import { CrosswordHelpDialog } from "@/components/games/CrosswordHelpDialog";
 import { TimeExpiredDialog } from "@/components/games/TimeExpiredDialog";
 import { ExitConfirmDialog } from "@/components/games/ExitConfirmDialog";
@@ -416,16 +416,15 @@ function GamePlayPage() {
             disabled={stageDone || failed}
           />
         ) : (
-          <HelpErrorBoundary open={helpOpen} onClose={() => setHelpOpen(false)}>
-            <GameHelpDialog
-              open={helpOpen}
-              onOpenChange={setHelpOpen}
-              dinars={playerDinars}
-              spendDinars={spendDinars}
-              builtinOptions={helpBuiltins}
-            />
-          </HelpErrorBoundary>
+          <GameHelpDialog
+            open={helpOpen}
+            onOpenChange={setHelpOpen}
+            dinars={playerDinars}
+            spendDinars={spendDinars}
+            builtinOptions={helpBuiltins}
+          />
         )}
+
 
         {/* Time-Expired grace dialog — shared by every timed mini-game. */}
         <TimeExpiredDialog

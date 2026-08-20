@@ -79,45 +79,51 @@ export function WhoAmIRenderer({ gameId, retryNonce = 0, stage, onComplete, onWr
 
   const words = useMemo(() => stage.answer.trim().split(/\s+/), [stage.answer]);
 
-  // V11 Preview Diagnostics: Who Am I State Snapshot
-  useEffect(() => {
-    if (typeof window !== "undefined" && window.location.hostname.includes("lovable.app") && gameId) {
-      console.log("[IRTH_WHOAMI_HELP_STATE]", {
-        gameId,
-        done,
-        wordsLength: words.length,
-        revealedWordsIsArray: Array.isArray(helpState.revealedWords),
-        revealedWordsLength: helpState.revealedWords.length,
-        revealedLettersIsNull: helpState.revealedLetters === null,
-        revealedLettersType: typeof helpState.revealedLetters,
-        revealedLetters0IsArray: Array.isArray(helpState.revealedLetters?.[0]),
-        revealedEntries: Object.keys(helpState.revealedLetters).length
-      });
-    }
-  }, [gameId, done, words.length, helpState]);
 
-  useRegisterHelpOption("whoami_reveal", gameId && !done ? {
-    icon: words.length > 1 ? <ScrollText className="h-4 w-4" /> : <HelpCircle className="h-4 w-4" />,
-    label: words.length > 1 ? "كشف كلمة" : "كشف حروف",
-    description: words.length > 1 ? "اكشف إحدى كلمات الاسم مقابل 20 دينار." : "اكشف بعض حروف الاسم مقابل 20 دينار.",
-    cost: 20,
-    getAvailable: () => {
-      if (words.length > 1) {
-        return (helpState.revealedWords?.length ?? 0) < words.length - 1;
+  // Stability refs for help callbacks to avoid re-registration loops
+  const helpStateRef = useRef(helpState);
+  helpStateRef.current = helpState;
+  const stageRef = useRef(stage);
+  stageRef.current = stage;
+  const gameIdRef = useRef(gameId);
+  gameIdRef.current = gameId;
+  const retryNonceRef = useRef(retryNonce);
+  retryNonceRef.current = retryNonce;
+
+  const revealSpec = useMemo(() => {
+    if (!gameId || done) return null;
+    return {
+      icon: words.length > 1 ? <ScrollText className="h-4 w-4" /> : <HelpCircle className="h-4 w-4" />,
+      label: words.length > 1 ? "كشف كلمة" : "كشف حروف",
+      description: words.length > 1 ? "اكشف إحدى كلمات الاسم مقابل 20 دينار." : "اكشف بعض حروف الاسم مقابل 20 دينار.",
+      cost: 20,
+      getAvailable: () => {
+        const hs = helpStateRef.current;
+        const w = stageRef.current.answer.trim().split(/\s+/);
+        if (w.length > 1) {
+          return (hs.revealedWords?.length ?? 0) < w.length - 1;
+        }
+        if (w.length === 0) return false;
+        const letters = hs.revealedLetters?.[0];
+        return Array.isArray(letters) ? letters.length === 0 : true;
+      },
+      perform: ({ pay }: { pay: () => boolean }) => {
+        const gid = gameIdRef.current;
+        const nonce = retryNonceRef.current;
+        const ans = stageRef.current.answer;
+        if (!gid) return false;
+        
+        const ok = purchaseWhoAmIHelp(gid, nonce, ans, { pay });
+        if (ok) {
+          setHelpVersion(v => v + 1);
+          sfx("gold_unlock");
+        }
+        return ok;
       }
-      if (words.length === 0) return false;
-      const letters = helpState.revealedLetters?.[0];
-      return Array.isArray(letters) ? letters.length === 0 : true;
-    },
-    perform: ({ pay }) => {
-      const ok = purchaseWhoAmIHelp(gameId!, retryNonce, stage.answer, { pay });
-      if (ok) {
-        setHelpVersion(v => v + 1);
-        sfx("gold_unlock");
-      }
-      return ok;
-    }
-  } : null);
+    };
+  }, [gameId, done, words.length]);
+
+  useRegisterHelpOption("whoami_reveal", revealSpec);
 
   const renderVisualHelp = () => {
     if (words.length > 1) {
