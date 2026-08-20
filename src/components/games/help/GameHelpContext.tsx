@@ -43,6 +43,12 @@ export function GameHelpProvider({ children }: { children: ReactNode }) {
     const existing = mapRef.current.get(id);
     if (existing === spec) return () => {};
 
+    // Safety: If there is an existing spec with a DIFFERENT identity, 
+    // we log a warning but proceed. This is where loops usually start.
+    if (existing) {
+      console.warn(`[GameHelp] Overwriting registration for ${id}. Potential loop source.`);
+    }
+
     mapRef.current.set(id, spec);
     setVersion((v) => v + 1);
     
