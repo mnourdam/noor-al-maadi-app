@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Coins, HelpCircle, X } from "lucide-react";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -16,12 +16,11 @@ interface Props {
 }
 
 /**
- * Unified, premium Help dialog used across every mini-game. Lists every
- * option registered through GameHelpContext; opens an "insufficient dinars"
- * sub-dialog when the player cannot afford a chosen option.
+ * Unified, premium Help dialog used across every mini-game.
  */
 export function GameHelpDialog({ open, onOpenChange, dinars, spendDinars, builtinOptions = [] }: Props) {
   const ctx = useGameHelp();
+  
   const options = useMemo(() => {
     return [...builtinOptions, ...(ctx?.options ?? [])];
   }, [builtinOptions, ctx?.options]);
@@ -62,13 +61,11 @@ export function GameHelpDialog({ open, onOpenChange, dinars, spendDinars, builti
             <ul className="space-y-2">
               {options.map((opt, idx) => {
                 let available = true;
-                
-
                 try { available = opt.getAvailable?.() ?? true; } catch { available = true; }
                 const affordable = dinars >= opt.cost;
                 const disabled = !available;
                 return (
-                  <li key={opt.id}>
+                  <li key={opt.id || idx}>
                     <button
                       type="button"
                       disabled={disabled}
