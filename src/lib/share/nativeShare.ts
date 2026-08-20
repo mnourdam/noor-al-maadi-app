@@ -118,16 +118,46 @@ export async function shareImageNative(input: {
 export async function saveImageNative(input: {
   blob: Blob;
   filename: string;
-}): Promise<{ uri: string }> {
+}): Promise<{ status: "downloaded" | "shared"; uri: string }> {
   const { Filesystem, Directory } = await loadFs();
+  const Share = await loadShare();
+
   const data = await blobToBase64(input.blob);
-  const res = await Filesystem.writeFile({
-    path: input.filename,
+  
+  // V11 Fix: Generate a unique cache filename to avoid collisions and
+  // ensure compatibility with Android Scoped Storage via Share Sheet.
+  const stamp = Date.now();
+  const path = `irth-${stamp}-${input.filename}`;
+
+  const written = await Filesystem.writeFile({
+    path,
     data,
-    directory: Directory.Documents,
+    directory: Directory.Cache,
     recursive: true,
   });
-  return { uri: res.uri };
+
+  try {
+    await Share.share({
+      files: [written.uri],
+      // We don't include text/title here to keep the share sheet focused 
+      // on the "Save to device" / "Photos" / "Print" actions.
+    });
+    
+    // Best effort cleanup after a delay.
+    setTimeout(() => {
+      Filesystem.deleteFile({ path, directory: Directory.Cache }).catch(() => {});
+    }, 40_000);
+
+    return { status: "shared", uri: written.uri };
+  } catch (err) {
+    const msg = (err as { message?: string } | null)?.message ?? "";
+    // If user cancels the share sheet, we don't treat it as a hard failure,
+    // but we can't claim it was saved.
+    if (/cancel|dismiss/i.test(msg)) {
+      throw new Error("Share sheet dismissed");
+    }
+    throw err;
+  }
 }
 
 async function cleanupCacheFiles(): Promise<void> {
