@@ -404,7 +404,8 @@ function GamePlayPage() {
   return (
     <AppShell>
      <GameHelpProvider>
-      <div dir="rtl"><ReadingScale className="mx-auto max-w-3xl space-y-5 px-4 py-6">
+      <HelpErrorBoundary>
+       <div dir="rtl"><ReadingScale className="mx-auto max-w-3xl space-y-5 px-4 py-6">
 
         {mode === "crossword" ? (
           <CrosswordHelpDialog
