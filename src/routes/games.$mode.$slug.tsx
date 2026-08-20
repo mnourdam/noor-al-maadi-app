@@ -21,6 +21,7 @@ import { GameHelpProvider } from "@/components/games/help/GameHelpContext";
 import { GameHelpDialog } from "@/components/games/help/GameHelpDialog";
 
 import { CrosswordHelpDialog } from "@/components/games/CrosswordHelpDialog";
+import { HelpErrorBoundary } from "@/components/games/help/HelpErrorBoundary";
 import { TimeExpiredDialog } from "@/components/games/TimeExpiredDialog";
 import { ExitConfirmDialog } from "@/components/games/ExitConfirmDialog";
 import { sfx } from "@/components/games/sfx";
