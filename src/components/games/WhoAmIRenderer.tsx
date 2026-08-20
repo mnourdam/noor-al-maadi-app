@@ -117,7 +117,7 @@ export function WhoAmIRenderer({ gameId, retryNonce = 0, stage, onComplete, onWr
       );
     } else {
       const word = words[0];
-      const revealedPositions = helpState.revealedLetters[0] ?? [];
+      const revealedPositions = (helpState.revealedLetters && helpState.revealedLetters[0]) ?? [];
       if (revealedPositions.length === 0) return null;
 
       return (
