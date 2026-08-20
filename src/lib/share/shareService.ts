@@ -56,6 +56,7 @@ const MSG = {
   copied: "تم نسخ الرابط",
   copiedFallback: "تعذّرت المشاركة — نُسخ الرابط بدلاً من ذلك",
   downloaded: "تم حفظ البطاقة",
+  readyToShare: "البطاقة جاهزة للحفظ أو المشاركة",
   shareUnavailable: "المشاركة غير متاحة على هذا الجهاز — انسخ الرابط أو نزّل البطاقة",
   failed: "تعذّرت المشاركة — حاول مجددًا",
   invalidUrl: "الرابط غير متاح حاليًا",
@@ -279,11 +280,15 @@ export async function downloadImage(input: {
       return { status: "failed" };
     }
     const filename = sanitizeFilename(input.filename);
-    // Native: write to Documents via Capacitor Filesystem so the file
-    // persists past the WebView session (unlike a blob:/data: <a download>).
+    // Native: use Share Sheet via cache to ensure user-visible persistence on Android.
     if (canUseNativeShare()) {
       try {
-        await saveImageNative({ blob: input.blob, filename });
+        const res = await saveImageNative({ blob: input.blob, filename });
+        if (res.status === "shared") {
+          successToast(MSG.readyToShare);
+          return { status: "shared" };
+        }
+        // If native save somehow directly succeeded (e.g. MediaStore)
         successToast(MSG.downloaded);
         return { status: "downloaded" };
       } catch (err) {
