@@ -376,12 +376,12 @@ export function StoryPlayer({
 
   return (
     <div
-      className="fixed inset-0 z-[200] select-none bg-black text-white"
+      className="fixed inset-0 z-[200] select-none bg-black text-white touch-none"
       dir="rtl"
       onPointerDown={onPointerDown}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerCancel}
-      onPointerLeave={onPointerCancel}
+      onPointerLeave={onPointerLeave}
     >
       {/* Top HUD */}
       <div
