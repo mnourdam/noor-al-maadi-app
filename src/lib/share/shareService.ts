@@ -282,9 +282,13 @@ export async function downloadImage(input: {
     const filename = sanitizeFilename(input.filename);
     // Native: write to Documents via Capacitor Filesystem so the file
     // persists past the WebView session (unlike a blob:/data: <a download>).
-    if (canUseNativeShare()) {
       try {
-        await saveImageNative({ blob: input.blob, filename });
+        const res = await saveImageNative({ blob: input.blob, filename });
+        if (res.status === "shared") {
+          successToast(MSG.readyToShare);
+          return { status: "shared" };
+        }
+        // If native save somehow directly succeeded (e.g. MediaStore)
         successToast(MSG.downloaded);
         return { status: "downloaded" };
       } catch (err) {
