@@ -634,6 +634,7 @@ function GamePlayPage() {
       />
 
       <OutOfHeartsModal open={showOutOfHearts} onClose={() => setShowOutOfHearts(false)} />
+      </HelpErrorBoundary>
      </GameHelpProvider>
     </AppShell>
   );
