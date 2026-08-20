@@ -252,6 +252,16 @@ export function StoryPlayer({
   };
 
   const onPointerUp = (e: React.PointerEvent) => {
+    // Release pointer capture safely
+    if (activePointerId.current !== null) {
+      try {
+        e.currentTarget.releasePointerCapture(activePointerId.current);
+      } catch (err) {
+        /* ignore */
+      }
+      activePointerId.current = null;
+    }
+
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
@@ -262,6 +272,7 @@ export function StoryPlayer({
     if (isLongPressing) {
       setIsLongPressing(false);
       setLongPressPulse(false);
+      // Long-press ends: resume but don't navigate
       return;
     }
 
