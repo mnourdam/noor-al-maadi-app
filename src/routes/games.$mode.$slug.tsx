@@ -416,16 +416,15 @@ function GamePlayPage() {
             disabled={stageDone || failed}
           />
         ) : (
-          <HelpErrorBoundary open={helpOpen} onClose={() => setHelpOpen(false)}>
-            <GameHelpDialog
-              open={helpOpen}
-              onOpenChange={setHelpOpen}
-              dinars={playerDinars}
-              spendDinars={spendDinars}
-              builtinOptions={helpBuiltins}
-            />
-          </HelpErrorBoundary>
+          <GameHelpDialog
+            open={helpOpen}
+            onOpenChange={setHelpOpen}
+            dinars={playerDinars}
+            spendDinars={spendDinars}
+            builtinOptions={helpBuiltins}
+          />
         )}
+
 
         {/* Time-Expired grace dialog — shared by every timed mini-game. */}
         <TimeExpiredDialog
