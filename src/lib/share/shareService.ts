@@ -280,8 +280,8 @@ export async function downloadImage(input: {
       return { status: "failed" };
     }
     const filename = sanitizeFilename(input.filename);
-    // Native: write to Documents via Capacitor Filesystem so the file
-    // persists past the WebView session (unlike a blob:/data: <a download>).
+    // Native: use Share Sheet via cache to ensure user-visible persistence on Android.
+    if (canUseNativeShare()) {
       try {
         const res = await saveImageNative({ blob: input.blob, filename });
         if (res.status === "shared") {
