@@ -135,8 +135,7 @@ export async function signInWithGoogleNative(): Promise<{ ok: boolean; error?: s
     }
 
     // signInWithOAuth internally reads/writes the PKCE verifier via the
-    // storage adapter. The adapter is intentionally localStorage + memory only
-    // on native so no Capacitor plugin can block Browser.open().
+    // storage adapter.
     const oauth = await tracedAwait(
       "signInWithOAuth",
       () =>
@@ -166,23 +165,24 @@ export async function signInWithGoogleNative(): Promise<{ ok: boolean; error?: s
     }
     recordTrace("native-auth", "signInWithOAuth-url", `len=${oauthUrl.length}`);
 
-    // Atomic storage verification: ensure PKCE verifier is durable before opening browser
-    let verifier = readLocalStorageValue(NATIVE_CODE_VERIFIER_KEY);
-    if (!verifier) {
-      // Best-effort read from memory fallback via durable storage adapter
-      verifier = await getDurableAuthStorage().getItem(NATIVE_CODE_VERIFIER_KEY);
-    }
-    
-    const verifierLen = verifier?.length ?? 0;
-    recordTrace("native-auth", "pkce-verifier-present", `before browser-open:len=${verifierLen}`);
-    
-    if (!verifier || verifierLen < 10) {
-      console.error("[native-auth] PKCE verifier missing or invalid after signInWithOAuth");
-      recordTrace("native-auth", "pkce-verifier-missing-critical");
-      return { ok: false, error: "تعذر تأمين رمز الدخول عبر Google. يرجى المحاولة مرة أخرى." };
+    // V11: Explicitly await durable persistence before opening the browser.
+    // The key is NATIVE_CODE_VERIFIER_KEY, but Supabase also stores the 
+    // flow identifier and potentially other metadata under the storageKey.
+    // We prioritize the verifier durability.
+    const storage = getDurableAuthStorage();
+    const persisted = await tracedAwait(
+      "pkce-durable-persist",
+      () => storage.ensureDurablePersistence(NATIVE_CODE_VERIFIER_KEY),
+      3000
+    );
+
+    if (!persisted.ok || !persisted.value) {
+      console.error("[native-auth] PKCE durability failure before browser-open");
+      recordTrace("native-auth", "pkce-durability-failure");
+      return { ok: false, error: "تعذر تأمين رمز الدخول بشكل دائم. يرجى المحاولة مرة أخرى." };
     }
 
-    console.info("[native-auth] PKCE verifier verified. opening custom tab", sanitizeOAuthUrl(oauthUrl));
+    console.info("[native-auth] PKCE verifier persisted durably. opening custom tab", sanitizeOAuthUrl(oauthUrl));
     const open = await tracedAwait(
       "browser-open",
       () => Browser.open({ url: oauthUrl, presentationStyle: "fullscreen" }),
