@@ -346,7 +346,16 @@ export function StoryPlayer({
   // was retired; kept as intentional void reference for future overlays.
   void story.era;
 
-  const onPointerCancel = () => {
+  const onPointerCancel = (e: React.PointerEvent) => {
+    if (activePointerId.current !== null) {
+      try {
+        e.currentTarget.releasePointerCapture(activePointerId.current);
+      } catch (err) {
+        /* ignore */
+      }
+      activePointerId.current = null;
+    }
+
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
@@ -354,6 +363,15 @@ export function StoryPlayer({
     touchRef.current = null;
     setIsLongPressing(false);
     setLongPressPulse(false);
+  };
+
+  const onPointerLeave = (e: React.PointerEvent) => {
+    // If pointer capture is active, pointerleave is NOT an intentional release.
+    // The browser will continue to fire pointer events at this element even if the 
+    // finger moves outside its bounds. We only handle real releases or cancellations.
+    if (activePointerId.current !== null) return;
+    
+    onPointerCancel(e);
   };
 
   return (
