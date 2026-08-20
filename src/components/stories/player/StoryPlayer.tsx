@@ -233,9 +233,16 @@ export function StoryPlayer({
     setTapFlash({ x, y, kind, key: performance.now() });
   };
 
+  const activePointerId = useRef<number | null>(null);
+
   const onPointerDown = (e: React.PointerEvent) => {
     if (phase !== "playing") return;
     if (isReflectionScene || exportLockScene !== null) return; // reflection and export lock own their input
+    
+    // Capture the pointer to prevent Android system gestures from stealing it
+    e.currentTarget.setPointerCapture(e.pointerId);
+    activePointerId.current = e.pointerId;
+    
     touchRef.current = { x: e.clientX, y: e.clientY, t: performance.now() };
     if (longPressTimer.current) clearTimeout(longPressTimer.current);
     longPressTimer.current = window.setTimeout(() => {
