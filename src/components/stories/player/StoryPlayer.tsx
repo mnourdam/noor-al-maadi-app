@@ -233,9 +233,16 @@ export function StoryPlayer({
     setTapFlash({ x, y, kind, key: performance.now() });
   };
 
+  const activePointerId = useRef<number | null>(null);
+
   const onPointerDown = (e: React.PointerEvent) => {
     if (phase !== "playing") return;
     if (isReflectionScene || exportLockScene !== null) return; // reflection and export lock own their input
+    
+    // Capture the pointer to prevent Android system gestures from stealing it
+    e.currentTarget.setPointerCapture(e.pointerId);
+    activePointerId.current = e.pointerId;
+    
     touchRef.current = { x: e.clientX, y: e.clientY, t: performance.now() };
     if (longPressTimer.current) clearTimeout(longPressTimer.current);
     longPressTimer.current = window.setTimeout(() => {
@@ -245,6 +252,16 @@ export function StoryPlayer({
   };
 
   const onPointerUp = (e: React.PointerEvent) => {
+    // Release pointer capture safely
+    if (activePointerId.current !== null) {
+      try {
+        e.currentTarget.releasePointerCapture(activePointerId.current);
+      } catch (err) {
+        /* ignore */
+      }
+      activePointerId.current = null;
+    }
+
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
@@ -255,6 +272,7 @@ export function StoryPlayer({
     if (isLongPressing) {
       setIsLongPressing(false);
       setLongPressPulse(false);
+      // Long-press ends: resume but don't navigate
       return;
     }
 
@@ -328,7 +346,16 @@ export function StoryPlayer({
   // was retired; kept as intentional void reference for future overlays.
   void story.era;
 
-  const onPointerCancel = () => {
+  const onPointerCancel = (e: React.PointerEvent) => {
+    if (activePointerId.current !== null) {
+      try {
+        e.currentTarget.releasePointerCapture(activePointerId.current);
+      } catch (err) {
+        /* ignore */
+      }
+      activePointerId.current = null;
+    }
+
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
@@ -338,14 +365,23 @@ export function StoryPlayer({
     setLongPressPulse(false);
   };
 
+  const onPointerLeave = (e: React.PointerEvent) => {
+    // If pointer capture is active, pointerleave is NOT an intentional release.
+    // The browser will continue to fire pointer events at this element even if the 
+    // finger moves outside its bounds. We only handle real releases or cancellations.
+    if (activePointerId.current !== null) return;
+    
+    onPointerCancel(e);
+  };
+
   return (
     <div
-      className="fixed inset-0 z-[200] select-none bg-black text-white"
+      className="fixed inset-0 z-[200] select-none bg-black text-white touch-none"
       dir="rtl"
       onPointerDown={onPointerDown}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerCancel}
-      onPointerLeave={onPointerCancel}
+      onPointerLeave={onPointerLeave}
     >
       {/* Top HUD */}
       <div
