@@ -5,6 +5,12 @@
 // Preferences bridge can hang before Browser.open(). This adapter therefore
 // resolves immediately from window.localStorage, with an in-memory mirror as a
 // fallback when localStorage is unavailable.
+//
+// V11 UPDATE: Added Capacitor Preferences as a DURABLE BACKUP that is NOT
+// awaited during gotrue-js calls but is synced immediately after, and 
+// checked during recovery (cold start).
+
+import { Preferences } from "@capacitor/preferences";
 
 export interface AsyncSupabaseStorage {
   getItem(key: string): Promise<string | null>;
@@ -12,9 +18,18 @@ export interface AsyncSupabaseStorage {
   removeItem(key: string): Promise<void>;
 }
 
+/** 10 minutes expiry for PKCE verifiers */
+const PKCE_EXPIRY_MS = 10 * 60 * 1000;
+
+interface DurableEntry {
+  value: string;
+  ts: number;
+}
+
 // In-memory mirror + best-effort localStorage mirror. Guarantees gotrue-js
 // forward progress without touching any native plugin in the PKCE path.
 const mem = new Map<string, string>();
+
 function memGet(key: string): string | null {
   try {
     if (typeof window !== "undefined") {
@@ -28,10 +43,12 @@ function memGet(key: string): string | null {
   if (mem.has(key)) return mem.get(key) ?? null;
   return null;
 }
+
 function memSet(key: string, value: string): void {
   mem.set(key, value);
   try { if (typeof window !== "undefined") window.localStorage.setItem(key, value); } catch { /* ignore */ }
 }
+
 function memDel(key: string): void {
   mem.delete(key);
   try { if (typeof window !== "undefined") window.localStorage.removeItem(key); } catch { /* ignore */ }
@@ -39,18 +56,88 @@ function memDel(key: string): void {
 
 class ImmediateNativePkceStorage implements AsyncSupabaseStorage {
   async getItem(key: string): Promise<string | null> {
-    return memGet(key);
+    const local = memGet(key);
+    if (local) return local;
+
+    // COLD START RECOVERY: If not in memory/localStorage, try Capacitor Preferences
+    try {
+      const { value } = await Preferences.get({ key });
+      if (value) {
+        try {
+          const entry = JSON.parse(value) as DurableEntry;
+          const age = Date.now() - entry.ts;
+          if (age < PKCE_EXPIRY_MS) {
+            console.info(`[native-auth-storage] Recovered durable verifier for ${key} (age: ${Math.round(age/1000)}s)`);
+            // Restore to memory/localStorage for faster subsequent access
+            memSet(key, entry.value);
+            return entry.value;
+          } else {
+            console.warn(`[native-auth-storage] Stale verifier ignored for ${key} (age: ${Math.round(age/1000)}s)`);
+            await this.removeItem(key);
+          }
+        } catch {
+          // Legacy non-JSON value? (unlikely for PKCE keys)
+          return value;
+        }
+      }
+    } catch (e) {
+      console.error("[native-auth-storage] Preferences recovery failed", e);
+    }
+
+    return null;
   }
+
   async setItem(key: string, value: string): Promise<void> {
+    // 1. Immediate sync write (Memory + LocalStorage)
     memSet(key, value);
+
+    // 2. Fire-and-forget durable backup (don't await to avoid blocking gotrue-js flow)
+    // The calling flow (signInWithGoogleNative) will explicitly await persistence 
+    // before Browser.open() via ensureDurablePersistence().
+    this.persistDurably(key, value).catch(e => {
+      console.error("[native-auth-storage] Background durable write failed", e);
+    });
   }
+
   async removeItem(key: string): Promise<void> {
     memDel(key);
+    try {
+      await Preferences.remove({ key });
+    } catch (e) {
+      console.error("[native-auth-storage] Preferences remove failed", e);
+    }
+  }
+
+  private async persistDurably(key: string, value: string): Promise<void> {
+    const entry: DurableEntry = { value, ts: Date.now() };
+    await Preferences.set({
+      key,
+      value: JSON.stringify(entry)
+    });
+  }
+
+  /**
+   * Explicitly ensures the verifier has reached durable storage.
+   * Called by signInWithGoogleNative before Browser.open().
+   */
+  async ensureDurablePersistence(key: string): Promise<boolean> {
+    const localValue = memGet(key);
+    if (!localValue) return false;
+
+    try {
+      await this.persistDurably(key, localValue);
+      // Double check
+      const { value } = await Preferences.get({ key });
+      return !!value;
+    } catch (e) {
+      console.error("[native-auth-storage] ensureDurablePersistence failed", e);
+      return false;
+    }
   }
 }
 
-let cached: AsyncSupabaseStorage | null = null;
-export function getDurableAuthStorage(): AsyncSupabaseStorage {
+let cached: ImmediateNativePkceStorage | null = null;
+export function getDurableAuthStorage(): ImmediateNativePkceStorage {
   if (cached) return cached;
   cached = new ImmediateNativePkceStorage();
   return cached;
