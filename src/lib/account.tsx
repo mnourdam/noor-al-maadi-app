@@ -77,7 +77,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     androidMark("account.session.start");
     supabase.auth.getSession().then(({ data }) => {
       if (!alive) return;
-      setReconciliationState(data.session?.user ? "loading-local" : "idle");
+      setReconciliationState(data.session?.user ? "loading-local" : "offline-local");
       recordAndroidAction("account.session.resolved", { hasUser: !!data.session?.user });
       setUser(data.session?.user ?? null);
       setLoadingSession(false);
@@ -85,9 +85,9 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       const u = session?.user ?? null;
       if (event === "SIGNED_OUT") {
-        setReconciliationState("idle");
+        setReconciliationState("offline-local");
       } else if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
-        setReconciliationState(u ? "loading-local" : "idle");
+        setReconciliationState(u ? "loading-local" : "offline-local");
       }
 
       // THE single approved identity-switch path. Idempotent: repeated
