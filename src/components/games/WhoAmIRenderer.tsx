@@ -88,6 +88,7 @@ export function WhoAmIRenderer({ gameId, retryNonce = 0, stage, onComplete, onWr
       if (words.length > 1) {
         return (helpState.revealedWords?.length ?? 0) < words.length - 1;
       }
+      if (words.length === 0) return false;
       const letters = helpState.revealedLetters?.[0];
       return Array.isArray(letters) ? letters.length === 0 : true;
     },
