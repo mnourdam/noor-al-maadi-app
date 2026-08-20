@@ -115,7 +115,11 @@ export function purchaseWhoAmIHelp(
 ): boolean {
   const key = `${gameId}:${nonce}`;
   const store = getHelpStore();
-  const current = store.reveals[key] ?? { revealedWords: [], revealedLetters: {} };
+  const raw = store.reveals[key];
+  const current = {
+    revealedWords: Array.isArray(raw?.revealedWords) ? raw.revealedWords : [],
+    revealedLetters: (raw?.revealedLetters && typeof raw.revealedLetters === 'object') ? raw.revealedLetters : {}
+  };
 
   const words = answer.trim().split(/\s+/);
   
@@ -146,5 +150,9 @@ export function purchaseWhoAmIHelp(
 
 export function getRevealedState(gameId: string, nonce: number) {
   const store = getHelpStore();
-  return store.reveals[`${gameId}:${nonce}`] ?? { revealedWords: [], revealedLetters: {} };
+  const raw = store.reveals[`${gameId}:${nonce}`];
+  return {
+    revealedWords: Array.isArray(raw?.revealedWords) ? raw.revealedWords : [],
+    revealedLetters: (raw?.revealedLetters && typeof raw.revealedLetters === 'object') ? raw.revealedLetters : {}
+  };
 }

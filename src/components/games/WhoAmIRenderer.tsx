@@ -86,9 +86,10 @@ export function WhoAmIRenderer({ gameId, retryNonce = 0, stage, onComplete, onWr
     cost: 20,
     getAvailable: () => {
       if (words.length > 1) {
-        return helpState.revealedWords.length < words.length - 1;
+        return (helpState.revealedWords?.length ?? 0) < words.length - 1;
       }
-      return (helpState.revealedLetters[0]?.length ?? 0) === 0;
+      const letters = helpState.revealedLetters?.[0];
+      return Array.isArray(letters) ? letters.length === 0 : true;
     },
     perform: ({ pay }) => {
       const ok = purchaseWhoAmIHelp(gameId!, retryNonce, stage.answer, { pay });
