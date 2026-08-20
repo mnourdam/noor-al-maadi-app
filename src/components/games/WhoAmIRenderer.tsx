@@ -88,6 +88,7 @@ export function WhoAmIRenderer({ gameId, retryNonce = 0, stage, onComplete, onWr
       if (words.length > 1) {
         return (helpState.revealedWords?.length ?? 0) < words.length - 1;
       }
+      if (words.length === 0) return false;
       const letters = helpState.revealedLetters?.[0];
       return Array.isArray(letters) ? letters.length === 0 : true;
     },
@@ -117,7 +118,7 @@ export function WhoAmIRenderer({ gameId, retryNonce = 0, stage, onComplete, onWr
       );
     } else {
       const word = words[0];
-      const revealedPositions = (helpState.revealedLetters && helpState.revealedLetters[0]) ?? [];
+      const revealedPositions = Array.isArray(helpState.revealedLetters?.[0]) ? helpState.revealedLetters[0] : [];
       if (revealedPositions.length === 0) return null;
 
       return (

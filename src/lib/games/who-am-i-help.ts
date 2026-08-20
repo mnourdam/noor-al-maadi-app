@@ -118,7 +118,9 @@ export function purchaseWhoAmIHelp(
   const raw = store.reveals[key];
   const current = {
     revealedWords: Array.isArray(raw?.revealedWords) ? raw.revealedWords : [],
-    revealedLetters: (raw?.revealedLetters && typeof raw.revealedLetters === 'object' && raw.revealedLetters !== null) ? raw.revealedLetters : {}
+    revealedLetters: (raw?.revealedLetters !== null && typeof raw?.revealedLetters === "object" && !Array.isArray(raw?.revealedLetters)) 
+      ? raw.revealedLetters 
+      : {}
   };
 
   const words = answer.trim().split(/\s+/);
@@ -153,6 +155,8 @@ export function getRevealedState(gameId: string, nonce: number) {
   const raw = store.reveals[`${gameId}:${nonce}`];
   return {
     revealedWords: Array.isArray(raw?.revealedWords) ? raw.revealedWords : [],
-    revealedLetters: (raw?.revealedLetters && typeof raw.revealedLetters === 'object' && raw.revealedLetters !== null) ? raw.revealedLetters : {}
+    revealedLetters: (raw?.revealedLetters !== null && typeof raw?.revealedLetters === "object" && !Array.isArray(raw?.revealedLetters)) 
+      ? raw.revealedLetters 
+      : {}
   };
 }
