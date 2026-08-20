@@ -17,18 +17,31 @@ interface State { error: Error | null }
  */
 export class HelpErrorBoundary extends Component<Props, State> {
   state: State = { error: null };
+  errorInfo: { componentStack?: string } | null = null;
 
   static getDerivedStateFromError(error: Error): State { return { error }; }
 
-  componentDidCatch(error: Error) {
+  componentDidCatch(error: Error, errorInfo: { componentStack?: string }) {
+    this.errorInfo = errorInfo;
     // Keep logs but never rethrow.
     // eslint-disable-next-line no-console
     console.warn("[GameHelp] dialog render failed", error);
+
+    // V11 Preview Diagnostics
+    if (typeof window !== "undefined" && window.location.hostname.includes("lovable.app")) {
+      console.error("[IRTH_HELP_RUNTIME_ERROR]", {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        componentStack: errorInfo.componentStack
+      });
+    }
   }
 
   componentDidUpdate(prev: Props) {
     if (prev.open !== this.props.open && !this.props.open && this.state.error) {
       this.setState({ error: null });
+      this.errorInfo = null;
     }
   }
 
@@ -45,6 +58,13 @@ export class HelpErrorBoundary extends Component<Props, State> {
             <DialogDescription className="text-amber-100/80 leading-7">
               حدث خلل بسيط أثناء تحضير خيارات المساعدة. يمكنك متابعة اللعبة كالمعتاد والمحاولة لاحقًا.
             </DialogDescription>
+            {typeof window !== "undefined" && window.location.hostname.includes("lovable.app") && this.state.error && (
+              <div className="mt-4 rounded border border-red-500/30 bg-red-500/10 p-2 font-mono text-[10px] text-red-200">
+                <p className="font-bold border-b border-red-500/20 mb-1 pb-1">PREVIEW DIAGNOSTICS</p>
+                <p className="break-words">ERROR: {this.state.error.message}</p>
+                <p className="mt-1 opacity-70 italic">SOURCE: {this.state.error.stack?.split("\n")[1]?.trim() || "Unknown"}</p>
+              </div>
+            )}
           </DialogHeader>
           <DialogFooter className="mt-2">
             <button

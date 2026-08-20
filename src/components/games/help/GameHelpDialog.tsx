@@ -28,6 +28,20 @@ export function GameHelpDialog({ open, onOpenChange, dinars, spendDinars, builti
   } catch {
     options = [...builtinOptions];
   }
+
+  // V11 Preview Diagnostics: Registry Snapshot
+  if (typeof window !== "undefined" && window.location.hostname.includes("lovable.app") && open) {
+    const snapshot = options.map((opt, i) => ({
+      index: i,
+      id: opt?.id,
+      type: typeof opt,
+      label: opt?.label,
+      cost: opt?.cost,
+      hasGetAvailable: typeof opt?.getAvailable === "function",
+      hasPerform: typeof opt?.perform === "function"
+    }));
+    console.log("[IRTH_HELP_REGISTRY]", snapshot);
+  }
   const [insufficientOpen, setInsufficientOpen] = useState(false);
   const [pendingCost, setPendingCost] = useState<number>(0);
 
@@ -62,8 +76,14 @@ export function GameHelpDialog({ open, onOpenChange, dinars, spendDinars, builti
             </p>
           ) : (
             <ul className="space-y-2">
-              {options.map((opt) => {
+              {options.map((opt, idx) => {
                 let available = true;
+                
+                // V11 Preview Diagnostics: Trace evaluation
+                if (typeof window !== "undefined" && window.location.hostname.includes("lovable.app") && open) {
+                  console.log(`[IRTH_HELP_EVALUATING] index=${idx} id=${opt?.id}`);
+                }
+
                 try { available = opt.getAvailable?.() ?? true; } catch { available = true; }
                 const affordable = dinars >= opt.cost;
                 const disabled = !available;
