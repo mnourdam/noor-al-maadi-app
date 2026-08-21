@@ -13,7 +13,8 @@ export type TraceChannel =
   | "deep-link"
   | "campaign-persistence"
   | "tutorial"
-  | "achievement";
+  | "achievement"
+  | "export-audit";
 
 export interface TraceEntry {
   ts: string;          // ISO timestamp
