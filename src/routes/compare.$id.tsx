@@ -197,13 +197,25 @@ function ComparePage() {
           </Link>
         </div>
 
-        {!other && !denied && (
+        {(loading) && (
           <div className="rounded-3xl border border-gold/20 bg-surface p-8 text-center text-sm text-muted-foreground">
             جارٍ التحميل…
           </div>
         )}
 
-        {denied && (
+        {!loading && error && (
+          <div className="rounded-3xl border border-red-500/20 bg-surface p-8 text-center text-sm text-muted-foreground">
+            <p>تعذر تحميل المقارنة. تأكد من اتصالك بالإنترنت.</p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="mt-4 rounded-xl bg-gold/10 px-4 py-2 text-gold hover:bg-gold/20 transition-colors"
+            >
+              إعادة المحاولة
+            </button>
+          </div>
+        )}
+
+        {!loading && !error && denied && (
           <div className="rounded-3xl border border-white/10 bg-surface p-6 text-center text-sm text-muted-foreground">
             هذه المقارنة متاحة فقط بين الأصدقاء. أرسل طلب صداقة أولاً لعرض تقدّم هذا اللاعب.
           </div>
