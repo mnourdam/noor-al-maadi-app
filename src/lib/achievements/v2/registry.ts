@@ -15,6 +15,7 @@ import type {
   CanonicalDomain,
 } from "./types";
 import { knownI18nKeys } from "./i18n";
+import { RETIRED_IDS } from "./definitions/retired";
 
 export const REGISTRY_VERSION = 1;
 export const ENGINE_VERSION = 2;
@@ -182,16 +183,7 @@ export function validate(
 
   // Retired-id isolation: v2 registry MUST NOT re-declare a retired id.
   // Loaded lazily to avoid a require cycle when the registry initializes.
-  let retiredIds: ReadonlySet<string> = new Set();
-  // Validating retired IDs is a non-critical check that can be done asynchronously 
-  // if the environment supports it, but for the registry boot, we skip if require is not available.
-  // In V12 we prefer to avoid runtime require entirely.
-  try {
-    // @ts-ignore - dynamic import in a sync function, we only use this if it's already in cache or we don't care about the result for now
-    // Actually, we'll just skip the retired ID check in pure ESM environments if it's not pre-loaded.
-  } catch {
-    /* retired module optional at validation time */
-  }
+  const retiredIds = RETIRED_IDS;
 
   for (const d of definitions) {
     // Unique id
