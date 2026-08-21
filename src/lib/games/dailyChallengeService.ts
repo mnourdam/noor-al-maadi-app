@@ -268,43 +268,7 @@ export function useDailyChallengeState(opts: { enabled?: boolean } = {}): {
   refresh: () => void;
 } {
   const enabled = opts.enabled !== false;
-  const [state, setState] = useState<DailyChallengeState | null>(() => {
-    if (!enabled || typeof window === "undefined") return null;
-    
-    // Stage 1: Async Initial Render (Local-First)
-    (async () => {
-    try {
-      const { isLocalReady } = await import("@/lib/local-first-store");
-      const { localListPublishedGames } = await import("./store");
-      
-      if (isLocalReady()) {
-        const localGames = localListPublishedGames();
-        if (localGames.length > 0) {
-          // We can't await server IDs synchronously, but we can return 
-          // a "pessimistic" state using local completion evidence.
-          // This prevents the section from disappearing.
-          const userKey = resolveUserKeySync();
-          const date = localDateKey();
-          
-          // Re-read local completions for the sync pass
-          const localDone = new Set(readIds(doneKey(userKey, date)));
-          const allTimeCompleted = new Set<string>();
-          if (userKey === "guest") {
-             for (const id of readGuestCompletedIds()) allTimeCompleted.add(id);
-          }
-
-          // We don't have serverAllTime here, but loadDailyChallengeState 
-          // will follow up in the background and fill them in.
-          // Return null for now or compute rotation if possible?
-          // Actually, we must return a valid state to avoid the skeleton if possible.
-          // But without server completions, rotation might be wrong.
-          // Better to return null and let the useEffect handle it, 
-          // BUT ensure it starts IMMEDIATELY (no idle delay).
-        }
-      }
-    })();
-    return null;
-  });
+  const [state, setState] = useState<DailyChallengeState | null>(null);
   const [loading, setLoading] = useState(enabled);
   const [nonce, setNonce] = useState(0);
 
