@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Compass, Swords, Map, Library, User, BookOpen } from "lucide-react";
-import { createContext, useContext, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useEffect, memo, type ReactNode } from "react";
 import { HUD } from "./HUD";
 import { FriendNotificationsPoller } from "./FriendNotificationsPoller";
 
@@ -19,7 +19,7 @@ const tabs = [
 
 const AppShellNestingContext = createContext(false);
 
-export function AppShell({ children }: { children: ReactNode }) {
+export const AppShell = memo(function AppShell({ children }: { children: ReactNode }) {
   androidMark("render:AppShell");
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const androidStable = isAndroidUltraStableMode();
@@ -99,7 +99,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </div>
     </AppShellNestingContext.Provider>
   );
-}
+});
 
 export function Screen({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
   return (

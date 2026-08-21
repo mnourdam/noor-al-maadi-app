@@ -20,7 +20,7 @@ import { shouldForceRemoteAtlas } from "./atlas/atlas-recovery";
 export function usePublishedAtlasEntities() {
   return useQuery<AtlasEntityRow[]>({
     queryKey: ["atlas-entities", "published", "lc1"],
-    staleTime: 60_000,
+    staleTime: 10 * 60_000,
     initialData: () => {
       if (shouldForceRemoteAtlas()) return undefined;
       const rows = localAtlasEntities() as AtlasEntityRow[];

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, memo } from "react";
 import { Heart, Coins, Flame, Bell, Star } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useProfile } from "@/lib/profile";
@@ -21,7 +21,7 @@ type BumpKey = "dinars" | "points" | "hearts";
  * Compact top-of-screen HUD: hearts, dinars, streak.
  * Lives inside AppShell so every screen sees it.
  */
-export function HUD() {
+export const HUD = memo(function HUD() {
   const { profile } = useProfile();
   const [, force] = useState(0);
   const [unread, setUnread] = useState(0);
@@ -208,4 +208,4 @@ export function HUD() {
       </div>
     </div>
   );
-}
+});

@@ -114,7 +114,7 @@ function rowCategory(r: TimelineRow): TimelineLane | null {
 function useTimelineRows() {
   return useQuery({
     queryKey: ["timeline-entities"],
-    staleTime: 60_000,
+    staleTime: 10 * 60_000,
     retry: 1,
     queryFn: async (): Promise<TimelineRow[]> => {
       try {

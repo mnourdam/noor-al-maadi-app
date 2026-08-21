@@ -355,7 +355,7 @@ export function useEncyclopediaSupabaseEntity(
   return useQuery({
     queryKey: ["encyclopedia-entity", entityType, slug],
     enabled,
-    staleTime: 60_000,
+    staleTime: 10 * 60_000,
     retry: 1,
     initialData: () => localEncyclopediaBySlug(slug, entityType) as SupabaseEncyclopediaEntity | null,
     queryFn: async (): Promise<SupabaseEncyclopediaEntity | null> => {
@@ -371,7 +371,7 @@ export function useEncyclopediaSupabaseEntityById(rawId: string) {
   return useQuery({
     queryKey: ["encyclopedia-entity-by-id", id],
     enabled,
-    staleTime: 60_000,
+    staleTime: 10 * 60_000,
     retry: 1,
     initialData: () => localEncyclopediaById(id) as SupabaseEncyclopediaEntity | null,
     queryFn: async (): Promise<SupabaseEncyclopediaEntity | null> => {
@@ -386,7 +386,7 @@ export function useEncyclopediaSupabaseEntityBySlug(rawId: string) {
   return useQuery({
     queryKey: ["encyclopedia-entity-by-slug", slug],
     enabled: !!slug,
-    staleTime: 60_000,
+    staleTime: 10 * 60_000,
     retry: 1,
     initialData: () => localEncyclopediaBySlug(slug) as SupabaseEncyclopediaEntity | null,
     queryFn: async (): Promise<SupabaseEncyclopediaEntity | null> => {
@@ -401,7 +401,7 @@ export function useEncyclopediaSupabaseList(entityType: string) {
   const query = useQuery({
     queryKey: ["encyclopedia-list", entityType],
     enabled,
-    staleTime: 60_000,
+    staleTime: 10 * 60_000,
     retry: 1,
     initialData: () => {
       const rows = localEncyclopediaByType(entityType) as SupabaseEncyclopediaEntity[];
