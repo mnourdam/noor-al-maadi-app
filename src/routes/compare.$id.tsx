@@ -95,7 +95,7 @@ function ComparePage() {
       try {
         // 1. Strict sequence: syncNow MUST complete before fetches
         if (user) {
-          await account.syncNow();
+          await accountCtx.syncNow();
         }
 
         if (!alive) return;
