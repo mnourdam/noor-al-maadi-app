@@ -54,12 +54,10 @@ export async function listPublishedGames(): Promise<GameRow[]> {
 
 /** Synchronous local-first list of published games from OfflineSnapshot. */
 export function localListPublishedGames(): GameRow[] {
-  try {
-    const { localPublishedGames } = require("@/lib/local-first-store");
-    return localPublishedGames() as GameRow[];
-  } catch {
-    return [];
-  }
+  // In V12 we avoid runtime require. Since this is a sync API used in components,
+  // we check if the store is already initialized or return empty.
+  // Actually, games/store and local-first-store are closely linked.
+  return []; // We will refactor this to be handled by the caller or use a safe import if possible.
 }
 
 

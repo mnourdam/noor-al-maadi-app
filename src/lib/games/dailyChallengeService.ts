@@ -27,6 +27,7 @@ import {
   selectDailyChallenges,
   type GameRow,
 } from "@/lib/games/store";
+import { getActiveOwner } from "@/lib/identity/owner";
 import {
   readGuestCompletedIds,
   GUEST_COMPLETIONS_EVENT,
@@ -132,7 +133,6 @@ export function markDailyChallengeCompletedLocally(
 /** Resolve the caller's userKey synchronously via getActiveOwner. */
 function resolveUserKeySync(): string {
   try {
-    const { getActiveOwner, userOwnerKey } = require("@/lib/identity/owner");
     const owner = getActiveOwner();
     // getActiveOwner returns `user:<id>` or `guest:<id>`.
     // The legacy dailyChallengeService uses raw `id` for users and "guest" for guests.
@@ -271,10 +271,11 @@ export function useDailyChallengeState(opts: { enabled?: boolean } = {}): {
   const [state, setState] = useState<DailyChallengeState | null>(() => {
     if (!enabled || typeof window === "undefined") return null;
     
-    // Stage 1: Synchronous Initial Render (Local-First)
+    // Stage 1: Async Initial Render (Local-First)
+    (async () => {
     try {
-      const { isLocalReady } = require("@/lib/local-first-store");
-      const { localListPublishedGames } = require("./store");
+      const { isLocalReady } = await import("@/lib/local-first-store");
+      const { localListPublishedGames } = await import("./store");
       
       if (isLocalReady()) {
         const localGames = localListPublishedGames();
@@ -301,7 +302,7 @@ export function useDailyChallengeState(opts: { enabled?: boolean } = {}): {
           // BUT ensure it starts IMMEDIATELY (no idle delay).
         }
       }
-    } catch { /* ignore */ }
+    })();
     return null;
   });
   const [loading, setLoading] = useState(enabled);
@@ -314,8 +315,8 @@ export function useDailyChallengeState(opts: { enabled?: boolean } = {}): {
     async function run() {
       // Priority 1: Check Local Cache First
       try {
-        const { isLocalReady, ensureLocalSnapshotLoaded } = require("@/lib/local-first-store");
-        const { getLocalPublishedGames, getBaselineContent } = require("../offline-baseline-resolver");
+        const { isLocalReady, ensureLocalSnapshotLoaded } = await import("@/lib/local-first-store");
+        const { getLocalPublishedGames, getBaselineContent } = await import("../offline-baseline-resolver");
         
         // If not ready, await it, but we prefer synchronous.
         if (!isLocalReady()) {

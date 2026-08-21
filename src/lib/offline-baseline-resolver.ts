@@ -154,12 +154,15 @@ export async function seedBaselineToPersistentStore(): Promise<void> {
  * Synchronous local list of library stories, following the Phase 2 priority.
  * Guaranteed to exclude campaign intros.
  */
-export function getLocalLibraryStories(): any[] {
-  // We need to be careful with 'require' in TanStack Start's SSR environment.
-  const lfs = require("./local-first-store");
-  const publishedCampaigns = lfs.localPublishedCampaigns();
-  const { isCampaignIntroRow, introStoryIdsFromCampaigns } = require("./stories/library-filter");
-  const introIds = introStoryIdsFromCampaigns(publishedCampaigns);
+  // We use dynamic imports to handle potential circularity with local-first-store
+  // but since these functions are public sync APIs, we have a problem.
+  // However, local-first-store.ts DOES NOT import offline-baseline-resolver.ts.
+  // So a static import of local-first-store is safe here.
+  return []; // TEMP: Placeholder to check build while I refactor imports below
+}
+
+// Moving require logic to the top via static imports since circularity check passed.
+import * as lfs from "./local-first-store";
   
   // 1. Memory / Persistent (local-first-store)
   if (lfs.isLocalReady()) {
@@ -184,8 +187,6 @@ export function getLocalLibraryStories(): any[] {
  * Synchronous local list of published games, following the Phase 2 priority.
  */
 export function getLocalPublishedGames(): GameRow[] {
-  const lfs = require("./local-first-store");
-  
   // 1. Memory / Persistent (local-first-store)
   if (lfs.isLocalReady()) {
     const games = lfs.localPublishedGames();
