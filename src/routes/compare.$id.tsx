@@ -124,25 +124,24 @@ function ComparePage() {
 
     load();
     return () => { alive = false; };
-  }, [id, user?.id, account]);
+  }, [id, user?.id, accountCtx]); 
 
   const me: Side | null = useMemo(() => {
-    if (!user) return null;
-    const s = derivePublicStats(profile);
+    if (!meProfile) return null;
     return {
       side: "me",
       displayName: bestDisplayName({
-        display_name: account?.display_name ?? null,
-        username: account?.username ?? profile.name,
+        display_name: meProfile.display_name,
+        username: meProfile.username,
       }),
-      username: account?.username ?? profile.name,
-      title: s.title ?? "مستكشف التاريخ",
-      avatarId: profile.avatarId ?? DEFAULT_AVATAR_ID,
-      level: s.level,
-      xp: s.xp,
-      campaigns: s.campaigns_completed,
+      username: meProfile.username,
+      title: meProfile.title ?? "مستكشف التاريخ",
+      avatarId: meProfile.avatar_id ?? DEFAULT_AVATAR_ID,
+      level: meProfile.level,
+      xp: meProfile.xp ?? 0,
+      campaigns: meProfile.campaigns_completed,
     };
-  }, [user, profile, account]);
+  }, [meProfile]);
 
   const friend: Side | null = useMemo(() => {
     if (!other) return null;
