@@ -85,6 +85,8 @@ function ComparePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
+  const syncNow = accountCtx.syncNow;
+
   useEffect(() => {
     let alive = true;
     const load = async () => {
@@ -94,15 +96,15 @@ function ComparePage() {
       
       try {
         // 1. Strict sequence: syncNow MUST complete before fetches
-        if (user) {
-          await accountCtx.syncNow();
+        if (user?.id) {
+          await syncNow();
         }
 
         if (!alive) return;
 
         // 2. Authoritative dual fetch from the same source
         const [meRes, otherRes] = await Promise.all([
-          user ? fetchGatedProfileById(user.id) : Promise.resolve(null),
+          user?.id ? fetchGatedProfileById(user.id) : Promise.resolve(null),
           fetchGatedProfileById(id)
         ]);
 
@@ -124,7 +126,8 @@ function ComparePage() {
 
     load();
     return () => { alive = false; };
-  }, [id, user?.id, accountCtx]); 
+  }, [id, user?.id, syncNow]); 
+
 
   const me: Side | null = useMemo(() => {
     if (!meProfile) return null;
