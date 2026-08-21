@@ -15,6 +15,7 @@ import { isValidBaseline, type BaselineContent } from "./offline-baseline";
 import { type GameRow } from "./games/store";
 import { type StoryAccessBundle } from "./stories/types";
 import { isCampaignIntroRow, introStoryIdsFromCampaigns } from "./stories/library-filter";
+import * as lfs from "./local-first-store";
 
 // --- Internal State ---
 
@@ -97,9 +98,6 @@ export async function seedBaselineToPersistentStore(): Promise<void> {
 
     const { collections } = baseline;
     
-    // Construct a snapshot compatible with the local-first-store
-    // NOTE: We only touch the collections defined in baseline-content.json.
-    // If we're upgrading an existing snapshot, we preserve other collections (encyclopedia, atlas, etc.)
     const newSnapshot: OfflineSnapshot = existing ? { ...existing } : {
       snapshot_version: baseline.version,
       schema_version: SNAPSHOT_SCHEMA_VERSION,
@@ -130,9 +128,8 @@ export async function seedBaselineToPersistentStore(): Promise<void> {
     await saveSnapshot(newSnapshot);
     
     // Notify local-first-store to re-index if it's already ready
-    const { isLocalReady, applyLocalSnapshot } = await import("./local-first-store");
-    if (isLocalReady()) {
-      applyLocalSnapshot(newSnapshot);
+    if (lfs.isLocalReady()) {
+      lfs.applyLocalSnapshot(newSnapshot);
     }
 
     _indexedDbSeedTimeMs = now() - start;
@@ -154,15 +151,9 @@ export async function seedBaselineToPersistentStore(): Promise<void> {
  * Synchronous local list of library stories, following the Phase 2 priority.
  * Guaranteed to exclude campaign intros.
  */
-  // We use dynamic imports to handle potential circularity with local-first-store
-  // but since these functions are public sync APIs, we have a problem.
-  // However, local-first-store.ts DOES NOT import offline-baseline-resolver.ts.
-  // So a static import of local-first-store is safe here.
-  return []; // TEMP: Placeholder to check build while I refactor imports below
-}
-
-// Moving require logic to the top via static imports since circularity check passed.
-import * as lfs from "./local-first-store";
+export function getLocalLibraryStories(): any[] {
+  const publishedCampaigns = lfs.localPublishedCampaigns();
+  const introIds = introStoryIdsFromCampaigns(publishedCampaigns);
   
   // 1. Memory / Persistent (local-first-store)
   if (lfs.isLocalReady()) {
