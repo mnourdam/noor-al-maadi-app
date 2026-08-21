@@ -76,40 +76,72 @@ function bestDisplayName(p: { display_name?: string | null; username: string }) 
 
 function ComparePage() {
   const { id } = Route.useParams();
-  const { user, account } = useAccount();
+  const accountCtx = useAccount();
+  const { user } = accountCtx;
   const { profile } = useProfile();
+  const [meProfile, setMeProfile] = useState<PublicProfile | null>(null);
   const [other, setOther] = useState<PublicProfile | null>(null);
   const [denied, setDenied] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     let alive = true;
-    setDenied(false);
-    setOther(null);
-    fetchGatedProfileById(id).then((r) => {
-      if (!alive) return;
-      setOther(r);
-      if (!r) setDenied(true);
-    });
+    const load = async () => {
+      setLoading(true);
+      setError(false);
+      setDenied(false);
+      
+      try {
+        // 1. Strict sequence: syncNow MUST complete before fetches
+        if (user) {
+          await accountCtx.syncNow();
+        }
+
+        if (!alive) return;
+
+        // 2. Authoritative dual fetch from the same source
+        const [meRes, otherRes] = await Promise.all([
+          user ? fetchGatedProfileById(user.id) : Promise.resolve(null),
+          fetchGatedProfileById(id)
+        ]);
+
+        if (!alive) return;
+
+        setMeProfile(meRes);
+        setOther(otherRes);
+        
+        if (!otherRes) {
+          setDenied(true);
+        }
+      } catch (err) {
+        console.error("[compare] Load failed:", err);
+        if (alive) setError(true);
+      } finally {
+        if (alive) setLoading(false);
+      }
+    };
+
+    load();
     return () => { alive = false; };
-  }, [id]);
+  }, [id, user?.id, accountCtx]); 
 
   const me: Side | null = useMemo(() => {
-    if (!user) return null;
-    const s = derivePublicStats(profile);
+    if (!meProfile) return null;
     return {
       side: "me",
       displayName: bestDisplayName({
-        display_name: account?.display_name ?? null,
-        username: account?.username ?? profile.name,
+        display_name: meProfile.display_name,
+        username: meProfile.username,
       }),
-      username: account?.username ?? profile.name,
-      title: s.title ?? "مستكشف التاريخ",
-      avatarId: profile.avatarId ?? DEFAULT_AVATAR_ID,
-      level: s.level,
-      xp: s.xp,
-      campaigns: s.campaigns_completed,
+      username: meProfile.username,
+      title: meProfile.title ?? "مستكشف التاريخ",
+      avatarId: meProfile.avatar_id ?? DEFAULT_AVATAR_ID,
+      level: meProfile.level,
+      xp: meProfile.xp ?? 0,
+      campaigns: meProfile.campaigns_completed,
     };
-  }, [user, profile, account]);
+  }, [meProfile]);
 
   const friend: Side | null = useMemo(() => {
     if (!other) return null;
@@ -165,13 +197,25 @@ function ComparePage() {
           </Link>
         </div>
 
-        {!other && !denied && (
+        {(loading) && (
           <div className="rounded-3xl border border-gold/20 bg-surface p-8 text-center text-sm text-muted-foreground">
             جارٍ التحميل…
           </div>
         )}
 
-        {denied && (
+        {!loading && error && (
+          <div className="rounded-3xl border border-red-500/20 bg-surface p-8 text-center text-sm text-muted-foreground">
+            <p>تعذر تحميل المقارنة. تأكد من اتصالك بالإنترنت.</p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="mt-4 rounded-xl bg-gold/10 px-4 py-2 text-gold hover:bg-gold/20 transition-colors"
+            >
+              إعادة المحاولة
+            </button>
+          </div>
+        )}
+
+        {!loading && !error && denied && (
           <div className="rounded-3xl border border-white/10 bg-surface p-6 text-center text-sm text-muted-foreground">
             هذه المقارنة متاحة فقط بين الأصدقاء. أرسل طلب صداقة أولاً لعرض تقدّم هذا اللاعب.
           </div>

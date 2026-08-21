@@ -569,9 +569,15 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     if (!user) return false;
     setSyncing(true);
     try {
-      const ok = await pushSave(user.id, profileRef.current);
-      if (ok) setLastSyncAt(Date.now());
-      return ok;
+      // Flush both cloud save (profile blob) and public stats (comparison projection)
+      const [saveOk] = await Promise.all([
+        pushSave(user.id, profileRef.current),
+        pushPublicStats(user.id, profileRef.current)
+      ]);
+      if (saveOk) setLastSyncAt(Date.now());
+      // Re-release the realtime guard if we just forced a push
+      lastLocalChangeRef.current = 0;
+      return saveOk;
     } finally {
       setSyncing(false);
     }
