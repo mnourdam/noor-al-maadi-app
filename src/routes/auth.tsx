@@ -203,16 +203,6 @@ function AuthPage() {
     // referral code capture removed in Phase 2
 
     try {
-      if (typeof navigator !== "undefined" && navigator.onLine === false) {
-        openAuthDialog({
-          id: "offline",
-          tone: "warning",
-          title: "لا يوجد اتصال بالإنترنت",
-          body: "تحقّق من الشبكة ثم أعد المحاولة.",
-          primary: { label: "إعادة المحاولة" },
-        });
-        return;
-      }
       if (mode === "forgot") {
         if (!email) { setError("أدخل بريدك الإلكتروني"); return; }
         const authEmailMode = ((import.meta.env.VITE_AUTH_EMAIL_MODE as string | undefined) ?? "custom").toLowerCase();

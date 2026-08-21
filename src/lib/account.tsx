@@ -287,6 +287,9 @@ export function AccountProvider({ children }: { children: ReactNode }) {
             recordStartupMark("server-reconciliation-success");
           } else if (outcome.kind === "timeout") {
             recordStartupMark("server-reconciliation-soft-timeout", "onboarding");
+            // Soft-timeout sets state to offline-local to allow the app to boot,
+            // but the onLate callback above will promote it to 'reconciled' 
+            // if the request eventually finishes successfully.
             setReconciliationState("offline-local", "onboarding-timeout");
           } else if (outcome.kind === "offline") {
             recordStartupMark("offline-local-entered", "onboarding");
@@ -296,8 +299,9 @@ export function AccountProvider({ children }: { children: ReactNode }) {
             setReconciliationState("failed", outcome.error instanceof Error ? outcome.error.message : String(outcome.error));
           }
         } catch (e) {
-          const offline = typeof navigator !== "undefined" && navigator.onLine === false;
-          setReconciliationState(offline ? "offline-local" : "failed", e instanceof Error ? e.message : String(e));
+          // If a low-level error happens during initialization, 
+          // default to 'failed' rather than assuming a device-offline state.
+          setReconciliationState("failed", e instanceof Error ? e.message : String(e));
         }
 
 

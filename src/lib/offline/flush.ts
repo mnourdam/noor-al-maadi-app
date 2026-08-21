@@ -414,7 +414,7 @@ async function handleItem(item: OutboxItem): Promise<{ ok: boolean; error?: stri
 
 export async function flushOutbox(userId: string): Promise<{ flushed: number; failed: number }> {
   if (inflight) return inflight;
-  if (typeof navigator !== "undefined" && !navigator.onLine) return { flushed: 0, failed: 0 };
+  
   inflight = (async () => {
     let flushed = 0;
     let failed = 0;

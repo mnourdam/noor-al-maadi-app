@@ -45,10 +45,6 @@ export function GoogleSignInButton({
     if (busy) return;
     setBusy(true);
     try {
-      if (typeof navigator !== "undefined" && navigator.onLine === false) {
-        onError?.("لا يوجد اتصال بالإنترنت. تحقق من الشبكة وحاول مجدداً.");
-        return;
-      }
 
       // Persist the intent so the post-auth dialog (web callback OR native
       // deep link) can compare it against the actual outcome.

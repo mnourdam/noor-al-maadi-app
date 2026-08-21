@@ -17,11 +17,13 @@ export type BoundedOutcome<T> =
 const DEFAULT_TIMEOUT_MS = 5000;
 
 function isOffline(err: unknown): boolean {
-  if (typeof navigator !== "undefined" && navigator.onLine === false) return true;
   const msg =
     err instanceof Error ? err.message :
     typeof err === "string" ? err : "";
-  return /Failed to fetch|NetworkError|network request failed|offline/i.test(msg);
+  // Differentiate: only classify as "offline" if it's a confirmed lack of network
+  // or a terminal transport error. Generic "Failed to fetch" is treated as 
+  // "failed" to allow the system to retry or show specific service errors.
+  return /network request failed|offline|NetworkError/i.test(msg);
 }
 
 export async function withBoundedTimeout<T>(
