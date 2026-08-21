@@ -15,6 +15,7 @@ import { isValidBaseline, type BaselineContent } from "./offline-baseline";
 import { type GameRow } from "./games/store";
 import { type StoryAccessBundle } from "./stories/types";
 import { isCampaignIntroRow, introStoryIdsFromCampaigns } from "./stories/library-filter";
+import * as lfs from "./local-first-store";
 
 // --- Internal State ---
 
@@ -97,9 +98,6 @@ export async function seedBaselineToPersistentStore(): Promise<void> {
 
     const { collections } = baseline;
     
-    // Construct a snapshot compatible with the local-first-store
-    // NOTE: We only touch the collections defined in baseline-content.json.
-    // If we're upgrading an existing snapshot, we preserve other collections (encyclopedia, atlas, etc.)
     const newSnapshot: OfflineSnapshot = existing ? { ...existing } : {
       snapshot_version: baseline.version,
       schema_version: SNAPSHOT_SCHEMA_VERSION,
@@ -130,9 +128,8 @@ export async function seedBaselineToPersistentStore(): Promise<void> {
     await saveSnapshot(newSnapshot);
     
     // Notify local-first-store to re-index if it's already ready
-    const { isLocalReady, applyLocalSnapshot } = await import("./local-first-store");
-    if (isLocalReady()) {
-      applyLocalSnapshot(newSnapshot);
+    if (lfs.isLocalReady()) {
+      lfs.applyLocalSnapshot(newSnapshot);
     }
 
     _indexedDbSeedTimeMs = now() - start;
@@ -155,10 +152,7 @@ export async function seedBaselineToPersistentStore(): Promise<void> {
  * Guaranteed to exclude campaign intros.
  */
 export function getLocalLibraryStories(): any[] {
-  // We need to be careful with 'require' in TanStack Start's SSR environment.
-  const lfs = require("./local-first-store");
   const publishedCampaigns = lfs.localPublishedCampaigns();
-  const { isCampaignIntroRow, introStoryIdsFromCampaigns } = require("./stories/library-filter");
   const introIds = introStoryIdsFromCampaigns(publishedCampaigns);
   
   // 1. Memory / Persistent (local-first-store)
@@ -184,8 +178,6 @@ export function getLocalLibraryStories(): any[] {
  * Synchronous local list of published games, following the Phase 2 priority.
  */
 export function getLocalPublishedGames(): GameRow[] {
-  const lfs = require("./local-first-store");
-  
   // 1. Memory / Persistent (local-first-store)
   if (lfs.isLocalReady()) {
     const games = lfs.localPublishedGames();

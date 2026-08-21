@@ -24,6 +24,7 @@ import {
   partitionCampaignRows,
   type RawCampaignRow,
 } from "./campaigns/entities";
+import { isCampaignIntroRow, introStoryIdsFromCampaigns } from "./stories/library-filter";
 
 type Row = Record<string, any>;
 
@@ -174,7 +175,6 @@ function indexStories(rows: Row[]) {
   storiesById.clear(); storiesBySlug.clear();
   // Filter for published status and EXCLUDE campaign intros.
   // We use the library-filter helper to ensure consistency with Phase 2 rules.
-  const { isCampaignIntroRow, introStoryIdsFromCampaigns } = require("./stories/library-filter");
   const introIds = introStoryIdsFromCampaigns(campaignsAll);
   
   storiesAll = rows.filter((r) => 

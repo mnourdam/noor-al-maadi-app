@@ -15,6 +15,7 @@ import type {
   CanonicalDomain,
 } from "./types";
 import { knownI18nKeys } from "./i18n";
+import { RETIRED_IDS } from "./definitions/retired";
 
 export const REGISTRY_VERSION = 1;
 export const ENGINE_VERSION = 2;
@@ -182,14 +183,7 @@ export function validate(
 
   // Retired-id isolation: v2 registry MUST NOT re-declare a retired id.
   // Loaded lazily to avoid a require cycle when the registry initializes.
-  let retiredIds: ReadonlySet<string> = new Set();
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const mod = require("./definitions/retired") as { RETIRED_IDS: ReadonlySet<string> };
-    retiredIds = mod.RETIRED_IDS;
-  } catch {
-    /* retired module optional at validation time */
-  }
+  const retiredIds = RETIRED_IDS;
 
   for (const d of definitions) {
     // Unique id

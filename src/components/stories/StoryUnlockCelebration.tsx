@@ -25,6 +25,7 @@ import { ModalPortal } from "@/components/ModalPortal";
 import { OverlayDismissRegistration } from "@/lib/navigation/overlay-registration";
 import { supabase } from "@/integrations/supabase/client";
 import type { StorySummary } from "@/lib/stories/summary";
+import { getActiveOwner } from "@/lib/identity/owner";
 
 const STATE_KEY = "irth.stories.lockstate.v1";
 const SEEN_KEY = "irth.stories.unlock-celebrated.v1";
@@ -97,7 +98,6 @@ export function StoryUnlockCelebration() {
       if (!alive) return;
       userIdRef.current = uid;
       // Use synchronous resolution from owner.ts
-      const { getActiveOwner } = require("@/lib/identity/owner");
       const current = getActiveOwner();
       setOwnerKey(current);
       storageReady.current = true;
