@@ -78,20 +78,52 @@ function ComparePage() {
   const { id } = Route.useParams();
   const { user, account } = useAccount();
   const { profile } = useProfile();
+  const [meProfile, setMeProfile] = useState<PublicProfile | null>(null);
   const [other, setOther] = useState<PublicProfile | null>(null);
   const [denied, setDenied] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     let alive = true;
-    setDenied(false);
-    setOther(null);
-    fetchGatedProfileById(id).then((r) => {
-      if (!alive) return;
-      setOther(r);
-      if (!r) setDenied(true);
-    });
+    const load = async () => {
+      setLoading(true);
+      setError(false);
+      setDenied(false);
+      
+      try {
+        // 1. Strict sequence: syncNow MUST complete before fetches
+        if (user) {
+          await account.syncNow();
+        }
+
+        if (!alive) return;
+
+        // 2. Authoritative dual fetch from the same source
+        const [meRes, otherRes] = await Promise.all([
+          user ? fetchGatedProfileById(user.id) : Promise.resolve(null),
+          fetchGatedProfileById(id)
+        ]);
+
+        if (!alive) return;
+
+        setMeProfile(meRes);
+        setOther(otherRes);
+        
+        if (!otherRes) {
+          setDenied(true);
+        }
+      } catch (err) {
+        console.error("[compare] Load failed:", err);
+        if (alive) setError(true);
+      } finally {
+        if (alive) setLoading(false);
+      }
+    };
+
+    load();
     return () => { alive = false; };
-  }, [id]);
+  }, [id, user?.id, account]);
 
   const me: Side | null = useMemo(() => {
     if (!user) return null;
