@@ -120,30 +120,41 @@ export async function saveImageNative(input: {
   blob: Blob;
   filename: string;
 }): Promise<{ status: "downloaded" | "shared"; uri: string }> {
+  recordTrace("export-audit", "EXPORT_5_CACHE_WRITE_START");
   const { Filesystem, Directory } = await loadFs();
   const Share = await loadShare();
 
   const data = await blobToBase64(input.blob);
+  recordTrace("export-audit", "EXPORT_4_BASE64_READY", `len=${data.length}`);
   
-  // V11 Fix: Generate a unique cache filename to avoid collisions and
-  // ensure compatibility with Android Scoped Storage via Share Sheet.
   const stamp = Date.now();
   const path = `irth-${stamp}-${input.filename}`;
 
-  const written = await Filesystem.writeFile({
-    path,
-    data,
-    directory: Directory.Cache,
-    recursive: true,
-  });
-
   try {
+    const written = await Filesystem.writeFile({
+      path,
+      data,
+      directory: Directory.Cache,
+      recursive: true,
+    });
+    recordTrace("export-audit", "EXPORT_6_CACHE_WRITE_DONE", `uri=${written.uri.slice(0, 50)}...`);
+    recordTrace("export-audit", "EXPORT_7_URI_READY", written.uri);
+
+    recordTrace("export-audit", "EXPORT_8_SHARE_START", JSON.stringify({
+      uri: written.uri,
+      scheme: written.uri.split(":")[0],
+      filename: path,
+      platform: "android",
+      shareAvailable: !!Share,
+      fsAvailable: !!Filesystem
+    }));
+
     await Share.share({
       files: [written.uri],
-      // We don't include text/title here to keep the share sheet focused 
-      // on the "Save to device" / "Photos" / "Print" actions.
     });
     
+    recordTrace("export-audit", "EXPORT_9_SHARE_RESOLVED");
+
     // Best effort cleanup after a delay.
     setTimeout(() => {
       Filesystem.deleteFile({ path, directory: Directory.Cache }).catch(() => {});
@@ -151,9 +162,14 @@ export async function saveImageNative(input: {
 
     return { status: "shared", uri: written.uri };
   } catch (err) {
-    const msg = (err as { message?: string } | null)?.message ?? "";
-    // If user cancels the share sheet, we don't treat it as a hard failure,
-    // but we can't claim it was saved.
+    const error = err as Error;
+    recordTrace("export-audit", "EXPORT_ERROR", JSON.stringify({
+      stage: "native-save-flow",
+      name: error.name,
+      message: error.message,
+      stack: error.stack?.slice(0, 200)
+    }));
+    const msg = error.message ?? "";
     if (/cancel|dismiss/i.test(msg)) {
       throw new Error("Share sheet dismissed");
     }
