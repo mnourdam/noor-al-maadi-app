@@ -16,6 +16,7 @@
 // falls back to Web Share / <a download> for browser environments.
 
 import { isCapacitorNative } from "@/lib/native-auth";
+import { recordTrace } from "@/lib/diag-trace";
 
 type ShareStatus = "shared" | "cancelled";
 
