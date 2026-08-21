@@ -11,13 +11,27 @@ import { useQuery } from "@tanstack/react-query";
 import { BookOpenText, ArrowLeft } from "lucide-react";
 import { listStoriesSummary, pickHomeStories } from "@/lib/stories/summary";
 import { StoryCard } from "@/components/stories/StoryCard";
+import { useEffect } from "react";
 
 export function StoriesRail({ worldSlug }: { worldSlug?: string | null }) {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ["stories-summary", worldSlug ?? null],
     queryFn: () => listStoriesSummary(worldSlug ?? null),
     staleTime: 60_000,
   });
+
+  // Minimal safe fix: react to story progress/completion events to force-refresh
+  // the current rail snapshot, bypassing the 60s staleTime.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const refresh = () => { void refetch(); };
+    window.addEventListener("irth:story-progress:changed", refresh);
+    window.addEventListener("irth:story-completions:changed", refresh);
+    return () => {
+      window.removeEventListener("irth:story-progress:changed", refresh);
+      window.removeEventListener("irth:story-completions:changed", refresh);
+    };
+  }, [refetch]);
 
   if (isLoading || !data || data.length === 0) return null;
   const picks = pickHomeStories(data, 6);
