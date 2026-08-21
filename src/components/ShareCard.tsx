@@ -21,7 +21,9 @@
 // ============================================================
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Download, Loader2 } from "lucide-react";
+import { Download, Loader2, Info } from "lucide-react";
+import { recordTrace, readTrace } from "@/lib/diag-trace";
+import { isCapacitorNative } from "@/lib/native-auth";
 import { toast } from "sonner";
 import type { ProfileState } from "@/lib/profile";
 import { levelFor } from "@/lib/app-constants";
@@ -254,10 +256,18 @@ export function ShareCard(props: ShareCardProps) {
 
   const onDownload = useCallback(async () => {
     if (!ready || busy) return;
+    recordTrace("export-audit", "EXPORT_1_CLICK");
     setBusy("download");
     try {
       const blob = await canvasToBlob(canvasRef.current);
-      if (!blob) { toast.error("تعذر تجهيز البطاقة، حاول مجددًا"); return; }
+      recordTrace("export-audit", "EXPORT_2_CANVAS_READY");
+      if (!blob) { 
+        recordTrace("export-audit", "EXPORT_ERROR", "canvasToBlob_null");
+        toast.error("تعذر تجهيز البطاقة، حاول مجددًا"); 
+        return; 
+      }
+      recordTrace("export-audit", "EXPORT_3_BLOB_READY", `size=${blob.size}`);
+
       const res = await downloadImage({
         jobId: `identity-card-download-${cardNumber}`,
         blob,
@@ -268,7 +278,15 @@ export function ShareCard(props: ShareCardProps) {
       } else if (res.status === "failed") {
         toast.error("تعذر تجهيز البطاقة، حاول مجددًا");
       }
+    } catch (e) {
+      const error = e as Error;
+      recordTrace("export-audit", "EXPORT_ERROR", JSON.stringify({
+        stage: "ui-handler",
+        name: error.name,
+        message: error.message
+      }));
     } finally {
+      recordTrace("export-audit", "EXPORT_10_FINALLY");
       setBusy(null);
     }
   }, [ready, busy, cardNumber, filenameBase]);
@@ -298,6 +316,18 @@ export function ShareCard(props: ShareCardProps) {
           <><Download className="size-4" /> تحميل كصورة</>
         )}
       </button>
+
+      {/* Temporary Diagnostic Trace (only in development/native) */}
+      {!import.meta.env.PROD && isCapacitorNative() && (
+        <div className="flex flex-col gap-1.5 rounded-lg border border-white/10 bg-black/20 p-3 text-[10px] font-mono text-white/40">
+          <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-white/60">
+            <Info className="size-3" /> Android Export Audit
+          </div>
+          <div className="line-clamp-3 break-all">
+            {readTrace("export-audit").slice(-1)[0]?.stage || "READY"}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
