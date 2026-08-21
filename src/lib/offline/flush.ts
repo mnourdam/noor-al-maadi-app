@@ -305,11 +305,23 @@ async function handleItem(item: OutboxItem): Promise<{ ok: boolean; error?: stri
       case "avatar_select": {
         const p = item.payload as { avatarId?: string };
         if (!p?.avatarId) return { ok: false, error: "invalid_avatar_id" };
-        const [{ readPersistedProfileState }, { derivePublicStats }] = await Promise.all([
+        const [{ readPersistedProfileState }, { derivePublicStats }, { unionCompletedIds }] = await Promise.all([
           import("@/lib/profile"),
           import("@/lib/social"),
+          import("@/lib/campaigns/completions"),
         ]);
-        const stats = { ...derivePublicStats(readPersistedProfileState()), avatar_id: p.avatarId };
+        const p = readPersistedProfileState();
+        let canonicalCount: number | undefined;
+        try {
+          const union = await unionCompletedIds(p.campaignsCompleted);
+          if (union.size > 0) {
+            canonicalCount = union.size;
+          }
+        } catch (e) {
+          console.error("[flush] failed to resolve canonical completions for avatar sync", e);
+        }
+        const stats = { ...derivePublicStats(p, canonicalCount), avatar_id: p.avatarId };
+
         const { error } = await supabase.rpc("sync_my_public_stats" as any, {
           p_stats: stats as any,
         });
