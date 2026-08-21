@@ -385,7 +385,7 @@ function HomeFull() {
         subtitle: ev.body,
       });
     });
-    if (recentDiscoveries.length > 0) {
+    if (recentDiscoveries.length > 0 && recentDiscoveries[0]) {
       const r = recentDiscoveries[0];
       out.push({
         kind: "discovery", bg: bgAt(2),
@@ -1263,7 +1263,7 @@ function TodayEventsCarousel({ events, focusEventId }: { events: TodayInHistoryE
   // strip the query param so re-renders / hash changes don't retrigger.
   useEffect(() => {
     if (!emblaApi || !focusEventId) return;
-    const target = events.findIndex((e) => String(e.id) === String(focusEventId));
+    const target = events.findIndex((e) => e && String(e.id) === String(focusEventId));
     if (target > 0) emblaApi.scrollTo(target, true);
     if (typeof window !== "undefined") {
       try {

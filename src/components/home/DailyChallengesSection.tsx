@@ -263,13 +263,13 @@ export function DailyChallengesSection() {
             </div>
           </div>
         </Reveal>
-      ) : picks.length === 1 ? (
+      ) : picks.length === 1 && picks[0] ? (
         <ChallengeCard
           game={picks[0]}
           variant="primary"
           completed={completedIds.has(picks[0].id)}
         />
-      ) : (
+      ) : picks.length >= 2 && picks[0] && picks[1] ? (
         <Stagger className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 md:gap-5" max={2}>
           <ChallengeCard
             game={picks[0]}
@@ -282,7 +282,7 @@ export function DailyChallengesSection() {
             completed={completedIds.has(picks[1].id)}
           />
         </Stagger>
-      )}
+      ) : null}
     </section>
   );
 }

@@ -144,9 +144,10 @@ function resolveUserKeySync(): string {
 }
 
 /** Deterministic fingerprint of the game catalogue to detect meaningful changes. */
-function getCatalogueFingerprint(games: GameRow[]): string {
-  if (!games.length) return "empty";
-  const sorted = [...games].sort((a, b) => a.id.localeCompare(b.id));
+function getCatalogueFingerprint(games: (GameRow | undefined | null)[]): string {
+  const valid = games.filter((g): g is GameRow => !!g);
+  if (!valid.length) return "empty";
+  const sorted = [...valid].sort((a, b) => a.id.localeCompare(b.id));
   return sorted.map(g => `${g.id}|${g.updated_at}`).join(";");
 }
 
