@@ -76,7 +76,8 @@ function bestDisplayName(p: { display_name?: string | null; username: string }) 
 
 function ComparePage() {
   const { id } = Route.useParams();
-  const { user, account } = useAccount();
+  const accountCtx = useAccount();
+  const { user } = accountCtx;
   const { profile } = useProfile();
   const [meProfile, setMeProfile] = useState<PublicProfile | null>(null);
   const [other, setOther] = useState<PublicProfile | null>(null);
