@@ -97,7 +97,11 @@ export function StoryPlayer({
   useEffect(() => {
     if (phase !== "playing" || !scene) return;
     if (alreadyCompleted) return;
-    void recordStoryProgress(story.id, scene.scene_index);
+    void recordStoryProgress(story.id, scene.scene_index).then((res) => {
+      if (res.acknowledged) {
+        void queryClient.invalidateQueries({ queryKey: ["stories-summary"] });
+      }
+    });
   }, [phase, scene, story.id, alreadyCompleted]);
 
   // --- Auto advance ----------------------------------------------
