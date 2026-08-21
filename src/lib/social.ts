@@ -159,7 +159,7 @@ export async function searchPlayers(q: string, excludeId?: string): Promise<Publ
 
 
 // =========== Derive public stats from local profile ===========
-export function derivePublicStats(p: ProfileState) {
+export function derivePublicStats(p: ProfileState, canonicalCompletionsCount?: number) {
   const lvl = levelFor(p.points);
   const have = p.charactersUnlocked.length + p.artifactsFound.length;
   const discovery = Math.min(100, have);
@@ -168,6 +168,14 @@ export function derivePublicStats(p: ProfileState) {
   // derived on read on both sides; pushing the effective value would
   // mis-anchor the timer.
   const hearts = Math.max(0, Math.min(5, Math.floor(p.hearts ?? 5)));
+  
+  // Use the canonical count if provided, otherwise fall back to the naive local length.
+  // The naive length is preserved for legacy synchronous callers that haven't
+  // awaited the union resolve.
+  const completedCount = typeof canonicalCompletionsCount === 'number' 
+    ? canonicalCompletionsCount 
+    : (p.campaignsCompleted?.length ?? 0);
+
   return {
     bio: p.bio ?? "",
     title: p.titlesEarned?.[p.titlesEarned.length - 1] ?? lvl.title,
@@ -176,7 +184,7 @@ export function derivePublicStats(p: ProfileState) {
     dinars: p.dinars ?? 0,
     hearts,
     streak: p.streak,
-    campaigns_completed: p.campaignsCompleted.length,
+    campaigns_completed: completedCount,
     artifacts_collected: p.artifactsFound.length,
     discovery_pct: discovery,
     favorite_state_id: p.favoriteStateId || null,
@@ -186,11 +194,28 @@ export function derivePublicStats(p: ProfileState) {
 }
 
 
+
 export async function pushPublicStats(userId: string, p: ProfileState): Promise<void> {
-  const stats = derivePublicStats(p);
+  // Canonical boundary: resolve the true completion count before derivation.
+  let canonicalCount: number | undefined;
+  try {
+    const { unionCompletedIds } = await import("./campaigns/completions");
+    const union = await unionCompletedIds(p.campaignsCompleted);
+    // Safety: if union is empty but local profile has data, do NOT downgrade.
+    // unionCompletedIds includes profile data, so an empty set implies a failure 
+    // or a truly empty account. We only override if we have a positive union.
+    if (union.size > 0) {
+      canonicalCount = union.size;
+    }
+  } catch (e) {
+    console.error("[social] failed to resolve canonical completions", e);
+  }
+
+  const stats = derivePublicStats(p, canonicalCount);
   // Route through SECURITY DEFINER RPC; direct UPDATE on economy columns is revoked.
   await db.rpc("sync_my_public_stats", { p_stats: stats as never });
 }
+
 
 // =========== Friendships ===========
 function emitFriendsUpdated() {
