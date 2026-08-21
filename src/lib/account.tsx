@@ -299,8 +299,9 @@ export function AccountProvider({ children }: { children: ReactNode }) {
             setReconciliationState("failed", outcome.error instanceof Error ? outcome.error.message : String(outcome.error));
           }
         } catch (e) {
-          const offline = typeof navigator !== "undefined" && navigator.onLine === false;
-          setReconciliationState(offline ? "offline-local" : "failed", e instanceof Error ? e.message : String(e));
+          // If a low-level error happens during initialization, 
+          // default to 'failed' rather than assuming a device-offline state.
+          setReconciliationState("failed", e instanceof Error ? e.message : String(e));
         }
 
 
