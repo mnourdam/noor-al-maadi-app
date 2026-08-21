@@ -1,49 +1,50 @@
 # Plan - Implement Symmetric Friend Comparison (V12 BUG 2)
 
-Implement a minimal safe fix to ensure friend comparisons are symmetric by anchoring both "Me" and "Friend" stats to the server's public profile authoritative source.
+Implement a minimal safe fix to ensure friend comparisons are symmetric by anchoring both "Me" and "Friend" stats to the server's public profile authoritative source, following a strict synchronization sequence.
 
 ## Proposed Changes
 
 ### 1. Unified Data Fetching (`src/routes/compare.$id.tsx`)
-- Update `ComparePage` to manage a new `meProfile` state (public projection).
-- Implement a `useEffect` that:
-  - Calls `syncNow()` from `AccountProvider` if authenticated to flush latest local stats to the cloud.
-  - Fetches both the current user's profile and the friend's profile using `fetchGatedProfileById`.
-  - Parallelizes these fetches for efficiency.
-- Remove the derivation of "Me" stats from the local `useProfile()` hook.
-- Ensure the `Side` component and internal memos consume the fetched `meProfile` instead of local state.
+- Update `ComparePage` to manage a new `meProfile` state (public projection) alongside the `other` profile state.
+- Implement a `useEffect` that follows this strict sequence:
+  1. **Sync First**: `await syncNow()` from `AccountProvider` if authenticated to flush latest local stats to the cloud.
+  2. **Fetch authoritative snapshots**: ONLY after `syncNow` finishes, `await Promise.all([fetchGatedProfileById(currentUserId), fetchGatedProfileById(friendId)])`.
+- Completely remove the derivation of "Me" stats from the local `useProfile()` hook within the comparison logic.
+- Ensure all comparison statistics are rendered exclusively from these server-side snapshots.
 
 ### 2. Loading and Offline Resilience
-- Add a unified loading state that covers the initial sync and both profile fetches.
-- Implement a symmetric "Comparison Unavailable" view if the user is offline or the server fetch fails, preventing the fallback to asymmetric local data.
+- Add a unified loading state covering the sync and subsequent fetches.
+- If `syncNow` or the fetches fail (offline/server unavailable), show a symmetric "Comparison Unavailable" view with a retry option.
+- Explicitly avoid falling back to asymmetric local/server data on failure.
 
 ### 3. Loop Prevention
-- Ensure `syncNow` is called only once per route mount or user change.
-- Stabilize the fetch triggers to prevent redundant network requests.
+- Ensure `syncNow` is called exactly once per mount or user change using a ref or stable dependency.
+- Prevent redundant network requests on rerenders.
 
 ## Technical Details
-- **Data Source**: `fetchGatedProfileById(id)` from `src/lib/social.ts`.
-- **Sync Trigger**: `syncNow()` from `AccountProvider` context.
-- **State Partitioning**: Maintain a clear separation between the "UI-local" profile (used for gameplay) and the "Comparison-public" profile (fetched from the server).
-- **No Schema Changes**: Purely a frontend orchestration fix; RLS and RPCs remain untouched.
+- **Sequence**: `syncNow()` -> `fetchGatedProfileById` (self & friend).
+- **Data Source**: Authoritative server-side public projection for both sides.
+- **Constraints**: No changes to RPC, RLS, database schema, campaign progression, or XP/Level formulas.
 
 ## Verification Plan
 
 ### 1. Automated Checks
 - `bun run typecheck`
-- `npm run build` (Production build verification)
+- `npm run build:android:web` (Crucial for Android parity verification)
 
 ### 2. Runtime/Preview Verification
-- Create a Playwright script to simulate the comparison flow.
-- Verify that `fetchGatedProfileById` is called for both IDs.
-- Verify that local profile changes (mocked) do not appear in comparison until a sync occurs.
-- Verify offline behavior by intercepting network requests.
+- Verify the `syncNow` await sequence via logs/tracing.
+- Confirm both sides use the same RPC source.
+- Verify that local mutations don't appear in comparison until sync completes.
+- Test offline/error states to ensure symmetry is maintained.
 
 ### 3. Manual Verification Checklist
-- [ ] Self source: `fetchGatedProfileById` (YES)
-- [ ] Friend source: `fetchGatedProfileById` (YES)
-- [ ] Local/Server mixing removed (YES)
-- [ ] `syncNow` runs once safely (YES)
-- [ ] Symmetry A→B / B→A (PASS)
-- [ ] Offline/Unavailable behavior (PASS)
-- [ ] No sync loops (PASS)
+- [ ] syncNow awaited before profile fetch (YES)
+- [ ] Self/friend fetch parallel AFTER sync (YES)
+- [ ] Local profile removed from comparison calculation (YES)
+- [ ] A→B / B→A symmetry (PASS)
+- [ ] Offline/error state (PASS)
+- [ ] Duplicate sync loop (NONE)
+- [ ] Typecheck (PASS)
+- [ ] npm run build:android:web (PASS)
+
