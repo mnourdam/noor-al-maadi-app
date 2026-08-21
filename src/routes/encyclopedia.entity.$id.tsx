@@ -112,7 +112,7 @@ function EntityPage() {
 
   const query = useQuery({
     queryKey: ["encyclopedia", "entity", id, "v3"],
-    staleTime: 60_000,
+    staleTime: 10 * 60_000,
     queryFn: async (): Promise<SupabaseEncyclopediaEntity | null> => {
       // Follow canonical_id / merged_into / converted_to / redirect_to
       // chains so old references to converted entities still land on the
@@ -182,7 +182,7 @@ function EntityPage() {
   const relatedQuery = useQuery({
     queryKey: ["encyclopedia", "graph", entity?.id ?? ""],
     enabled: !!entity,
-    staleTime: 60_000,
+    staleTime: 10 * 60_000,
     queryFn: async () => (entity ? resolveRelatedEntities(entity) : []),
   });
 
@@ -197,7 +197,7 @@ function EntityPage() {
   const atlasLinkQuery = useQuery({
     queryKey: ["encyclopedia", "atlas-link", entity?.id ?? ""],
     enabled: atlasEligible && !!entity?.id,
-    staleTime: 5 * 60_000,
+    staleTime: 10 * 60_000,
     queryFn: async () => {
       if (!entity?.id) return null;
       const data = localAtlasEntities().find((row: any) => row.encyclopedia_entity_id === entity.id) ?? null;

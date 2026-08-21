@@ -280,7 +280,7 @@ const EMPTY_BY_ERA = (): Record<EraId, JourneyEntry[]> => {
 export function useTimelineJourney() {
   const q = useQuery({
     queryKey: ["timeline-journey-v1"],
-    staleTime: 60_000,
+    staleTime: 10 * 60_000,
     retry: 1,
     queryFn: async () => {
       const [rows, atlasIds] = await Promise.all([fetchEntities(), fetchAtlasIds()]);

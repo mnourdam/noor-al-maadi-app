@@ -121,7 +121,7 @@ export function useTaxonomy(
 
   const query = useQuery({
     queryKey: ["admin-taxonomy", type, enabledOnly, source],
-    staleTime: 60_000,
+    staleTime: 10 * 60_000,
     retry: 1,
     enabled: source === "db",
     queryFn: async (): Promise<TaxonomyEntry[]> => {
