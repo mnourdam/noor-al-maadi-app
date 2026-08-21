@@ -293,14 +293,24 @@ export function ShareCard(props: ShareCardProps) {
 
   const disabled = !ready || busy !== null;
 
+  const isLoading = !ready;
+
   return (
     <div className="space-y-3">
-      <div className="overflow-hidden rounded-2xl border border-gold/30 bg-black/40 p-2">
+      <div className="relative overflow-hidden rounded-2xl border border-gold/30 bg-black/40 p-2 min-h-[400px] flex items-center justify-center">
+        {isLoading && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 z-10 p-6 text-center">
+            <Loader2 className="size-8 animate-spin text-gold mb-4" />
+            <h3 className="text-gold font-bold text-lg mb-1">جاري تجهيز بطاقة هويتك التاريخية...</h3>
+            <p className="text-white/60 text-xs">لحظات ونستحضر رحلتك في إرث</p>
+          </div>
+        )}
+        
         <canvas
           ref={canvasRef}
           width={1080}
           height={1920}
-          className="block w-full rounded-xl"
+          className={`block w-full rounded-xl transition-opacity duration-500 ${isLoading ? "opacity-0" : "opacity-100"}`}
           aria-label="بطاقة الهوية التاريخية"
         />
       </div>
