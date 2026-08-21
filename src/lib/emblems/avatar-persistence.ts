@@ -129,11 +129,23 @@ export type AvatarPersistResult = "synced" | "queued" | "local" | "failed";
  */
 async function pushAvatarDirect(avatarId: string): Promise<boolean> {
   try {
-    const [{ readPersistedProfileState }, { derivePublicStats }] = await Promise.all([
+    const [{ readPersistedProfileState }, { derivePublicStats }, { unionCompletedIds }] = await Promise.all([
       import("@/lib/profile"),
       import("@/lib/social"),
+      import("@/lib/campaigns/completions"),
     ]);
-    const stats = { ...derivePublicStats(readPersistedProfileState()), avatar_id: avatarId };
+    const p = readPersistedProfileState();
+    let canonicalCount: number | undefined;
+    try {
+      const union = await unionCompletedIds(p.campaignsCompleted);
+      if (union.size > 0) {
+        canonicalCount = union.size;
+      }
+    } catch (e) {
+      console.error("[avatar-persistence] failed to resolve canonical completions", e);
+    }
+    const stats = { ...derivePublicStats(p, canonicalCount), avatar_id: avatarId };
+
     const { error } = await supabase.rpc("sync_my_public_stats" as never, {
       p_stats: stats as never,
     } as never);
