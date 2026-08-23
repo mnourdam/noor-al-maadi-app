@@ -90,6 +90,15 @@ interface LockMapCache {
 }
 let globalLockMapCache: LockMapCache | null = null;
 
+/**
+ * Sync reset for the campaign lock map cache.
+ * Should be called during identity reset.
+ */
+export function clearCampaignProgressionCache() {
+  globalLockMapCache = null;
+}
+
+
 /** Lock map for the full campaigns feed (era groups in authored order). */
 export function useCampaignLockMap(
   sections:

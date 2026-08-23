@@ -334,14 +334,26 @@ let currentAuthUid: string | null | undefined = undefined; // undefined = not-ye
 const uidListeners = new Set<UidListener>();
 let uidSubscriptionStarted = false;
 
+/**
+ * Synchronous reset for the investigation UID and listeners.
+ * Should be called during identity reset.
+ */
+export function resetInvestigationIdentity(nextUid: string | null) {
+  import("@/lib/diag-trace").then(m => m.recordTrace("logout-audit", "investigations:uid-reset", nextUid));
+  currentAuthUid = nextUid;
+  uidListeners.forEach((l) => l(nextUid));
+}
+
 function startUidSubscription(): void {
   if (uidSubscriptionStarted) return;
   uidSubscriptionStarted = true;
   supabase.auth.getSession().then(({ data }) => {
     const next = data.session?.user?.id ?? null;
+    if (currentAuthUid !== undefined) return; // resetInvestigationIdentity already ran
     currentAuthUid = next;
     uidListeners.forEach((l) => l(next));
   }).catch(() => {
+    if (currentAuthUid !== undefined) return;
     currentAuthUid = null;
     uidListeners.forEach((l) => l(null));
   });
@@ -351,6 +363,7 @@ function startUidSubscription(): void {
     uidListeners.forEach((l) => l(next));
   });
 }
+
 
 function useAuthUid(): string | null {
   const [uid, setUid] = useState<string | null>(

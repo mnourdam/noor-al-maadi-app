@@ -233,37 +233,43 @@ function notifyListeners(): void {
 
 export function initAchievementEngine(): void {
   registerProviders();
-  alreadyNotified = loadNotified();
+  if (typeof window !== "undefined") {
+    alreadyNotified = loadNotified();
+  }
 }
+
 
 /**
  * Signal that the auth state changed. On sign-in this fetches the server
  * mirror; on sign-out this clears the mirror and restores guest state.
  */
-export async function refreshPersistedForUser(userId: string | null): Promise<void> {
-  if (bootedForUserId === userId) return;
-
+export async function resetAchievementEngine(nextUserId: string | null): Promise<void> {
+  recordTrace("logout-audit", "achievements:reset:start", nextUserId);
+  
   // ATOMIC RESET: Flush all module-level memory belonging to the previous identity.
   persisted = new Map();
   alreadyNotified = new Set();
   lastClaimedSet = new Set();
-
-  bootedForUserId = userId;
-  inputs.profile.userId = userId;
+  
+  bootedForUserId = nextUserId;
+  inputs.profile.userId = nextUserId;
   mirrorReady = false;
   liveTransitionsReady = false;
+  baselineInFlight = null;
 
-  if (!userId) {
+  if (!nextUserId) {
     persisted = loadGuestUnlocks();
-    // Guest state: whatever is persisted locally has already been notified
-    // on the run that unlocked it; we still trust the local `alreadyNotified`
-    // cache but also union with persisted ids to survive a cache wipe.
+    // Sanitization: If a guest partition contains an achievement that was unlocked 
+    // by a logged-in user (mirroring the profile pollution check), we must prune it.
+    // However, guest unlocks in v2 don't currently store a 'loggedIn' flag in the record.
+    // We rely on the storage invariant in partition.ts for the key itself.
     for (const id of persisted.keys()) alreadyNotified.add(id);
     saveNotified();
     mirrorReady = true;
     await runCycle(allDomains(), "startup_hydration");
     liveTransitionsReady = true;
-    recordAchievementTrace("baseline-ready", { user: "guest", persisted: persisted.size });
+    recordTrace("logout-audit", "achievements:reset:hydrated", `guest:${persisted.size}`);
+    notifyListeners();
     return;
   }
 
@@ -285,19 +291,22 @@ export async function refreshPersistedForUser(userId: string | null): Promise<vo
         },
       ]),
     );
-    // Seed `alreadyNotified` with every server-known unlock. This is the
-    // canonical fix for the reinstall-notification storm: everything the
-    // server already remembers is HISTORICAL, so its unlock event was
-    // dispatched in a prior session and MUST be silent this session even
-    // when the local `alreadyNotified` cache was wiped by reinstall.
     for (const id of persisted.keys()) alreadyNotified.add(id);
     saveNotified();
+    recordTrace("logout-audit", "achievements:reset:hydrated", `user:${persisted.size}`);
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.warn("[achievements] mirror fetch failed; keeping local state", err);
   }
   mirrorReady = true;
   notifyListeners();
+}
+
+/**
+ * @deprecated Use resetAchievementEngine directly for identity transitions.
+ */
+export async function refreshPersistedForUser(userId: string | null): Promise<void> {
+  if (bootedForUserId === userId && mirrorReady) return;
+  return resetAchievementEngine(userId);
 }
 
 /**
