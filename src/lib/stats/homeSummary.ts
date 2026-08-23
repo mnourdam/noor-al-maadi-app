@@ -95,7 +95,7 @@ export function useHomeSummary(): HomeSummary {
     const load = async () => {
       try {
         const local = localCampaignCompletedIds();
-        const server = uid ? await fetchServerCampaignCompletedIds() : new Set<string>();
+        const server = uid ? (await fetchServerCampaignCompletedIds()).ids : new Set<string>();
         if (cancelled) return;
         const unioned = new Set<string>();
         for (const id of local) unioned.add(id);

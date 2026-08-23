@@ -111,7 +111,7 @@ function PersistenceDiagnostics() {
     } else {
       try { setItems(await peekAll(uid)); } catch { setItems([]); }
       setDead(listDeadLetters(uid));
-      try { setServerCampaignCompletionCount((await fetchServerCompletedIds()).size); }
+      try { setServerCampaignCompletionCount((await fetchServerCompletedIds()).ids.size); }
       catch { setServerCampaignCompletionCount(null); }
       try {
         const server = await fetchServerCompletion(IRTH_FIRST_TIME_TUTORIAL.id);

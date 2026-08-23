@@ -252,7 +252,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
           let sticky: string[] = [];
           try {
             const { fetchServerCompletedIds } = await import("@/lib/campaigns/completions");
-            sticky = Array.from(await fetchServerCompletedIds());
+            sticky = Array.from((await fetchServerCompletedIds()).ids);
           } catch { /* offline / transient — proceed without ledger */ }
           mergeCloudSave(save.data, { stickyCampaignIds: sticky });
           autoPushEnabled.current = true;

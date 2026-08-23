@@ -52,7 +52,7 @@ export function AchievementEngineBoot() {
   const canonicalInv = useCanonicalInvestigationProgress();
   const authUserIdRef = useRef<string | null | undefined>(undefined);
   const migratedRef = useRef(false);
-  const [serverCompletedIds, setServerCompletedIds] = useState<readonly string[]>([]);
+  const [serverResult, setServerResult] = useState<{ userId: string | null; ids: readonly string[] }>({ userId: null, ids: [] });
   const [achievementSourcesSettled, setAchievementSourcesSettled] = useState(false);
 
   // V13 Transition Barrier: Capture current identity epoch to invalidate stale pushes.
@@ -78,8 +78,8 @@ export function AchievementEngineBoot() {
         // not know about (post-reinstall, post-conflict-resolution, etc).
         if (!cancelled && uid) {
           try {
-            const ids = await fetchServerCompletedIds();
-            if (!cancelled) setServerCompletedIds([...ids]);
+            const res = await fetchServerCompletedIds();
+            if (!cancelled) setServerResult({ userId: res.userId, ids: [...res.ids] });
           } catch { /* silent */ }
         }
         if (!cancelled) setAchievementSourcesSettled(true);
@@ -99,13 +99,13 @@ export function AchievementEngineBoot() {
         }
         void refreshPersistedForUser(uid);
         if (event === "SIGNED_IN" && uid) {
-          void fetchServerCompletedIds().then(ids => {
-            if (!cancelled) setServerCompletedIds([...ids]);
+          void fetchServerCompletedIds().then(res => {
+            if (!cancelled) setServerResult({ userId: res.userId, ids: [...res.ids] });
           }).catch(() => { /* silent */ }).finally(() => {
             if (!cancelled) setAchievementSourcesSettled(true);
           });
         } else if (event === "SIGNED_OUT") {
-          setServerCompletedIds([]);
+          setServerResult({ userId: null, ids: [] });
           setAchievementSourcesSettled(true);
         } else {
           setAchievementSourcesSettled(true);
@@ -117,8 +117,8 @@ export function AchievementEngineBoot() {
     const onChange = () => {
       const uid = authUserIdRef.current;
       if (!uid) return;
-      void fetchServerCompletedIds().then(ids => {
-        if (!cancelled) setServerCompletedIds([...ids]);
+      void fetchServerCompletedIds().then(res => {
+        if (!cancelled) setServerResult({ userId: res.userId, ids: [...res.ids] });
       }).catch(() => { /* silent */ });
     };
     if (typeof window !== "undefined") {
@@ -152,7 +152,35 @@ export function AchievementEngineBoot() {
     
     const profileSource = profile.campaignsCompleted ?? [];
     const localSource = Array.from(localCompletedIds());
-    const serverSource = serverCompletedIds;
+    
+    // V13 SOURCE-LEVEL FIX: Validate ownership of server results before unioning.
+    const rawServerCount = serverResult.ids.length;
+    let acceptedServerCount = 0;
+    let rejectedReason = "";
+
+    if (!userId) {
+      rejectedReason = "guest_mode";
+    } else if (serverResult.userId !== userId) {
+      rejectedReason = "userId_mismatch";
+    } else if (intendedOwner !== activeOwner) {
+      rejectedReason = "owner_mismatch";
+    } else {
+      acceptedServerCount = rawServerCount;
+    }
+
+    const serverSource = acceptedServerCount > 0 ? serverResult.ids : [];
+
+    // V13 Diagnostic: Log server completion source evaluation
+    import("@/lib/diag-trace").then(m => {
+      m.recordTrace("logout-audit", "ACHIEVEMENT_SERVER_COMPLETION_SOURCE", JSON.stringify({
+        activeOwner,
+        currentUserId: userId,
+        resultOwnerUserId: serverResult.userId,
+        rawServerCount,
+        acceptedServerCount,
+        rejectedReason
+      }));
+    }).catch(() => {});
 
     const out = new Set<string>();
     for (const id of profileSource) if (id) out.add(id);
@@ -173,7 +201,7 @@ export function AchievementEngineBoot() {
     }).catch(() => {});
 
     return [...out];
-  }, [profile.campaignsCompleted, serverCompletedIds, hydrated, identityEpoch, userId]);
+  }, [profile.campaignsCompleted, serverResult, hydrated, identityEpoch, userId]);
 
 
 
