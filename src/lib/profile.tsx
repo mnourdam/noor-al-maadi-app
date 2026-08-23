@@ -368,8 +368,12 @@ function hydrateFromStorage(): ProfileState | null {
       source: finalSource,
       logicalKey: STORAGE_KEY,
       physicalKey: rawLocal ? "mapped-by-partition" : STORAGE_KEY,
-      data: parsedData
+      data: parsedData,
+      points: (parsedData as any)?.points,
+      dinars: (parsedData as any)?.dinars,
+      loggedIn: (parsedData as any)?.loggedIn
     }));
+
 
     if (!finalRaw) return null;
     const parsed = JSON.parse(finalRaw);
