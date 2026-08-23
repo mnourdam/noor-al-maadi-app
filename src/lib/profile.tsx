@@ -454,7 +454,22 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     const intendedOwner = profileOwnerRef.current;
     const activeOwnerAtFlush = getActiveOwner();
     
-    // ROOT CAUSE MITIGATION: Never write a profile if the owner has changed.
+    // V13 POLLUTION ROOT CAUSE FIX:
+    // If we are about to write but the owner has ALREADY changed, this is a stale 
+    // write from the previous identity's React closure.
+    if (intendedOwner !== activeOwnerAtFlush) {
+      import("@/lib/diag-trace").then(m => {
+        m.recordTrace("logout-audit", "PROFILE_POLLUTION_PREVENTED", JSON.stringify({
+          intendedOwner,
+          activeOwnerAtFlush,
+          loggedIn: profile.loggedIn,
+          points: profile.points,
+          caller: "ProfileProvider:persistenceEffect"
+        }));
+      }).catch(() => {});
+      return;
+    }
+
     // If ProfileProvider is still holding Account A's state but activeOwner is Guest,
     // this guard stops the write.
     if (intendedOwner !== activeOwnerAtFlush) {
