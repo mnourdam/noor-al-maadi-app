@@ -1,50 +1,52 @@
-# Plan - Implement Symmetric Friend Comparison (V12 BUG 2)
+# V13 BUG 2 — GOOGLE PKCE FAILURE AFTER LOGOUT
 
-Implement a minimal safe fix to ensure friend comparisons are symmetric by anchoring both "Me" and "Friend" stats to the server's public profile authoritative source, following a strict synchronization sequence.
+## Forensic Report
 
-## Proposed Changes
+### Root Cause
+The "PKCE code verifier not found" error on the first login attempt after logout is caused by a **race condition** between the `resetForIdentityChange` async cleanup and the `signInWithGoogleNative` flow.
 
-### 1. Unified Data Fetching (`src/routes/compare.$id.tsx`)
-- Update `ComparePage` to manage a new `meProfile` state (public projection) alongside the `other` profile state.
-- Implement a `useEffect` that follows this strict sequence:
-  1. **Sync First**: `await syncNow()` from `AccountProvider` if authenticated to flush latest local stats to the cloud.
-  2. **Fetch authoritative snapshots**: ONLY after `syncNow` finishes, `await Promise.all([fetchGatedProfileById(currentUserId), fetchGatedProfileById(friendId)])`.
-- Completely remove the derivation of "Me" stats from the local `useProfile()` hook within the comparison logic.
-- Ensure all comparison statistics are rendered exclusively from these server-side snapshots.
+1. **Logout Triggered**: When the user logs out, `supabase.auth.signOut()` is called, triggering a `SIGNED_OUT` event.
+2. **Cleanup Starts**: `AccountProvider` catches this and calls `resetForIdentityChange`, which is an `async` function.
+3. **Identity Swap**: `resetForIdentityChange` calls `setActiveOwnerInternal(guest)`, which instantly repoints `localStorage` to the guest namespace.
+4. **Login Tapped**: The user immediately taps "Login with Google". The UI is available because React hasn't finished its cycle yet.
+5. **Verifier Written**: `signInWithGoogleNative` generates a PKCE verifier and writes it using `ImmediateNativePkceStorage`.
+6. **Verifier Leak**: Although the verifier key is in `SHARED_PREFIXES` (device-global), `resetForIdentityChange` continues to run in the background. It imports modules like `src/lib/profile.tsx` which re-trigger `hydrateFromStorage()`.
+7. **The Killer**: `nativePkceClient` is a module-level **singleton** in `src/lib/native-auth.ts`. It was initialized during the *previous* session (Account A). When `signInWithOAuth` is called, it uses this existing client instance. If the client state is stale or inconsistent during the identity transition, the verifier storage logic can fail or write to a location that is later cleared by the final stages of the identity reset.
 
-### 2. Loading and Offline Resilience
-- Add a unified loading state covering the sync and subsequent fetches.
-- If `syncNow` or the fetches fail (offline/server unavailable), show a symmetric "Comparison Unavailable" view with a retry option.
-- Explicitly avoid falling back to asymmetric local/server data on failure.
+Specifically, `supabase.auth.signOut()` on the main client doesn't clear the `nativePkceClient` state. When the new login starts, the `nativePkceClient` might still think it has a session or be in an inconsistent state regarding its internal storage adapter.
 
-### 3. Loop Prevention
-- Ensure `syncNow` is called exactly once per mount or user change using a ref or stable dependency.
-- Prevent redundant network requests on rerenders.
+### Why second attempt succeeds
+By the second attempt, all async cleanup from the first logout has finished, and `nativePkceClient` has been "poked" into a fresh state by the failure of the first attempt (which likely cleared some internal state upon the error).
+
+## Design Plan
+
+### 1. Atomic Auth Client Reset
+We must ensure the `nativePkceClient` singleton is explicitly reset during logout so the next login attempt starts with a completely fresh, unauthenticated Supabase client instance.
+
+### 2. Synchronization Barrier
+We will add a flag to `AccountProvider` (or use the existing `loadingSession`) to prevent the Google Login button from being actionable until `resetForIdentityChange` has completed its critical phase.
+
+### 3. Storage Key Integrity
+We will verify that `NATIVE_CODE_VERIFIER_KEY` is absolutely exempt from any partition-based purging. (Already verified: it is in `SHARED_PREFIXES`).
 
 ## Technical Details
-- **Sequence**: `syncNow()` -> `fetchGatedProfileById` (self & friend).
-- **Data Source**: Authoritative server-side public projection for both sides.
-- **Constraints**: No changes to RPC, RLS, database schema, campaign progression, or XP/Level formulas.
 
-## Verification Plan
+### `src/lib/native-auth.ts`
+- Export a `resetNativePkceClient()` function that sets the singleton to `null`.
+- This ensures `getNativePkceSupabaseClient()` creates a fresh instance for the new login flow.
 
-### 1. Automated Checks
-- `bun run typecheck`
-- `npm run build:android:web` (Crucial for Android parity verification)
+### `src/lib/identity/reset.ts`
+- Call `resetNativePkceClient()` inside the `resetForIdentityChange` flow.
 
-### 2. Runtime/Preview Verification
-- Verify the `syncNow` await sequence via logs/tracing.
-- Confirm both sides use the same RPC source.
-- Verify that local mutations don't appear in comparison until sync completes.
-- Test offline/error states to ensure symmetry is maintained.
+### `src/lib/account.tsx`
+- Ensure the `signOut` handler awaits `resetForIdentityChange` before allowing new auth actions.
+- The `busy` state in `src/routes/auth.tsx` should be tied to the account's readiness.
 
-### 3. Manual Verification Checklist
-- [ ] syncNow awaited before profile fetch (YES)
-- [ ] Self/friend fetch parallel AFTER sync (YES)
-- [ ] Local profile removed from comparison calculation (YES)
-- [ ] A→B / B→A symmetry (PASS)
-- [ ] Offline/error state (PASS)
-- [ ] Duplicate sync loop (NONE)
-- [ ] Typecheck (PASS)
-- [ ] npm run build:android:web (PASS)
+## Safety Invariants
+- **Durable PKCE**: Capacitor Preferences backup remains intact.
+- **Account Isolation**: Bug 3 fixes are preserved; `resetNativePkceClient` only touches the auth transport client, not user data.
+- **No Weakening**: PKCE remains mandatory and secured.
 
+## Verification
+- **Test B/D**: A → Logout → Google Login B must pass on the first attempt.
+- **Test G/H**: Isolation for Bug 3 and Bug 4 must remain PASS.
