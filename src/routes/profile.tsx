@@ -700,17 +700,6 @@ function OverviewTab({
 function LegacyAccountDiagPanel() {
   return null;
 }
-                  </div>
-                );
-              })}
-              {entries.length === 0 && <div className="italic text-white/20 py-2 text-center">لا يوجد سجل حالياً</div>}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 
 function AchievementMini({ view }: { view: AchievementView }) {
