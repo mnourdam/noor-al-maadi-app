@@ -1,8 +1,9 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { countMyUnreadFeedback } from "@/lib/feedback/api";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { AccountDiagPanel } from "@/components/AccountDiagPanel";
 import {
   Crown, Flame, Star, Trophy, LogOut, Volume2, BellRing, Sparkles, Info,
   ChevronLeft, IdCard, Pencil, Check, Calendar, Compass, Heart, MapPin,
