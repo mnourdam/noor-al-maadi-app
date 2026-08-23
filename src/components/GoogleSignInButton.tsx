@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { isCapacitorNative, signInWithGoogleNative } from "@/lib/native-auth";
 import { setGoogleAuthIntent, type GoogleAuthIntent } from "@/lib/googleAuthResult";
 import { peekAuthOrigin } from "@/lib/authOrigin";
+import { useAccount } from "@/lib/account";
 
 type Props = {
   /** Same-origin path to return to after successful sign-in (web only). */
@@ -40,9 +41,10 @@ export function GoogleSignInButton({
   className,
 }: Props) {
   const [busy, setBusy] = useState(false);
+  const { isAuthResetting } = useAccount() || { isAuthResetting: false };
 
   async function handleClick() {
-    if (busy) return;
+    if (busy || isAuthResetting) return;
     setBusy(true);
     try {
 
@@ -114,7 +116,7 @@ export function GoogleSignInButton({
     <button
       type="button"
       onClick={handleClick}
-      disabled={busy}
+      disabled={busy || isAuthResetting}
       dir="rtl"
       className={
         className ??

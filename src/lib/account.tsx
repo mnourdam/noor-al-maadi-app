@@ -32,6 +32,7 @@ interface AccountCtx {
   displayName: string;
   loadingSession: boolean;
   syncing: boolean;
+  isAuthResetting: boolean;
   lastSyncAt: number | null;
   signUp: (args: { email: string; password: string; username: string; displayName?: string }) => Promise<{ ok: boolean; error?: string }>;
   signIn: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
@@ -54,6 +55,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const [loadingSession, setLoadingSession] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [lastSyncAt, setLastSyncAt] = useState<number | null>(null);
+  const [isAuthResetting, setIsAuthResetting] = useState(false);
 
   // Block auto-push while we're resolving a conflict or initial hydration.
   const autoPushEnabled = useRef(false);
@@ -86,6 +88,11 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       const u = session?.user ?? null;
       if (event === "SIGNED_OUT") {
         setReconciliationState("offline-local");
+        // V13 Bug 2: Ensure the native PKCE client reference is reset on all 
+        // SIGNED_OUT transitions, not just explicit logout.
+        try {
+          import("@/lib/native-auth").then(m => m.resetNativePkceClient()).catch(() => {});
+        } catch { /* ignore dynamic import failure */ }
       } else if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
         setReconciliationState(u ? "loading-local" : "offline-local");
       }
@@ -633,7 +640,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     user,
     account,
     displayName,
-    loadingSession,
+      isAuthResetting,
     syncing,
     lastSyncAt,
     signUp,

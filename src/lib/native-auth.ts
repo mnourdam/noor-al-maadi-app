@@ -211,6 +211,17 @@ export async function signInWithGoogleNative(): Promise<{ ok: boolean; error?: s
 
 let nativePkceClient: SupabaseClient<Database> | null = null;
 
+/**
+ * Nullifies the module-level singleton Supabase client.
+ * Called during logout or identity switches to ensure the next native OAuth 
+ * flow uses a fresh client instance, preventing PKCE code-verifier mismatches 
+ * without affecting durable storage.
+ */
+export function resetNativePkceClient(): void {
+  console.info("[native-auth] resetNativePkceClient called");
+  nativePkceClient = null;
+}
+
 function getNativePkceSupabaseClient(): SupabaseClient<Database> {
   if (nativePkceClient) return nativePkceClient;
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
