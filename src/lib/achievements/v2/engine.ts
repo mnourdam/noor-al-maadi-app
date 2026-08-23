@@ -416,10 +416,22 @@ export function pushCanonical(patch: Partial<CanonicalInputs>): void {
     if (key === "profile") continue; // handled above
     (inputs as unknown as Record<string, unknown>)[key] = patch[key] as unknown;
     changed.push(key as CanonicalDomain);
+
+    // V13 Diagnostic Trace: Log campaign updates
+    if (key === "campaigns") {
+      recordTrace("logout-audit", "ACHIEVEMENT_CANONICAL_CAMPAIGNS", JSON.stringify({
+        owner: inputs.profile.userId ? `user:${inputs.profile.userId}` : "guest",
+        caller: "pushCanonical",
+        completedIdsCount: inputs.campaigns.completedIds.length,
+        inProgressIdsCount: 0,
+        totalCompleted: inputs.campaigns.completedIds.length
+      }));
+    }
   }
   if (changed.length === 0) return;
   void runCycle(changed, liveTransitionsReady ? "live_gameplay_unlock" : "historical_reconciliation");
 }
+
 
 
 let cycleInFlight: Promise<void> | null = null;
