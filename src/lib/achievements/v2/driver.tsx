@@ -158,7 +158,8 @@ export function AchievementEngineBoot() {
     // internal profile userId matches the profile we are currently reading from.
     // This prevents Account A's hook-driven re-render (which fires after logout 
     // but before the hook updates to Guest) from polluting the Guest engine.
-    const engineUserId = getPersisted().size === 0 && !profile.loggedIn ? null : profile.loggedIn ? (profile as any).userId || authUserIdRef.current : null;
+    if (userId !== authUserIdRef.current && userId !== null) return;
+
     
     pushCanonical({
       campaigns: { completedIds: unionedCampaigns },
