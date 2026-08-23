@@ -52,7 +52,7 @@ export function recordTrace(
     arr.push({
       ts: new Date().toISOString(),
       stage,
-      detail: detail == null ? undefined : String(detail).slice(0, 200),
+      detail: detail == null ? undefined : String(detail).slice(0, 1000),
     });
     while (arr.length > MAX_ENTRIES) arr.shift();
     s.setItem(keyFor(channel), JSON.stringify(arr));
