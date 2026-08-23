@@ -78,11 +78,17 @@ function NativeAuthDiagnostics() {
   const [nativeTrace, setNativeTrace] = useState<TraceEntry[]>([]);
   const [signupTrace, setSignupTrace] = useState<TraceEntry[]>([]);
   const [deepLinkTrace, setDeepLinkTrace] = useState<TraceEntry[]>([]);
+  const [logoutTrace, setLogoutTrace] = useState<TraceEntry[]>([]);
+  const [pkceAuditTrace, setPkceAuditTrace] = useState<TraceEntry[]>([]);
+  const [exportAuditTrace, setExportAuditTrace] = useState<TraceEntry[]>([]);
 
   const refreshTraces = useCallback(() => {
     setNativeTrace(readTrace("native-auth"));
     setSignupTrace(readTrace("signup"));
     setDeepLinkTrace(readTrace("deep-link"));
+    setLogoutTrace(readTrace("logout-audit"));
+    setPkceAuditTrace(readTrace("pkce-audit"));
+    setExportAuditTrace(readTrace("export-audit"));
   }, []);
 
   useEffect(() => {
@@ -311,6 +317,18 @@ function NativeAuthDiagnostics() {
             </div>
           ))
         )}
+      </Section>
+
+      <Section title="V13 Logout State Leak Audit">
+        <TraceView entries={logoutTrace} onClear={() => { clearTrace("logout-audit"); refreshTraces(); }} />
+      </Section>
+
+      <Section title="V13 PKCE & Auth Barrier Audit">
+        <TraceView entries={pkceAuditTrace} onClear={() => { clearTrace("pkce-audit"); refreshTraces(); }} />
+      </Section>
+
+      <Section title="V13 Android Export Audit">
+        <TraceView entries={exportAuditTrace} onClear={() => { clearTrace("export-audit"); refreshTraces(); }} />
       </Section>
 
       <Section title="Google OAuth trace (native-auth)">
