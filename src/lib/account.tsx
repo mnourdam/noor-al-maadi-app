@@ -43,6 +43,9 @@ interface AccountCtx {
   isUsernameAvailable: (username: string) => Promise<boolean>;
 }
 
+import { recordTrace } from "@/lib/diag-trace";
+
+
 const Ctx = createContext<AccountCtx | null>(null);
 
 const PUSH_DEBOUNCE_MS = 1500;

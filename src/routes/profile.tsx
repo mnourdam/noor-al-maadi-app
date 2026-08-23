@@ -1424,7 +1424,8 @@ function SettingsTab({
       )}
 
       {/* ============== DIAGNOSTICS ============== */}
-      <AccountDiagPanel />
+      <HeartsDiagPanel />
+
 
       {profile.loggedIn && <DeleteAccountSection />}
 

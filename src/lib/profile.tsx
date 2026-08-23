@@ -532,8 +532,21 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       }));
     }).catch(() => {});
 
+    const prev = readPersistedProfileState();
+    if (prev.hearts !== profile.hearts || prev.heartsAt !== profile.heartsAt) {
+      recordTrace("hearts-audit", "HEARTS_WRITE", JSON.stringify({
+        intendedOwner,
+        activeOwner: activeOwnerAtFlush,
+        destination: "localStorage",
+        before: { hearts: prev.hearts, heartsAt: prev.heartsAt },
+        after: { hearts: profile.hearts, heartsAt: profile.heartsAt },
+        caller: "persistence-effect"
+      }));
+    }
+
     localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
   }, [profile, hydrated]);
+
 
   // Live streak-expiry watcher. While the app stays open across local
   // midnight, the stored streak value would otherwise stay stale (e.g. 7)
