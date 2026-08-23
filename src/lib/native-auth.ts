@@ -23,6 +23,8 @@ import { recordTrace } from "@/lib/diag-trace";
 import { getDurableAuthStorage } from "@/lib/nativeAuthStorage";
 import { setRecoveryMode } from "@/lib/recoveryMode";
 import { setAuthReady } from "./identity/guard";
+import { getActiveOwner } from "./identity/owner";
+import { getIdentityEpochSafe } from "./offline/flush";
 
 // Published bounce endpoint that returns an HTML page which immediately
 // redirects Chrome Custom Tab to the APK's custom-scheme deep link (with an
@@ -124,7 +126,11 @@ export async function signInWithGoogleNative(): Promise<{ ok: boolean; error?: s
     // block before Browser.open().
     const clientInit = await tracedAwait(
       "pkce-client-init",
-      async () => getNativePkceSupabaseClient(),
+      async () => {
+        const client = getNativePkceSupabaseClient();
+        recordTrace("pkce-audit", "pkceClient:create/reuse");
+        return client;
+      },
       3000,
     );
     if (!clientInit.ok) {
@@ -186,6 +192,7 @@ export async function signInWithGoogleNative(): Promise<{ ok: boolean; error?: s
     }
 
     console.info("[native-auth] PKCE verifier persisted durably. opening custom tab", sanitizeOAuthUrl(oauthUrl));
+    recordTrace("pkce-audit", "pkce:beforeExternalNavigation");
     const open = await tracedAwait(
       "browser-open",
       () => Browser.open({ url: oauthUrl, presentationStyle: "fullscreen" }),
@@ -288,6 +295,7 @@ export async function handleNativeAuthCallback(url: string | null | undefined): 
 
   console.info("[IrthAuth] CALLBACK_ACCEPTED", sanitizeOAuthUrl(url));
   recordTrace("native-auth", "callback-accepted");
+  recordTrace("pkce-audit", "deep-link:received", url.split("?")[0]);
   
   let exchangedOk = false;
   let exchangeError: string | null = null;
@@ -353,16 +361,22 @@ export async function handleNativeAuthCallback(url: string | null | undefined): 
       } else if (code) {
         console.info("[IrthAuth] EXCHANGE_START");
         recordTrace("native-auth", "EXCHANGE_START");
+        recordTrace("pkce-audit", "pkce:beforeExchange", JSON.stringify({
+          owner: getActiveOwner(),
+          epoch: getIdentityEpochSafe()
+        }));
         const nativeClient = getNativePkceSupabaseClient();
         const { data, error } = await nativeClient.auth.exchangeCodeForSession(code);
         if (error) {
           exchangeError = error.message;
           console.error("[IrthAuth] EXCHANGE_FAILED", error.message);
           recordTrace("native-auth", "EXCHANGE_FAILED", error.message);
+          recordTrace("pkce-audit", "pkce:exchangeFailure", error.message);
           stashOAuthError({ reason: "OAUTH_EXCHANGE_FAILED", message: error.message, ts: Date.now() });
         } else {
           console.info("[IrthAuth] EXCHANGE_SUCCESS");
           recordTrace("native-auth", "EXCHANGE_SUCCESS");
+          recordTrace("pkce-audit", "pkce:exchangeSuccess");
           
           // SUCCESS: Mark as processed to prevent any late duplicate calls from showing errors
           processedCodes.add(code);
