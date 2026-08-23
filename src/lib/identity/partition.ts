@@ -122,10 +122,15 @@ function mapKey(key: string): string {
   // V13 Physical Android Diagnostics - Profile read/write mapping
   if (key === "hakaya.profile.v2") {
     import("../diag-trace").then(m => {
+      const exists = typeof window !== "undefined" && window.localStorage.getItem(physical) !== null;
+      const legacyExists = typeof window !== "undefined" && window.localStorage.getItem(key) !== null;
+      
       m.recordTrace("logout-audit", "storage-mapping", JSON.stringify({
-        logical: key,
         owner: owner,
-        physical: physical
+        logical: key,
+        physical: physical,
+        exists,
+        legacyExists
       }));
     }).catch(() => {});
   }
@@ -180,6 +185,14 @@ function migrateLegacyKeys(store: Storage, owner: OwnerKey): void {
 
       try {
         const v = store.getItem(k);
+        const parseSafe = (val: string | null) => {
+          if (!val) return null;
+          try {
+            const p = JSON.parse(val);
+            return { name: p.name, loggedIn: p.loggedIn, points: p.points, dinars: p.dinars };
+          } catch { return "error"; }
+        };
+
         let copyPerformed = false;
         if (v !== null && store.getItem(target) === null) {
           store.setItem(target, v);
@@ -192,7 +205,8 @@ function migrateLegacyKeys(store: Storage, owner: OwnerKey): void {
         log("result", JSON.stringify({
           key: k,
           copyPerformed,
-          legacyRemoved: removed
+          legacyRemoved: removed,
+          data: k === "hakaya.profile.v2" ? parseSafe(v) : undefined
         }));
       } catch (e) { 
         log("error", (e as Error).message);
@@ -239,11 +253,13 @@ export function installIdentityPartition(): void {
       import("../diag-trace").then(m => {
         m.recordTrace("logout-audit", "profile-read", JSON.stringify({
           owner: getActiveOwner(),
+          logical: logical,
           physical: mapped,
           exists: val !== null,
           data: parseSafe(val),
           legacyExists: legacyVal !== null,
-          legacyData: parseSafe(legacyVal)
+          legacyData: parseSafe(legacyVal),
+          returned: val !== null ? (ownerOfPhysicalKey(mapped) || "legacy/global") : (legacyVal !== null ? "legacy/fallback" : "null")
         }));
       }).catch(() => {});
     }
@@ -255,6 +271,7 @@ export function installIdentityPartition(): void {
     const mapped = mapKey(logical);
     
     if (logical === "hakaya.profile.v2" && mapping) {
+      const legacyVal = getItem.call(this, logical);
       const parseSafe = (v: string | null) => {
         if (!v) return null;
         try {
@@ -265,8 +282,11 @@ export function installIdentityPartition(): void {
       import("../diag-trace").then(m => {
         m.recordTrace("logout-audit", "profile-write", JSON.stringify({
           owner: getActiveOwner(),
+          logical: logical,
           physical: mapped,
-          data: parseSafe(value)
+          data: parseSafe(value),
+          legacyExists: legacyVal !== null,
+          legacyData: parseSafe(legacyVal)
         }));
       }).catch(() => {});
     }

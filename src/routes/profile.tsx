@@ -701,7 +701,15 @@ function AccountDiagPanel() {
   const [open, setOpen] = useState(false);
   const [version, setVersion] = useState(0);
 
-  const entries = readTrace("logout-audit");
+  const [entries, setEntries] = useState(() => readTrace("logout-audit"));
+
+  useEffect(() => {
+    if (!open) return;
+    const t = setInterval(() => {
+      setEntries(readTrace("logout-audit"));
+    }, 1000);
+    return () => clearInterval(t);
+  }, [open, version]);
 
   const campaignsCount = profile.campaignsCompleted?.length ?? 0;
   
@@ -753,15 +761,39 @@ function AccountDiagPanel() {
               </button>
             </div>
             <div className="max-h-60 overflow-y-auto space-y-1 bg-black/60 p-3 rounded-xl border border-white/5 scrollbar-thin">
-              {entries.map((entry, i) => (
-                <div key={i} className="flex gap-2 text-white/40">
-                  <span className="opacity-50 shrink-0">[{entry.ts.split('T')[1].slice(0, 8)}]</span>
-                  <span className="flex-1 break-all">
-                    <span className="text-white/70">{entry.stage}</span>
-                    {entry.detail ? <span className="text-white/30 ml-1">→ {entry.detail}</span> : ""}
-                  </span>
-                </div>
-              ))}
+              {entries.map((entry, i) => {
+                let detailObj: any = null;
+                if (entry.detail?.startsWith("{")) {
+                  try { detailObj = JSON.parse(entry.detail); } catch { /* ignore */ }
+                }
+
+                return (
+                  <div key={i} className="flex flex-col gap-1 py-1 border-b border-white/5 last:border-0">
+                    <div className="flex gap-2 text-white/40">
+                      <span className="opacity-50 shrink-0">[{entry.ts.split('T')[1].slice(0, 8)}]</span>
+                      <span className="flex-1 font-bold text-white/70">{entry.stage}</span>
+                    </div>
+                    {detailObj ? (
+                      <div className="mr-6 space-y-0.5 text-[9px] text-white/30 bg-white/5 p-1.5 rounded-lg border border-white/5">
+                        {Object.entries(detailObj).map(([k, v]) => (
+                          <div key={k} className="flex justify-between gap-4">
+                            <span className="opacity-60">{k}:</span>
+                            <span className={
+                              k === "returned" || k === "copyPerformed" ? "text-sky-300" :
+                              k === "exists" || k === "legacyExists" || k === "sourceExists" ? (v ? "text-emerald-400" : "text-rose-400") :
+                              "text-white/60"
+                            }>
+                              {typeof v === "object" ? JSON.stringify(v) : String(v)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : entry.detail ? (
+                      <div className="mr-6 text-white/30 italic">→ {entry.detail}</div>
+                    ) : null}
+                  </div>
+                );
+              })}
               {entries.length === 0 && <div className="italic text-white/20 py-2 text-center">لا يوجد سجل حالياً</div>}
             </div>
           </div>
