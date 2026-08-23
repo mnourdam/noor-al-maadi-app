@@ -119,16 +119,17 @@ function mapKey(key: string): string {
   const owner = getActiveOwner();
   const physical = physicalKey(key, owner);
   
-  // V13 Physical Android Diagnostics - Profile read/write mapping
-  if (key === "hakaya.profile.v2") {
+  // V13 Physical Android Diagnostics - Profile/Progression mapping
+  const logMappedKeys = ["hakaya.profile.v2", "irth.campaign_completions.v1", "irth.achievements.v2.guest_unlocks"];
+  if (logMappedKeys.includes(key)) {
     import("../diag-trace").then(m => {
       const exists = typeof window !== "undefined" && window.localStorage.getItem(physical) !== null;
       const legacyExists = typeof window !== "undefined" && window.localStorage.getItem(key) !== null;
       
       m.recordTrace("logout-audit", "storage-mapping", JSON.stringify({
-        owner: owner,
+        owner,
         logical: key,
-        physical: physical,
+        physical,
         exists,
         legacyExists
       }));
@@ -245,28 +246,37 @@ export function installIdentityPartition(): void {
     const mapped = mapKey(logical);
     const val = getItem.call(this, mapped);
 
-    if (logical === "hakaya.profile.v2" && mapping) {
-      const legacyVal = getItem.call(this, logical);
-      const parseSafe = (v: string | null) => {
-        if (!v) return null;
-        try {
-          const p = JSON.parse(v);
-          return { name: p.name, loggedIn: p.loggedIn, points: p.points, dinars: p.dinars };
-        } catch { return "error"; }
-      };
+    if (mapping) {
+      const isAuditedKey = logical === "hakaya.profile.v2" || 
+                           logical === "irth.campaign_completions.v1" ||
+                           logical === "irth.achievements.v2.guest_unlocks";
+      
+      if (isAuditedKey) {
+        const legacyVal = getItem.call(this, logical);
+        const parseSummary = (v: string | null) => {
+          if (!v) return null;
+          try {
+            const p = JSON.parse(v);
+            if (logical === "hakaya.profile.v2") return { name: p.name, loggedIn: p.loggedIn, points: p.points };
+            if (Array.isArray(p)) return `array:${p.length}`;
+            if (p && typeof p === "object") return `keys:${Object.keys(p).length}`;
+            return "scalar";
+          } catch { return "error"; }
+        };
 
-      import("../diag-trace").then(m => {
-        m.recordTrace("logout-audit", "profile-read", JSON.stringify({
-          owner: getActiveOwner(),
-          logical: logical,
-          physical: mapped,
-          exists: val !== null,
-          data: parseSafe(val),
-          legacyExists: legacyVal !== null,
-          legacyData: parseSafe(legacyVal),
-          returned: val !== null ? (ownerOfPhysicalKey(mapped) || "legacy/global") : (legacyVal !== null ? "legacy/fallback" : "null")
-        }));
-      }).catch(() => {});
+        import("../diag-trace").then(m => {
+          m.recordTrace("logout-audit", "progression-read", JSON.stringify({
+            owner: getActiveOwner(),
+            logical,
+            physical: mapped,
+            exists: val !== null,
+            data: parseSummary(val),
+            legacyExists: legacyVal !== null,
+            legacyData: parseSummary(legacyVal),
+            returned: val !== null ? (ownerOfPhysicalKey(mapped) || "legacy/global") : (legacyVal !== null ? "legacy/fallback" : "null")
+          }));
+        }).catch(() => {});
+      }
     }
     return val;
   };
@@ -316,19 +326,21 @@ export function installIdentityPartition(): void {
     
     if (isProgressionKey && mapping) {
       import("../diag-trace").then(m => {
-        const parseSafe = (v: string | null) => {
+        const parseSummary = (v: string | null) => {
           if (!v) return null;
           try {
-            const parsed = JSON.parse(v);
-            if (logical === "hakaya.profile.v2") return { name: parsed.name, points: parsed.points, loggedIn: parsed.loggedIn };
-            return `count:${Object.keys(parsed).length}`;
+            const p = JSON.parse(v);
+            if (logical === "hakaya.profile.v2") return { name: p.name, loggedIn: p.loggedIn, points: p.points };
+            if (Array.isArray(p)) return `array:${p.length}`;
+            if (p && typeof p === "object") return `keys:${Object.keys(p).length}`;
+            return "scalar";
           } catch { return "error"; }
         };
-        m.recordTrace("logout-audit", "PROFILE_WRITE_COMMITTED", JSON.stringify({
+        m.recordTrace("logout-audit", "PROGRESSION_WRITE", JSON.stringify({
           owner: activeOwner,
-          logical: logical,
+          logical,
           physical: mapped,
-          data: parseSafe(value)
+          data: parseSummary(value)
         }));
       }).catch(() => {});
     }
