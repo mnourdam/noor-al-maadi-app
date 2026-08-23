@@ -204,24 +204,26 @@ export async function recordCampaignCompletion(p: {
  * Fetch the server's sticky completion ledger for the current user.
  * Returns an empty set when signed-out or offline; callers are expected
  * to UNION the result with `localCompletedIds()`.
+ * 
+ * V13: Returns the userId that produced this result to allow ownership validation.
  */
-export async function fetchServerCompletedIds(): Promise<Set<string>> {
+export async function fetchServerCompletedIds(): Promise<{ userId: string | null; ids: Set<string> }> {
   const uid = await currentUserId();
-  if (!uid) return new Set();
+  if (!uid) return { userId: null, ids: new Set() };
   try {
     const { data, error } = await supabase
       .from("user_campaign_completions" as any)
       .select("campaign_id")
       .eq("user_id", uid);
-    if (error || !Array.isArray(data)) return new Set();
+    if (error || !Array.isArray(data)) return { userId: uid, ids: new Set() };
     const ids = new Set<string>();
     for (const row of data as Array<{ campaign_id?: string | null }>) {
       if (row?.campaign_id) {
         normalizeIdentifier(row.campaign_id).forEach(v => ids.add(v));
       }
     }
-    return ids;
-  } catch { return new Set(); }
+    return { userId: uid, ids };
+  } catch { return { userId: uid, ids: new Set() }; }
 }
 
 /**
@@ -261,7 +263,7 @@ export async function unionCompletedIds(
   
   // 3) Server Ledger (Stable Source of Truth)
   const server = await fetchServerCompletedIds();
-  for (const id of server) {
+  for (const id of server.ids) {
     normalizeIdentifier(id).forEach(v => out.add(v));
   }
   
