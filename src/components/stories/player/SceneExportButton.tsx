@@ -117,11 +117,12 @@ export function SceneExportButton({
 
         console.log(`[IrthExport] android_save_ok uri=${saveResult.uri}`);
         
-        await Share.share({
+        const shareResult = Share.share({
           title: storyTitle ?? "إرث",
           text: storyTitle ?? "إرث",
           url: saveResult.uri,
         });
+        await shareResult;
         
         console.log(`[IrthExport] android_share_dispatched`);
       } else {
