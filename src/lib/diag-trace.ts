@@ -14,7 +14,9 @@ export type TraceChannel =
   | "campaign-persistence"
   | "tutorial"
   | "achievement"
-  | "export-audit";
+  | "export-audit"
+  | "logout-audit"
+  | "pkce-audit";
 
 export interface TraceEntry {
   ts: string;          // ISO timestamp

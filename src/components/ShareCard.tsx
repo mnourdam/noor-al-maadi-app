@@ -256,17 +256,19 @@ export function ShareCard(props: ShareCardProps) {
 
   const onDownload = useCallback(async () => {
     if (!ready || busy) return;
-    recordTrace("export-audit", "EXPORT_1_CLICK");
+    recordTrace("export-audit", "export:start");
+    recordTrace("export-audit", "canvas:ready", ready);
     setBusy("download");
     try {
+      recordTrace("export-audit", "canvas:toBlob:start");
       const blob = await canvasToBlob(canvasRef.current);
-      recordTrace("export-audit", "EXPORT_2_CANVAS_READY");
+      recordTrace("export-audit", "canvas:toBlob:end");
       if (!blob) { 
         recordTrace("export-audit", "EXPORT_ERROR", "canvasToBlob_null");
         toast.error("تعذر تجهيز البطاقة، حاول مجددًا"); 
         return; 
       }
-      recordTrace("export-audit", "EXPORT_3_BLOB_READY", `size=${blob.size}`);
+      recordTrace("export-audit", "blob:ready", `size=${blob.size}, type=${blob.type}`);
 
       const res = await downloadImage({
         jobId: `identity-card-download-${cardNumber}`,
@@ -290,7 +292,7 @@ export function ShareCard(props: ShareCardProps) {
         toast.error(msg);
       }
     } finally {
-      recordTrace("export-audit", "EXPORT_10_FINALLY");
+      recordTrace("export-audit", "export:finally");
       setBusy(null);
     }
   }, [ready, busy, cardNumber, filenameBase]);

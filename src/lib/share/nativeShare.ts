@@ -40,6 +40,7 @@ export function canUseNativeShare(): boolean {
  * with large binary string builds on Android.
  */
 function blobToBase64(blob: Blob): Promise<string> {
+  recordTrace("export-audit", "fileReader:start");
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
@@ -54,6 +55,7 @@ function blobToBase64(blob: Blob): Promise<string> {
         reject(new Error("Failed to extract base64 from DataURL"));
         return;
       }
+      recordTrace("export-audit", "fileReader:end", `len=${base64.length}`);
       resolve(base64);
     };
     reader.onerror = () => reject(reader.error || new Error("FileReader error"));
@@ -135,12 +137,12 @@ export async function saveImageNative(input: {
   blob: Blob;
   filename: string;
 }): Promise<{ status: "downloaded" | "shared"; uri: string }> {
-  recordTrace("export-audit", "EXPORT_5_CACHE_WRITE_START");
+  recordTrace("export-audit", "filesystem:write:start");
   const { Filesystem, Directory } = await loadFs();
   const Share = await loadShare();
 
   const data = await blobToBase64(input.blob);
-  recordTrace("export-audit", "EXPORT_4_BASE64_READY", `len=${data.length}`);
+  recordTrace("export-audit", "base64:ready", `len=${data.length}`);
   
   const stamp = Date.now();
   const path = `irth-${stamp}-${input.filename}`;
@@ -152,16 +154,12 @@ export async function saveImageNative(input: {
       directory: Directory.Cache,
       recursive: true,
     });
-    recordTrace("export-audit", "EXPORT_6_CACHE_WRITE_DONE", `uri=${written.uri.slice(0, 50)}...`);
-    recordTrace("export-audit", "EXPORT_7_URI_READY", written.uri);
+    recordTrace("export-audit", "filesystem:write:end", `uri=${written.uri.slice(0, 50)}...`);
+    recordTrace("export-audit", "filesystem:getUri:end", written.uri);
 
-    recordTrace("export-audit", "EXPORT_8_SHARE_START", JSON.stringify({
+    recordTrace("export-audit", "share:start", JSON.stringify({
       uri: written.uri,
-      scheme: written.uri.split(":")[0],
-      filename: path,
-      platform: "android",
-      shareAvailable: !!Share,
-      fsAvailable: !!Filesystem
+      platform: "android"
     }));
 
     // V13 Safety: Wrap the native share call in a race to prevent infinite hanging
@@ -176,7 +174,7 @@ export async function saveImageNative(input: {
 
     await Promise.race([sharePromise, watchdog]);
     
-    recordTrace("export-audit", "EXPORT_9_SHARE_RESOLVED");
+    recordTrace("export-audit", "share:end");
 
     // Best effort cleanup after a delay.
     setTimeout(() => {

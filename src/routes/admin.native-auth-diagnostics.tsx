@@ -22,6 +22,7 @@ import {
   BUILD_TIME,
   BUILD_TYPE,
   BUILD_TARGET,
+  APP_VERSION,
 } from "@/lib/build-info";
 import { readTrace, clearTrace, type TraceEntry } from "@/lib/diag-trace";
 
@@ -78,11 +79,17 @@ function NativeAuthDiagnostics() {
   const [nativeTrace, setNativeTrace] = useState<TraceEntry[]>([]);
   const [signupTrace, setSignupTrace] = useState<TraceEntry[]>([]);
   const [deepLinkTrace, setDeepLinkTrace] = useState<TraceEntry[]>([]);
+  const [logoutTrace, setLogoutTrace] = useState<TraceEntry[]>([]);
+  const [pkceAuditTrace, setPkceAuditTrace] = useState<TraceEntry[]>([]);
+  const [exportAuditTrace, setExportAuditTrace] = useState<TraceEntry[]>([]);
 
   const refreshTraces = useCallback(() => {
     setNativeTrace(readTrace("native-auth"));
     setSignupTrace(readTrace("signup"));
     setDeepLinkTrace(readTrace("deep-link"));
+    setLogoutTrace(readTrace("logout-audit"));
+    setPkceAuditTrace(readTrace("pkce-audit"));
+    setExportAuditTrace(readTrace("export-audit"));
   }, []);
 
   useEffect(() => {
@@ -219,7 +226,7 @@ function NativeAuthDiagnostics() {
     ["build timestamp", BUILD_TIME],
     ["build type", BUILD_TYPE],
     ["build target", BUILD_TARGET],
-    ["app version (package)", "1.0.0"],
+    ["app version (package)", APP_VERSION],
     ["Capacitor native", String(native)],
     ["WebView origin", origin || "(none)"],
     ["current URL", href || "(none)"],
@@ -311,6 +318,18 @@ function NativeAuthDiagnostics() {
             </div>
           ))
         )}
+      </Section>
+
+      <Section title="V13 Logout State Leak Audit">
+        <TraceView entries={logoutTrace} onClear={() => { clearTrace("logout-audit"); refreshTraces(); }} />
+      </Section>
+
+      <Section title="V13 PKCE & Auth Barrier Audit">
+        <TraceView entries={pkceAuditTrace} onClear={() => { clearTrace("pkce-audit"); refreshTraces(); }} />
+      </Section>
+
+      <Section title="V13 Android Export Audit">
+        <TraceView entries={exportAuditTrace} onClear={() => { clearTrace("export-audit"); refreshTraces(); }} />
       </Section>
 
       <Section title="Google OAuth trace (native-auth)">

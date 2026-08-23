@@ -342,6 +342,14 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const onIdentityChange = () => {
+      import("@/lib/diag-trace").then(m => {
+        m.recordTrace("logout-audit", "ProfileProvider:onIdentityChange:start", JSON.stringify({
+          beforePoints: profile.points,
+          beforeName: profile.name,
+          beforeLoggedIn: profile.loggedIn
+        }));
+      }).catch(() => {});
+
       // 1) IMMEDIATELY detach the previous owner's React profile state.
       // This prevents stale data (Account A's XP) from remaining visible
       // in the React tree while hydrateFromStorage is working.
@@ -349,7 +357,16 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       
       // 2) Then hydrate the newly active owner's profile from its already-switched partition.
       // 3) Replace initial state with the hydrated new-owner profile.
-      setProfile(hydrateFromStorage() ?? initial);
+      const next = hydrateFromStorage() ?? initial;
+      setProfile(next);
+
+      import("@/lib/diag-trace").then(m => {
+        m.recordTrace("logout-audit", "ProfileProvider:onIdentityChange:end", JSON.stringify({
+          afterPoints: next.points,
+          afterName: next.name,
+          afterLoggedIn: next.loggedIn
+        }));
+      }).catch(() => {});
     };
     window.addEventListener("irth:identity-changed", onIdentityChange);
     return () => window.removeEventListener("irth:identity-changed", onIdentityChange);

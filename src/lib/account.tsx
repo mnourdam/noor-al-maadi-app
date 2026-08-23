@@ -86,12 +86,25 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     });
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       const u = session?.user ?? null;
+      
+      // V13 Forensic Trace: Record the auth event immediately.
+      import("@/lib/diag-trace").then(m => {
+        m.recordTrace("logout-audit", `auth:${event}`, JSON.stringify({
+          hasUser: !!u,
+          userId: u?.id?.slice(0, 8) ?? null,
+          reason: event
+        }));
+      }).catch(() => {});
+
       if (event === "SIGNED_OUT") {
         setReconciliationState("offline-local");
         // V13 Bug 2: Ensure the native PKCE client reference is reset on all 
         // SIGNED_OUT transitions, not just explicit logout.
         try {
-          import("@/lib/native-auth").then(m => m.resetNativePkceClient()).catch(() => {});
+          import("@/lib/native-auth").then(m => {
+            import("@/lib/diag-trace").then(dt => dt.recordTrace("pkce-audit", "SIGNED_OUT_received"));
+            m.resetNativePkceClient();
+          }).catch(() => {});
         } catch { /* ignore dynamic import failure */ }
       } else if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
         setReconciliationState(u ? "loading-local" : "offline-local");

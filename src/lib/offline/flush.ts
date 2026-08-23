@@ -21,7 +21,7 @@ let inflight: Promise<{ flushed: number; failed: number }> | null = null;
 // cross-account leaks or accidental deletions.
 let activeFlushEpoch = 0;
 
-function getIdentityEpochSafe(): number {
+export function getIdentityEpochSafe(): number {
   try {
     return getIdentityEpoch();
   } catch {
