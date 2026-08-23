@@ -341,12 +341,13 @@ function hydrateFromStorage(): ProfileState | null {
                        rawLegacy ? "legacy-local" : 
                        rawSession ? "session-storage" : "none";
 
+    const parsedData = parseSafe(finalRaw);
     recordTrace("logout-audit", "PROFILE_HYDRATION_SOURCE", JSON.stringify({
       owner: ownerAtHydrate,
       source: finalSource,
       logicalKey: STORAGE_KEY,
       physicalKey: rawLocal ? "mapped-by-partition" : STORAGE_KEY,
-      ...parseSafe(finalRaw)
+      data: parsedData
     }));
 
     if (!finalRaw) {
