@@ -342,7 +342,8 @@ function hydrateFromStorage(): ProfileState | null {
           recordTrace("logout-audit", "PROFILE_POLLUTION_DETECTED", JSON.stringify({
             owner: ownerAtHydrate,
             source: finalSource,
-            data: parsedData
+            data: parsedData,
+            caller: "hydrateFromStorage"
           }));
           
           if (rawLocal) {

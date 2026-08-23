@@ -217,33 +217,34 @@ function saveGuestUnlocks(caller: string): void {
   
   // V13 Safety Invariant: Never save Guest unlocks while an account is logged in.
   const userId = inputs.profile.userId;
-  if (userId) {
-    import("@/lib/diag-trace").then(m => {
+  import("@/lib/diag-trace").then(m => {
+    const activeOwner = getActiveOwner();
+    const userId = activeOwner.startsWith("user:") ? activeOwner.split(":")[1] : null;
+
+    if (userId) {
       m.recordTrace("logout-audit", "ACHIEVEMENTS_WRITE_QUARANTINED", JSON.stringify({
         owner: "guest",
         activeOwner: `user:${userId}`,
         logicalKey: GUEST_UNLOCKS_KEY,
         caller
       }));
-    }).catch(() => {});
-    return;
-  }
+      return;
+    }
 
-  try {
-    const data = JSON.stringify([...persisted.values()]);
-    window.localStorage.setItem(GUEST_UNLOCKS_KEY, data);
-    
-    import("@/lib/diag-trace").then(m => {
+    try {
+      const data = JSON.stringify([...persisted.values()]);
+      window.localStorage.setItem(GUEST_UNLOCKS_KEY, data);
+      
       m.recordTrace("logout-audit", "ACHIEVEMENTS_WRITE_SOURCE", JSON.stringify({
         owner: "guest",
         logicalKey: GUEST_UNLOCKS_KEY,
         count: persisted.size,
         caller
       }));
-    }).catch(() => {});
-  } catch {
-    /* noop */
-  }
+    } catch {
+      /* noop */
+    }
+  }).catch(() => {});
 }
 
 // ---------- subscribers ----------

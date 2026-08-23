@@ -304,11 +304,16 @@ export function installIdentityPartition(): void {
 
         if (isPolluted) {
           import("../diag-trace").then(m => {
+            const err = new Error();
+            const stack = err.stack || "";
+            const caller = stack.split("\n")[2] || "unknown";
+            
             m.recordTrace("logout-audit", "STORAGE_WRITE_QUARANTINED", JSON.stringify({
               owner: activeOwner,
               logical: logical,
               physical: mapped,
-              reason: "authenticated-data-in-guest-partition"
+              reason: "authenticated-data-in-guest-partition",
+              caller: caller.trim()
             }));
           }).catch(() => {});
           return; // BLOCK THE WRITE
@@ -330,11 +335,16 @@ export function installIdentityPartition(): void {
             return "scalar";
           } catch { return "error"; }
         };
+        const err = new Error();
+        const stack = err.stack || "";
+        const caller = stack.split("\n")[2] || "unknown";
+
         m.recordTrace("logout-audit", "PROGRESSION_WRITE", JSON.stringify({
           owner: activeOwner,
           logical,
           physical: mapped,
-          data: parseSummary(value)
+          data: parseSummary(value),
+          caller: caller.trim()
         }));
       }).catch(() => {});
     }
