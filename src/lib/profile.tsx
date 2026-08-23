@@ -292,7 +292,18 @@ function dinarsForReward(xp: number): number {
 export function readPersistedProfileState(): ProfileState {
   try {
     if (typeof localStorage === "undefined") return initial;
+    const owner = getActiveOwner();
     const raw = localStorage.getItem(STORAGE_KEY);
+    
+    recordTrace("hearts-audit", "HEARTS_SOURCE_READ", JSON.stringify({
+      owner,
+      source: "owner-partitioned localStorage",
+      logicalKey: STORAGE_KEY,
+      physicalKey: STORAGE_KEY,
+      hearts: raw ? JSON.parse(raw).hearts : undefined,
+      heartsAt: raw ? JSON.parse(raw).heartsAt : undefined
+    }));
+
     if (!raw) return initial;
     const parsed = JSON.parse(raw) as Partial<ProfileState>;
     return {
@@ -307,6 +318,9 @@ export function readPersistedProfileState(): ProfileState {
 
 /** Read + normalise the persisted profile of the CURRENT owner namespace. */
 function hydrateFromStorage(): ProfileState | null {
+  const start = Date.now();
+  recordTrace("hearts-audit", "HEARTS_LOGIN_START");
+
   try {
     const ownerAtHydrate = getActiveOwner();
     recordTrace("logout-audit", "profile-hydrate:initial");
@@ -374,6 +388,19 @@ function hydrateFromStorage(): ProfileState | null {
       returned: finalSource !== "none" ? finalSource : "null"
     }));
 
+    if (parsedData && typeof (parsedData as any).hearts !== 'undefined') {
+      recordTrace("hearts-audit", "HEARTS_SOURCE_READ", JSON.stringify({
+        owner: ownerAtHydrate,
+        source: finalSource,
+        logicalKey: STORAGE_KEY,
+        physicalKey: rawLocal ? "mapped-by-partition" : STORAGE_KEY,
+        hearts: (parsedData as any).hearts,
+        heartsAt: (parsedData as any).heartsAt,
+        sourceOwner: ownerAtHydrate
+      }));
+    }
+
+
 
     if (!finalRaw) return null;
     const parsed = JSON.parse(finalRaw);
@@ -387,6 +414,14 @@ function hydrateFromStorage(): ProfileState | null {
     if (derived.streak !== merged.streak) {
       merged = { ...merged, streak: derived.streak };
     }
+    
+    recordTrace("hearts-audit", "HEARTS_LOCAL_HYDRATED", JSON.stringify({
+      hearts: merged.hearts,
+      heartsAt: merged.heartsAt,
+      effective: getEffectiveHearts(merged, Date.now()),
+      elapsed: Date.now() - start
+    }));
+
     return merged;
   } catch (e) {
     recordTrace("logout-audit", "profile-hydrate:error", (e as Error).message);
@@ -497,8 +532,21 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       }));
     }).catch(() => {});
 
+    const prev = readPersistedProfileState();
+    if (prev.hearts !== profile.hearts || prev.heartsAt !== profile.heartsAt) {
+      recordTrace("hearts-audit", "HEARTS_WRITE", JSON.stringify({
+        intendedOwner,
+        activeOwner: activeOwnerAtFlush,
+        destination: "localStorage",
+        before: { hearts: prev.hearts, heartsAt: prev.heartsAt },
+        after: { hearts: profile.hearts, heartsAt: profile.heartsAt },
+        caller: "persistence-effect"
+      }));
+    }
+
     localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
   }, [profile, hydrated]);
+
 
   // Live streak-expiry watcher. While the app stays open across local
   // midnight, the stored streak value would otherwise stay stale (e.g. 7)
@@ -750,7 +798,15 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         const eff = getEffectiveHearts(p, now);
         const next = Math.max(0, eff - 1);
         result = next;
-        return { ...p, ...commitHearts(p, next, now) };
+      recordTrace("hearts-audit", "HEARTS_STATE_CHANGE", JSON.stringify({
+        owner: getActiveOwner(),
+        caller: "loseHeart",
+        previousHearts: getEffectiveHearts(p, now),
+        nextHearts: next,
+        reason: "Activity penalty"
+      }));
+      return { ...p, ...commitHearts(p, next, now) };
+
       });
       if (typeof window !== "undefined") {
         try { window.dispatchEvent(new CustomEvent("irth:heart-lost", { detail: { hearts: result } })); } catch {}
@@ -807,7 +863,15 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         if (eff >= HEART_MAX) return p;
         if ((p.dinars ?? 0) < HEART_COST_DINARS) return p;
         ok = true;
-        return { ...p, ...commitHearts(p, eff + 1, now), dinars: p.dinars - HEART_COST_DINARS };
+      recordTrace("hearts-audit", "HEARTS_STATE_CHANGE", JSON.stringify({
+        owner: getActiveOwner(),
+        caller: "spendDinarsForHeart",
+        previousHearts: getEffectiveHearts(p, now),
+        nextHearts: eff + 1,
+        reason: "Purchase with Dinars"
+      }));
+      return { ...p, ...commitHearts(p, eff + 1, now), dinars: p.dinars - HEART_COST_DINARS };
+
       });
       return ok;
     },
@@ -966,14 +1030,38 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       const cloudAt = typeof cloud.heartsAt === "number" && Number.isFinite(cloud.heartsAt)
         ? cloud.heartsAt
         : null;
-      const anchorSource: ProfileState = cloudAt !== null && cloudAt < (p.heartsAt ?? Date.now())
+      const now = Date.now();
+      const localEff = getEffectiveHearts(p, now);
+      const cloudEff = cloudAt !== null ? getEffectiveHearts({ ...p, hearts: cloudHearts, heartsAt: cloudAt }, now) : cloudHearts;
+
+      recordTrace("hearts-audit", "HEARTS_RECONCILIATION", JSON.stringify({
+        owner: getActiveOwner(),
+        localHearts: localCommitted,
+        localEffective: localEff,
+        cloudHearts: cloudHearts,
+        cloudEffective: cloudEff,
+        profileHearts: p.hearts,
+        mergeRule: "Cloud Hydration",
+        localUpdatedAt: p.heartsAt,
+        cloudUpdatedAt: cloudAt
+      }));
+
+      const anchorSource: ProfileState = cloudAt !== null && cloudAt < (p.heartsAt ?? now)
         ? ({ ...p, heartsAt: cloudAt } as ProfileState)
         : p;
+
       const heartsPatch = cloudHearts !== localCommitted
-        ? commitHearts(anchorSource, cloudHearts, Date.now())
+        ? commitHearts(anchorSource, cloudHearts, now)
         : { hearts: anchorSource.hearts, heartsAt: anchorSource.heartsAt };
 
+      recordTrace("hearts-audit", "HEARTS_PROFILE_APPLIED", JSON.stringify({
+        chosenHearts: heartsPatch.hearts,
+        chosenHeartsAt: heartsPatch.heartsAt,
+        source: cloudHearts !== localCommitted ? "cloud" : "local/preserved"
+      }));
+
       const dailyDay = cloud.dailyClaimed?.day && cloud.dailyClaimed.day === p.dailyClaimed?.day
+
         ? p.dailyClaimed.day
         : (cloud.dailyClaimed?.day ?? p.dailyClaimed?.day ?? "");
       const dailyIds = cloud.dailyClaimed?.day === p.dailyClaimed?.day
@@ -1085,10 +1173,27 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         // syncs. Only apply a true admin-side change.
         const target = Math.max(0, Math.min(HEART_MAX, stats.hearts));
         const localCommitted = Math.max(0, Math.min(HEART_MAX, p.hearts ?? HEART_MAX));
+        recordTrace("hearts-audit", "HEARTS_RECONCILIATION", JSON.stringify({
+          owner: getActiveOwner(),
+          localHearts: localCommitted,
+          localEffective: getEffectiveHearts(p, now),
+          serverHearts: target,
+          mergeRule: "Server Stats Apply",
+          localUpdatedAt: p.heartsAt
+        }));
+
         if (target !== localCommitted) {
-          next = { ...next, ...commitHearts(p, target, now) };
+          const patched = commitHearts(p, target, now);
+          next = { ...next, ...patched };
           changed = true;
+          
+          recordTrace("hearts-audit", "HEARTS_PROFILE_APPLIED", JSON.stringify({
+            chosenHearts: patched.hearts,
+            chosenHeartsAt: patched.heartsAt,
+            source: "server-stats"
+          }));
         }
+
       }
 
       return changed ? next : p;
