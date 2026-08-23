@@ -24,7 +24,7 @@ export interface TraceEntry {
   detail?: string;     // optional short safe detail
 }
 
-const MAX_ENTRIES = 100;
+const MAX_ENTRIES = 200;
 
 function keyFor(channel: TraceChannel): string {
   return `diag-trace:${channel}`;
@@ -52,7 +52,7 @@ export function recordTrace(
     arr.push({
       ts: new Date().toISOString(),
       stage,
-      detail: detail == null ? undefined : String(detail).slice(0, 200),
+      detail: detail == null ? undefined : String(detail).slice(0, 1000),
     });
     while (arr.length > MAX_ENTRIES) arr.shift();
     s.setItem(keyFor(channel), JSON.stringify(arr));

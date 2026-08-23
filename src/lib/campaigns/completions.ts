@@ -19,6 +19,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { enqueueWithId } from "@/lib/offline/outbox";
 import { flushOutbox } from "@/lib/offline/flush";
+import { getActiveOwner } from "@/lib/identity/owner";
 
 const LOCAL_STICKY_KEY = "irth.campaign_completions.v1";
 
@@ -43,20 +44,20 @@ function readLocalSticky(): Record<string, LocalStickyRecord> {
   } catch { return {}; }
 }
 
-function writeLocalSticky(m: Record<string, LocalStickyRecord>): void {
+function writeLocalSticky(m: Record<string, LocalStickyRecord>, caller: string): void {
   if (!isBrowser()) return;
   
-  // V13 Ownership Bind: We must decide if this write is for Guest or Account.
-  // Since this module doesn't have easy access to the identity event, 
-  // we use a diagnostic to trace the intended owner.
+  // V13 Safety Invariant: Decouple physical partition logic from memory writes.
+  // The caller must provide an intended owner.
   try { 
     const data = JSON.stringify(m);
     window.localStorage.setItem(LOCAL_STICKY_KEY, data); 
 
-    import("@/lib/diag-trace").then(m => {
-      m.recordTrace("logout-audit", "CAMPAIGN_WRITE_SOURCE", JSON.stringify({
+    import("@/lib/diag-trace").then(m_diag => {
+      m_diag.recordTrace("logout-audit", "CAMPAIGN_WRITE_SOURCE", JSON.stringify({
         logicalKey: LOCAL_STICKY_KEY,
-        count: Object.keys(m).length
+        count: Object.keys(m).length,
+        caller
       }));
     }).catch(() => {});
   } catch { /* quota */ }
@@ -69,12 +70,14 @@ function writeLocalSticky(m: Record<string, LocalStickyRecord>): void {
  */
 export function localCompletedIds(): Set<string> {
   const ids = new Set<string>();
+  
+  // 1. Primary Sticky Ledger (Partitioned)
   const sticky = readLocalSticky();
-  for (const cid of Object.keys(sticky)) ids.add(cid);
+  const stickyIds = Object.keys(sticky);
+  for (const cid of stickyIds) ids.add(cid);
 
-  // RECOVERY: The canonical projection must recognize old progression data.
-  // `irth_campaign_progress` was the legacy store. A campaign is considered
-  // completed ONLY if it has an explicit `completed: true` flag.
+  // 2. Legacy Mirror (Partitioned)
+  let legacyIds: string[] = [];
   if (isBrowser()) {
     try {
       const legacy = window.localStorage.getItem("irth_campaign_progress");
@@ -84,12 +87,25 @@ export function localCompletedIds(): Set<string> {
           for (const [id, data] of Object.entries(parsed)) {
             if (id && data?.completed === true) {
               ids.add(String(id));
+              legacyIds.push(String(id));
             }
           }
         }
       }
     } catch { /* ignore */ }
   }
+
+  // V13 Forensic Tracing
+  import("@/lib/diag-trace").then(m => {
+    const activeOwner = typeof getActiveOwner === 'function' ? getActiveOwner() : 'unknown';
+    m.recordTrace("logout-audit", "CAMPAIGN_LOCAL_SOURCE", JSON.stringify({
+      owner: activeOwner,
+      stickyCount: stickyIds.length,
+      legacyCount: legacyIds.length,
+      totalCount: ids.size,
+      idsSample: Array.from(ids).slice(0, 3)
+    }));
+  }).catch(() => {});
 
   return ids;
 }
@@ -125,7 +141,7 @@ export async function recordCampaignCompletion(p: {
       campaignVersion: p.campaignVersion ?? null,
       source: p.source ?? "gameplay",
     };
-    writeLocalSticky(m);
+    writeLocalSticky(m, `recordCampaignCompletion:${cid}`);
     try {
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("irth:campaign-completions:changed"));
@@ -262,24 +278,20 @@ export function sanitizeGuestCampaignCompletions(): void {
   const sticky = readLocalSticky();
   const count = Object.keys(sticky).length;
   
-  // If Guest has 25 completions, it's almost certainly polluted from an account.
-  if (count > 0) {
-    import("@/lib/diag-trace").then(m => {
-      m.recordTrace("logout-audit", "CAMPAIGN_GUEST_SANITIZED", JSON.stringify({
-        key: LOCAL_STICKY_KEY,
-        count
-      }));
-    }).catch(() => {});
-    
-    // For local sticky, we can just clear it if we suspect pollution.
-    // In V13, we clear if it's Guest and has significant completions.
-    window.localStorage.removeItem(LOCAL_STICKY_KEY);
-    
-    // Also clear the legacy mirror
-    window.localStorage.removeItem("irth_campaign_progress");
-    
-    try {
-      window.dispatchEvent(new CustomEvent("irth:campaign-completions:changed"));
-    } catch {}
-  }
+  // V13: We clear Guest progress on logout/reset to ensure no leaks,
+  // but we keep legitimate Guest data if we can distinguish it.
+  // For now, the safest reset is a clean wipe of the Guest partition.
+  import("@/lib/diag-trace").then(m => {
+    m.recordTrace("logout-audit", "CAMPAIGN_GUEST_SANITIZED", JSON.stringify({
+      key: LOCAL_STICKY_KEY,
+      count
+    }));
+  }).catch(() => {});
+  
+  window.localStorage.removeItem(LOCAL_STICKY_KEY);
+  window.localStorage.removeItem("irth_campaign_progress");
+  
+  try {
+    window.dispatchEvent(new CustomEvent("irth:campaign-completions:changed"));
+  } catch {}
 }

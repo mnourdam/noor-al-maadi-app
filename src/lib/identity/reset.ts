@@ -117,6 +117,10 @@ export async function resetForIdentityChange(opts: {
           import("@/lib/campaigns/completions").then(c => {
             c.sanitizeGuestCampaignCompletions();
           }).catch(() => {});
+          // Also sanitize Guest achievements via engine
+          if (achEngine.status === "fulfilled") {
+            try { (achEngine.value as any).resetAchievementEngine?.(null); } catch { /* ignore */ }
+          }
         }
       } catch { /* ignore */ }
     }

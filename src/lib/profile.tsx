@@ -318,14 +318,17 @@ function hydrateFromStorage(): ProfileState | null {
       } catch { return "error"; }
     };
 
-    const rawLocal = localStorage.getItem(STORAGE_KEY);
+    const s = typeof window !== "undefined" ? window.localStorage : null;
+    const originalGet = s ? ((s as any).__originalGetItem || s.getItem) : null;
+    
+    const rawLocal = s ? s.getItem(STORAGE_KEY) : null;
     let rawLegacy = null;
-    try {
-      // @ts-ignore
-      const originalGet = (Storage.prototype as any).__originalGetItem || localStorage.getItem;
-      rawLegacy = originalGet.call(localStorage, STORAGE_KEY);
-    } catch (e) {}
-    const rawSession = sessionStorage.getItem(STORAGE_KEY);
+    if (s && originalGet) {
+      try {
+        rawLegacy = originalGet.call(s, STORAGE_KEY);
+      } catch (e) {}
+    }
+    const rawSession = typeof window !== "undefined" ? window.sessionStorage.getItem(STORAGE_KEY) : null;
 
     const finalRaw = rawLocal || rawLegacy || rawSession;
     const finalSource = rawLocal ? "partitioned-local" : 
@@ -342,7 +345,8 @@ function hydrateFromStorage(): ProfileState | null {
           recordTrace("logout-audit", "PROFILE_POLLUTION_DETECTED", JSON.stringify({
             owner: ownerAtHydrate,
             source: finalSource,
-            data: parsedData
+            data: parsedData,
+            caller: "hydrateFromStorage"
           }));
           
           if (rawLocal) {
@@ -456,30 +460,27 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         m.recordTrace("logout-audit", "PROFILE_WRITE_QUARANTINED", JSON.stringify({
           intendedOwner,
           activeOwner: activeOwnerAtFlush,
-          reason: "owner-mismatch-during-effect",
-          data: { name: profile.name, points: profile.points, loggedIn: profile.loggedIn }
+          caller: "ProfileProvider:persistenceEffect",
+          points: profile.points,
+          loggedIn: profile.loggedIn
         }));
       }).catch(() => {});
       return;
     }
+    
+    import("@/lib/diag-trace").then(m => {
+      m.recordTrace("logout-audit", "PROFILE_WRITE_SOURCE", JSON.stringify({
+        intendedOwner,
+        activeOwner: activeOwnerAtFlush,
+        physicalKey: STORAGE_KEY, // Partitioned internally
+        caller: "ProfileProvider:persistenceEffect",
+        points: profile.points,
+        dinars: profile.dinars,
+        loggedIn: profile.loggedIn
+      }));
+    }).catch(() => {});
 
-    const started = performance.now();
-    let raw = "";
-    try {
-      raw = JSON.stringify(profile);
-      
-      localStorage.setItem(STORAGE_KEY, raw);
-      
-      import("@/lib/diag-trace").then(m => {
-        m.recordTrace("logout-audit", "PROFILE_WRITE_SUCCESS", JSON.stringify({
-          owner: intendedOwner,
-          points: profile.points,
-          loggedIn: profile.loggedIn,
-          ms: performance.now() - started
-        }));
-      }).catch(() => {});
-    } catch {}
-    androidMeasure("profile.localStorage.write", started, { bytes: raw.length });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
   }, [profile, hydrated]);
 
   // Live streak-expiry watcher. While the app stays open across local
