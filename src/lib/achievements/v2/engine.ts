@@ -297,9 +297,19 @@ export async function resetAchievementEngine(nextUserId: string | null): Promise
     persisted = loadGuestUnlocks();
     
     // V13 Guest Sanitization: Prune contaminated achievements.
-    // If the Guest partition was polluted, doCycle will clear it.
-    // The previous count > 5 heuristic was unsafe and is removed here
-    // in favor of the active write-blocking implemented in doCycle.
+    // Account achievements are always server-authoritative; any Guest unlock
+    // must be earned while Guest. On logout, we clear Guest progress
+    // to ensure no leakage from the previous session.
+    if (persisted.size > 0) {
+      import("@/lib/diag-trace").then(m => {
+        m.recordTrace("logout-audit", "ACHIEVEMENTS_GUEST_SANITIZED", JSON.stringify({
+          before: persisted.size,
+          reason: "identity-reset-to-guest"
+        }));
+      }).catch(() => {});
+      persisted = new Map();
+      saveGuestUnlocks("resetAchievementEngine:sanitization");
+    }
 
     for (const id of persisted.keys()) alreadyNotified.add(id);
     saveNotified();
