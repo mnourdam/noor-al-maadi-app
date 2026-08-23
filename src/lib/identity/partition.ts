@@ -300,20 +300,11 @@ export function installIdentityPartition(): void {
         if (logical === "hakaya.profile.v2") {
           p = JSON.parse(value);
           isPolluted = p && p.loggedIn === true;
-        } else if (logical === "irth.campaign_completions.v1") {
-          // If the guest completion set contains IDs that we know are Account-only, 
-          // we should block, but we don't have a reliable list of those IDs here.
-          // The Campaign completion fix will bind the write to the intended owner.
-        } else if (logical === "irth.achievements.v2.guest_unlocks") {
-          // Achievements in guest_unlocks are already meant for Guest, but
-          // we check if they contain data that looks like it belongs to a user.
-          // v2 records don't have a loggedIn flag, but we block if we're in 
-          // a logout transition (handled by resetting the engine).
         }
 
         if (isPolluted) {
           import("../diag-trace").then(m => {
-            m.recordTrace("logout-audit", "PROFILE_WRITE_QUARANTINED", JSON.stringify({
+            m.recordTrace("logout-audit", "STORAGE_WRITE_QUARANTINED", JSON.stringify({
               owner: activeOwner,
               logical: logical,
               physical: mapped,

@@ -212,11 +212,22 @@ function loadGuestUnlocks(): Map<AchievementId, UserAchievementRecord> {
     return new Map();
   }
 }
-function saveGuestUnlocks(): void {
+function saveGuestUnlocks(caller: string): void {
   if (typeof window === "undefined") return;
   
   // V13 Safety Invariant: Never save Guest unlocks while an account is logged in.
-  if (inputs.profile.userId) return;
+  const userId = inputs.profile.userId;
+  if (userId) {
+    import("@/lib/diag-trace").then(m => {
+      m.recordTrace("logout-audit", "ACHIEVEMENTS_WRITE_QUARANTINED", JSON.stringify({
+        owner: "guest",
+        activeOwner: `user:${userId}`,
+        logicalKey: GUEST_UNLOCKS_KEY,
+        caller
+      }));
+    }).catch(() => {});
+    return;
+  }
 
   try {
     const data = JSON.stringify([...persisted.values()]);
@@ -226,7 +237,8 @@ function saveGuestUnlocks(): void {
       m.recordTrace("logout-audit", "ACHIEVEMENTS_WRITE_SOURCE", JSON.stringify({
         owner: "guest",
         logicalKey: GUEST_UNLOCKS_KEY,
-        count: persisted.size
+        count: persisted.size,
+        caller
       }));
     }).catch(() => {});
   } catch {
@@ -285,20 +297,9 @@ export async function resetAchievementEngine(nextUserId: string | null): Promise
     persisted = loadGuestUnlocks();
     
     // V13 Guest Sanitization: Prune contaminated achievements.
-    // We detect contamination by comparing against a heuristic or 
-    // simply by checking if the count is impossible for a new Guest.
-    // If Guest has 17+ achievements but 0 points, it's polluted.
-    const hasSuspectedPollution = persisted.size > 5; // Conservative threshold
-    if (hasSuspectedPollution) {
-      import("@/lib/diag-trace").then(m => {
-        m.recordTrace("logout-audit", "ACHIEVEMENTS_GUEST_SANITIZED", JSON.stringify({
-          before: persisted.size,
-          reason: "suspected-account-pollution"
-        }));
-      }).catch(() => {});
-      persisted = new Map();
-      saveGuestUnlocks();
-    }
+    // If the Guest partition was polluted, doCycle will clear it.
+    // The previous count > 5 heuristic was unsafe and is removed here
+    // in favor of the active write-blocking implemented in doCycle.
 
     for (const id of persisted.keys()) alreadyNotified.add(id);
     saveNotified();
@@ -433,7 +434,9 @@ async function doCycle(
   // Mark evaluated ids locally only as an optimization; server presentation
   // state is the durable truth after sign-in/reinstall.
   for (const id of output.newlyUnlocked) alreadyNotified.add(id);
-  saveNotified();
+  if (output.newlyUnlocked.length > 0) {
+    saveNotified();
+  }
 
   const userId = inputs.profile.userId;
   if (output.newlyUnlocked.length > 0) {
@@ -457,7 +460,7 @@ async function doCycle(
         for (const id of output.newlyUnlocked) {
           persisted.set(id, buildLocalRecord(id, true));
         }
-        saveGuestUnlocks();
+        saveGuestUnlocks("doCycle:historical_reconciliation");
       }
       notifyListeners();
       return;
