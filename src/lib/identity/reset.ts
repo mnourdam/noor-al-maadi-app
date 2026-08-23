@@ -57,6 +57,13 @@ export async function resetForIdentityChange(opts: {
 }): Promise<{ changed: boolean; owner: OwnerKey; previous: OwnerKey }> {
   const next = opts.nextUserId ? userOwnerKey(opts.nextUserId) : guestOwnerKey();
   const previous = getActiveOwner();
+
+  recordTrace("logout-audit", "identity-reset:start", JSON.stringify({
+    previousOwner: previous,
+    requestedNextOwner: next,
+    reason: opts.reason
+  }));
+
   if (previous === next) {
     // If we're already the correct user, ensure readiness is signaled.
     if (opts.nextUserId) setAuthReady(true);
@@ -80,7 +87,11 @@ export async function resetForIdentityChange(opts: {
 
   // 3) Atomic owner swap — every personal storage key now resolves into the
   //    new namespace and the identity epoch invalidates every in-flight guard.
+  recordTrace("logout-audit", "owner:before-set", previous);
   const res = setActiveOwnerInternal(next);
+  recordTrace("logout-audit", "owner:after-set", next);
+
+  recordTrace("logout-audit", "cleanup:start");
 
   // 4) Drop in-memory module caches, then let providers re-hydrate.
   try {
@@ -107,7 +118,7 @@ export async function resetForIdentityChange(opts: {
     if (profileMod.status === "fulfilled") {
       // ProfileProvider uses irth:identity-changed to re-hydrate, 
       // but we can also trigger any exported cleanup if added.
-    }
+    recordTrace("logout-audit", "cleanup:end");
   } catch { /* ignore */ }
 
   if (typeof window !== "undefined") {
@@ -117,6 +128,8 @@ export async function resetForIdentityChange(opts: {
       reason: opts.reason,
     };
     try {
+      recordTrace("logout-audit", "identity-event:before-dispatch");
+      recordTrace("logout-audit", "identity-event:owner-at-dispatch", getActiveOwner());
       window.dispatchEvent(new CustomEvent(IDENTITY_CHANGED_EVENT, { detail }));
     } catch { /* ignore */ }
   }

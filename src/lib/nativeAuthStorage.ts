@@ -56,19 +56,25 @@ function memDel(key: string): void {
 
 class ImmediateNativePkceStorage implements AsyncSupabaseStorage {
   async getItem(key: string): Promise<string | null> {
+    recordTrace("pkce-audit", "pkce:get:start", key);
     const local = memGet(key);
-    if (local) return local;
+    if (local) {
+      recordTrace("pkce-audit", "pkce:get:memory-hit");
+      return local;
+    }
+    recordTrace("pkce-audit", "pkce:get:memory-miss");
 
     // COLD START RECOVERY: If not in memory/localStorage, try Capacitor Preferences
     try {
+      recordTrace("pkce-audit", "pkce:get:preferences:start");
       const { value } = await Preferences.get({ key });
       if (value) {
+        recordTrace("pkce-audit", "pkce:get:preferences-hit");
         try {
           const entry = JSON.parse(value) as DurableEntry;
           const age = Date.now() - entry.ts;
           if (age < PKCE_EXPIRY_MS) {
             console.info(`[native-auth-storage] Recovered durable verifier for ${key} (age: ${Math.round(age/1000)}s)`);
-            // Restore to memory/localStorage for faster subsequent access
             memSet(key, entry.value);
             return entry.value;
           } else {
@@ -76,11 +82,13 @@ class ImmediateNativePkceStorage implements AsyncSupabaseStorage {
             await this.removeItem(key);
           }
         } catch {
-          // Legacy non-JSON value? (unlikely for PKCE keys)
           return value;
         }
+      } else {
+        recordTrace("pkce-audit", "pkce:get:preferences-miss");
       }
     } catch (e) {
+      recordTrace("pkce-audit", "pkce:get:preferences:error", (e as Error).message);
       console.error("[native-auth-storage] Preferences recovery failed", e);
     }
 
@@ -88,13 +96,16 @@ class ImmediateNativePkceStorage implements AsyncSupabaseStorage {
   }
 
   async setItem(key: string, value: string): Promise<void> {
+    recordTrace("pkce-audit", "pkce:set:start", key);
     // 1. Immediate sync write (Memory + LocalStorage)
     memSet(key, value);
+    recordTrace("pkce-audit", "pkce:set:memory");
 
     // 2. Fire-and-forget durable backup (don't await to avoid blocking gotrue-js flow)
-    // The calling flow (signInWithGoogleNative) will explicitly await persistence 
-    // before Browser.open() via ensureDurablePersistence().
-    this.persistDurably(key, value).catch(e => {
+    this.persistDurably(key, value).then(() => {
+      recordTrace("pkce-audit", "pkce:set:preferences:success");
+    }).catch(e => {
+      recordTrace("pkce-audit", "pkce:set:preferences:error", (e as Error).message);
       console.error("[native-auth-storage] Background durable write failed", e);
     });
   }

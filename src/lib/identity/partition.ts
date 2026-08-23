@@ -116,7 +116,20 @@ let mapping = true;
 function mapKey(key: string): string {
   if (!mapping) return key;
   if (!isPersonalKey(key)) return key;
-  return physicalKey(key, getActiveOwner());
+  const owner = getActiveOwner();
+  const physical = physicalKey(key, owner);
+  
+  // V13 Physical Android Diagnostics - log only for profile key to avoid noise
+  if (key === "hakaya.profile.v2") {
+    import("../diag-trace").then(m => {
+      m.recordTrace("logout-audit", "partition:mapKey:profile", JSON.stringify({
+        owner,
+        physical
+      }));
+    }).catch(() => {});
+  }
+  
+  return physical;
 }
 
 /** Escape hatch used by the migration + owner-scoped bulk operations. */

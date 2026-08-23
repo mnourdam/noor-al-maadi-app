@@ -192,14 +192,14 @@ export async function signInWithGoogleNative(): Promise<{ ok: boolean; error?: s
     }
 
     console.info("[native-auth] PKCE verifier persisted durably. opening custom tab", sanitizeOAuthUrl(oauthUrl));
-    recordTrace("pkce-audit", "pkce:beforeExternalNavigation");
+    recordTrace("pkce-audit", "oauth:browser-open");
     const open = await tracedAwait(
       "browser-open",
       () => Browser.open({ url: oauthUrl, presentationStyle: "fullscreen" }),
       5000,
     );
     if (!open.ok) {
-      recordTrace("native-auth", "browser-open-failed", open.error);
+      recordTrace("pkce-audit", "oauth:browser-open-failed", open.error);
       return { ok: false, error: `تعذر فتح نافذة تسجيل الدخول: ${open.error}` };
     }
 
@@ -281,8 +281,11 @@ let oauthFlowActive = false;
 export function isNativeAuthListenerInstalled(): boolean { return listenerInstalled; }
 export function isNativeAuthListenerRegistered(): boolean { return listenerRegistered; }
 
+let callbackCounter = 0;
+
 /** Unified handler for all native auth callbacks (appUrlOpen + getLaunchUrl) */
 export async function handleNativeAuthCallback(url: string | null | undefined): Promise<void> {
+  const callId = ++callbackCounter;
   if (!url) {
     console.info("[IrthAuth] CALLBACK_IGNORED reason=empty_url");
     return;
@@ -294,8 +297,8 @@ export async function handleNativeAuthCallback(url: string | null | undefined): 
   }
 
   console.info("[IrthAuth] CALLBACK_ACCEPTED", sanitizeOAuthUrl(url));
-  recordTrace("native-auth", "callback-accepted");
-  recordTrace("pkce-audit", "deep-link:received", url.split("?")[0]);
+  recordTrace("pkce-audit", "deeplink:received", `${url.split("?")[0]} (id=${callId})`);
+  recordTrace("pkce-audit", "callback:start", `id=${callId}`);
   
   let exchangedOk = false;
   let exchangeError: string | null = null;
@@ -307,6 +310,7 @@ export async function handleNativeAuthCallback(url: string | null | undefined): 
     const code = params.get("code");
     const accessToken = params.get("access_token");
     const refreshToken = params.get("refresh_token");
+    recordTrace("pkce-audit", "deeplink:url-has-code", !!code);
 
     // 1. Synchronous Idempotency & In-Flight Guard
     if (code) {

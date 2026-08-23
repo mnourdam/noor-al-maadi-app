@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { getActiveOwner } from "./identity/owner";
 function todayKey(d: Date = new Date()): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -304,9 +305,27 @@ export function readPersistedProfileState(): ProfileState {
 /** Read + normalise the persisted profile of the CURRENT owner namespace. */
 function hydrateFromStorage(): ProfileState | null {
   try {
+    const ownerAtHydrate = getActiveOwner();
+    recordTrace("logout-audit", "profile-hydrate:start");
+    recordTrace("logout-audit", "owner-at-hydrate", ownerAtHydrate);
+    
+    // The key mapper is synchronous and should reflect the activeOwner.
+    // We log the logical vs physical key resolved by the partition layer.
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
+    
+    if (!raw) {
+      recordTrace("logout-audit", "profile-hydrate-result", "null");
+      return null;
+    }
     const parsed = JSON.parse(raw);
+    
+    recordTrace("logout-audit", "profile-hydrate-result", JSON.stringify({
+      name: parsed.name,
+      points: parsed.points,
+      dinars: parsed.dinars,
+      loggedIn: parsed.loggedIn
+    }));
+
     let merged: ProfileState = {
       ...initial,
       ...parsed,
@@ -321,7 +340,8 @@ function hydrateFromStorage(): ProfileState | null {
       merged = { ...merged, streak: derived.streak };
     }
     return merged;
-  } catch {
+  } catch (e) {
+    recordTrace("logout-audit", "profile-hydrate:error", (e as Error).message);
     return null;
   }
 }
@@ -343,6 +363,8 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     if (typeof window === "undefined") return;
     const onIdentityChange = () => {
       import("@/lib/diag-trace").then(m => {
+        m.recordTrace("logout-audit", "profile-identity-event:received");
+        m.recordTrace("logout-audit", "owner-at-listener", getActiveOwner());
         m.recordTrace("logout-audit", "ProfileProvider:onIdentityChange:start", JSON.stringify({
           beforePoints: profile.points,
           beforeName: profile.name,
