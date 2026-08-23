@@ -47,7 +47,7 @@ function ensureInit() {
  */
 export function AchievementEngineBoot() {
   ensureInit();
-  const { profile, hydrated } = useProfile();
+  const { profile, hydrated, userId } = useProfile();
   const canonicalInv = useCanonicalInvestigationProgress();
   const authUserIdRef = useRef<string | null | undefined>(undefined);
   const migratedRef = useRef(false);
@@ -165,7 +165,7 @@ export function AchievementEngineBoot() {
       },
       streak: { current: profile.streak ?? 0, longest: Math.max(profile.longestStreak ?? 0, profile.streak ?? 0) },
       titles: { earnedCount: (profile.titlesEarned ?? []).length },
-      profile: { userId: profile.loggedIn ? ((profile as any).userId || authUserIdRef.current) : null }
+      profile: { userId }
     });
   }, [
     unionedCampaigns,
@@ -175,7 +175,7 @@ export function AchievementEngineBoot() {
     profile.longestStreak,
     profile.titlesEarned,
     profile.loggedIn,
-    (profile as any).userId,
+    userId,
     canonicalInv.count,
     hydrated,
   ]);
