@@ -276,49 +276,65 @@ export function installIdentityPartition(): void {
     const mapped = mapKey(logical);
     const activeOwner = getActiveOwner();
 
-    // V13 Storage Invariant: Reject authenticated profiles in guest partitions
-    if (logical === "hakaya.profile.v2" && activeOwner.startsWith("guest:")) {
+    // V13 Storage Invariant: Reject authenticated progression in guest partitions
+    const isProgressionKey = logical === "hakaya.profile.v2" || 
+                             logical === "irth.campaign_completions.v1" ||
+                             logical === "irth.achievements.v2.guest_unlocks";
+
+    if (isProgressionKey && activeOwner.startsWith("guest:")) {
       try {
-        const parsed = JSON.parse(value);
-        if (parsed && parsed.loggedIn === true) {
+        let isPolluted = false;
+        let p: any = null;
+        
+        if (logical === "hakaya.profile.v2") {
+          p = JSON.parse(value);
+          isPolluted = p && p.loggedIn === true;
+        } else if (logical === "irth.campaign_completions.v1") {
+          p = JSON.parse(value);
+          // Check if any record in the completion ledger looks like it came from an account.
+          // In v1 completions, we don't have a 'loggedIn' flag per row yet,
+          // but we can look for specific account-only indicators if they existed.
+          // For now, we mainly quarantine the Profile.
+        }
+
+        if (isPolluted) {
           import("../diag-trace").then(m => {
             m.recordTrace("logout-audit", "PROFILE_WRITE_QUARANTINED", JSON.stringify({
               owner: activeOwner,
               logical: logical,
               physical: mapped,
-              data: { name: parsed.name, points: parsed.points, dinars: parsed.dinars, loggedIn: parsed.loggedIn },
+              data: logical === "hakaya.profile.v2" ? { name: p.name, points: p.points, dinars: p.dinars, loggedIn: p.loggedIn } : "progression-ledger",
               reason: "authenticated-data-in-guest-partition"
             }));
           }).catch(() => {});
           return; // BLOCK THE WRITE
         }
       } catch (e) {
-        // Not a valid profile JSON, proceed with mapped write
+        // Not valid JSON, proceed
       }
     }
     
-    if (logical === "hakaya.profile.v2" && mapping) {
-      const legacyVal = getItem.call(this, logical);
-      const parseSafe = (v: string | null) => {
-        if (!v) return null;
-        try {
-          const p = JSON.parse(v);
-          return { name: p.name, loggedIn: p.loggedIn, points: p.points, dinars: p.dinars };
-        } catch { return "error"; }
-      };
+    if (isProgressionKey && mapping) {
       import("../diag-trace").then(m => {
+        const parseSafe = (v: string | null) => {
+          if (!v) return null;
+          try {
+            const parsed = JSON.parse(v);
+            if (logical === "hakaya.profile.v2") return { name: parsed.name, points: parsed.points, loggedIn: parsed.loggedIn };
+            return `count:${Object.keys(parsed).length}`;
+          } catch { return "error"; }
+        };
         m.recordTrace("logout-audit", "PROFILE_WRITE_COMMITTED", JSON.stringify({
           owner: activeOwner,
           logical: logical,
           physical: mapped,
-          data: parseSafe(value),
-          legacyExists: legacyVal !== null,
-          legacyData: parseSafe(legacyVal)
+          data: parseSafe(value)
         }));
       }).catch(() => {});
     }
     return setItem.call(this, mapped, value);
   };
+
 
   proto.removeItem = function (this: Storage, key: string) {
     return removeItem.call(this, mapKey(String(key)));
