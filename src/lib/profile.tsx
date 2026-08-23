@@ -307,24 +307,24 @@ export function readPersistedProfileState(): ProfileState {
 function hydrateFromStorage(): ProfileState | null {
   try {
     const ownerAtHydrate = getActiveOwner();
-    recordTrace("logout-audit", "profile-hydrate:start");
-    recordTrace("logout-audit", "owner-at-hydrate", ownerAtHydrate);
+    recordTrace("logout-audit", "profile-hydrate:initial");
+    recordTrace("logout-audit", "owner:before", ownerAtHydrate);
     
     // The key mapper is synchronous and should reflect the activeOwner.
     // We log the logical vs physical key resolved by the partition layer.
     const raw = localStorage.getItem(STORAGE_KEY);
     
     if (!raw) {
-      recordTrace("logout-audit", "profile-hydrate-result", "null");
+      recordTrace("logout-audit", "profile-hydrate:result", "null");
       return null;
     }
     const parsed = JSON.parse(raw);
     
-    recordTrace("logout-audit", "profile-hydrate-result", JSON.stringify({
+    recordTrace("logout-audit", "profile-hydrate:result", JSON.stringify({
       name: parsed.name,
+      loggedIn: parsed.loggedIn,
       points: parsed.points,
-      dinars: parsed.dinars,
-      loggedIn: parsed.loggedIn
+      dinars: parsed.dinars
     }));
 
     let merged: ProfileState = {

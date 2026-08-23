@@ -122,10 +122,10 @@ function mapKey(key: string): string {
   // V13 Physical Android Diagnostics - log only for profile key to avoid noise
   if (key === "hakaya.profile.v2") {
     import("../diag-trace").then(m => {
-      m.recordTrace("logout-audit", "partition:mapKey:profile", JSON.stringify({
-        owner,
-        physical
-      }));
+      m.recordTrace("logout-audit", "storage:operation", "read/write");
+      m.recordTrace("logout-audit", "logical-key", key);
+      m.recordTrace("logout-audit", "activeOwner", owner);
+      m.recordTrace("logout-audit", "physical-key", physical);
     }).catch(() => {});
   }
   

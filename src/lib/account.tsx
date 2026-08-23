@@ -192,6 +192,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       if (isStale()) return;
 
       const started = performance.now();
+      import("@/lib/diag-trace").then(m => m.recordTrace("logout-audit", "profile-hydrate:start", JSON.stringify({ userId: user.id.slice(0, 8) }))).catch(() => {});
       androidMark("account.hydrate.start", { userId: user.id.slice(0, 8) });
       recordStartupMark("server-reconciliation-started");
       setSyncing(true);
@@ -212,6 +213,11 @@ export function AccountProvider({ children }: { children: ReactNode }) {
           fetchCloudSave(user.id),
         ]);
         if (isStale()) return;
+        import("@/lib/diag-trace").then(m => m.recordTrace("logout-audit", "profile-hydrate:result", JSON.stringify({
+          name: acc?.display_name,
+          username: acc?.username,
+          hasSave: !!save
+        }))).catch(() => {});
 
         setAccount(acc);
         if (!androidStable) void touchLastActive(user.id);
@@ -357,8 +363,13 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         }
         if (reconciled && !isStale()) setReconciliationState("reconciled");
       } catch (e) {
-        if (!isStale()) setReconciliationState("failed", e instanceof Error ? e.message : String(e));
+        if (!isStale()) {
+          import("@/lib/diag-trace").then(m => m.recordTrace("logout-audit", "profile-hydrate:error", String(e))).catch(() => {});
+          setReconciliationState("failed", e instanceof Error ? e.message : String(e));
+        }
       } finally {
+        const duration = performance.now() - started;
+        import("@/lib/diag-trace").then(m => m.recordTrace("logout-audit", "sync:end", `${Math.round(duration)}ms`)).catch(() => {});
         clearTimeout(softTimer);
         androidMeasure("account.hydrate", started);
         if (!isStale()) setSyncing(false);
