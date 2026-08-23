@@ -701,7 +701,15 @@ function AccountDiagPanel() {
   const [open, setOpen] = useState(false);
   const [version, setVersion] = useState(0);
 
-  const entries = readTrace("logout-audit");
+  const [entries, setEntries] = useState(() => readTrace("logout-audit"));
+
+  useEffect(() => {
+    if (!open) return;
+    const t = setInterval(() => {
+      setEntries(readTrace("logout-audit"));
+    }, 1000);
+    return () => clearInterval(t);
+  }, [open, version]);
 
   const campaignsCount = profile.campaignsCompleted?.length ?? 0;
   
