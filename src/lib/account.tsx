@@ -540,48 +540,63 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOutFn = useCallback(async () => {
-    // Cancel the debounce and flush a final synchronous push BEFORE
-    // signing out so any pending progression (hearts just lost, coins
-    // earned, XP awarded seconds before logout, streak update) lands in
-    // both cloud_saves and the profiles row. Without this the debounced
-    // push is dropped when the auth token is cleared and the next login
-    // restores a stale snapshot — most visibly, a heart the player just
-    // lost reappears / a heart just spent comes back at 5/5.
-    autoPushEnabled.current = false;
-    if (pushTimer.current) {
-      clearTimeout(pushTimer.current);
-      pushTimer.current = null;
-    }
-    const currentUser = user;
-    if (currentUser) {
-      try {
-        await pushSave(currentUser.id, profileRef.current);
-        await pushPublicStats(currentUser.id, profileRef.current);
-      } catch (err) {
-        console.warn("[account] final flush before signOut failed", err);
+    setIsAuthResetting(true);
+    try {
+      // Cancel the debounce and flush a final synchronous push BEFORE
+      // signing out so any pending progression (hearts just lost, coins
+      // earned, XP awarded seconds before logout, streak update) lands in
+      // both cloud_saves and the profiles row. Without this the debounced
+      // push is dropped when the auth token is cleared and the next login
+      // restores a stale snapshot — most visibly, a heart the player just
+      // lost reappears / a heart just spent comes back at 5/5.
+      autoPushEnabled.current = false;
+      if (pushTimer.current) {
+        clearTimeout(pushTimer.current);
+        pushTimer.current = null;
       }
-      // Priority-Zero §5: drain the durable outbox so queued chapter
-      // progress / tutorial completions / etc. reach the server BEFORE
-      // the auth token clears. Bounded timeout so sign-out never hangs.
-      try {
-        const { flushOutboxWithTimeout } = await import("./offline/logout-flush");
-        const res = await flushOutboxWithTimeout(currentUser.id, 4000);
-        if (res.pendingAfter > 0) {
-          console.warn("[account] signOut leaving pending outbox ops", res);
+      const currentUser = user;
+      if (currentUser) {
+        try {
+          await pushSave(currentUser.id, profileRef.current);
+          await pushPublicStats(currentUser.id, profileRef.current);
+        } catch (err) {
+          console.warn("[account] final flush before signOut failed", err);
         }
-      } catch (err) {
-        console.warn("[account] logout-flush errored", err);
+        // Priority-Zero §5: drain the durable outbox so queued chapter
+        // progress / tutorial completions / etc. reach the server BEFORE
+        // the auth token clears. Bounded timeout so sign-out never hangs.
+        try {
+          const { flushOutboxWithTimeout } = await import("./offline/logout-flush");
+          const res = await flushOutboxWithTimeout(currentUser.id, 4000);
+          if (res.pendingAfter > 0) {
+            console.warn("[account] signOut leaving pending outbox ops", res);
+          }
+        } catch (err) {
+          console.warn("[account] logout-flush errored", err);
+        }
       }
+
+      const { resetNativePkceClient } = await import("@/lib/native-auth");
+      
+      // Atomic identity switch back to this device's guest space. The auth
+      // listener also calls this (idempotent) — doing it here guarantees the
+      // swap has completed before signOut() resolves, so no frame can render
+      // the previous account's data.
+      await resetForIdentityChange({ nextUserId: null, reason: "sign-out" });
+      
+      // V13 Bug 2: Nullify the native PKCE transport reference so the next 
+      // login uses a fresh instance, avoiding "code verifier not found".
+      resetNativePkceClient();
+
+      await cloudSignOut();
+      setUser(null);
+      setAccount(null);
+      setLastSyncAt(null);
+    } catch (e) {
+      console.error("[account] signOut error", e);
+    } finally {
+      setIsAuthResetting(false);
     }
-    await cloudSignOut();
-    // Atomic identity switch back to this device's guest space. The auth
-    // listener also calls this (idempotent) — doing it here guarantees the
-    // swap has completed before signOut() resolves, so no frame can render
-    // the previous account's data.
-    await resetForIdentityChange({ nextUserId: null, reason: "sign-out" });
-    setUser(null);
-    setAccount(null);
-    setLastSyncAt(null);
   }, [user]);
 
   const syncNow = useCallback(async () => {
@@ -640,8 +655,9 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     user,
     account,
     displayName,
-      isAuthResetting,
+    loadingSession,
     syncing,
+    isAuthResetting,
     lastSyncAt,
     signUp,
     signIn,
@@ -650,7 +666,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     updateDisplayName: updateDisplayNameFn,
     updateUsername: updateUsernameFn,
     isUsernameAvailable: isUsernameAvailableFn,
-  }), [user, account, displayName, loadingSession, syncing, lastSyncAt, signUp, signIn, signOutFn, syncNow, updateDisplayNameFn, updateUsernameFn, isUsernameAvailableFn]);
+  }), [user, account, displayName, loadingSession, syncing, isAuthResetting, lastSyncAt, signUp, signIn, signOutFn, syncNow, updateDisplayNameFn, updateUsernameFn, isUsernameAvailableFn]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
