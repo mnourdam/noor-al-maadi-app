@@ -1,50 +1,21 @@
-// ============================================================
-// resetForIdentityChange — THE single approved identity switch path
-// ------------------------------------------------------------
-// Must be used for: sign-in, sign-out, account switch, session expiry,
-// account deletion, and any auth-listener-detected user change.
-//
-// The switch is atomic from the UI's point of view:
-//   1. stop the previous identity's syncing + subscriptions
-//   2. cancel and drop every cached query belonging to it
-//   3. swap the active owner (this instantly repoints ALL personal
-//      storage at the new namespace — see ./partition.ts)
-//   4. tell every in-memory store to drop state and re-hydrate from
-//      the new owner's namespace
-//
-// There is no page reload and no UI hiding: isolation is real, at the
-// storage + memory + sync layers.
-// ============================================================
+import { getActiveOwner, userOwnerKey, guestOwnerKey, type OwnerKey, setActiveOwnerInternal } from "./owner";
+import { setAuthReady } from "./identity/guard";
+import { recordTrace } from "@/lib/diag-trace";
 
-import type { QueryClient } from "@tanstack/react-query";
-import {
-  getActiveOwner,
-  guestOwnerKey,
-  setActiveOwnerInternal,
-  userOwnerKey,
-  type OwnerKey,
-} from "./owner";
-import { IDENTITY_CHANGED_EVENT, setAuthReady } from "./guard";
-
-let queryClient: QueryClient | null = null;
-
-export function registerIdentityQueryClient(qc: QueryClient): void {
-  queryClient = qc;
+let queryClient: any = null;
+export function setQueryClientForReset(client: any) {
+  queryClient = client;
 }
 
-export type IdentityChangeReason =
-  | "sign-in"
-  | "sign-out"
-  | "account-switch"
-  | "session-expired"
-  | "account-deleted"
-  | "auth-listener";
+export type IdentityChangeReason = "boot" | "login" | "logout" | "account-switch" | "session-expired";
 
 export interface IdentityChangeDetail {
   owner: OwnerKey;
   previous: OwnerKey;
   reason: IdentityChangeReason;
 }
+
+export const IDENTITY_CHANGED_EVENT = "irth:identity-changed";
 
 /**
  * Swap the active identity. `nextUserId === null` means guest mode.
@@ -118,6 +89,7 @@ export async function resetForIdentityChange(opts: {
     if (profileMod.status === "fulfilled") {
       // ProfileProvider uses irth:identity-changed to re-hydrate, 
       // but we can also trigger any exported cleanup if added.
+    }
     recordTrace("logout-audit", "cleanup:end");
   } catch { /* ignore */ }
 
