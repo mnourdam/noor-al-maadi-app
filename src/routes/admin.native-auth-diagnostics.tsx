@@ -22,6 +22,7 @@ import {
   BUILD_TIME,
   BUILD_TYPE,
   BUILD_TARGET,
+  APP_VERSION,
 } from "@/lib/build-info";
 import { readTrace, clearTrace, type TraceEntry } from "@/lib/diag-trace";
 
@@ -225,7 +226,7 @@ function NativeAuthDiagnostics() {
     ["build timestamp", BUILD_TIME],
     ["build type", BUILD_TYPE],
     ["build target", BUILD_TARGET],
-    ["app version (package)", "1.0.0"],
+    ["app version (package)", APP_VERSION],
     ["Capacitor native", String(native)],
     ["WebView origin", origin || "(none)"],
     ["current URL", href || "(none)"],
