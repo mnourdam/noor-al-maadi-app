@@ -17,16 +17,18 @@
 
 import { isCapacitorNative } from "@/lib/native-auth";
 import { recordTrace } from "@/lib/diag-trace";
+import { Share } from "@capacitor/share";
 
 type ShareStatus = "shared" | "cancelled";
 
-async function loadShare() {
-  recordTrace("export-audit", "09 — share-module:import:start");
-  const { Share } = await import("@capacitor/share");
-  recordTrace("export-audit", "10 — share-module:import:success");
-  recordTrace("export-audit", "11 — share-plugin:resolved", `typeShare=${typeof Share}, typeShareShare=${typeof Share?.share}`);
-  return Share;
-}
+// V13_EXPORT_DIAG_1
+// We removed loadShare() helper entirely because it was an async function 
+// that returned the Share plugin proxy. When a Promise resolves to a thenable,
+// the JS engine calls .then() to assimilate it. Capacitor's Android bridge
+// throws "Share.then() is not implemented" when .then is accessed.
+//
+// By using a top-level static import, the proxy is never wrapped in a 
+// Promise resolution at runtime.
 
 async function loadFs() {
   const mod = await import("@capacitor/filesystem");
@@ -72,7 +74,6 @@ export async function shareTextNative(input: {
   url: string;
   title?: string;
 }): Promise<ShareStatus> {
-  const Share = await loadShare();
   try {
     const result = Share.share({
       title: input.title,
@@ -100,7 +101,6 @@ export async function shareImageNative(input: {
   title?: string;
 }): Promise<ShareStatus> {
   const { Filesystem, Directory } = await loadFs();
-  const Share = await loadShare();
 
   const data = await blobToBase64(input.blob);
   const path = input.filename;
@@ -148,7 +148,6 @@ export async function saveImageNative(input: {
   
   recordTrace("export-audit", "07 — filesystem:write:start");
   const { Filesystem, Directory } = await loadFs();
-  const Share = await loadShare();
   
   const stamp = Date.now();
   const path = `irth-${stamp}-${input.filename}`;
