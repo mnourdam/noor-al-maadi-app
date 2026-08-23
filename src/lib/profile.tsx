@@ -318,14 +318,17 @@ function hydrateFromStorage(): ProfileState | null {
       } catch { return "error"; }
     };
 
-    const rawLocal = localStorage.getItem(STORAGE_KEY);
+    const s = typeof window !== "undefined" ? window.localStorage : null;
+    const originalGet = s ? ((s as any).__originalGetItem || s.getItem) : null;
+    
+    const rawLocal = s ? s.getItem(STORAGE_KEY) : null;
     let rawLegacy = null;
-    try {
-      // @ts-ignore
-      const originalGet = (Storage.prototype as any).__originalGetItem || localStorage.getItem;
-      rawLegacy = originalGet.call(localStorage, STORAGE_KEY);
-    } catch (e) {}
-    const rawSession = sessionStorage.getItem(STORAGE_KEY);
+    if (s && originalGet) {
+      try {
+        rawLegacy = originalGet.call(s, STORAGE_KEY);
+      } catch (e) {}
+    }
+    const rawSession = typeof window !== "undefined" ? window.sessionStorage.getItem(STORAGE_KEY) : null;
 
     const finalRaw = rawLocal || rawLegacy || rawSession;
     const finalSource = rawLocal ? "partitioned-local" : 
