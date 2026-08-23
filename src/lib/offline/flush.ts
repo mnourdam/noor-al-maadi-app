@@ -9,6 +9,7 @@
 // ============================================================
 
 import { supabase } from "@/integrations/supabase/client";
+import { getIdentityEpoch } from "../identity/owner";
 import { peekAll, remove, bumpAttempt, type OutboxItem } from "./outbox";
 import { recordDeadLetter, isPermanentReason } from "./dead-letter";
 
@@ -20,11 +21,9 @@ let inflight: Promise<{ flushed: number; failed: number }> | null = null;
 // cross-account leaks or accidental deletions.
 let activeFlushEpoch = 0;
 
-function getIdentityEpoch(): number {
-  if (typeof window === "undefined") return 0;
+function getIdentityEpochSafe(): number {
   try {
-    const { getIdentityEpoch: getEpoch } = require("../identity/owner");
-    return getEpoch();
+    return getIdentityEpoch();
   } catch {
     return 0;
   }
@@ -453,7 +452,7 @@ export async function flushOutbox(userId: string): Promise<{ flushed: number; fa
   if (!userId) return { flushed: 0, failed: 0 };
   
   // Capture current epoch to detect identity switches after awaits.
-  const startEpoch = getIdentityEpoch();
+  const startEpoch = getIdentityEpochSafe();
 
   if (inflight) return inflight;
   inflight = (async () => {
@@ -463,7 +462,7 @@ export async function flushOutbox(userId: string): Promise<{ flushed: number; fa
       const items = await peekAll(userId);
       for (const item of items) {
         // IDENTITY CHECK: Before owner-sensitive mutation / network call.
-        if (getIdentityEpoch() !== startEpoch) {
+        if (getIdentityEpochSafe() !== startEpoch) {
           console.warn("[flush] identity changed mid-flush, stopping safely", { userId });
           break;
         }
@@ -471,7 +470,7 @@ export async function flushOutbox(userId: string): Promise<{ flushed: number; fa
         const res = await handleItem(item);
 
         // IDENTITY CHECK: After network call, before updating local queue state.
-        if (getIdentityEpoch() !== startEpoch) {
+        if (getIdentityEpochSafe() !== startEpoch) {
           console.warn("[flush] identity changed after handleItem, aborting queue update", { userId });
           break;
         }
