@@ -1173,10 +1173,27 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         // syncs. Only apply a true admin-side change.
         const target = Math.max(0, Math.min(HEART_MAX, stats.hearts));
         const localCommitted = Math.max(0, Math.min(HEART_MAX, p.hearts ?? HEART_MAX));
+        recordTrace("hearts-audit", "HEARTS_RECONCILIATION", JSON.stringify({
+          owner: getActiveOwner(),
+          localHearts: localCommitted,
+          localEffective: getEffectiveHearts(p, now),
+          serverHearts: target,
+          mergeRule: "Server Stats Apply",
+          localUpdatedAt: p.heartsAt
+        }));
+
         if (target !== localCommitted) {
-          next = { ...next, ...commitHearts(p, target, now) };
+          const patched = commitHearts(p, target, now);
+          next = { ...next, ...patched };
           changed = true;
+          
+          recordTrace("hearts-audit", "HEARTS_PROFILE_APPLIED", JSON.stringify({
+            chosenHearts: patched.hearts,
+            chosenHeartsAt: patched.heartsAt,
+            source: "server-stats"
+          }));
         }
+
       }
 
       return changed ? next : p;
