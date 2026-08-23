@@ -122,10 +122,15 @@ function mapKey(key: string): string {
   // V13 Physical Android Diagnostics - Profile read/write mapping
   if (key === "hakaya.profile.v2") {
     import("../diag-trace").then(m => {
+      const exists = typeof window !== "undefined" && window.localStorage.getItem(physical) !== null;
+      const legacyExists = typeof window !== "undefined" && window.localStorage.getItem(key) !== null;
+      
       m.recordTrace("logout-audit", "storage-mapping", JSON.stringify({
-        logical: key,
         owner: owner,
-        physical: physical
+        logical: key,
+        physical: physical,
+        exists,
+        legacyExists
       }));
     }).catch(() => {});
   }
@@ -239,11 +244,13 @@ export function installIdentityPartition(): void {
       import("../diag-trace").then(m => {
         m.recordTrace("logout-audit", "profile-read", JSON.stringify({
           owner: getActiveOwner(),
+          logical: logical,
           physical: mapped,
           exists: val !== null,
           data: parseSafe(val),
           legacyExists: legacyVal !== null,
-          legacyData: parseSafe(legacyVal)
+          legacyData: parseSafe(legacyVal),
+          returned: val !== null ? (ownerOfPhysicalKey(mapped) || "legacy/global") : (legacyVal !== null ? "legacy/fallback" : "null")
         }));
       }).catch(() => {});
     }
