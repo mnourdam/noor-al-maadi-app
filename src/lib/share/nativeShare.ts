@@ -21,7 +21,10 @@ import { recordTrace } from "@/lib/diag-trace";
 type ShareStatus = "shared" | "cancelled";
 
 async function loadShare() {
+  recordTrace("export-audit", "09 — share-module:import:start");
   const { Share } = await import("@capacitor/share");
+  recordTrace("export-audit", "10 — share-module:import:success");
+  recordTrace("export-audit", "11 — share-plugin:resolved", `typeShare=${typeof Share}, typeShareShare=${typeof Share?.share}`);
   return Share;
 }
 
@@ -139,12 +142,13 @@ export async function saveImageNative(input: {
   blob: Blob;
   filename: string;
 }): Promise<{ status: "downloaded" | "shared"; uri: string }> {
-  recordTrace("export-audit", "filesystem:write:start");
+  recordTrace("export-audit", "05 — base64:start");
+  const data = await blobToBase64(input.blob);
+  recordTrace("export-audit", "06 — base64:success", `len=${data.length}`);
+  
+  recordTrace("export-audit", "07 — filesystem:write:start");
   const { Filesystem, Directory } = await loadFs();
   const Share = await loadShare();
-
-  const data = await blobToBase64(input.blob);
-  recordTrace("export-audit", "base64:ready", `len=${data.length}`);
   
   const stamp = Date.now();
   const path = `irth-${stamp}-${input.filename}`;
@@ -156,8 +160,7 @@ export async function saveImageNative(input: {
       directory: Directory.Cache,
       recursive: true,
     });
-    recordTrace("export-audit", "filesystem:write:end", `uri=${written.uri.slice(0, 50)}...`);
-    recordTrace("export-audit", "filesystem:getUri:end", written.uri);
+    recordTrace("export-audit", "08 — filesystem:write:success", `uri=${written.uri}`);
 
     recordTrace("export-audit", "share:call:start");
     
