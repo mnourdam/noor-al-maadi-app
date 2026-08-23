@@ -119,13 +119,14 @@ function mapKey(key: string): string {
   const owner = getActiveOwner();
   const physical = physicalKey(key, owner);
   
-  // V13 Physical Android Diagnostics - log only for profile key to avoid noise
+  // V13 Physical Android Diagnostics - Profile read/write mapping
   if (key === "hakaya.profile.v2") {
     import("../diag-trace").then(m => {
-      m.recordTrace("logout-audit", "storage:operation", "read/write");
-      m.recordTrace("logout-audit", "logical-key", key);
-      m.recordTrace("logout-audit", "activeOwner", owner);
-      m.recordTrace("logout-audit", "physical-key", physical);
+      m.recordTrace("logout-audit", "storage-mapping", JSON.stringify({
+        logical: key,
+        owner: owner,
+        physical: physical
+      }));
     }).catch(() => {});
   }
   
@@ -148,19 +149,54 @@ const MIGRATED_FLAG = "irth.identity.partitionMigrated.v1";
  */
 function migrateLegacyKeys(store: Storage, owner: OwnerKey): void {
   withoutMapping(() => {
-    if (store.getItem(MIGRATED_FLAG) === owner) return;
+    const log = (stage: string, detail?: string) => {
+      import("../diag-trace").then(m => m.recordTrace("logout-audit", `migration:${stage}`, detail)).catch(() => {});
+    };
+
+    if (store.getItem(MIGRATED_FLAG) === owner) {
+      log("skipped-already-migrated", owner);
+      return;
+    }
+
+    log("start", owner);
+
     const legacy: string[] = [];
     for (let i = 0; i < store.length; i++) {
       const k = store.key(i);
       if (k && isPersonalKey(k)) legacy.push(k);
     }
+
     for (const k of legacy) {
       const target = physicalKey(k, owner);
+      const sourceExists = store.getItem(k) !== null;
+      const targetExistsBefore = store.getItem(target) !== null;
+      
+      log("check", JSON.stringify({
+        key: k,
+        sourceExists,
+        target: target,
+        targetExistsBefore
+      }));
+
       try {
         const v = store.getItem(k);
-        if (v !== null && store.getItem(target) === null) store.setItem(target, v);
-        store.removeItem(k);
-      } catch { /* quota — keep going */ }
+        let copyPerformed = false;
+        if (v !== null && store.getItem(target) === null) {
+          store.setItem(target, v);
+          copyPerformed = true;
+        }
+        
+        const removed = v !== null;
+        if (removed) store.removeItem(k);
+
+        log("result", JSON.stringify({
+          key: k,
+          copyPerformed,
+          legacyRemoved: removed
+        }));
+      } catch (e) { 
+        log("error", (e as Error).message);
+      }
     }
     try { store.setItem(MIGRATED_FLAG, owner); } catch { /* ignore */ }
   });
@@ -186,11 +222,57 @@ export function installIdentityPartition(): void {
   const removeItem = proto.removeItem;
 
   proto.getItem = function (this: Storage, key: string) {
-    return getItem.call(this, mapKey(String(key)));
+    const logical = String(key);
+    const mapped = mapKey(logical);
+    const val = getItem.call(this, mapped);
+
+    if (logical === "hakaya.profile.v2" && mapping) {
+      const legacyVal = getItem.call(this, logical);
+      const parseSafe = (v: string | null) => {
+        if (!v) return null;
+        try {
+          const p = JSON.parse(v);
+          return { name: p.name, loggedIn: p.loggedIn, points: p.points, dinars: p.dinars };
+        } catch { return "error"; }
+      };
+
+      import("../diag-trace").then(m => {
+        m.recordTrace("logout-audit", "profile-read", JSON.stringify({
+          owner: getActiveOwner(),
+          physical: mapped,
+          exists: val !== null,
+          data: parseSafe(val),
+          legacyExists: legacyVal !== null,
+          legacyData: parseSafe(legacyVal)
+        }));
+      }).catch(() => {});
+    }
+    return val;
   };
+
   proto.setItem = function (this: Storage, key: string, value: string) {
-    return setItem.call(this, mapKey(String(key)), value);
+    const logical = String(key);
+    const mapped = mapKey(logical);
+    
+    if (logical === "hakaya.profile.v2" && mapping) {
+      const parseSafe = (v: string | null) => {
+        if (!v) return null;
+        try {
+          const p = JSON.parse(v);
+          return { name: p.name, loggedIn: p.loggedIn, points: p.points, dinars: p.dinars };
+        } catch { return "error"; }
+      };
+      import("../diag-trace").then(m => {
+        m.recordTrace("logout-audit", "profile-write", JSON.stringify({
+          owner: getActiveOwner(),
+          physical: mapped,
+          data: parseSafe(value)
+        }));
+      }).catch(() => {});
+    }
+    return setItem.call(this, mapped, value);
   };
+
   proto.removeItem = function (this: Storage, key: string) {
     return removeItem.call(this, mapKey(String(key)));
   };
