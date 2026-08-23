@@ -113,7 +113,17 @@ function resetCanonicalInputs(): void {
   inputs.games = { totalPlays: 0 };
   inputs.titles = { earnedCount: 0 };
   inputs.profile = { userId: null };
+
+  // V13 Diagnostic Trace: Verify reset state
+  recordTrace("logout-audit", "ACHIEVEMENT_CANONICAL_CAMPAIGNS", JSON.stringify({
+    owner: inputs.profile.userId ? `user:${inputs.profile.userId}` : "guest",
+    caller: "resetCanonicalInputs",
+    completedIdsCount: inputs.campaigns.completedIds.length,
+    inProgressIdsCount: 0,
+    totalCompleted: inputs.campaigns.completedIds.length
+  }));
 }
+
 
 
 // ---------- slice providers (pure reads from `inputs`) ----------
