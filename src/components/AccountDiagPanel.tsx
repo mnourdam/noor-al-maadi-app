@@ -49,15 +49,15 @@ export function AccountDiagPanel() {
       </div>
       
       <div className="mb-4 rounded-xl border border-gold/30 bg-gold/5 p-3 text-[10px] text-gold/90 leading-relaxed whitespace-pre-wrap">
-        {`V13 — ACHIEVEMENT RACE NOW PROVEN WITH EXACT TIMING
+        {`V13 — FINAL ACHIEVEMENT ROOT CAUSE PROVEN: STALE SERVER COMPLETIONS
  
  Physical Android verification:
  CAMPAIGNS: PASS
  INVESTIGATIONS: PASS
- PKCE: PASS
+ SERVER COMPLETIONS: BINDING TO USER_ID
  
- STATUS: IMPLEMENTED Transition Barrier in AchievementEngineBoot.
- VERDICT: Stale pushes from Account A (24 completions) are now blocked by identityEpoch + owner verification during the logout window.`}
+ STATUS: IMPLEMENTED Source-Level Fix in AchievementEngineBoot.
+ VERDICT: Stale server completions from Account A (24 completions) are now explicitly rejected during logout by validating the result's userId against the active identity.`}
       </div>
 
       <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
