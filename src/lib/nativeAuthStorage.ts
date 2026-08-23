@@ -11,6 +11,7 @@
 // checked during recovery (cold start).
 
 import { Preferences } from "@capacitor/preferences";
+import { recordTrace } from "@/lib/diag-trace";
 
 export interface AsyncSupabaseStorage {
   getItem(key: string): Promise<string | null>;

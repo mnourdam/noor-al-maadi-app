@@ -1,5 +1,5 @@
 import { getActiveOwner, userOwnerKey, guestOwnerKey, type OwnerKey, setActiveOwnerInternal } from "./owner";
-import { setAuthReady } from "./identity/guard";
+import { setAuthReady } from "./guard";
 import { recordTrace } from "@/lib/diag-trace";
 
 let queryClient: any = null;
@@ -7,7 +7,21 @@ export function setQueryClientForReset(client: any) {
   queryClient = client;
 }
 
-export type IdentityChangeReason = "boot" | "login" | "logout" | "account-switch" | "session-expired";
+/** Added missing exports needed for build */
+export function registerIdentityQueryClient(client: any) {
+  queryClient = client;
+}
+
+export type IdentityChangeReason = 
+  | "boot" 
+  | "login" 
+  | "logout" 
+  | "account-switch" 
+  | "session-expired"
+  | "auth-listener"
+  | "sign-in"
+  | "sign-out"
+  | "account-deleted";
 
 export interface IdentityChangeDetail {
   owner: OwnerKey;
@@ -115,5 +129,3 @@ export async function resetForIdentityChange(opts: {
 
   return { changed: true, owner: next, previous: res.previous };
 }
-
-export { IDENTITY_CHANGED_EVENT };
