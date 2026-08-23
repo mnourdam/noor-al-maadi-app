@@ -280,11 +280,15 @@ export function ShareCard(props: ShareCardProps) {
       }
     } catch (e) {
       const error = e as Error;
+      const msg = error.message || "حدث خطأ أثناء تجهيز البطاقة";
       recordTrace("export-audit", "EXPORT_ERROR", JSON.stringify({
         stage: "ui-handler",
         name: error.name,
         message: error.message
       }));
+      if (msg !== "Share sheet dismissed") {
+        toast.error(msg);
+      }
     } finally {
       recordTrace("export-audit", "EXPORT_10_FINALLY");
       setBusy(null);
