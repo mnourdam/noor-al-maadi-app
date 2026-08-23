@@ -159,11 +159,8 @@ export async function saveImageNative(input: {
     recordTrace("export-audit", "filesystem:write:end", `uri=${written.uri.slice(0, 50)}...`);
     recordTrace("export-audit", "filesystem:getUri:end", written.uri);
 
-    recordTrace("export-audit", "share:start", JSON.stringify({
-      uri: written.uri,
-      platform: "android"
-    }));
-
+    recordTrace("export-audit", "share:call:start");
+    
     // V13 Physical Android Fix: Capacitor plugins on Android are proxied objects.
     // The previous patches failed because they either used Promise.race or
     // manual `.then()` callbacks on the proxied result of `Share.share()`.
@@ -174,17 +171,17 @@ export async function saveImageNative(input: {
     // 
     // Minimal Safe Fix: We use simple `await Share.share()` which, combined 
     // with the Capacitor 8.x bridge improvements, avoids the proxy trap.
-    recordTrace("export-audit", "share:call:start");
-    
     const result = Share.share({
       files: [written.uri],
     });
+
+    // DIAGNOSTIC HOOK: Record type of returned proxy without triggering .then
+    recordTrace("export-audit", "share:call:returned", typeof result);
+
+    recordTrace("export-audit", "share:await:start");
     await result;
     
     recordTrace("export-audit", "share:success");
-    
-    recordTrace("export-audit", "share:complete");
-    
     recordTrace("export-audit", "export:finally");
 
     // Best effort cleanup after a delay.
