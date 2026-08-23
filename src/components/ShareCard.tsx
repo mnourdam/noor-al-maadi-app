@@ -102,26 +102,6 @@ export function ShareCard(props: ShareCardProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState<"download" | null>(null);
-  const [diagVersion, setDiagVersion] = useState(0);
-  const [diagOpen, setDiagOpen] = useState(false);
-
-  useEffect(() => {
-    const handleRejection = (e: PromiseRejectionEvent) => {
-      const msg = e.reason instanceof Error ? e.reason.message : String(e.reason);
-      recordTrace("export-audit", "UNHANDLED_REJECTION", msg);
-      setDiagVersion(v => v + 1);
-    };
-    const handleError = (e: ErrorEvent) => {
-      recordTrace("export-audit", "RUNTIME_ERROR", e.message);
-      setDiagVersion(v => v + 1);
-    };
-    window.addEventListener("unhandledrejection", handleRejection);
-    window.addEventListener("error", handleError);
-    return () => {
-      window.removeEventListener("unhandledrejection", handleRejection);
-      window.removeEventListener("error", handleError);
-    };
-  }, []);
 
   const lvl = levelFor(profile.points);
   const activeTitle =
@@ -277,45 +257,20 @@ export function ShareCard(props: ShareCardProps) {
   const onDownload = useCallback(async () => {
     if (!ready || busy) return;
     
-    // V13_EXPORT_DIAG_1
-    const addLog = (stage: string, detail?: string) => {
-      recordTrace("export-audit", stage, detail);
-      // Trigger local state update to refresh the panel
-      setDiagVersion(v => v + 1);
-    };
-
-    addLog("01 — export:click");
     setBusy("download");
     
     try {
-      addLog("02 — canvas:available", String(!!canvasRef.current));
-      
-      addLog("03 — canvas:toBlob:start");
       const blob = await canvasToBlob(canvasRef.current);
-      addLog("04 — canvas:toBlob:success", blob ? `size=${blob.size}, type=${blob.type}` : "null");
-
       if (!blob) { 
         toast.error("تعذر تجهيز البطاقة، حاول مجددًا"); 
         return; 
       }
-
-      addLog("05 — base64:start");
-      // Indirectly tracked by shareImage/downloadImage/saveImageNative
-      // but we wrap the call to see the transition.
-
-      addLog("09 — share-module:import:start");
-      // The shareService handles imports, but we've instrumented nativeShare.ts
-      
-      addLog("12 — share:call:start");
-      addLog("12.1 — وصل إلى استدعاء المشاركة");
 
       const res = await downloadImage({
         jobId: `identity-card-download-${cardNumber}`,
         blob,
         filename: `${filenameBase}.png`,
       });
-
-      addLog("16 — export:success", res.status);
 
       if (res.status === "downloaded") {
         toast.success("تم تنزيل البطاقة ✓");
@@ -324,12 +279,10 @@ export function ShareCard(props: ShareCardProps) {
       }
     } catch (e) {
       const error = e as Error;
-      addLog("ERROR", `name=${error.name}, message=${error.message}`);
       if (error.message !== "Share sheet dismissed") {
         toast.error(error.message || "حدث خطأ أثناء تجهيز البطاقة");
       }
     } finally {
-      addLog("17 — export:finally");
       setBusy(null);
     }
   }, [ready, busy, cardNumber, filenameBase]);
@@ -370,59 +323,6 @@ export function ShareCard(props: ShareCardProps) {
         )}
       </button>
 
-      {/* V13_EXPORT_DIAG_1: Visible diagnostic panel */}
-      {isCapacitorNative() && (
-        <div className="mt-4 overflow-hidden rounded-xl border border-white/10 bg-black/20 text-[10px] font-mono">
-          <button
-            onClick={() => setDiagOpen(!diagOpen)}
-            className="flex w-full items-center justify-between p-3 text-white/60 hover:bg-white/5"
-          >
-            <div className="flex items-center gap-2 font-bold uppercase tracking-wider">
-              <Info className="size-3" /> تشخيص تحميل البطاقة
-            </div>
-            <span className="text-[9px] opacity-40">{diagOpen ? "إغلاق" : "فتح"}</span>
-          </button>
-          
-          {diagOpen && (
-            <div className="border-t border-white/5 p-3 space-y-2">
-              <div className="grid grid-cols-2 gap-2 text-white/40 border-b border-white/5 pb-2">
-                <div>المنصة: android</div>
-                <div>Capacitor: true</div>
-                <div>النسخة: V13_EXPORT_DIAG_1</div>
-                <div>الوقت: {new Date().toLocaleTimeString()}</div>
-              </div>
-
-              <div className="space-y-1">
-                <div className="text-white/60 font-bold mb-1">سجل المراحل:</div>
-                <div className="max-h-48 overflow-y-auto space-y-1 bg-black/40 p-2 rounded border border-white/5">
-                  {readTrace("export-audit").map((entry, i) => (
-                    <div key={i} className={`flex gap-2 ${entry.stage === "ERROR" || entry.stage === "UNHANDLED_REJECTION" ? "text-red-400" : "text-white/40"}`}>
-                      <span className="opacity-50">[{entry.ts.split('T')[1].split('.')[0]}]</span>
-                      <span className="flex-1 break-all">{entry.stage} {entry.detail ? `→ ${entry.detail}` : ""}</span>
-                    </div>
-                  ))}
-                  {readTrace("export-audit").length === 0 && <div className="italic text-white/20">لا يوجد سجل حالياً</div>}
-                </div>
-              </div>
-
-              <div className="flex justify-between pt-1">
-                <button
-                  onClick={() => {
-                    import("@/lib/diag-trace").then(m => m.clearTrace("export-audit"));
-                    setDiagVersion(v => v + 1);
-                  }}
-                  className="text-gold/60 hover:text-gold"
-                >
-                  مسح السجل
-                </button>
-                <div className="text-white/20">
-                  آخر مرحلة: {readTrace("export-audit").slice(-1)[0]?.stage || "READY"}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }

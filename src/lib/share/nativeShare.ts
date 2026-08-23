@@ -21,14 +21,6 @@ import { Share } from "@capacitor/share";
 
 type ShareStatus = "shared" | "cancelled";
 
-// V13_EXPORT_DIAG_1
-// We removed loadShare() helper entirely because it was an async function 
-// that returned the Share plugin proxy. When a Promise resolves to a thenable,
-// the JS engine calls .then() to assimilate it. Capacitor's Android bridge
-// throws "Share.then() is not implemented" when .then is accessed.
-//
-// By using a top-level static import, the proxy is never wrapped in a 
-// Promise resolution at runtime.
 
 async function loadFs() {
   const mod = await import("@capacitor/filesystem");
@@ -45,7 +37,7 @@ export function canUseNativeShare(): boolean {
  * with large binary string builds on Android.
  */
 function blobToBase64(blob: Blob): Promise<string> {
-  recordTrace("export-audit", "fileReader:start");
+  
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
@@ -60,7 +52,7 @@ function blobToBase64(blob: Blob): Promise<string> {
         reject(new Error("Failed to extract base64 from DataURL"));
         return;
       }
-      recordTrace("export-audit", "fileReader:end", `len=${base64.length}`);
+      
       resolve(base64);
     };
     reader.onerror = () => reject(reader.error || new Error("FileReader error"));
@@ -142,11 +134,8 @@ export async function saveImageNative(input: {
   blob: Blob;
   filename: string;
 }): Promise<{ status: "downloaded" | "shared"; uri: string }> {
-  recordTrace("export-audit", "05 — base64:start");
   const data = await blobToBase64(input.blob);
-  recordTrace("export-audit", "06 — base64:success", `len=${data.length}`);
   
-  recordTrace("export-audit", "07 — filesystem:write:start");
   const { Filesystem, Directory } = await loadFs();
   
   const stamp = Date.now();
@@ -159,9 +148,6 @@ export async function saveImageNative(input: {
       directory: Directory.Cache,
       recursive: true,
     });
-    recordTrace("export-audit", "08 — filesystem:write:success", `uri=${written.uri}`);
-
-    recordTrace("export-audit", "share:call:start");
     
     // V13 Physical Android Fix: Capacitor plugins on Android are proxied objects.
     // The previous patches failed because they either used Promise.race or
@@ -177,14 +163,7 @@ export async function saveImageNative(input: {
       files: [written.uri],
     });
 
-    // DIAGNOSTIC HOOK: Record type of returned proxy without triggering .then
-    recordTrace("export-audit", "share:call:returned", typeof result);
-
-    recordTrace("export-audit", "share:await:start");
     await result;
-    
-    recordTrace("export-audit", "share:success");
-    recordTrace("export-audit", "export:finally");
 
     // Best effort cleanup after a delay.
     setTimeout(() => {
@@ -194,11 +173,6 @@ export async function saveImageNative(input: {
     return { status: "shared", uri: written.uri };
   } catch (err) {
     const error = err as Error;
-    recordTrace("export-audit", "EXPORT_ERROR", JSON.stringify({
-      stage: "native-save-flow",
-      name: error.name,
-      message: error.message
-    }));
     
     const msg = error.message ?? "";
     if (/cancel|dismiss/i.test(msg)) {
