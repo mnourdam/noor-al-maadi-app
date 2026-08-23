@@ -71,12 +71,13 @@ export async function shareTextNative(input: {
 }): Promise<ShareStatus> {
   const Share = await loadShare();
   try {
-    await Share.share({
+    const sharePromise = Share.share({
       title: input.title,
       text: input.text,
       url: input.url,
       dialogTitle: input.title,
     });
+    await sharePromise;
     return "shared";
   } catch (err) {
     const msg = (err as { message?: string } | null)?.message ?? "";
