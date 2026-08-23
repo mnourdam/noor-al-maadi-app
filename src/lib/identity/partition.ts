@@ -262,6 +262,7 @@ export function installIdentityPartition(): void {
     const mapped = mapKey(logical);
     
     if (logical === "hakaya.profile.v2" && mapping) {
+      const legacyVal = getItem.call(this, logical);
       const parseSafe = (v: string | null) => {
         if (!v) return null;
         try {
@@ -272,8 +273,11 @@ export function installIdentityPartition(): void {
       import("../diag-trace").then(m => {
         m.recordTrace("logout-audit", "profile-write", JSON.stringify({
           owner: getActiveOwner(),
+          logical: logical,
           physical: mapped,
-          data: parseSafe(value)
+          data: parseSafe(value),
+          legacyExists: legacyVal !== null,
+          legacyData: parseSafe(legacyVal)
         }));
       }).catch(() => {});
     }
