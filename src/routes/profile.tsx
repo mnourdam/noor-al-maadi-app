@@ -12,6 +12,10 @@ import {
   Type as TypeIcon, Sprout, Inbox, Mail, Package, Gem, Award,
 } from "lucide-react";
 import { z } from "zod";
+import { Loader2 } from "lucide-react";
+import { recordTrace, readTrace, clearTrace } from "@/lib/diag-trace";
+import { getActiveOwner, getIdentityEpoch } from "@/lib/identity/owner";
+import { getReconciliationState } from "@/lib/boot/reconciliation";
 
 import { toWesternDigits } from "@/lib/formatNumber";
 import { useAudioSettings } from "@/hooks/useAudioSettings";
@@ -80,7 +84,7 @@ const TABS: { id: TabId; label: string; icon: typeof LayoutGrid }[] = [
   // Seasons tab hidden for LC1 — feature deferred post-beta. Renderer kept intact.
   // { id: "seasons", label: "المواسم", icon: ScrollText },
   // Referrals tab removed in Phase 2 (Referrals removal).
-  { id: "settings", label: "الإعدادات", icon: SettingsIcon },
+      {id: "settings", label: "الإعدادات", icon: SettingsIcon },
 ];
 
 const TAB_STORAGE_KEY = "irth.profile.tab";
