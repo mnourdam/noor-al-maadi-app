@@ -242,6 +242,12 @@ export function initAchievementEngine(): void {
  */
 export async function refreshPersistedForUser(userId: string | null): Promise<void> {
   if (bootedForUserId === userId) return;
+
+  // ATOMIC RESET: Flush all module-level memory belonging to the previous identity.
+  persisted = new Map();
+  alreadyNotified = new Set();
+  lastClaimedSet = new Set();
+
   bootedForUserId = userId;
   inputs.profile.userId = userId;
   mirrorReady = false;
