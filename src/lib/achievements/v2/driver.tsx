@@ -137,11 +137,17 @@ export function AchievementEngineBoot() {
   //   ∪  serverCompletedIds       (server-authoritative ledger)
   const unionedCampaigns = useMemo(() => {
     const out = new Set<string>();
+    
+    // V13 Safety Guard: If not hydrated or logged out without userId settled,
+    // we must not union anything that might be stale.
+    if (!hydrated) return [];
+    
     for (const id of profile.campaignsCompleted ?? []) if (id) out.add(id);
     for (const id of localCompletedIds()) out.add(id);
     for (const id of serverCompletedIds) out.add(id);
     return [...out];
-  }, [profile.campaignsCompleted, serverCompletedIds]);
+  }, [profile.campaignsCompleted, serverCompletedIds, hydrated]);
+
 
   // Canonical inputs → engine.
   useEffect(() => {
@@ -152,7 +158,8 @@ export function AchievementEngineBoot() {
     // internal profile userId matches the profile we are currently reading from.
     // This prevents Account A's hook-driven re-render (which fires after logout 
     // but before the hook updates to Guest) from polluting the Guest engine.
-    const engineUserId = getPersisted().size === 0 && !profile.loggedIn ? null : profile.loggedIn ? (profile as any).userId || authUserIdRef.current : null;
+    if (userId !== authUserIdRef.current && userId !== null) return;
+
     
     pushCanonical({
       campaigns: { completedIds: unionedCampaigns },

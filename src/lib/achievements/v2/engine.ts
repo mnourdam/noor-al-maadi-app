@@ -113,7 +113,17 @@ function resetCanonicalInputs(): void {
   inputs.games = { totalPlays: 0 };
   inputs.titles = { earnedCount: 0 };
   inputs.profile = { userId: null };
+
+  // V13 Diagnostic Trace: Verify reset state
+  recordTrace("logout-audit", "ACHIEVEMENT_CANONICAL_CAMPAIGNS", JSON.stringify({
+    owner: inputs.profile.userId ? `user:${inputs.profile.userId}` : "guest",
+    caller: "resetCanonicalInputs",
+    completedIdsCount: inputs.campaigns.completedIds.length,
+    inProgressIdsCount: 0,
+    totalCompleted: inputs.campaigns.completedIds.length
+  }));
 }
+
 
 
 // ---------- slice providers (pure reads from `inputs`) ----------
@@ -406,10 +416,22 @@ export function pushCanonical(patch: Partial<CanonicalInputs>): void {
     if (key === "profile") continue; // handled above
     (inputs as unknown as Record<string, unknown>)[key] = patch[key] as unknown;
     changed.push(key as CanonicalDomain);
+
+    // V13 Diagnostic Trace: Log campaign updates
+    if (key === "campaigns") {
+      recordTrace("logout-audit", "ACHIEVEMENT_CANONICAL_CAMPAIGNS", JSON.stringify({
+        owner: inputs.profile.userId ? `user:${inputs.profile.userId}` : "guest",
+        caller: "pushCanonical",
+        completedIdsCount: inputs.campaigns.completedIds.length,
+        inProgressIdsCount: 0,
+        totalCompleted: inputs.campaigns.completedIds.length
+      }));
+    }
   }
   if (changed.length === 0) return;
   void runCycle(changed, liveTransitionsReady ? "live_gameplay_unlock" : "historical_reconciliation");
 }
+
 
 
 let cycleInFlight: Promise<void> | null = null;
@@ -451,8 +473,20 @@ async function doCycle(
   changedDomains: readonly CanonicalDomain[],
   origin: TransitionOrigin,
 ): Promise<void> {
+  // V13 Diagnostic Trace: Log state before reconciliation
+  if (origin === "historical_reconciliation" || changedDomains.includes("campaigns")) {
+    recordTrace("logout-audit", "ACHIEVEMENT_CANONICAL_CAMPAIGNS", JSON.stringify({
+      owner: inputs.profile.userId ? `user:${inputs.profile.userId}` : "guest",
+      caller: `doCycle:${origin}`,
+      completedIdsCount: inputs.campaigns.completedIds.length,
+      inProgressIdsCount: 0,
+      totalCompleted: inputs.campaigns.completedIds.length
+    }));
+  }
+
   snapshot = rebuildSnapshot(snapshot, changedDomains);
   const alreadyUnlockedSet = new Set<AchievementId>(persisted.keys());
+
   evaluation = evaluate(snapshot, registry, alreadyUnlockedSet, {
     changedDomains,
     prev: evaluation,
