@@ -102,7 +102,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         // SIGNED_OUT transitions, not just explicit logout.
         try {
           import("@/lib/native-auth").then(m => {
-            m.recordTrace("pkce-audit", "SIGNED_OUT_received");
+            import("@/lib/diag-trace").then(dt => dt.recordTrace("pkce-audit", "SIGNED_OUT_received"));
             m.resetNativePkceClient();
           }).catch(() => {});
         } catch { /* ignore dynamic import failure */ }
