@@ -478,9 +478,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
   }, [profile, hydrated]);
-    } catch {}
-    androidMeasure("profile.localStorage.write", started, { bytes: raw.length });
-  }, [profile, hydrated]);
 
   // Live streak-expiry watcher. While the app stays open across local
   // midnight, the stored streak value would otherwise stay stale (e.g. 7)
