@@ -86,6 +86,9 @@ async function tracedAwait<T>(
 }
 
 export async function signInWithGoogleNative(): Promise<{ ok: boolean; error?: string }> {
+  recordTrace("pkce-audit", "googleLogin:tap");
+  recordTrace("pkce-audit", "activeOwner", getActiveOwner());
+  recordTrace("pkce-audit", "identityEpoch", getIdentityEpochSafe());
   if (oauthFlowActive) {
     console.warn("[native-auth] OAUTH_FLOW_ALREADY_ACTIVE — ignoring duplicate tap");
     return { ok: false, error: "هناك عملية تسجيل دخول قيد التنفيذ بالفعل." };
