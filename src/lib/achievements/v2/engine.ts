@@ -89,6 +89,33 @@ const inputs: CanonicalInputs = {
   profile: { userId: null },
 };
 
+/**
+ * Resets the module-level canonical inputs to their initial empty/guest state.
+ * Prevents cross-identity pollution during logout/reset cycles.
+ */
+function resetCanonicalInputs(): void {
+  inputs.campaigns = { completedIds: [] };
+  inputs.investigations = { completedIds: [] };
+  inputs.encyclopedia = {
+    discoveredIds: [],
+    byCategory: {},
+    byEra: {},
+    byRegion: {},
+  };
+  inputs.museum = { ownedIds: [], byRarity: {} };
+  inputs.atlas = { discoveredIds: [] };
+  inputs.worlds = { completedSlugs: [], perWorldRatio: {} };
+  inputs.xp = 0;
+  inputs.level = 0;
+  inputs.dinars = { current: 0, lifetimeEarned: 0 };
+  inputs.streak = { current: 0, longest: 0 };
+  inputs.daily = { challengesCompleted: 0 };
+  inputs.games = { totalPlays: 0 };
+  inputs.titles = { earnedCount: 0 };
+  inputs.profile = { userId: null };
+}
+
+
 // ---------- slice providers (pure reads from `inputs`) ----------
 
 let providersRegistered = false;
@@ -287,11 +314,17 @@ export async function resetAchievementEngine(nextUserId: string | null): Promise
   alreadyNotified = new Set();
   lastClaimedSet = new Set();
   
+  // V13 Fix: Clear the canonical inputs staging area BEFORE starting hydration.
+  // This prevents the new identity from satisfy achievements based on the 
+  // previous identity's stale progression (e.g. Account A's 25 campaigns).
+  resetCanonicalInputs();
+
   bootedForUserId = nextUserId;
   inputs.profile.userId = nextUserId;
   mirrorReady = false;
   liveTransitionsReady = false;
   baselineInFlight = null;
+
 
   if (!nextUserId) {
     persisted = loadGuestUnlocks();
@@ -362,13 +395,22 @@ export async function refreshPersistedForUser(userId: string | null): Promise<vo
  */
 export function pushCanonical(patch: Partial<CanonicalInputs>): void {
   const changed: CanonicalDomain[] = [];
+  
+  // V13 Ownership Guard: If the patch includes a userId, update it first.
+  if (patch.profile) {
+    inputs.profile.userId = patch.profile.userId;
+    changed.push("profile");
+  }
+
   for (const key of Object.keys(patch) as (keyof CanonicalInputs)[]) {
+    if (key === "profile") continue; // handled above
     (inputs as unknown as Record<string, unknown>)[key] = patch[key] as unknown;
     changed.push(key as CanonicalDomain);
   }
   if (changed.length === 0) return;
   void runCycle(changed, liveTransitionsReady ? "live_gameplay_unlock" : "historical_reconciliation");
 }
+
 
 let cycleInFlight: Promise<void> | null = null;
 let queuedDomains: CanonicalDomain[] | null = null;
@@ -430,6 +472,26 @@ async function doCycle(
     persisted,
     alreadyNotified,
   });
+
+  // V13 Forensic Tracing: Log the reason for each new unlock.
+  if (output.newlyUnlocked.length > 0) {
+    for (const id of output.newlyUnlocked) {
+      const def = registry.byId.get(id);
+      if (def) {
+        // Detailed reconciliation reason trace
+        recordTrace("logout-audit", "ACHIEVEMENT_RECONCILIATION_REASON", JSON.stringify({
+          owner: inputs.profile.userId ? `user:${inputs.profile.userId}` : "guest",
+          achievementId: id,
+          inputs: def.inputs,
+          satisfied: true,
+          origin,
+          // Snapshot evidence sample (first input domain only)
+          evidence: def.inputs[0] ? (snapshot as any)[def.inputs[0]] : null
+        }));
+      }
+    }
+  }
+
 
   // Claim acknowledgements are explicitly silent; this call is a deprecated
   // no-op kept for API compatibility.

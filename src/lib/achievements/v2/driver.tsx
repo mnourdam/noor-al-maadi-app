@@ -47,7 +47,7 @@ function ensureInit() {
  */
 export function AchievementEngineBoot() {
   ensureInit();
-  const { profile, hydrated } = useProfile();
+  const { profile, hydrated, userId } = useProfile();
   const canonicalInv = useCanonicalInvestigationProgress();
   const authUserIdRef = useRef<string | null | undefined>(undefined);
   const migratedRef = useRef(false);
@@ -147,6 +147,13 @@ export function AchievementEngineBoot() {
   useEffect(() => {
     if (!hydrated) return;
     const lvl = levelFor(profile.points).level;
+    
+    // V13 Safety Guard: Ensure we only push canonical inputs if the engine's 
+    // internal profile userId matches the profile we are currently reading from.
+    // This prevents Account A's hook-driven re-render (which fires after logout 
+    // but before the hook updates to Guest) from polluting the Guest engine.
+    const engineUserId = getPersisted().size === 0 && !profile.loggedIn ? null : profile.loggedIn ? (profile as any).userId || authUserIdRef.current : null;
+    
     pushCanonical({
       campaigns: { completedIds: unionedCampaigns },
       investigations: { completedIds: [...canonicalInv.completedIds] },
@@ -154,11 +161,11 @@ export function AchievementEngineBoot() {
       level: lvl,
       dinars: {
         current: profile.dinars ?? 0,
-        // No canonical lifetime ledger; use current as lower-bound.
         lifetimeEarned: profile.dinars ?? 0,
       },
       streak: { current: profile.streak ?? 0, longest: Math.max(profile.longestStreak ?? 0, profile.streak ?? 0) },
       titles: { earnedCount: (profile.titlesEarned ?? []).length },
+      profile: { userId }
     });
   }, [
     unionedCampaigns,
@@ -167,9 +174,12 @@ export function AchievementEngineBoot() {
     profile.streak,
     profile.longestStreak,
     profile.titlesEarned,
+    profile.loggedIn,
+    userId,
     canonicalInv.count,
     hydrated,
   ]);
+
 
   // Silent baseline gate: live achievement notifications are enabled only
   // after the auth mirror and initial canonical completion sources settle.

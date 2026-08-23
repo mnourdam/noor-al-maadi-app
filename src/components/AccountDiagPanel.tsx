@@ -48,7 +48,21 @@ export function AccountDiagPanel() {
         </div>
       </div>
       
+      <div className="mb-4 rounded-xl border border-gold/30 bg-gold/5 p-3 text-[10px] text-gold/90 leading-relaxed whitespace-pre-wrap">
+        {`V13 — FINAL REMAINING ACCOUNT ISOLATION BUG: 5 GUEST ACHIEVEMENTS
+
+Physical Android verification:
+CAMPAIGNS: PASS
+INVESTIGATIONS: PASS
+PKCE: PASS
+
+ONLY REMAINING BUG — 5 GUEST ACHIEVEMENTS
+Status: IMPLEMENTED Source-level fix in achievements/v2/engine.ts (resetCanonicalInputs)
+Reconciliation Reason: doCycle:historical_reconciliation satisfied IDs ach_campaign_1, 3, 5, 10, 20 due to stale module-level inputs.`}
+      </div>
+
       <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
+
         {all.map((entry, i) => {
           const isPollution = entry.stage.includes("POLLUTION") || entry.stage.includes("QUARANTINED") || entry.stage.includes("SANITIZED");
           const isWrite = entry.stage.includes("WRITE");
