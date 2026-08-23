@@ -185,6 +185,14 @@ function migrateLegacyKeys(store: Storage, owner: OwnerKey): void {
 
       try {
         const v = store.getItem(k);
+        const parseSafe = (val: string | null) => {
+          if (!val) return null;
+          try {
+            const p = JSON.parse(val);
+            return { name: p.name, loggedIn: p.loggedIn, points: p.points, dinars: p.dinars };
+          } catch { return "error"; }
+        };
+
         let copyPerformed = false;
         if (v !== null && store.getItem(target) === null) {
           store.setItem(target, v);
@@ -197,7 +205,8 @@ function migrateLegacyKeys(store: Storage, owner: OwnerKey): void {
         log("result", JSON.stringify({
           key: k,
           copyPerformed,
-          legacyRemoved: removed
+          legacyRemoved: removed,
+          data: k === "hakaya.profile.v2" ? parseSafe(v) : undefined
         }));
       } catch (e) { 
         log("error", (e as Error).message);
