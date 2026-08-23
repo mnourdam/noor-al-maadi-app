@@ -72,9 +72,9 @@ export async function resetForIdentityChange(opts: {
 
   // 3) Atomic owner swap — every personal storage key now resolves into the
   //    new namespace and the identity epoch invalidates every in-flight guard.
-  recordTrace("logout-audit", "owner:before-set", previous);
+  recordTrace("logout-audit", "owner:before", previous);
   const res = setActiveOwnerInternal(next);
-  recordTrace("logout-audit", "owner:after-set", next);
+  recordTrace("logout-audit", "owner:after", next);
 
   recordTrace("logout-audit", "cleanup:start");
 
@@ -115,7 +115,7 @@ export async function resetForIdentityChange(opts: {
     };
     try {
       recordTrace("logout-audit", "identity-event:before-dispatch");
-      recordTrace("logout-audit", "identity-event:owner-at-dispatch", getActiveOwner());
+      recordTrace("logout-audit", "identity-event:dispatch");
       window.dispatchEvent(new CustomEvent(IDENTITY_CHANGED_EVENT, { detail }));
     } catch { /* ignore */ }
   }
