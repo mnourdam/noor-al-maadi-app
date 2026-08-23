@@ -21,8 +21,8 @@ import { recordTrace } from "@/lib/diag-trace";
 type ShareStatus = "shared" | "cancelled";
 
 async function loadShare() {
-  const mod = await import("@capacitor/share");
-  return mod.Share;
+  const { Share } = await import("@capacitor/share");
+  return Share;
 }
 
 async function loadFs() {
