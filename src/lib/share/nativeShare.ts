@@ -34,16 +34,31 @@ export function canUseNativeShare(): boolean {
   return isCapacitorNative();
 }
 
-/** Convert a Blob to a base64 string (no data-url prefix). */
-async function blobToBase64(blob: Blob): Promise<string> {
-  const buf = await blob.arrayBuffer();
-  const bytes = new Uint8Array(buf);
-  let bin = "";
-  const chunk = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunk) {
-    bin += String.fromCharCode(...bytes.subarray(i, i + chunk));
-  }
-  return btoa(bin);
+/** 
+ * Convert a Blob to a base64 string (no data-url prefix).
+ * Uses an asynchronous FileReader to avoid stalling the main thread 
+ * with large binary string builds on Android.
+ */
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      if (!result) {
+        reject(new Error("Empty result from FileReader"));
+        return;
+      }
+      // Strip "data:image/png;base64," prefix
+      const base64 = result.split(",")[1];
+      if (!base64) {
+        reject(new Error("Failed to extract base64 from DataURL"));
+        return;
+      }
+      resolve(base64);
+    };
+    reader.onerror = () => reject(reader.error || new Error("FileReader error"));
+    reader.readAsDataURL(blob);
+  });
 }
 
 /** Native text/URL share via Capacitor Share plugin. */
@@ -115,7 +130,7 @@ export async function shareImageNative(input: {
   }
 }
 
-/** Persist the PNG to Documents so it survives after the share sheet closes. */
+/** Persist the PNG to Cache and share it. */
 export async function saveImageNative(input: {
   blob: Blob;
   filename: string;
@@ -149,9 +164,17 @@ export async function saveImageNative(input: {
       fsAvailable: !!Filesystem
     }));
 
-    await Share.share({
+    // V13 Safety: Wrap the native share call in a race to prevent infinite hanging
+    // if the native bridge fails to resolve or reject the promise.
+    const sharePromise = Share.share({
       files: [written.uri],
     });
+
+    const watchdog = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error("NATIVE_SHARE_TIMEOUT")), 25000);
+    });
+
+    await Promise.race([sharePromise, watchdog]);
     
     recordTrace("export-audit", "EXPORT_9_SHARE_RESOLVED");
 
@@ -166,13 +189,18 @@ export async function saveImageNative(input: {
     recordTrace("export-audit", "EXPORT_ERROR", JSON.stringify({
       stage: "native-save-flow",
       name: error.name,
-      message: error.message,
-      stack: error.stack?.slice(0, 200)
+      message: error.message
     }));
+    
     const msg = error.message ?? "";
     if (/cancel|dismiss/i.test(msg)) {
       throw new Error("Share sheet dismissed");
     }
+    
+    if (msg === "NATIVE_SHARE_TIMEOUT") {
+      throw new Error("استغرقت العملية وقتاً طويلاً. يرجى المحاولة مرة أخرى.");
+    }
+    
     throw err;
   }
 }
