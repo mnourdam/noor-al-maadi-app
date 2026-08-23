@@ -506,7 +506,7 @@ async function doCycle(
         persisted.set(id, rec);
         emitLiveTransition(id, rec, true, false);
       }
-      saveGuestUnlocks();
+      saveGuestUnlocks("doCycle:live_gameplay_unlock");
     }
   }
 

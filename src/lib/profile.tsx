@@ -456,28 +456,28 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         m.recordTrace("logout-audit", "PROFILE_WRITE_QUARANTINED", JSON.stringify({
           intendedOwner,
           activeOwner: activeOwnerAtFlush,
-          reason: "owner-mismatch-during-effect",
-          data: { name: profile.name, points: profile.points, loggedIn: profile.loggedIn }
+          caller: "ProfileProvider:persistenceEffect",
+          points: profile.points,
+          loggedIn: profile.loggedIn
         }));
       }).catch(() => {});
       return;
     }
+    
+    import("@/lib/diag-trace").then(m => {
+      m.recordTrace("logout-audit", "PROFILE_WRITE_SOURCE", JSON.stringify({
+        intendedOwner,
+        activeOwner: activeOwnerAtFlush,
+        physicalKey: STORAGE_KEY, // Partitioned internally
+        caller: "ProfileProvider:persistenceEffect",
+        points: profile.points,
+        dinars: profile.dinars,
+        loggedIn: profile.loggedIn
+      }));
+    }).catch(() => {});
 
-    const started = performance.now();
-    let raw = "";
-    try {
-      raw = JSON.stringify(profile);
-      
-      localStorage.setItem(STORAGE_KEY, raw);
-      
-      import("@/lib/diag-trace").then(m => {
-        m.recordTrace("logout-audit", "PROFILE_WRITE_SUCCESS", JSON.stringify({
-          owner: intendedOwner,
-          points: profile.points,
-          loggedIn: profile.loggedIn,
-          ms: performance.now() - started
-        }));
-      }).catch(() => {});
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
+  }, [profile, hydrated]);
     } catch {}
     androidMeasure("profile.localStorage.write", started, { bytes: raw.length });
   }, [profile, hydrated]);
