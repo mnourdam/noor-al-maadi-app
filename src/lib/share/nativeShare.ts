@@ -71,13 +71,14 @@ export async function shareTextNative(input: {
 }): Promise<ShareStatus> {
   const Share = await loadShare();
   try {
-    const sharePromise = Share.share({
-      title: input.title,
-      text: input.text,
-      url: input.url,
-      dialogTitle: input.title,
+    await new Promise<void>((resolve, reject) => {
+      Share.share({
+        title: input.title,
+        text: input.text,
+        url: input.url,
+        dialogTitle: input.title,
+      }).then(() => resolve()).catch(reject);
     });
-    await sharePromise;
     return "shared";
   } catch (err) {
     const msg = (err as { message?: string } | null)?.message ?? "";
@@ -113,13 +114,14 @@ export async function shareImageNative(input: {
   cacheFilesToCleanup.push({ directory: Directory.Cache, path });
 
   try {
-    const sharePromise = Share.share({
-      title: input.title,
-      text: input.text,
-      files: [written.uri],
-      dialogTitle: input.title,
+    await new Promise<void>((resolve, reject) => {
+      Share.share({
+        title: input.title,
+        text: input.text,
+        files: [written.uri],
+        dialogTitle: input.title,
+      }).then(() => resolve()).catch(reject);
     });
-    await sharePromise;
     return "shared";
   } catch (err) {
     const msg = (err as { message?: string } | null)?.message ?? "";
@@ -165,38 +167,35 @@ export async function saveImageNative(input: {
     }));
 
     // V13 Physical Android Fix: Capacitor plugins on Android are proxied objects.
-    // Accessing .then() or awaiting them directly inside a Promise.race triggers 
-    // "Share.then() is not implemented". We must call the method and then 
-    // handle the resulting promise separately.
+    // The previous patch failed because `Promise.race([sharePromise, ...])`
+    // still triggers promise assimilation (accessing `.then`) on the proxied 
+    // result of `Share.share()`.
+    //
+    // On physical Android, the Capacitor bridge interprets the `.then` access 
+    // as a native plugin method call, throwing "Share.then() is not implemented".
+    // 
+    // Minimal Safe Fix: We wrap the plugin call in a standard native Promise
+    // IMMEDIATELY to isolate the proxy from the async/await machinery.
     recordTrace("export-audit", "share:call:start");
     
-    // 1. Trigger the native share sheet. 
-    // We do NOT await it here to avoid immediate promise assimilation in the race.
-    const sharePromise = Share.share({
-      files: [written.uri],
-    });
-
-    try {
-      recordTrace("export-audit", "share:await:start");
-      
-      // 2. Wrap the watchdog.
-      const watchdog = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error("NATIVE_SHARE_TIMEOUT")), 25000);
+    await new Promise<void>((resolve, reject) => {
+      // 1. Trigger the native share sheet. 
+      Share.share({
+        files: [written.uri],
+      }).then(() => {
+        recordTrace("export-audit", "share:success");
+        resolve();
+      }).catch((e) => {
+        const err = e as Error;
+        recordTrace("export-audit", "share:error", JSON.stringify({
+          name: err.name,
+          message: err.message
+        }));
+        reject(e);
       });
-      
-      // 3. Race. Since sharePromise is already a standard Promise from the plugin call,
-      // racing it here is safer, but we still catch the specific proxy error if it leaks.
-      await Promise.race([sharePromise, watchdog]);
-      
-      recordTrace("export-audit", "share:success");
-    } catch (e) {
-      const err = e as Error;
-      recordTrace("export-audit", "share:error", JSON.stringify({
-        name: err.name,
-        message: err.message
-      }));
-      throw e;
-    }
+    });
+    
+    recordTrace("export-audit", "share:complete");
     
     recordTrace("export-audit", "export:finally");
 
