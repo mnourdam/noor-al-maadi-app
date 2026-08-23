@@ -64,7 +64,7 @@ export function useProgressionState(): ProgressionState {
         owner: profileHydrated ? "hydrated" : "loading",
         profileCount: profile.campaignsCompleted.length,
         localCount: local.size,
-        serverCount: serverCompleted?.length ?? 0,
+        serverCount: (serverCompleted as any)?.length ?? 0,
         totalUnion: completed.size,
         idsSample: Array.from(completed).slice(0, 3)
       }));
