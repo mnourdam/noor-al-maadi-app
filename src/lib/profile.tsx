@@ -468,16 +468,16 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     try {
       raw = JSON.stringify(profile);
       
+      localStorage.setItem(STORAGE_KEY, raw);
+      
       import("@/lib/diag-trace").then(m => {
-        m.recordTrace("logout-audit", "PROFILE_WRITE_ATTEMPT", JSON.stringify({
-          intendedOwner,
-          activeOwner: activeOwnerAtFlush,
-          logical: STORAGE_KEY,
-          data: { name: profile.name, points: profile.points, loggedIn: profile.loggedIn }
+        m.recordTrace("logout-audit", "PROFILE_WRITE_SUCCESS", JSON.stringify({
+          owner: intendedOwner,
+          points: profile.points,
+          loggedIn: profile.loggedIn,
+          ms: performance.now() - started
         }));
       }).catch(() => {});
-
-      localStorage.setItem(STORAGE_KEY, raw);
     } catch {}
     androidMeasure("profile.localStorage.write", started, { bytes: raw.length });
   }, [profile, hydrated]);

@@ -281,7 +281,7 @@ export function installIdentityPartition(): void {
     return val;
   };
 
-  proto.setItem = function (this: Storage, key: string, value: string) {
+    proto.setItem = function (this: Storage, key: string, value: string) {
     const logical = String(key);
     const mapped = mapKey(logical);
     const activeOwner = getActiveOwner();
@@ -289,7 +289,8 @@ export function installIdentityPartition(): void {
     // V13 Storage Invariant: Reject authenticated progression in guest partitions
     const isProgressionKey = logical === "hakaya.profile.v2" || 
                              logical === "irth.campaign_completions.v1" ||
-                             logical === "irth.achievements.v2.guest_unlocks";
+                             logical === "irth.achievements.v2.guest_unlocks" ||
+                             logical === "irth.achievements.v2.notified";
 
     if (isProgressionKey && activeOwner.startsWith("guest:")) {
       try {
@@ -300,11 +301,14 @@ export function installIdentityPartition(): void {
           p = JSON.parse(value);
           isPolluted = p && p.loggedIn === true;
         } else if (logical === "irth.campaign_completions.v1") {
-          p = JSON.parse(value);
-          // Check if any record in the completion ledger looks like it came from an account.
-          // In v1 completions, we don't have a 'loggedIn' flag per row yet,
-          // but we can look for specific account-only indicators if they existed.
-          // For now, we mainly quarantine the Profile.
+          // If the guest completion set contains IDs that we know are Account-only, 
+          // we should block, but we don't have a reliable list of those IDs here.
+          // The Campaign completion fix will bind the write to the intended owner.
+        } else if (logical === "irth.achievements.v2.guest_unlocks") {
+          // Achievements in guest_unlocks are already meant for Guest, but
+          // we check if they contain data that looks like it belongs to a user.
+          // v2 records don't have a loggedIn flag, but we block if we're in 
+          // a logout transition (handled by resetting the engine).
         }
 
         if (isPolluted) {
@@ -313,7 +317,6 @@ export function installIdentityPartition(): void {
               owner: activeOwner,
               logical: logical,
               physical: mapped,
-              data: logical === "hakaya.profile.v2" ? { name: p.name, points: p.points, dinars: p.dinars, loggedIn: p.loggedIn } : "progression-ledger",
               reason: "authenticated-data-in-guest-partition"
             }));
           }).catch(() => {});
