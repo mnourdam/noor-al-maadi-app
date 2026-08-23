@@ -102,8 +102,12 @@ export function SceneExportButton({
         const base64Data = await base64Promise;
 
         // Use Capacitor Filesystem + Share
-        const { Filesystem, Directory } = await import("@capacitor/filesystem");
-        const { Share } = await import("@capacitor/share");
+        const FSModule = await import("@capacitor/filesystem");
+        const Filesystem = FSModule.Filesystem;
+        const Directory = FSModule.Directory;
+        
+        const ShareModule = await import("@capacitor/share");
+        const Share = ShareModule.Share;
 
         const saveResult = await Filesystem.writeFile({
           path: filename,
@@ -113,11 +117,12 @@ export function SceneExportButton({
 
         console.log(`[IrthExport] android_save_ok uri=${saveResult.uri}`);
         
-        await Share.share({
+        const shareResult = Share.share({
           title: storyTitle ?? "إرث",
           text: storyTitle ?? "إرث",
           url: saveResult.uri,
         });
+        await shareResult;
         
         console.log(`[IrthExport] android_share_dispatched`);
       } else {

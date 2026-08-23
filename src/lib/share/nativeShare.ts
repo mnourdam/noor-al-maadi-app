@@ -21,8 +21,8 @@ import { recordTrace } from "@/lib/diag-trace";
 type ShareStatus = "shared" | "cancelled";
 
 async function loadShare() {
-  const mod = await import("@capacitor/share");
-  return mod.Share;
+  const { Share } = await import("@capacitor/share");
+  return Share;
 }
 
 async function loadFs() {
@@ -71,12 +71,13 @@ export async function shareTextNative(input: {
 }): Promise<ShareStatus> {
   const Share = await loadShare();
   try {
-    await Share.share({
+    const result = Share.share({
       title: input.title,
       text: input.text,
       url: input.url,
       dialogTitle: input.title,
     });
+    await result;
     return "shared";
   } catch (err) {
     const msg = (err as { message?: string } | null)?.message ?? "";
@@ -112,12 +113,13 @@ export async function shareImageNative(input: {
   cacheFilesToCleanup.push({ directory: Directory.Cache, path });
 
   try {
-    await Share.share({
+    const result = Share.share({
       title: input.title,
       text: input.text,
       files: [written.uri],
       dialogTitle: input.title,
     });
+    await result;
     return "shared";
   } catch (err) {
     const msg = (err as { message?: string } | null)?.message ?? "";
@@ -174,9 +176,10 @@ export async function saveImageNative(input: {
     // with the Capacitor 8.x bridge improvements, avoids the proxy trap.
     recordTrace("export-audit", "share:call:start");
     
-    await Share.share({
+    const result = Share.share({
       files: [written.uri],
     });
+    await result;
     
     recordTrace("export-audit", "share:success");
     
