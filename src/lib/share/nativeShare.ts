@@ -19,6 +19,8 @@ import { isCapacitorNative } from "@/lib/native-auth";
 import { recordTrace } from "@/lib/diag-trace";
 import { Share } from "@capacitor/share";
 
+type ShareStatus = "shared" | "cancelled";
+
 // V13_EXPORT_DIAG_1
 // We removed loadShare() helper entirely because it was an async function 
 // that returned the Share plugin proxy. When a Promise resolves to a thenable,
@@ -72,7 +74,6 @@ export async function shareTextNative(input: {
   url: string;
   title?: string;
 }): Promise<ShareStatus> {
-  const Share = await loadShare();
   try {
     const result = Share.share({
       title: input.title,
@@ -100,7 +101,6 @@ export async function shareImageNative(input: {
   title?: string;
 }): Promise<ShareStatus> {
   const { Filesystem, Directory } = await loadFs();
-  const Share = await loadShare();
 
   const data = await blobToBase64(input.blob);
   const path = input.filename;
@@ -148,7 +148,6 @@ export async function saveImageNative(input: {
   
   recordTrace("export-audit", "07 — filesystem:write:start");
   const { Filesystem, Directory } = await loadFs();
-  const Share = await loadShare();
   
   const stamp = Date.now();
   const path = `irth-${stamp}-${input.filename}`;
