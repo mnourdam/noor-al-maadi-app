@@ -395,13 +395,22 @@ export async function refreshPersistedForUser(userId: string | null): Promise<vo
  */
 export function pushCanonical(patch: Partial<CanonicalInputs>): void {
   const changed: CanonicalDomain[] = [];
+  
+  // V13 Ownership Guard: If the patch includes a userId, update it first.
+  if (patch.profile) {
+    inputs.profile.userId = patch.profile.userId;
+    changed.push("profile");
+  }
+
   for (const key of Object.keys(patch) as (keyof CanonicalInputs)[]) {
+    if (key === "profile") continue; // handled above
     (inputs as unknown as Record<string, unknown>)[key] = patch[key] as unknown;
     changed.push(key as CanonicalDomain);
   }
   if (changed.length === 0) return;
   void runCycle(changed, liveTransitionsReady ? "live_gameplay_unlock" : "historical_reconciliation");
 }
+
 
 let cycleInFlight: Promise<void> | null = null;
 let queuedDomains: CanonicalDomain[] | null = null;

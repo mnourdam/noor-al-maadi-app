@@ -151,6 +151,8 @@ interface Ctx {
   hydrated: boolean;
   login: (name: string) => void;
   logout: () => void;
+  userId: string | null;
+
   addPoints: (n: number) => void;
   openStory: (id: string) => void;
   finishStory: (id: string, missionId?: string) => void;
