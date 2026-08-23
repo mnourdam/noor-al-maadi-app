@@ -696,10 +696,6 @@ function OverviewTab({
   );
 }
 
-/** V13 Account Switch Diagnostics Panel */
-function LegacyAccountDiagPanel() {
-  return null;
-}
 
 
 function AchievementMini({ view }: { view: AchievementView }) {
