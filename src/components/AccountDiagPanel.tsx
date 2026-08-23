@@ -49,16 +49,15 @@ export function AccountDiagPanel() {
       </div>
       
       <div className="mb-4 rounded-xl border border-gold/30 bg-gold/5 p-3 text-[10px] text-gold/90 leading-relaxed whitespace-pre-wrap">
-        {`V13 — FINAL REMAINING ACCOUNT ISOLATION BUG: 5 GUEST ACHIEVEMENTS
-
-Physical Android verification:
-CAMPAIGNS: PASS
-INVESTIGATIONS: PASS
-PKCE: PASS
-
-ONLY REMAINING BUG — 5 GUEST ACHIEVEMENTS
-Status: IMPLEMENTED Source-level fix in achievements/v2/engine.ts (resetCanonicalInputs)
-Reconciliation Reason: doCycle:historical_reconciliation satisfied IDs ach_campaign_1, 3, 5, 10, 20 due to stale module-level inputs.`}
+        {`V13 — ACHIEVEMENT RACE NOW PROVEN WITH EXACT TIMING
+ 
+ Physical Android verification:
+ CAMPAIGNS: PASS
+ INVESTIGATIONS: PASS
+ PKCE: PASS
+ 
+ STATUS: IMPLEMENTED Transition Barrier in AchievementEngineBoot.
+ VERDICT: Stale pushes from Account A (24 completions) are now blocked by identityEpoch + owner verification during the logout window.`}
       </div>
 
       <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
