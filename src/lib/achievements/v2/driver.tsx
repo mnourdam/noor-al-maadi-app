@@ -16,6 +16,7 @@ import { useProfile } from "@/lib/profile";
 import { useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
 import { levelFor } from "@/lib/progression";
 import { supabase } from "@/integrations/supabase/client";
+import { getActiveOwner, getActiveUserId, getIdentityEpoch, getDeviceId } from "@/lib/identity/owner";
 import {
   fetchServerCompletedIds,
   localCompletedIds,
@@ -53,6 +54,9 @@ export function AchievementEngineBoot() {
   const migratedRef = useRef(false);
   const [serverCompletedIds, setServerCompletedIds] = useState<readonly string[]>([]);
   const [achievementSourcesSettled, setAchievementSourcesSettled] = useState(false);
+
+  // V13 Transition Barrier: Capture current identity epoch to invalidate stale pushes.
+  const identityEpoch = getIdentityEpoch();
 
   // Auth-driven mirror refresh.
   useEffect(() => {
@@ -136,31 +140,52 @@ export function AchievementEngineBoot() {
   //   ∪  localCompletedIds()      (local sticky ledger)
   //   ∪  serverCompletedIds       (server-authoritative ledger)
   const unionedCampaigns = useMemo(() => {
+    // V13 Safety Guard: If not hydrated or identity changed, return empty to prevent stale union.
+    if (!hydrated || identityEpoch !== getIdentityEpoch()) return [];
+    
     const out = new Set<string>();
-    
-    // V13 Safety Guard: If not hydrated or logged out without userId settled,
-    // we must not union anything that might be stale.
-    if (!hydrated) return [];
-    
     for (const id of profile.campaignsCompleted ?? []) if (id) out.add(id);
     for (const id of localCompletedIds()) out.add(id);
     for (const id of serverCompletedIds) out.add(id);
     return [...out];
-  }, [profile.campaignsCompleted, serverCompletedIds, hydrated]);
+  }, [profile.campaignsCompleted, serverCompletedIds, hydrated, identityEpoch]);
 
 
   // Canonical inputs → engine.
   useEffect(() => {
     if (!hydrated) return;
-    const lvl = levelFor(profile.points).level;
     
-    // V13 Safety Guard: Ensure we only push canonical inputs if the engine's 
-    // internal profile userId matches the profile we are currently reading from.
-    // This prevents Account A's hook-driven re-render (which fires after logout 
-    // but before the hook updates to Guest) from polluting the Guest engine.
-    if (userId !== authUserIdRef.current && userId !== null) return;
+    const currentEpoch = getIdentityEpoch();
+    const activeOwner = getActiveOwner();
+    const activeUserId = getActiveUserId();
+    const intendedOwner = userId ? `user:${userId}` : `guest:${getDeviceId()}`;
 
-    
+    // V13 TRANSITION BARRIER
+    // 1. Epoch mismatch: identity changed while this render was queued.
+    // 2. userId mismatch: Hook userId (from closure) doesn't match current global auth state.
+    // 3. intendedOwner mismatch: Physical owner doesn't match logical owner.
+    let blockReason = "";
+    if (identityEpoch !== currentEpoch) blockReason = "epoch_mismatch";
+    else if (userId !== activeUserId) blockReason = "userId_mismatch";
+    else if (intendedOwner !== activeOwner) blockReason = "owner_mismatch";
+
+    if (blockReason) {
+      import("@/lib/diag-trace").then(m => {
+        m.recordTrace("logout-audit", "ACHIEVEMENT_CANONICAL_PUSH_BLOCKED", JSON.stringify({
+          reason: blockReason,
+          intendedOwner,
+          activeOwner,
+          capturedEpoch: identityEpoch,
+          currentEpoch,
+          totalCompleted: unionedCampaigns.length,
+          hookUserId: userId,
+          globalUserId: activeUserId
+        }));
+      }).catch(() => {});
+      return;
+    }
+
+    const lvl = levelFor(profile.points).level;
     pushCanonical({
       campaigns: { completedIds: unionedCampaigns },
       investigations: { completedIds: [...canonicalInv.completedIds] },
@@ -185,6 +210,7 @@ export function AchievementEngineBoot() {
     userId,
     canonicalInv.count,
     hydrated,
+    identityEpoch
   ]);
 
 
