@@ -1030,14 +1030,38 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       const cloudAt = typeof cloud.heartsAt === "number" && Number.isFinite(cloud.heartsAt)
         ? cloud.heartsAt
         : null;
-      const anchorSource: ProfileState = cloudAt !== null && cloudAt < (p.heartsAt ?? Date.now())
+      const now = Date.now();
+      const localEff = getEffectiveHearts(p, now);
+      const cloudEff = cloudAt !== null ? getEffectiveHearts({ ...p, hearts: cloudHearts, heartsAt: cloudAt }, now) : cloudHearts;
+
+      recordTrace("hearts-audit", "HEARTS_RECONCILIATION", JSON.stringify({
+        owner: getActiveOwner(),
+        localHearts: localCommitted,
+        localEffective: localEff,
+        cloudHearts: cloudHearts,
+        cloudEffective: cloudEff,
+        profileHearts: p.hearts,
+        mergeRule: "Cloud Hydration",
+        localUpdatedAt: p.heartsAt,
+        cloudUpdatedAt: cloudAt
+      }));
+
+      const anchorSource: ProfileState = cloudAt !== null && cloudAt < (p.heartsAt ?? now)
         ? ({ ...p, heartsAt: cloudAt } as ProfileState)
         : p;
+
       const heartsPatch = cloudHearts !== localCommitted
-        ? commitHearts(anchorSource, cloudHearts, Date.now())
+        ? commitHearts(anchorSource, cloudHearts, now)
         : { hearts: anchorSource.hearts, heartsAt: anchorSource.heartsAt };
 
+      recordTrace("hearts-audit", "HEARTS_PROFILE_APPLIED", JSON.stringify({
+        chosenHearts: heartsPatch.hearts,
+        chosenHeartsAt: heartsPatch.heartsAt,
+        source: cloudHearts !== localCommitted ? "cloud" : "local/preserved"
+      }));
+
       const dailyDay = cloud.dailyClaimed?.day && cloud.dailyClaimed.day === p.dailyClaimed?.day
+
         ? p.dailyClaimed.day
         : (cloud.dailyClaimed?.day ?? p.dailyClaimed?.day ?? "");
       const dailyIds = cloud.dailyClaimed?.day === p.dailyClaimed?.day
