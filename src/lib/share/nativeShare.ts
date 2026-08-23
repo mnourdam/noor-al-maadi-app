@@ -162,21 +162,30 @@ export async function saveImageNative(input: {
       platform: "android"
     }));
 
-    // V13 Physical Android Diagnostics
+    // V13 Physical Android Fix: Capacitor plugins on Android are proxied objects.
+    // Accessing .then() or awaiting them directly inside a Promise.race triggers 
+    // "Share.then() is not implemented". We must call the method and then 
+    // handle the resulting promise separately.
     recordTrace("export-audit", "share:call:start");
-    const shareResult = Share.share({
+    
+    // 1. Trigger the native share sheet. 
+    // We do NOT await it here to avoid immediate promise assimilation in the race.
+    const sharePromise = Share.share({
       files: [written.uri],
     });
-    recordTrace("export-audit", "share:return-type", typeof shareResult);
-    recordTrace("export-audit", "share:return-has-then", typeof (shareResult as any)?.then);
-    
+
     try {
       recordTrace("export-audit", "share:await:start");
+      
+      // 2. Wrap the watchdog.
       const watchdog = new Promise<never>((_, reject) => {
         setTimeout(() => reject(new Error("NATIVE_SHARE_TIMEOUT")), 25000);
       });
       
-      await Promise.race([shareResult, watchdog]);
+      // 3. Race. Since sharePromise is already a standard Promise from the plugin call,
+      // racing it here is safer, but we still catch the specific proxy error if it leaks.
+      await Promise.race([sharePromise, watchdog]);
+      
       recordTrace("export-audit", "share:success");
     } catch (e) {
       const err = e as Error;
