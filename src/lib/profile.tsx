@@ -342,6 +342,13 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const onIdentityChange = () => {
+      // 1) IMMEDIATELY detach the previous owner's React profile state.
+      // This prevents stale data (Account A's XP) from remaining visible
+      // in the React tree while hydrateFromStorage is working.
+      setProfile(initial);
+      
+      // 2) Then hydrate the newly active owner's profile from its already-switched partition.
+      // 3) Replace initial state with the hydrated new-owner profile.
       setProfile(hydrateFromStorage() ?? initial);
     };
     window.addEventListener("irth:identity-changed", onIdentityChange);

@@ -88,9 +88,10 @@ export async function resetForIdentityChange(opts: {
       import("@/lib/stories/unlock-cache"),
       import("@/lib/emblems/avatar-persistence"),
       import("@/lib/tutorial/persistence"),
+      import("@/lib/campaigns/intro/content-store"),
       import("@/lib/profile"), // Ensure ProfileProvider's in-memory scalars are reset
     ]);
-    const [unlock, avatar, tutorial, profileMod] = mods;
+    const [unlock, avatar, tutorial, campaignIntro, profileMod] = mods;
     if (unlock.status === "fulfilled") {
       try { (unlock.value as { clearUnlockCache?: () => void }).clearUnlockCache?.(); } catch { /* ignore */ }
     }
@@ -99,6 +100,9 @@ export async function resetForIdentityChange(opts: {
     }
     if (tutorial.status === "fulfilled") {
       try { (tutorial.value as { invalidateOnboardingCache?: () => void }).invalidateOnboardingCache?.(); } catch { /* ignore */ }
+    }
+    if (campaignIntro.status === "fulfilled") {
+      try { (campaignIntro.value as { clearIntroLinkCache?: () => void }).clearIntroLinkCache?.(); } catch { /* ignore */ }
     }
     if (profileMod.status === "fulfilled") {
       // ProfileProvider uses irth:identity-changed to re-hydrate, 

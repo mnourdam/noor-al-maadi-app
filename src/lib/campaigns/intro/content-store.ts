@@ -163,6 +163,15 @@ export function writeSyncedIntroLinks(links: SyncedIntroLink[]): void {
   hydrateLinks();
 }
 
+/** 
+ * OWNER TRANSITION FIX: Clear the in-memory cache when identity changes.
+ * The partition layer handles the underlying localStorage, but this 
+ * module-level Map would otherwise stay stale.
+ */
+export function clearIntroLinkCache(): void {
+  linkCache = null;
+}
+
 // ---------------------------------------------------------------
 // Meta
 // ---------------------------------------------------------------

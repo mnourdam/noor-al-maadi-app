@@ -9,11 +9,25 @@
 // ============================================================
 
 import { supabase } from "@/integrations/supabase/client";
+import { getIdentityEpoch } from "../identity/owner";
 import { peekAll, remove, bumpAttempt, type OutboxItem } from "./outbox";
 import { recordDeadLetter, isPermanentReason } from "./dead-letter";
 
 let lastFlushAt = 0;
 let inflight: Promise<{ flushed: number; failed: number }> | null = null;
+
+// Identity Epoch Guard: captures the state of identity at flush start.
+// If the owner changes mid-flush, we stop immediately to prevent
+// cross-account leaks or accidental deletions.
+let activeFlushEpoch = 0;
+
+function getIdentityEpochSafe(): number {
+  try {
+    return getIdentityEpoch();
+  } catch {
+    return 0;
+  }
+}
 
 async function handleItem(item: OutboxItem): Promise<{ ok: boolean; error?: string }> {
   // Sanity: never sync one user's item into another user's session.
@@ -427,16 +441,40 @@ async function handleItem(item: OutboxItem): Promise<{ ok: boolean; error?: stri
   }
 }
 
+/**
+ * Synchronous flush of all pending items for the current user.
+ * 
+ * IDENTITY GUARD: This function is owner-partitioned. If a logout
+ * happens while a flush is in progress, the identity epoch changes,
+ * and every await point in the loop checks it to stop immediately.
+ */
 export async function flushOutbox(userId: string): Promise<{ flushed: number; failed: number }> {
-  if (inflight) return inflight;
+  if (!userId) return { flushed: 0, failed: 0 };
   
+  // Capture current epoch to detect identity switches after awaits.
+  const startEpoch = getIdentityEpochSafe();
+
+  if (inflight) return inflight;
   inflight = (async () => {
     let flushed = 0;
     let failed = 0;
     try {
       const items = await peekAll(userId);
       for (const item of items) {
+        // IDENTITY CHECK: Before owner-sensitive mutation / network call.
+        if (getIdentityEpochSafe() !== startEpoch) {
+          console.warn("[flush] identity changed mid-flush, stopping safely", { userId });
+          break;
+        }
+
         const res = await handleItem(item);
+
+        // IDENTITY CHECK: After network call, before updating local queue state.
+        if (getIdentityEpochSafe() !== startEpoch) {
+          console.warn("[flush] identity changed after handleItem, aborting queue update", { userId });
+          break;
+        }
+
         if (res.ok) {
           await remove(item.id);
           flushed++;
