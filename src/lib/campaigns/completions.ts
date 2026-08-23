@@ -19,6 +19,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { enqueueWithId } from "@/lib/offline/outbox";
 import { flushOutbox } from "@/lib/offline/flush";
+import { getActiveOwner } from "@/lib/identity/owner";
 
 const LOCAL_STICKY_KEY = "irth.campaign_completions.v1";
 
@@ -96,7 +97,9 @@ export function localCompletedIds(): Set<string> {
 
   // V13 Forensic Tracing
   import("@/lib/diag-trace").then(m => {
+    const activeOwner = typeof getActiveOwner === 'function' ? getActiveOwner() : 'unknown';
     m.recordTrace("logout-audit", "CAMPAIGN_LOCAL_SOURCE", JSON.stringify({
+      owner: activeOwner,
       stickyCount: stickyIds.length,
       legacyCount: legacyIds.length,
       totalCount: ids.size,
