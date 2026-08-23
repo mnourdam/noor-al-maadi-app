@@ -205,14 +205,24 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         if (isStale() || reconciled) return;
         recordStartupMark("server-reconciliation-soft-timeout");
         recordStartupMark("offline-local-entered");
+        recordTrace("hearts-audit", "HEARTS_SYNC_COMPLETE", "soft-timeout");
         setReconciliationState("offline-local", "soft-timeout");
       }, 5000);
       try {
+        recordTrace("hearts-audit", "HEARTS_CLOUD_FETCH_START", JSON.stringify({ userId: user.id.slice(0, 8) }));
         const [acc, save] = await Promise.all([
           fetchAccountProfile(user.id),
           fetchCloudSave(user.id),
         ]);
         if (isStale()) return;
+        
+        recordTrace("hearts-audit", "HEARTS_CLOUD_FETCH_RESULT", JSON.stringify({
+          hasSave: !!save,
+          hearts: save?.data?.hearts,
+          heartsAt: save?.data?.heartsAt,
+          elapsed: performance.now() - started
+        }));
+
         import("@/lib/diag-trace").then(m => m.recordTrace("logout-audit", "profile-hydrate:result", JSON.stringify({
           name: acc?.display_name,
           username: acc?.username,
@@ -361,7 +371,11 @@ export function AccountProvider({ children }: { children: ReactNode }) {
             if (r.ok && r.value) setAccount((prev) => prev ? { ...prev, display_name: r.value! } : prev);
           } catch { /* ignore */ }
         }
-        if (reconciled && !isStale()) setReconciliationState("reconciled");
+        if (reconciled && !isStale()) {
+          setReconciliationState("reconciled");
+          recordTrace("hearts-audit", "HEARTS_SYNC_COMPLETE", JSON.stringify({ duration: Math.round(performance.now() - started) }));
+        }
+
       } catch (e) {
         if (!isStale()) {
           import("@/lib/diag-trace").then(m => m.recordTrace("logout-audit", "profile-hydrate:error", String(e))).catch(() => {});

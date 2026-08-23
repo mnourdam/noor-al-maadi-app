@@ -16,7 +16,8 @@ export type TraceChannel =
   | "achievement"
   | "export-audit"
   | "logout-audit"
-  | "pkce-audit";
+  | "pkce-audit"
+  | "hearts-audit";
 
 export interface TraceEntry {
   ts: string;          // ISO timestamp
@@ -24,7 +25,7 @@ export interface TraceEntry {
   detail?: string;     // optional short safe detail
 }
 
-const MAX_ENTRIES = 200;
+const MAX_ENTRIES = 500;
 
 function keyFor(channel: TraceChannel): string {
   return `diag-trace:${channel}`;

@@ -292,7 +292,18 @@ function dinarsForReward(xp: number): number {
 export function readPersistedProfileState(): ProfileState {
   try {
     if (typeof localStorage === "undefined") return initial;
+    const owner = getActiveOwner();
     const raw = localStorage.getItem(STORAGE_KEY);
+    
+    recordTrace("hearts-audit", "HEARTS_SOURCE_READ", JSON.stringify({
+      owner,
+      source: "owner-partitioned localStorage",
+      logicalKey: STORAGE_KEY,
+      physicalKey: STORAGE_KEY,
+      hearts: raw ? JSON.parse(raw).hearts : undefined,
+      heartsAt: raw ? JSON.parse(raw).heartsAt : undefined
+    }));
+
     if (!raw) return initial;
     const parsed = JSON.parse(raw) as Partial<ProfileState>;
     return {
@@ -307,6 +318,9 @@ export function readPersistedProfileState(): ProfileState {
 
 /** Read + normalise the persisted profile of the CURRENT owner namespace. */
 function hydrateFromStorage(): ProfileState | null {
+  const start = Date.now();
+  recordTrace("hearts-audit", "HEARTS_LOGIN_START");
+
   try {
     const ownerAtHydrate = getActiveOwner();
     recordTrace("logout-audit", "profile-hydrate:initial");
@@ -374,6 +388,19 @@ function hydrateFromStorage(): ProfileState | null {
       returned: finalSource !== "none" ? finalSource : "null"
     }));
 
+    if (parsedData && typeof (parsedData as any).hearts !== 'undefined') {
+      recordTrace("hearts-audit", "HEARTS_SOURCE_READ", JSON.stringify({
+        owner: ownerAtHydrate,
+        source: finalSource,
+        logicalKey: STORAGE_KEY,
+        physicalKey: rawLocal ? "mapped-by-partition" : STORAGE_KEY,
+        hearts: (parsedData as any).hearts,
+        heartsAt: (parsedData as any).heartsAt,
+        sourceOwner: ownerAtHydrate
+      }));
+    }
+
+
 
     if (!finalRaw) return null;
     const parsed = JSON.parse(finalRaw);
@@ -387,6 +414,14 @@ function hydrateFromStorage(): ProfileState | null {
     if (derived.streak !== merged.streak) {
       merged = { ...merged, streak: derived.streak };
     }
+    
+    recordTrace("hearts-audit", "HEARTS_LOCAL_HYDRATED", JSON.stringify({
+      hearts: merged.hearts,
+      heartsAt: merged.heartsAt,
+      effective: getEffectiveHearts(merged, Date.now()),
+      elapsed: Date.now() - start
+    }));
+
     return merged;
   } catch (e) {
     recordTrace("logout-audit", "profile-hydrate:error", (e as Error).message);
@@ -750,7 +785,15 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         const eff = getEffectiveHearts(p, now);
         const next = Math.max(0, eff - 1);
         result = next;
-        return { ...p, ...commitHearts(p, next, now) };
+      recordTrace("hearts-audit", "HEARTS_STATE_CHANGE", JSON.stringify({
+        owner: getActiveOwner(),
+        caller: "loseHeart",
+        previousHearts: getEffectiveHearts(p, now),
+        nextHearts: next,
+        reason: "Activity penalty"
+      }));
+      return { ...p, ...commitHearts(p, next, now) };
+
       });
       if (typeof window !== "undefined") {
         try { window.dispatchEvent(new CustomEvent("irth:heart-lost", { detail: { hearts: result } })); } catch {}
@@ -807,7 +850,15 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         if (eff >= HEART_MAX) return p;
         if ((p.dinars ?? 0) < HEART_COST_DINARS) return p;
         ok = true;
-        return { ...p, ...commitHearts(p, eff + 1, now), dinars: p.dinars - HEART_COST_DINARS };
+      recordTrace("hearts-audit", "HEARTS_STATE_CHANGE", JSON.stringify({
+        owner: getActiveOwner(),
+        caller: "spendDinarsForHeart",
+        previousHearts: getEffectiveHearts(p, now),
+        nextHearts: eff + 1,
+        reason: "Purchase with Dinars"
+      }));
+      return { ...p, ...commitHearts(p, eff + 1, now), dinars: p.dinars - HEART_COST_DINARS };
+
       });
       return ok;
     },
