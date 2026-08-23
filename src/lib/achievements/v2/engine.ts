@@ -233,8 +233,11 @@ function notifyListeners(): void {
 
 export function initAchievementEngine(): void {
   registerProviders();
-  alreadyNotified = loadNotified();
+  if (typeof window !== "undefined") {
+    alreadyNotified = loadNotified();
+  }
 }
+
 
 /**
  * Signal that the auth state changed. On sign-in this fetches the server
