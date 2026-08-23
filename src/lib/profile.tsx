@@ -345,10 +345,6 @@ function hydrateFromStorage(): ProfileState | null {
             data: parsedData
           }));
           
-          // SANITIZE: Remove the polluted physical key from the specific store it was found in.
-          // We don't want to destroy the profile entirely if it has progress, but 'loggedIn: true'
-          // is an invalid state for a guest. However, since the user's audit shows Account A data
-          // was written here, we must prioritize isolation.
           if (rawLocal) {
             localStorage.removeItem(STORAGE_KEY);
             recordTrace("logout-audit", "PROFILE_GUEST_SANITIZED", JSON.stringify({ key: STORAGE_KEY, store: "localStorage" }));
@@ -358,7 +354,7 @@ function hydrateFromStorage(): ProfileState | null {
             recordTrace("logout-audit", "PROFILE_GUEST_SANITIZED", JSON.stringify({ key: STORAGE_KEY, store: "sessionStorage" }));
           }
           
-          return null; // Force reset to initial
+          return null; 
         }
       } catch (e) {}
     }
@@ -369,9 +365,7 @@ function hydrateFromStorage(): ProfileState | null {
       logicalKey: STORAGE_KEY,
       physicalKey: rawLocal ? "mapped-by-partition" : STORAGE_KEY,
       data: parsedData,
-      points: (parsedData as any)?.points,
-      dinars: (parsedData as any)?.dinars,
-      loggedIn: (parsedData as any)?.loggedIn
+      returned: finalSource !== "none" ? finalSource : "null"
     }));
 
 

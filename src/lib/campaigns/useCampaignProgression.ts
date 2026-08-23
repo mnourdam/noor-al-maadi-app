@@ -53,9 +53,22 @@ export function useProgressionState(): ProgressionState {
   return useMemo(() => {
     // If the server ledger is still loading and we have no local evidence,
     // we return an empty but "pending" state.
+    const local = localCompletedIds();
     const completed = new Set<string>(profile.campaignsCompleted);
-    for (const id of localCompletedIds()) completed.add(id);
+    for (const id of local) completed.add(id);
     for (const id of serverCompleted ?? []) completed.add(id);
+
+    // V13 Forensic Tracing
+    import("@/lib/diag-trace").then(m => {
+      m.recordTrace("logout-audit", "CAMPAIGN_COMPLETION_SOURCE", JSON.stringify({
+        owner: profileHydrated ? "hydrated" : "loading",
+        profileCount: profile.campaignsCompleted.length,
+        localCount: local.size,
+        serverCount: (serverCompleted as any)?.length ?? 0,
+        totalUnion: completed.size,
+        idsSample: Array.from(completed).slice(0, 3)
+      }));
+    }).catch(() => {});
 
     const unlockedAchievementIds = new Set<string>(
       achievements.filter((a) => a.unlockedAt).map((a) => a.id),

@@ -427,6 +427,21 @@ export function useInvestigationProgress(): ProgressState {
     refetchOnWindowFocus: false,
   });
 
+  // V13 Forensic Tracing
+  useEffect(() => {
+    if (isSuccess && data) {
+      import("@/lib/diag-trace").then(m => {
+        m.recordTrace("logout-audit", "INVESTIGATION_COMPLETION_SOURCE", JSON.stringify({
+          owner: uid ? "user" : "guest",
+          authUid: uid,
+          source: "ReactQuery",
+          count: data.completedIds.size,
+          idsSample: Array.from(data.completedIds).slice(0, 3)
+        }));
+      }).catch(() => {});
+    }
+  }, [isSuccess, data, uid]);
+
   // One invalidation listener per hook instance is fine; React Query
   // dedupes the invalidate calls and only re-runs the query once.
   useEffect(() => {

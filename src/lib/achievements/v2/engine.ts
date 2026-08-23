@@ -191,6 +191,20 @@ function loadGuestUnlocks(): Map<AchievementId, UserAchievementRecord> {
   if (typeof window === "undefined") return new Map();
   try {
     const raw = window.localStorage.getItem(GUEST_UNLOCKS_KEY);
+    
+    // V13 Forensic Tracing
+    const owner = (import.meta as any).env ? "unknown" : "browser"; // getActiveOwner needs import
+    import("@/lib/diag-trace").then(m => {
+      const parsed = raw ? JSON.parse(raw) : null;
+      m.recordTrace("logout-audit", "ACHIEVEMENTS_HYDRATION_SOURCE", JSON.stringify({
+        owner: "checking...",
+        source: "localStorage",
+        logicalKey: GUEST_UNLOCKS_KEY,
+        count: Array.isArray(parsed) ? parsed.length : 0,
+        idsSample: Array.isArray(parsed) ? parsed.slice(0, 3).map(r => r.achievementId) : []
+      }));
+    }).catch(() => {});
+
     if (!raw) return new Map();
     const arr = JSON.parse(raw) as UserAchievementRecord[];
     return new Map(arr.map((r) => [r.achievementId, r]));
