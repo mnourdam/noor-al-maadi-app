@@ -137,11 +137,17 @@ export function AchievementEngineBoot() {
   //   ∪  serverCompletedIds       (server-authoritative ledger)
   const unionedCampaigns = useMemo(() => {
     const out = new Set<string>();
+    
+    // V13 Safety Guard: If not hydrated or logged out without userId settled,
+    // we must not union anything that might be stale.
+    if (!hydrated) return [];
+    
     for (const id of profile.campaignsCompleted ?? []) if (id) out.add(id);
     for (const id of localCompletedIds()) out.add(id);
     for (const id of serverCompletedIds) out.add(id);
     return [...out];
-  }, [profile.campaignsCompleted, serverCompletedIds]);
+  }, [profile.campaignsCompleted, serverCompletedIds, hydrated]);
+
 
   // Canonical inputs → engine.
   useEffect(() => {
