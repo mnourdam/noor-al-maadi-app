@@ -1418,14 +1418,11 @@ function SettingsTab({
         </button>
       )}
 
+      {/* ============== DIAGNOSTICS ============== */}
+      <AccountDiagPanel />
+
       {profile.loggedIn && <DeleteAccountSection />}
 
-          {/* ============== DIAGNOSTICS ============== */}
-          <AccountDiagPanel />
-
-          <DeleteAccountSection />
-        </>
-      )}
     </ReadingScale>
   );
 }
