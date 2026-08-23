@@ -140,15 +140,41 @@ export function AchievementEngineBoot() {
   //   ∪  localCompletedIds()      (local sticky ledger)
   //   ∪  serverCompletedIds       (server-authoritative ledger)
   const unionedCampaigns = useMemo(() => {
+    const currentEpoch = getIdentityEpoch();
+    const activeOwner = getActiveOwner();
+    const activeUserId = getActiveUserId();
+    const intendedOwner = userId ? `user:${userId}` : `guest:${getDeviceId()}`;
+
     // V13 Safety Guard: If not hydrated or identity changed, return empty to prevent stale union.
-    if (!hydrated || identityEpoch !== getIdentityEpoch()) return [];
+    if (!hydrated || identityEpoch !== currentEpoch || userId !== activeUserId || intendedOwner !== activeOwner) {
+      return [];
+    }
     
+    const profileSource = profile.campaignsCompleted ?? [];
+    const localSource = Array.from(localCompletedIds());
+    const serverSource = serverCompletedIds;
+
     const out = new Set<string>();
-    for (const id of profile.campaignsCompleted ?? []) if (id) out.add(id);
-    for (const id of localCompletedIds()) out.add(id);
-    for (const id of serverCompletedIds) out.add(id);
+    for (const id of profileSource) if (id) out.add(id);
+    for (const id of localSource) out.add(id);
+    for (const id of serverSource) out.add(id);
+
+    // V13 Diagnostic Trace: Log every constituent before push
+    import("@/lib/diag-trace").then(m => {
+      m.recordTrace("logout-audit", "ACHIEVEMENT_CANONICAL_INPUT_SOURCES", JSON.stringify({
+        owner: intendedOwner,
+        activeOwner,
+        profileCount: profileSource.length,
+        localCount: localSource.length,
+        serverCount: serverSource.length,
+        totalUnion: out.size,
+        identityMatch: userId === activeUserId
+      }));
+    }).catch(() => {});
+
     return [...out];
-  }, [profile.campaignsCompleted, serverCompletedIds, hydrated, identityEpoch]);
+  }, [profile.campaignsCompleted, serverCompletedIds, hydrated, identityEpoch, userId]);
+
 
 
   // Canonical inputs → engine.
