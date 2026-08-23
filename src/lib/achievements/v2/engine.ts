@@ -473,8 +473,20 @@ async function doCycle(
   changedDomains: readonly CanonicalDomain[],
   origin: TransitionOrigin,
 ): Promise<void> {
+  // V13 Diagnostic Trace: Log state before reconciliation
+  if (origin === "historical_reconciliation" || changedDomains.includes("campaigns")) {
+    recordTrace("logout-audit", "ACHIEVEMENT_CANONICAL_CAMPAIGNS", JSON.stringify({
+      owner: inputs.profile.userId ? `user:${inputs.profile.userId}` : "guest",
+      caller: `doCycle:${origin}`,
+      completedIdsCount: inputs.campaigns.completedIds.length,
+      inProgressIdsCount: 0,
+      totalCompleted: inputs.campaigns.completedIds.length
+    }));
+  }
+
   snapshot = rebuildSnapshot(snapshot, changedDomains);
   const alreadyUnlockedSet = new Set<AchievementId>(persisted.keys());
+
   evaluation = evaluate(snapshot, registry, alreadyUnlockedSet, {
     changedDomains,
     prev: evaluation,
