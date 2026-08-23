@@ -274,6 +274,28 @@ export function installIdentityPartition(): void {
   proto.setItem = function (this: Storage, key: string, value: string) {
     const logical = String(key);
     const mapped = mapKey(logical);
+    const activeOwner = getActiveOwner();
+
+    // V13 Storage Invariant: Reject authenticated profiles in guest partitions
+    if (logical === "hakaya.profile.v2" && activeOwner.startsWith("guest:")) {
+      try {
+        const parsed = JSON.parse(value);
+        if (parsed && parsed.loggedIn === true) {
+          import("../diag-trace").then(m => {
+            m.recordTrace("logout-audit", "PROFILE_WRITE_QUARANTINED", JSON.stringify({
+              owner: activeOwner,
+              logical: logical,
+              physical: mapped,
+              data: { name: parsed.name, points: parsed.points, dinars: parsed.dinars, loggedIn: parsed.loggedIn },
+              reason: "authenticated-data-in-guest-partition"
+            }));
+          }).catch(() => {});
+          return; // BLOCK THE WRITE
+        }
+      } catch (e) {
+        // Not a valid profile JSON, proceed with mapped write
+      }
+    }
     
     if (logical === "hakaya.profile.v2" && mapping) {
       const legacyVal = getItem.call(this, logical);
@@ -285,8 +307,8 @@ export function installIdentityPartition(): void {
         } catch { return "error"; }
       };
       import("../diag-trace").then(m => {
-        m.recordTrace("logout-audit", "profile-write", JSON.stringify({
-          owner: getActiveOwner(),
+        m.recordTrace("logout-audit", "PROFILE_WRITE_COMMITTED", JSON.stringify({
+          owner: activeOwner,
           logical: logical,
           physical: mapped,
           data: parseSafe(value),

@@ -80,12 +80,14 @@ export async function resetForIdentityChange(opts: {
 
   // 4) Drop in-memory module caches, then let providers re-hydrate.
   try {
+    // FORCE reset the profile state reference if it's cached in the module scope
+    // although it usually lives in the provider.
     const mods = await Promise.allSettled([
       import("@/lib/stories/unlock-cache"),
       import("@/lib/emblems/avatar-persistence"),
       import("@/lib/tutorial/persistence"),
       import("@/lib/campaigns/intro/content-store"),
-      import("@/lib/profile"), // Ensure ProfileProvider's in-memory scalars are reset
+      import("@/lib/profile"),
     ]);
     const [unlock, avatar, tutorial, campaignIntro, profileMod] = mods;
     if (unlock.status === "fulfilled") {
