@@ -694,6 +694,83 @@ function OverviewTab({
   );
 }
 
+/** V13 Account Switch Diagnostics Panel */
+function AccountDiagPanel() {
+  const { user, account, displayName, syncing } = useAccount();
+  const { profile } = useProfile();
+  const [open, setOpen] = useState(false);
+  const [version, setVersion] = useState(0);
+
+  const entries = readTrace("logout-audit");
+
+  const campaignsCount = profile.campaignsCompleted?.length ?? 0;
+  
+  return (
+    <div className="mt-8 overflow-hidden rounded-2xl border border-white/10 bg-black/40 text-[10px] font-mono shadow-elegant text-right" dir="rtl">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center justify-between p-4 text-white/60 hover:bg-white/5"
+      >
+        <div className="flex items-center gap-2 font-bold uppercase tracking-wider">
+          <Info className="size-4" /> تشخيص تبديل الحساب
+        </div>
+        <div className="flex items-center gap-3">
+          {syncing && <Loader2 className="size-3 animate-spin text-gold" />}
+          <span className="text-[9px] opacity-40">{open ? "إغلاق" : "فتح"}</span>
+        </div>
+      </button>
+
+      {open && (
+        <div className="border-t border-white/5 p-4 space-y-4">
+          {/* CURRENT STATE */}
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-white/40 border-b border-white/5 pb-4">
+            <div className="col-span-2 text-white/60 font-bold uppercase text-[9px] mb-1">الحالة الحالية</div>
+            <div>Supabase ID: <span className="text-white/80">{user?.id?.slice(0, 8) || "none"}</span></div>
+            <div>Owner: <span className="text-white/80">{getActiveOwner()}</span></div>
+            <div>Epoch: <span className="text-white/80">{getIdentityEpoch()}</span></div>
+            <div>loggedIn: <span className={profile.loggedIn ? "text-emerald-400" : "text-rose-400"}>{String(profile.loggedIn)}</span></div>
+            <div>Profile Name: <span className="text-white/80">{profile.name}</span></div>
+            <div>Acc Name: <span className="text-white/80">{displayName}</span></div>
+            <div>Points: <span className="text-gold">{profile.points}</span></div>
+            <div>Dinars: <span className="text-gold">{profile.dinars}</span></div>
+            <div>Hearts: <span className="text-rose-400">{getEffectiveHearts(profile)}</span></div>
+            <div>Campaigns: <span className="text-white/80">{campaignsCount}</span></div>
+            <div>Transition: <span className="text-sky-400">{getReconciliationState()}</span></div>
+          </div>
+
+          {/* TRACE LOG */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="text-white/60 font-bold uppercase text-[9px]">سجل التتبع</div>
+              <button
+                onClick={() => {
+                  clearTrace("logout-audit");
+                  setVersion(v => v + 1);
+                }}
+                className="text-gold/60 hover:text-gold text-[9px] underline"
+              >
+                مسح السجل
+              </button>
+            </div>
+            <div className="max-h-60 overflow-y-auto space-y-1 bg-black/60 p-3 rounded-xl border border-white/5 scrollbar-thin">
+              {entries.map((entry, i) => (
+                <div key={i} className="flex gap-2 text-white/40">
+                  <span className="opacity-50 shrink-0">[{entry.ts.split('T')[1].slice(0, 8)}]</span>
+                  <span className="flex-1 break-all">
+                    <span className="text-white/70">{entry.stage}</span>
+                    {entry.detail ? <span className="text-white/30 ml-1">→ {entry.detail}</span> : ""}
+                  </span>
+                </div>
+              ))}
+              {entries.length === 0 && <div className="italic text-white/20 py-2 text-center">لا يوجد سجل حالياً</div>}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 
 function AchievementMini({ view }: { view: AchievementView }) {
   const earned = isEarned(view);
