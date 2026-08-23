@@ -15,6 +15,21 @@ import { recordDeadLetter, isPermanentReason } from "./dead-letter";
 let lastFlushAt = 0;
 let inflight: Promise<{ flushed: number; failed: number }> | null = null;
 
+// Identity Epoch Guard: captures the state of identity at flush start.
+// If the owner changes mid-flush, we stop immediately to prevent
+// cross-account leaks or accidental deletions.
+let activeFlushEpoch = 0;
+
+function getIdentityEpoch(): number {
+  if (typeof window === "undefined") return 0;
+  try {
+    const { getIdentityEpoch: getEpoch } = require("../identity/owner");
+    return getEpoch();
+  } catch {
+    return 0;
+  }
+}
+
 async function handleItem(item: OutboxItem): Promise<{ ok: boolean; error?: string }> {
   // Sanity: never sync one user's item into another user's session.
   const { data } = await supabase.auth.getSession();

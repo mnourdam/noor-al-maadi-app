@@ -101,10 +101,18 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         reason: event === "SIGNED_OUT" ? "sign-out" : event === "SIGNED_IN" ? "sign-in" : "auth-listener",
       }).then((res) => {
         if (!res.changed) return;
+        
+        // Neutralize owner-bound pending state on identity swap.
         autoPushEnabled.current = false;
+        if (pushTimer.current) {
+          clearTimeout(pushTimer.current);
+          pushTimer.current = null;
+        }
+
         if (!u) {
           setAccount(null);
           setLastSyncAt(null);
+          setSyncing(false); // Neutralize syncing state on sign-out
         }
       });
 
