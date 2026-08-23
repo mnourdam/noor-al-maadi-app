@@ -162,19 +162,32 @@ export async function saveImageNative(input: {
       platform: "android"
     }));
 
-    // V13 Safety: Wrap the native share call in a race to prevent infinite hanging
-    // if the native bridge fails to resolve or reject the promise.
-    const sharePromise = Share.share({
+    // V13 Physical Android Diagnostics
+    recordTrace("export-audit", "share:call:start");
+    const shareResult = Share.share({
       files: [written.uri],
     });
-
-    const watchdog = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error("NATIVE_SHARE_TIMEOUT")), 25000);
-    });
-
-    await Promise.race([sharePromise, watchdog]);
+    recordTrace("export-audit", "share:return-type", typeof shareResult);
+    recordTrace("export-audit", "share:return-has-then", typeof (shareResult as any)?.then);
     
-    recordTrace("export-audit", "share:end");
+    try {
+      recordTrace("export-audit", "share:await:start");
+      const watchdog = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error("NATIVE_SHARE_TIMEOUT")), 25000);
+      });
+      
+      await Promise.race([shareResult, watchdog]);
+      recordTrace("export-audit", "share:success");
+    } catch (e) {
+      const err = e as Error;
+      recordTrace("export-audit", "share:error", JSON.stringify({
+        name: err.name,
+        message: err.message
+      }));
+      throw e;
+    }
+    
+    recordTrace("export-audit", "export:finally");
 
     // Best effort cleanup after a delay.
     setTimeout(() => {
