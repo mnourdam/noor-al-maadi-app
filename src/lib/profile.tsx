@@ -318,30 +318,51 @@ function hydrateFromStorage(): ProfileState | null {
       } catch { return "error"; }
     };
 
-    // 1. Check partitioned localStorage (patched read)
-    // IMPORTANT: We use localStorage directly to see if the patch is working.
     const rawLocal = localStorage.getItem(STORAGE_KEY);
-    
-    // 2. Check unpartitioned/legacy localStorage (unpatched read)
-    // We try to bypass the patch if it exists, or just read the key.
-    // In our implementation, logicalKey === physicalKey if unpartitioned.
     let rawLegacy = null;
     try {
-      // @ts-ignore - reaching for the original if it was saved, or just checking the key
+      // @ts-ignore
       const originalGet = (Storage.prototype as any).__originalGetItem || localStorage.getItem;
       rawLegacy = originalGet.call(localStorage, STORAGE_KEY);
     } catch (e) {}
-
-    // 3. Check SessionStorage
     const rawSession = sessionStorage.getItem(STORAGE_KEY);
 
-    // Record the definitive source event
     const finalRaw = rawLocal || rawLegacy || rawSession;
     const finalSource = rawLocal ? "partitioned-local" : 
                        rawLegacy ? "legacy-local" : 
                        rawSession ? "session-storage" : "none";
 
     const parsedData = parseSafe(finalRaw);
+    
+    // V13 Pollution Detection & Sanitization
+    if (finalRaw && ownerAtHydrate.startsWith("guest:")) {
+      try {
+        const p = JSON.parse(finalRaw);
+        if (p && p.loggedIn === true) {
+          recordTrace("logout-audit", "PROFILE_POLLUTION_DETECTED", JSON.stringify({
+            owner: ownerAtHydrate,
+            source: finalSource,
+            data: parsedData
+          }));
+          
+          // SANITIZE: Remove the polluted physical key from the specific store it was found in.
+          // We don't want to destroy the profile entirely if it has progress, but 'loggedIn: true'
+          // is an invalid state for a guest. However, since the user's audit shows Account A data
+          // was written here, we must prioritize isolation.
+          if (rawLocal) {
+            localStorage.removeItem(STORAGE_KEY);
+            recordTrace("logout-audit", "PROFILE_GUEST_SANITIZED", JSON.stringify({ key: STORAGE_KEY, store: "localStorage" }));
+          }
+          if (rawSession) {
+            sessionStorage.removeItem(STORAGE_KEY);
+            recordTrace("logout-audit", "PROFILE_GUEST_SANITIZED", JSON.stringify({ key: STORAGE_KEY, store: "sessionStorage" }));
+          }
+          
+          return null; // Force reset to initial
+        }
+      } catch (e) {}
+    }
+
     recordTrace("logout-audit", "PROFILE_HYDRATION_SOURCE", JSON.stringify({
       owner: ownerAtHydrate,
       source: finalSource,
@@ -350,19 +371,9 @@ function hydrateFromStorage(): ProfileState | null {
       data: parsedData
     }));
 
-    if (!finalRaw) {
-      recordTrace("logout-audit", "profile-hydrate:result", "null");
-      return null;
-    }
+    if (!finalRaw) return null;
     const parsed = JSON.parse(finalRaw);
     
-    recordTrace("logout-audit", "profile-hydrate:result", JSON.stringify({
-      name: parsed.name,
-      loggedIn: parsed.loggedIn,
-      points: parsed.points,
-      dinars: parsed.dinars
-    }));
-
     let merged: ProfileState = {
       ...initial,
       ...parsed,
