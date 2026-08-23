@@ -235,6 +235,11 @@ export function installIdentityPartition(): void {
   const setItem = proto.setItem;
   const removeItem = proto.removeItem;
 
+  // Save originals for diagnostic bypass
+  (proto as any).__originalGetItem = getItem;
+  (proto as any).__originalSetItem = setItem;
+  (proto as any).__originalRemoveItem = removeItem;
+
   proto.getItem = function (this: Storage, key: string) {
     const logical = String(key);
     const mapped = mapKey(logical);

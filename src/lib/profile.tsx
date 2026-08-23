@@ -310,15 +310,51 @@ function hydrateFromStorage(): ProfileState | null {
     recordTrace("logout-audit", "profile-hydrate:initial");
     recordTrace("logout-audit", "owner:before", ownerAtHydrate);
     
-    // The key mapper is synchronous and should reflect the activeOwner.
-    // We log the logical vs physical key resolved by the partition layer.
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const parseSafe = (v: string | null) => {
+      if (!v) return null;
+      try {
+        const p = JSON.parse(v);
+        return { name: p.name, loggedIn: p.loggedIn, points: p.points, dinars: p.dinars };
+      } catch { return "error"; }
+    };
+
+    // 1. Check partitioned localStorage (patched read)
+    // IMPORTANT: We use localStorage directly to see if the patch is working.
+    const rawLocal = localStorage.getItem(STORAGE_KEY);
     
-    if (!raw) {
+    // 2. Check unpartitioned/legacy localStorage (unpatched read)
+    // We try to bypass the patch if it exists, or just read the key.
+    // In our implementation, logicalKey === physicalKey if unpartitioned.
+    let rawLegacy = null;
+    try {
+      // @ts-ignore - reaching for the original if it was saved, or just checking the key
+      const originalGet = (Storage.prototype as any).__originalGetItem || localStorage.getItem;
+      rawLegacy = originalGet.call(localStorage, STORAGE_KEY);
+    } catch (e) {}
+
+    // 3. Check SessionStorage
+    const rawSession = sessionStorage.getItem(STORAGE_KEY);
+
+    // Record the definitive source event
+    const finalRaw = rawLocal || rawLegacy || rawSession;
+    const finalSource = rawLocal ? "partitioned-local" : 
+                       rawLegacy ? "legacy-local" : 
+                       rawSession ? "session-storage" : "none";
+
+    const parsedData = parseSafe(finalRaw);
+    recordTrace("logout-audit", "PROFILE_HYDRATION_SOURCE", JSON.stringify({
+      owner: ownerAtHydrate,
+      source: finalSource,
+      logicalKey: STORAGE_KEY,
+      physicalKey: rawLocal ? "mapped-by-partition" : STORAGE_KEY,
+      data: parsedData
+    }));
+
+    if (!finalRaw) {
       recordTrace("logout-audit", "profile-hydrate:result", "null");
       return null;
     }
-    const parsed = JSON.parse(raw);
+    const parsed = JSON.parse(finalRaw);
     
     recordTrace("logout-audit", "profile-hydrate:result", JSON.stringify({
       name: parsed.name,
@@ -332,10 +368,6 @@ function hydrateFromStorage(): ProfileState | null {
       ...parsed,
       settings: { ...initial.settings, ...(parsed.settings ?? {}) },
     };
-    // Passive streak expiry: streak is derived, never trusted as a
-    // stored number. If the last active day is older than yesterday
-    // (or missing entirely), force streak to 0 BEFORE first paint so
-    // the HUD never flashes a stale value.
     const derived = deriveStreak(merged.streak, merged.lastActiveDay);
     if (derived.streak !== merged.streak) {
       merged = { ...merged, streak: derived.streak };

@@ -750,15 +750,60 @@ function AccountDiagPanel() {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <div className="text-white/60 font-bold uppercase text-[9px]">سجل التتبع</div>
-              <button
-                onClick={() => {
-                  clearTrace("logout-audit");
-                  setVersion(v => v + 1);
-                }}
-                className="text-gold/60 hover:text-gold text-[9px] underline"
-              >
-                مسح السجل
-              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={async () => {
+                    const header = `
+DIAGNOSTIC EXPORT
+-----------------
+Time: ${new Date().toISOString()}
+Supabase ID: ${user?.id || "none"}
+Owner: ${getActiveOwner()}
+Epoch: ${getIdentityEpoch()}
+loggedIn: ${profile.loggedIn}
+Profile Name: ${profile.name}
+Points: ${profile.points}
+Dinars: ${profile.dinars}
+Hearts: ${getEffectiveHearts(profile)}
+Transition: ${getReconciliationState()}
+
+TRACE LOG:
+`;
+                    const log = entries.map(e => `[${e.ts}] ${e.stage} ${e.detail || ""}`).join("\n");
+                    const full = header + log;
+                    
+                    try {
+                      if (navigator.clipboard && navigator.clipboard.writeText) {
+                        await navigator.clipboard.writeText(full);
+                      } else {
+                        // Fallback for some Android webviews
+                        const textArea = document.createElement("textarea");
+                        textArea.value = full;
+                        document.body.appendChild(textArea);
+                        textArea.select();
+                        document.execCommand("copy");
+                        document.body.removeChild(textArea);
+                      }
+                      import("sonner").then(m => m.toast.success("تم نسخ السجل"));
+                    } catch (err) {
+                      import("sonner").then(m => m.toast.error("فشل نسخ السجل"));
+                      console.error("Clipboard error:", err);
+                    }
+                  }}
+                  className="text-sky-400/60 hover:text-sky-400 text-[9px] underline"
+                >
+                  نسخ السجل
+                </button>
+                <button
+                  onClick={() => {
+                    clearTrace("logout-audit");
+                    setVersion(v => v + 1);
+                  }}
+                  className="text-gold/60 hover:text-gold text-[9px] underline"
+                >
+                  مسح السجل
+                </button>
+              </div>
             </div>
             <div className="max-h-60 overflow-y-auto space-y-1 bg-black/60 p-3 rounded-xl border border-white/5 scrollbar-thin">
               {entries.map((entry, i) => {
