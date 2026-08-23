@@ -579,7 +579,9 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         resetForIdentityChange({ nextUserId: null, reason: "sign-out" });
       });
     },
+    userId: profileOwnerRef.current.startsWith("user:") ? profileOwnerRef.current.slice(5) : null,
     addPoints: (n) => update((p) => addPointsTo(p, n)),
+
     openStory: (id) => update((p) => p.storiesOpened.includes(id) ? p : { ...p, storiesOpened: [...p.storiesOpened, id] }),
     finishStory: (id, missionId) => update((p) => {
       if (p.storiesRead.includes(id)) {
