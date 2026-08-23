@@ -113,12 +113,13 @@ export async function shareImageNative(input: {
   cacheFilesToCleanup.push({ directory: Directory.Cache, path });
 
   try {
-    await Share.share({
+    const sharePromise = Share.share({
       title: input.title,
       text: input.text,
       files: [written.uri],
       dialogTitle: input.title,
     });
+    await sharePromise;
     return "shared";
   } catch (err) {
     const msg = (err as { message?: string } | null)?.message ?? "";
