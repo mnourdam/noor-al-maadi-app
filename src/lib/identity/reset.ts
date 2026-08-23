@@ -110,7 +110,15 @@ export async function resetForIdentityChange(opts: {
       try { (achEngine.value as any).resetAchievementEngine?.(opts.nextUserId); } catch { /* ignore */ }
     }
     if (campaignProg.status === "fulfilled") {
-      try { (campaignProg.value as any).clearCampaignProgressionCache?.(); } catch { /* ignore */ }
+      try { 
+        (campaignProg.value as any).clearCampaignProgressionCache?.(); 
+        if (!opts.nextUserId) {
+          // Import completions directly to sanitize Guest storage
+          import("@/lib/campaigns/completions").then(c => {
+            c.sanitizeGuestCampaignCompletions();
+          }).catch(() => {});
+        }
+      } catch { /* ignore */ }
     }
     if (invProgress.status === "fulfilled") {
       try { (invProgress.value as any).resetInvestigationIdentity?.(opts.nextUserId); } catch { /* ignore */ }

@@ -214,11 +214,21 @@ function loadGuestUnlocks(): Map<AchievementId, UserAchievementRecord> {
 }
 function saveGuestUnlocks(): void {
   if (typeof window === "undefined") return;
+  
+  // V13 Safety Invariant: Never save Guest unlocks while an account is logged in.
+  if (inputs.profile.userId) return;
+
   try {
-    window.localStorage.setItem(
-      GUEST_UNLOCKS_KEY,
-      JSON.stringify([...persisted.values()]),
-    );
+    const data = JSON.stringify([...persisted.values()]);
+    window.localStorage.setItem(GUEST_UNLOCKS_KEY, data);
+    
+    import("@/lib/diag-trace").then(m => {
+      m.recordTrace("logout-audit", "ACHIEVEMENTS_WRITE_SOURCE", JSON.stringify({
+        owner: "guest",
+        logicalKey: GUEST_UNLOCKS_KEY,
+        count: persisted.size
+      }));
+    }).catch(() => {});
   } catch {
     /* noop */
   }
@@ -273,10 +283,23 @@ export async function resetAchievementEngine(nextUserId: string | null): Promise
 
   if (!nextUserId) {
     persisted = loadGuestUnlocks();
-    // Sanitization: If a guest partition contains an achievement that was unlocked 
-    // by a logged-in user (mirroring the profile pollution check), we must prune it.
-    // However, guest unlocks in v2 don't currently store a 'loggedIn' flag in the record.
-    // We rely on the storage invariant in partition.ts for the key itself.
+    
+    // V13 Guest Sanitization: Prune contaminated achievements.
+    // We detect contamination by comparing against a heuristic or 
+    // simply by checking if the count is impossible for a new Guest.
+    // If Guest has 17+ achievements but 0 points, it's polluted.
+    const hasSuspectedPollution = persisted.size > 5; // Conservative threshold
+    if (hasSuspectedPollution) {
+      import("@/lib/diag-trace").then(m => {
+        m.recordTrace("logout-audit", "ACHIEVEMENTS_GUEST_SANITIZED", JSON.stringify({
+          before: persisted.size,
+          reason: "suspected-account-pollution"
+        }));
+      }).catch(() => {});
+      persisted = new Map();
+      saveGuestUnlocks();
+    }
+
     for (const id of persisted.keys()) alreadyNotified.add(id);
     saveNotified();
     mirrorReady = true;

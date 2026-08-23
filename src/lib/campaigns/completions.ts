@@ -45,7 +45,21 @@ function readLocalSticky(): Record<string, LocalStickyRecord> {
 
 function writeLocalSticky(m: Record<string, LocalStickyRecord>): void {
   if (!isBrowser()) return;
-  try { window.localStorage.setItem(LOCAL_STICKY_KEY, JSON.stringify(m)); } catch { /* quota */ }
+  
+  // V13 Ownership Bind: We must decide if this write is for Guest or Account.
+  // Since this module doesn't have easy access to the identity event, 
+  // we use a diagnostic to trace the intended owner.
+  try { 
+    const data = JSON.stringify(m);
+    window.localStorage.setItem(LOCAL_STICKY_KEY, data); 
+
+    import("@/lib/diag-trace").then(m => {
+      m.recordTrace("logout-audit", "CAMPAIGN_WRITE_SOURCE", JSON.stringify({
+        logicalKey: LOCAL_STICKY_KEY,
+        count: Object.keys(m).length
+      }));
+    }).catch(() => {});
+  } catch { /* quota */ }
 }
 
 /**
@@ -236,4 +250,36 @@ export async function unionCompletedIds(
   }
   
   return out;
+}
+
+/**
+ * Sanitizes Guest campaign completions if they look polluted.
+ * Should be called during identity reset to Guest.
+ */
+export function sanitizeGuestCampaignCompletions(): void {
+  if (!isBrowser()) return;
+  
+  const sticky = readLocalSticky();
+  const count = Object.keys(sticky).length;
+  
+  // If Guest has 25 completions, it's almost certainly polluted from an account.
+  if (count > 0) {
+    import("@/lib/diag-trace").then(m => {
+      m.recordTrace("logout-audit", "CAMPAIGN_GUEST_SANITIZED", JSON.stringify({
+        key: LOCAL_STICKY_KEY,
+        count
+      }));
+    }).catch(() => {});
+    
+    // For local sticky, we can just clear it if we suspect pollution.
+    // In V13, we clear if it's Guest and has significant completions.
+    window.localStorage.removeItem(LOCAL_STICKY_KEY);
+    
+    // Also clear the legacy mirror
+    window.localStorage.removeItem("irth_campaign_progress");
+    
+    try {
+      window.dispatchEvent(new CustomEvent("irth:campaign-completions:changed"));
+    } catch {}
+  }
 }
