@@ -80,34 +80,45 @@ export async function resetForIdentityChange(opts: {
 
   // 4) Drop in-memory module caches, then let providers re-hydrate.
   try {
-    // FORCE reset the profile state reference if it's cached in the module scope
-    // although it usually lives in the provider.
     const mods = await Promise.allSettled([
       import("@/lib/stories/unlock-cache"),
       import("@/lib/emblems/avatar-persistence"),
       import("@/lib/tutorial/persistence"),
       import("@/lib/campaigns/intro/content-store"),
       import("@/lib/profile"),
+      import("@/lib/achievements/v2/engine"),
+      import("@/lib/campaigns/useCampaignProgression"),
+      import("@/lib/investigations/progress"),
     ]);
-    const [unlock, avatar, tutorial, campaignIntro, profileMod] = mods;
+    const [unlock, avatar, tutorial, campaignIntro, profileMod, achEngine, campaignProg, invProgress] = mods;
+    
     if (unlock.status === "fulfilled") {
-      try { (unlock.value as { clearUnlockCache?: () => void }).clearUnlockCache?.(); } catch { /* ignore */ }
+      try { (unlock.value as any).clearUnlockCache?.(); } catch { /* ignore */ }
     }
     if (avatar.status === "fulfilled") {
-      try { (avatar.value as { clearPendingAvatar?: () => void }).clearPendingAvatar?.(); } catch { /* ignore */ }
+      try { (avatar.value as any).clearPendingAvatar?.(); } catch { /* ignore */ }
     }
     if (tutorial.status === "fulfilled") {
-      try { (tutorial.value as { invalidateOnboardingCache?: () => void }).invalidateOnboardingCache?.(); } catch { /* ignore */ }
+      try { (tutorial.value as any).invalidateOnboardingCache?.(); } catch { /* ignore */ }
     }
     if (campaignIntro.status === "fulfilled") {
-      try { (campaignIntro.value as { clearIntroLinkCache?: () => void }).clearIntroLinkCache?.(); } catch { /* ignore */ }
+      try { (campaignIntro.value as any).clearIntroLinkCache?.(); } catch { /* ignore */ }
     }
-    if (profileMod.status === "fulfilled") {
-      // ProfileProvider uses irth:identity-changed to re-hydrate, 
-      // but we can also trigger any exported cleanup if added.
+    
+    // ATOMIC PROGRESSION RESET
+    if (achEngine.status === "fulfilled") {
+      try { (achEngine.value as any).resetAchievementEngine?.(opts.nextUserId); } catch { /* ignore */ }
     }
+    if (campaignProg.status === "fulfilled") {
+      try { (campaignProg.value as any).clearCampaignProgressionCache?.(); } catch { /* ignore */ }
+    }
+    if (invProgress.status === "fulfilled") {
+      try { (invProgress.value as any).resetInvestigationIdentity?.(opts.nextUserId); } catch { /* ignore */ }
+    }
+
     recordTrace("logout-audit", "cleanup:end");
   } catch { /* ignore */ }
+
 
   if (typeof window !== "undefined") {
     const detail: IdentityChangeDetail = {
