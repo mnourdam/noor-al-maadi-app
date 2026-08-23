@@ -393,9 +393,12 @@ function hydrateFromStorage(): ProfileState | null {
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<ProfileState>(initial);
   const [hydrated, setHydrated] = useState(false);
+  const profileOwnerRef = useRef<string>(getActiveOwner());
 
   useEffect(() => {
-    setProfile(hydrateFromStorage() ?? initial);
+    const state = hydrateFromStorage() ?? initial;
+    setProfile(state);
+    profileOwnerRef.current = getActiveOwner();
     setHydrated(true);
   }, []);
 
@@ -406,13 +409,15 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const onIdentityChange = () => {
+      const nextOwner = getActiveOwner();
       import("@/lib/diag-trace").then(m => {
         m.recordTrace("logout-audit", "profile-identity-event:received");
-        m.recordTrace("logout-audit", "owner-at-listener", getActiveOwner());
+        m.recordTrace("logout-audit", "owner-at-listener", nextOwner);
         m.recordTrace("logout-audit", "ProfileProvider:onIdentityChange:start", JSON.stringify({
           beforePoints: profile.points,
           beforeName: profile.name,
-          beforeLoggedIn: profile.loggedIn
+          beforeLoggedIn: profile.loggedIn,
+          profileOwnerRef: profileOwnerRef.current
         }));
       }).catch(() => {});
 
@@ -420,9 +425,9 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       // This prevents stale data (Account A's XP) from remaining visible
       // in the React tree while hydrateFromStorage is working.
       setProfile(initial);
+      profileOwnerRef.current = nextOwner;
       
       // 2) Then hydrate the newly active owner's profile from its already-switched partition.
-      // 3) Replace initial state with the hydrated new-owner profile.
       const next = hydrateFromStorage() ?? initial;
       setProfile(next);
 
@@ -436,19 +441,44 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     };
     window.addEventListener("irth:identity-changed", onIdentityChange);
     return () => window.removeEventListener("irth:identity-changed", onIdentityChange);
-  }, []);
+  }, [profile.points, profile.name, profile.loggedIn]);
 
-
-
-
-
-
+  // V13 Owner-bound Persistence Effect
   useEffect(() => {
     if (!hydrated) return;
+    
+    const intendedOwner = profileOwnerRef.current;
+    const activeOwnerAtFlush = getActiveOwner();
+    
+    // ROOT CAUSE MITIGATION: Never write a profile if the owner has changed.
+    // If ProfileProvider is still holding Account A's state but activeOwner is Guest,
+    // this guard stops the write.
+    if (intendedOwner !== activeOwnerAtFlush) {
+      import("@/lib/diag-trace").then(m => {
+        m.recordTrace("logout-audit", "PROFILE_WRITE_QUARANTINED", JSON.stringify({
+          intendedOwner,
+          activeOwner: activeOwnerAtFlush,
+          reason: "owner-mismatch-during-effect",
+          data: { name: profile.name, points: profile.points, loggedIn: profile.loggedIn }
+        }));
+      }).catch(() => {});
+      return;
+    }
+
     const started = performance.now();
     let raw = "";
     try {
       raw = JSON.stringify(profile);
+      
+      import("@/lib/diag-trace").then(m => {
+        m.recordTrace("logout-audit", "PROFILE_WRITE_ATTEMPT", JSON.stringify({
+          intendedOwner,
+          activeOwner: activeOwnerAtFlush,
+          logical: STORAGE_KEY,
+          data: { name: profile.name, points: profile.points, loggedIn: profile.loggedIn }
+        }));
+      }).catch(() => {});
+
       localStorage.setItem(STORAGE_KEY, raw);
     } catch {}
     androidMeasure("profile.localStorage.write", started, { bytes: raw.length });
