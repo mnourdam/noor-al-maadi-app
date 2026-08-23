@@ -573,6 +573,7 @@ function ProfilePage() {
           onClose={() => setPickingAvatar(false)}
         />
       )}
+      <AccountDiagPanel />
     </AppShell>
   );
 }
