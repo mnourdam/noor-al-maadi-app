@@ -1420,8 +1420,13 @@ function SettingsTab({
 
       {profile.loggedIn && <DeleteAccountSection />}
 
-    </ReadingScale>
+          {/* ============== DIAGNOSTICS ============== */}
+          <AccountDiagPanel />
 
+          <DeleteAccountSection />
+        </>
+      )}
+    </ReadingScale>
   );
 }
 
