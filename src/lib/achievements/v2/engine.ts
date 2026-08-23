@@ -218,8 +218,7 @@ function saveGuestUnlocks(caller: string): void {
   // V13 Safety Invariant: Never save Guest unlocks while an account is logged in.
   const userId = inputs.profile.userId;
   import("@/lib/diag-trace").then(m => {
-    const activeOwner = getActiveOwner();
-    const userId = activeOwner.startsWith("user:") ? activeOwner.split(":")[1] : null;
+    const userId = inputs.profile.userId;
 
     if (userId) {
       m.recordTrace("logout-audit", "ACHIEVEMENTS_WRITE_QUARANTINED", JSON.stringify({
