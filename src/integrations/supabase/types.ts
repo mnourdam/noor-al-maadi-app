@@ -3852,6 +3852,7 @@ export type Database = {
         Returns: boolean
       }
       admin_story_delete_impact: { Args: { p_ids: string[] }; Returns: Json }
+      admin_system_health: { Args: never; Returns: Json }
       admin_unsubscribe_newsletter: {
         Args: { p_id: string; p_reason?: string }
         Returns: Json

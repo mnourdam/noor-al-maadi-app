@@ -78,6 +78,7 @@ import { Route as AdminInvestigationsRouteImport } from './routes/admin.investig
 import { Route as AdminMapRouteImport } from './routes/admin.map'
 import { Route as AdminMigrationRouteImport } from './routes/admin.migration'
 import { Route as AdminModerationRouteImport } from './routes/admin.moderation'
+import { Route as AdminMonitorRouteImport } from './routes/admin.monitor'
 import { Route as AdminMuseumProvenanceRouteImport } from './routes/admin.museum-provenance'
 import { Route as AdminNativeAuthDiagnosticsRouteImport } from './routes/admin.native-auth-diagnostics'
 import { Route as AdminNewsletterRouteImport } from './routes/admin.newsletter'
@@ -502,6 +503,11 @@ const AdminMigrationRoute = AdminMigrationRouteImport.update({
 const AdminModerationRoute = AdminModerationRouteImport.update({
   id: '/admin/moderation',
   path: '/admin/moderation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminMonitorRoute = AdminMonitorRouteImport.update({
+  id: '/admin/monitor',
+  path: '/admin/monitor',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminMuseumProvenanceRoute = AdminMuseumProvenanceRouteImport.update({
@@ -961,6 +967,7 @@ export interface FileRoutesByFullPath {
   '/admin/map': typeof AdminMapRoute
   '/admin/migration': typeof AdminMigrationRoute
   '/admin/moderation': typeof AdminModerationRoute
+  '/admin/monitor': typeof AdminMonitorRoute
   '/admin/museum-provenance': typeof AdminMuseumProvenanceRoute
   '/admin/native-auth-diagnostics': typeof AdminNativeAuthDiagnosticsRoute
   '/admin/newsletter': typeof AdminNewsletterRoute
@@ -1099,6 +1106,7 @@ export interface FileRoutesByTo {
   '/admin/map': typeof AdminMapRoute
   '/admin/migration': typeof AdminMigrationRoute
   '/admin/moderation': typeof AdminModerationRoute
+  '/admin/monitor': typeof AdminMonitorRoute
   '/admin/museum-provenance': typeof AdminMuseumProvenanceRoute
   '/admin/native-auth-diagnostics': typeof AdminNativeAuthDiagnosticsRoute
   '/admin/newsletter': typeof AdminNewsletterRoute
@@ -1244,6 +1252,7 @@ export interface FileRoutesById {
   '/admin/map': typeof AdminMapRoute
   '/admin/migration': typeof AdminMigrationRoute
   '/admin/moderation': typeof AdminModerationRoute
+  '/admin/monitor': typeof AdminMonitorRoute
   '/admin/museum-provenance': typeof AdminMuseumProvenanceRoute
   '/admin/native-auth-diagnostics': typeof AdminNativeAuthDiagnosticsRoute
   '/admin/newsletter': typeof AdminNewsletterRoute
@@ -1390,6 +1399,7 @@ export interface FileRouteTypes {
     | '/admin/map'
     | '/admin/migration'
     | '/admin/moderation'
+    | '/admin/monitor'
     | '/admin/museum-provenance'
     | '/admin/native-auth-diagnostics'
     | '/admin/newsletter'
@@ -1528,6 +1538,7 @@ export interface FileRouteTypes {
     | '/admin/map'
     | '/admin/migration'
     | '/admin/moderation'
+    | '/admin/monitor'
     | '/admin/museum-provenance'
     | '/admin/native-auth-diagnostics'
     | '/admin/newsletter'
@@ -1672,6 +1683,7 @@ export interface FileRouteTypes {
     | '/admin/map'
     | '/admin/migration'
     | '/admin/moderation'
+    | '/admin/monitor'
     | '/admin/museum-provenance'
     | '/admin/native-auth-diagnostics'
     | '/admin/newsletter'
@@ -1817,6 +1829,7 @@ export interface RootRouteChildren {
   AdminMapRoute: typeof AdminMapRoute
   AdminMigrationRoute: typeof AdminMigrationRoute
   AdminModerationRoute: typeof AdminModerationRoute
+  AdminMonitorRoute: typeof AdminMonitorRoute
   AdminMuseumProvenanceRoute: typeof AdminMuseumProvenanceRoute
   AdminNativeAuthDiagnosticsRoute: typeof AdminNativeAuthDiagnosticsRoute
   AdminNewsletterRoute: typeof AdminNewsletterRoute
@@ -2352,6 +2365,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/moderation'
       fullPath: '/admin/moderation'
       preLoaderRoute: typeof AdminModerationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/monitor': {
+      id: '/admin/monitor'
+      path: '/admin/monitor'
+      fullPath: '/admin/monitor'
+      preLoaderRoute: typeof AdminMonitorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/museum-provenance': {
@@ -3067,6 +3087,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminMapRoute: AdminMapRoute,
   AdminMigrationRoute: AdminMigrationRoute,
   AdminModerationRoute: AdminModerationRoute,
+  AdminMonitorRoute: AdminMonitorRoute,
   AdminMuseumProvenanceRoute: AdminMuseumProvenanceRoute,
   AdminNativeAuthDiagnosticsRoute: AdminNativeAuthDiagnosticsRoute,
   AdminNewsletterRoute: AdminNewsletterRoute,
