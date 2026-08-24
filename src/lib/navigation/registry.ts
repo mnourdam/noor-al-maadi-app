@@ -37,6 +37,13 @@ const PLAYER_ROUTES: RouteDeclaration[] = [
   { id: "/timeline", parentRoute: "/", kind: "player", label: "الخط الزمني" },
   { id: "/history-calendar", parentRoute: "/", kind: "player", label: "التقويم التاريخي" },
   { id: "/on-this-day", parentRoute: "/", kind: "player", label: "في مثل هذا اليوم" },
+  // Index-route id: `stories.index.tsx` generates the route id "/stories/"
+  // (trailing slash). The runtime engine resolves declarations by the
+  // router's raw routeId, so this entry MUST keep the trailing slash —
+  // without it `useStashCurrentAsOrigin()` from the Story Library (locked
+  // Story requirement → Encyclopedia entity) silently no-ops and Back
+  // falls through to the entity's declared parent.
+  { id: "/stories/", parentRoute: "/", kind: "player", label: "القصص" },
   // `/seasons` retired in Phase 3B — redirects to `/profile`; no registry entry.
   // `/achievements` was retired — the canonical trophy hall is Profile → Achievements
   // (`/profile?tab=achievements`). The route file now issues a permanent redirect;

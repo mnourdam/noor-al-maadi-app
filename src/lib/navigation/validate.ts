@@ -160,7 +160,11 @@ export function validateNavigationRegistry(
 
   // Cross-check against router-known routes when provided
   if (options.knownRouteIds) {
-    const registered = new Set(NAVIGATION_REGISTRY.map((d) => d.id));
+    // Normalize BOTH sides: the router reports index routes by fullPath
+    // ("/stories") while the registry keys by raw route id ("/stories/").
+    const registered = new Set(
+      NAVIGATION_REGISTRY.map((d) => normalizeKnownRouteId(d.id)).filter(Boolean) as string[],
+    );
     const known = new Set(
       options.knownRouteIds.map(normalizeKnownRouteId).filter(Boolean) as string[],
     );

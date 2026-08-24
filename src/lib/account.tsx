@@ -23,7 +23,7 @@ import { getReconciliationState, setReconciliationState } from "./boot/reconcili
 import { withBoundedTimeout } from "./boot/withTimeout";
 import { recordStartupMark } from "./boot/startup-timeline";
 import { resetForIdentityChange } from "./identity/reset";
-import { getActiveUserId } from "./identity/owner";
+import { getActiveOwner, getActiveUserId, guestOwnerKey, userOwnerKey } from "./identity/owner";
 import { waitForAuthReady } from "./identity/guard";
 
 
@@ -104,7 +104,16 @@ export function AccountProvider({ children }: { children: ReactNode }) {
           }).catch(() => {});
         } catch { /* ignore dynamic import failure */ }
       } else if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
-        setReconciliationState(u ? "loading-local" : "offline-local");
+        // V13 hotfix: only a REAL identity transition may downgrade trust.
+        // Duplicate same-user events (Android resume / WebView session
+        // restore re-emitting SIGNED_IN / INITIAL_SESSION) must leave an
+        // already-terminal reconciliation state untouched — the hydration
+        // effect is keyed on user.id and will NOT re-run to restore it, so
+        // a blind downgrade strands Hearts/Hero in loading indefinitely.
+        const nextOwner = u ? userOwnerKey(u.id) : guestOwnerKey();
+        if (getActiveOwner() !== nextOwner) {
+          setReconciliationState(u ? "loading-local" : "offline-local");
+        }
       }
 
       // THE single approved identity-switch path. Idempotent: repeated
@@ -118,7 +127,17 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         reason: event === "SIGNED_OUT" ? "sign-out" : event === "SIGNED_IN" ? "sign-in" : "auth-listener",
       }).then((res) => {
         if (!res.changed) return;
-        
+
+        // Real initialization/change confirmed by the identity lifecycle.
+        // Covers the edge the synchronous pre-check above cannot prove
+        // (same owner key but never fully initialized). Safe point: the
+        // hydration effect is gated on THIS reset's auth-readiness, so
+        // this loading state always proceeds to a terminal state through
+        // the existing reconciliation flow.
+        if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
+          setReconciliationState(u ? "loading-local" : "offline-local");
+        }
+
         // Neutralize owner-bound pending state on identity swap.
         autoPushEnabled.current = false;
         if (pushTimer.current) {
