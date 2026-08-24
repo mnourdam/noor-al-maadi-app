@@ -446,6 +446,8 @@ async function handleItem(item: OutboxItem): Promise<{ ok: boolean; error?: stri
  * and every await point in the loop checks it to stop immediately.
  */
 export async function flushOutbox(userId: string): Promise<{ flushed: number; failed: number }> {
+  const started = performance.now();
+  recordTrace("sync-forensics", "OUTBOX_FLUSH_START", JSON.stringify({ userId: userId.slice(0, 8) }));
   if (!userId) return { flushed: 0, failed: 0 };
   
   // Capture current epoch to detect identity switches after awaits.
@@ -496,6 +498,8 @@ export async function flushOutbox(userId: string): Promise<{ flushed: number; fa
     } finally {
       inflight = null;
     }
+    const duration = Math.round(performance.now() - started);
+    recordTrace("sync-forensics", "OUTBOX_FLUSH_DONE", `${duration}ms (flushed: ${flushed}, failed: ${failed})`);
     return { flushed, failed };
   })();
   return inflight;
