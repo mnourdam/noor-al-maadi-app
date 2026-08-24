@@ -25,11 +25,19 @@ export function AccountDiagPanel() {
     );
   }
 
-  const logs = readTrace("logout-audit");
+  const logs = readTrace("sync-forensics");
   const all = [...logs].sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime());
 
   const copy = () => {
-    navigator.clipboard.writeText(JSON.stringify(all, null, 2));
+    const switchEvents = all.filter(e => e.stage.includes("SWITCH") || e.stage.includes("SYNC") || e.stage.includes("HOME"));
+    const switchStartTime = all.find(e => e.stage === "ACCOUNT_SWITCH_REQUESTED")?.ts;
+    
+    let summary = "=== ACCOUNT SYNC FORENSICS ===\n\n";
+    summary += `Owner: ${owner}\n`;
+    summary += `Reconciliation: ${reco}\n\n`;
+    summary += JSON.stringify(all, null, 2);
+
+    navigator.clipboard.writeText(summary);
   };
 
   const owner = getActiveOwner();
@@ -46,7 +54,7 @@ export function AccountDiagPanel() {
           <button onClick={copy} className="flex items-center gap-1 rounded-full bg-white/5 px-3 py-1.5 hover:bg-white/10 transition-colors border border-white/5">
             <Copy className="size-3" /> نسخ
           </button>
-          <button onClick={() => clearTrace("logout-audit")} className="flex items-center gap-1 rounded-full bg-red-500/10 px-3 py-1.5 text-red-400 hover:bg-red-500/20 transition-colors border border-red-500/20">
+          <button onClick={() => clearTrace("sync-forensics")} className="flex items-center gap-1 rounded-full bg-red-500/10 px-3 py-1.5 text-red-400 hover:bg-red-500/20 transition-colors border border-red-500/20">
             <Trash2 className="size-3" /> مسح
           </button>
           <button onClick={() => setOpen(false)} className="rounded-full bg-white/5 p-1.5 hover:bg-white/10 transition-colors border border-white/5">
