@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { AlertTriangle, Bell, BookOpen, Upload, Sword, Landmark, ShieldCheck, Database, Search, HardDrive, MapPin, Compass, Network, Hammer, Users, Gamepad2, MessagesSquare, Layers, Mail, Flag, Gem, BarChart3 } from "lucide-react";
+import { Activity, AlertTriangle, Bell, BookOpen, Upload, Sword, Landmark, ShieldCheck, Database, Search, HardDrive, MapPin, Compass, Network, Hammer, Users, Gamepad2, MessagesSquare, Layers, Mail, Flag, Gem, BarChart3 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminGate } from "@/lib/admin-guard";
 
@@ -171,6 +171,8 @@ function AdminHub() {
             desc="توليد لقطة JSON موحّدة وتخزينها محليًا (Phase 1)." />
           <AdminCard to="/admin/offline-diagnostics" icon={<ShieldCheck className="h-5 w-5" />} title="تشخيص العمل دون اتصال"
             desc="حالة الاتصال، مصدر البيانات، عدّادات المجموعات، كاش الصور، ومزامنة يدوية — للاختبار على APK." />
+          <AdminCard to="/admin/monitor" icon={<Activity className="h-5 w-5" />} title="مراقبة النظام"
+            desc="مراقبة صحة الخادم وقاعدة البيانات وهامش القدرة — قراءة فقط، تحديث يدوي." />
         </section>
 
 
