@@ -53,11 +53,13 @@ export async function resetForIdentityChange(opts: {
     reason: opts.reason
   }));
 
-  if (previous === next) {
-    // If we're already the correct user, ensure readiness is signaled.
+  // Only collapse if identical identity is ALREADY active AND fully initialized.
+  if (previous === next && lastInitializedOwner === next && !inflightReset) {
     if (opts.nextUserId) setAuthReady(true);
     return { changed: false, owner: next, previous };
   }
+  
+  if (inflightReset && previous === next) return inflightReset;
 
   // PRE-READINESS RESET: Drop readiness during switch so no late payload
   // belonging to the previous identity can be delivered mid-swap.
