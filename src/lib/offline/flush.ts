@@ -1,3 +1,4 @@
+import { recordTrace } from "@/lib/diag-trace";
 // ============================================================
 // Offline Outbox Flush Driver
 // ------------------------------------------------------------
@@ -15,10 +16,6 @@ import { recordDeadLetter, isPermanentReason } from "./dead-letter";
 
 let lastFlushAt = 0;
 let inflight: Promise<{ flushed: number; failed: number }> | null = null;
-
-// Identity Epoch Guard: captures the state of identity at flush start.
-// If the owner changes mid-flush, we stop immediately to prevent
-// cross-account leaks or accidental deletions.
 let activeFlushEpoch = 0;
 
 export function getIdentityEpochSafe(): number {
