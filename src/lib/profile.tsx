@@ -295,7 +295,6 @@ export function readPersistedProfileState(): ProfileState {
     const owner = getActiveOwner();
     const raw = localStorage.getItem(STORAGE_KEY);
     
-    recordTrace("hearts-audit", "HEARTS_SOURCE_READ", JSON.stringify({
       owner,
       source: "owner-partitioned localStorage",
       logicalKey: STORAGE_KEY,
@@ -321,7 +320,6 @@ function hydrateFromStorage(): ProfileState | null {
   const ownerAtHydrate = getActiveOwner();
   recordTrace("sync-forensics", "LOCAL_PROFILE_HYDRATE_START", JSON.stringify({ owner: ownerAtHydrate }));
   const start = Date.now();
-  recordTrace("hearts-audit", "HEARTS_LOGIN_START");
 
   try {
     recordTrace("logout-audit", "profile-hydrate:initial");
@@ -390,7 +388,6 @@ function hydrateFromStorage(): ProfileState | null {
     }));
 
     if (parsedData && typeof (parsedData as any).hearts !== 'undefined') {
-      recordTrace("hearts-audit", "HEARTS_SOURCE_READ", JSON.stringify({
         owner: ownerAtHydrate,
         source: finalSource,
         logicalKey: STORAGE_KEY,
@@ -416,7 +413,6 @@ function hydrateFromStorage(): ProfileState | null {
       merged = { ...merged, streak: derived.streak };
     }
     
-    recordTrace("hearts-audit", "HEARTS_LOCAL_HYDRATED", JSON.stringify({
       hearts: merged.hearts,
       heartsAt: merged.heartsAt,
       effective: getEffectiveHearts(merged, Date.now()),
@@ -538,7 +534,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
     const prev = readPersistedProfileState();
     if (prev.hearts !== profile.hearts || prev.heartsAt !== profile.heartsAt) {
-      recordTrace("hearts-audit", "HEARTS_WRITE", JSON.stringify({
         intendedOwner,
         activeOwner: activeOwnerAtFlush,
         destination: "localStorage",
@@ -802,7 +797,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         const eff = getEffectiveHearts(p, now);
         const next = Math.max(0, eff - 1);
         result = next;
-      recordTrace("hearts-audit", "HEARTS_STATE_CHANGE", JSON.stringify({
         owner: getActiveOwner(),
         caller: "loseHeart",
         previousHearts: getEffectiveHearts(p, now),
@@ -867,7 +861,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         if (eff >= HEART_MAX) return p;
         if ((p.dinars ?? 0) < HEART_COST_DINARS) return p;
         ok = true;
-      recordTrace("hearts-audit", "HEARTS_STATE_CHANGE", JSON.stringify({
         owner: getActiveOwner(),
         caller: "spendDinarsForHeart",
         previousHearts: getEffectiveHearts(p, now),
@@ -1038,7 +1031,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       const localEff = getEffectiveHearts(p, now);
       const cloudEff = cloudAt !== null ? getEffectiveHearts({ ...p, hearts: cloudHearts, heartsAt: cloudAt }, now) : cloudHearts;
 
-      recordTrace("hearts-audit", "HEARTS_RECONCILIATION", JSON.stringify({
         owner: getActiveOwner(),
         localHearts: localCommitted,
         localEffective: localEff,
@@ -1058,7 +1050,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         ? { hearts: cloudHearts, heartsAt: cloudAt }
         : { hearts: p.hearts, heartsAt: p.heartsAt };
 
-      recordTrace("hearts-audit", "HEARTS_PROFILE_APPLIED", JSON.stringify({
         chosenHearts: heartsPatch.hearts,
         chosenHeartsAt: heartsPatch.heartsAt,
         source: cloudHearts !== localCommitted ? "cloud" : "local/preserved"
@@ -1177,7 +1168,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       if (typeof stats.hearts === "number") {
         const target = Math.max(0, Math.min(HEART_MAX, stats.hearts));
         const localCommitted = Math.max(0, Math.min(HEART_MAX, p.hearts ?? HEART_MAX));
-        recordTrace("hearts-audit", "HEARTS_RECONCILIATION", JSON.stringify({
           owner: getActiveOwner(),
           localHearts: localCommitted,
           localEffective: getEffectiveHearts(p, now),
@@ -1191,7 +1181,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
           next = { ...next, ...patched };
           changed = true;
           
-          recordTrace("hearts-audit", "HEARTS_PROFILE_APPLIED", JSON.stringify({
             chosenHearts: patched.hearts,
             chosenHeartsAt: patched.heartsAt,
             source: "server-stats"

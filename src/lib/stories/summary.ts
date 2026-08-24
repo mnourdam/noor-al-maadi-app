@@ -86,7 +86,6 @@ export async function listStoriesSummary(
   worldSlug?: string | null,
 ): Promise<StorySummary[]> {
   const started = performance.now();
-  recordTrace("sync-forensics", "STORY_PROGRESS_CLOUD_START");
   const online = typeof navigator === "undefined" || navigator.onLine !== false;
   const uid = await currentUid();
 
@@ -97,7 +96,6 @@ export async function listStoriesSummary(
 
     const promise = (async () => {
       try {
-        recordTrace("sync-forensics", "STORY_PROGRESS_CLOUD_START");
         const started = performance.now();
         // GUEST: the device is the unlock authority. `list_stories_guest_v3`
         // is the anon-only mirror of the authoritative RPC — the server still
@@ -115,7 +113,6 @@ export async function listStoriesSummary(
 
         // STALE CHECK: Identity changed while request was in-flight.
         if (getActiveUserId() !== uid) {
-          recordTrace("sync-forensics", "STORY_PROGRESS_CLOUD_STALE_DISCARDED");
           return [];
         }
 
@@ -164,7 +161,6 @@ export async function listStoriesSummary(
           })();
         }
         const duration = Math.round(performance.now() - started);
-        recordTrace("sync-forensics", "STORY_PROGRESS_CLOUD_DONE", `${duration}ms`);
         return rows;
       } finally {
         inflightSummary.delete(key);
