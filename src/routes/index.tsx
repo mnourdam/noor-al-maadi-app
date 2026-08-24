@@ -330,11 +330,6 @@ function HomeFull() {
     }
   }, [stories.length]);
 
-  useEffect(() => {
-    if (campaignSel && campaignHeroBg) {
-      recordTrace("sync-forensics", "HOME_HERO_READY");
-    }
-  }, [!!campaignSel, !!campaignHeroBg]);
 
   // ===== Campaign hero artwork (Single Source of Truth) =====
   // The resolver picks Key Art when present, else the rotating hero
@@ -346,6 +341,12 @@ function HomeFull() {
     "home-hero",
     heroPoolFallback,
   );
+
+  useEffect(() => {
+    if (campaignSel && campaignHeroBg) {
+      recordTrace("sync-forensics", "HOME_HERO_READY");
+    }
+  }, [!!campaignSel, campaignHeroBg]);
 
   // ===== Hero slides =====
   const slides = useMemo<HeroSlide[]>(() => {
