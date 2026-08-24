@@ -1408,8 +1408,6 @@ function SettingsTab({
         </button>
       )}
 
-      {/* ============== DIAGNOSTICS ============== */}
-      <AccountDiagPanel />
 
 
       {profile.loggedIn && <DeleteAccountSection />}
