@@ -44,7 +44,6 @@ interface AccountCtx {
   isUsernameAvailable: (username: string) => Promise<boolean>;
 }
 
-import { recordTrace } from "@/lib/diag-trace";
 
 
 const Ctx = createContext<AccountCtx | null>(null);
@@ -78,9 +77,10 @@ export function AccountProvider({ children }: { children: ReactNode }) {
 
 
   // ============ Initial session + auth state listener ============
+  const switchStartRef = useRef<number>(performance.now());
   useEffect(() => {
     let alive = true;
-    const switchStart = performance.now();
+    switchStartRef.current = performance.now();
     recordTrace("sync-forensics", "ACCOUNT_SWITCH_REQUESTED", JSON.stringify({ ts: Date.now() }));
     androidMark("account.session.start");
     supabase.auth.getSession().then(({ data }) => {
@@ -202,7 +202,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       const started = performance.now();
       recordTrace("sync-forensics", "ACCOUNT_RECONCILIATION_START", JSON.stringify({ 
         userId: user.id.slice(0, 8),
-        elapsedFromSwitchStart: Math.round(performance.now() - switchStart)
+        elapsedFromSwitchStart: Math.round(performance.now() - switchStartRef.current)
       }));
       import("@/lib/diag-trace").then(m => m.recordTrace("logout-audit", "profile-hydrate:start", JSON.stringify({ userId: user.id.slice(0, 8) }))).catch(() => {});
       androidMark("account.hydrate.start", { userId: user.id.slice(0, 8) });
@@ -218,7 +218,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         recordStartupMark("server-reconciliation-soft-timeout");
         recordTrace("sync-forensics", "SOFT_TIMEOUT_TRIGGERED", JSON.stringify({ 
           duration: 5000,
-          elapsedFromSwitchStart: Math.round(performance.now() - switchStart)
+          elapsedFromSwitchStart: Math.round(performance.now() - switchStartRef.current)
         }));
         recordStartupMark("offline-local-entered");
         recordTrace("hearts-audit", "HEARTS_SYNC_COMPLETE", "soft-timeout");
