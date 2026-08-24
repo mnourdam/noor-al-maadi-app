@@ -46,6 +46,7 @@ type HealthSnapshot = {
   max_connections: number;
   waiting_backends: number;
   lock_waiting_backends: number;
+  idle_clients?: number;
   longest_active_query_seconds: number;
   db_size_bytes: number;
   deadlocks: number;
@@ -306,7 +307,10 @@ function MonitorPage() {
                   {fmtPct(snap.connections, snap.max_connections)}
                 </div>
                 <p className="mt-1 text-[11px] text-slate-500">
-                  خامل/منتظر: {snap.waiting_backends} — بانتظار أقفال: {snap.lock_waiting_backends}
+                  نشطة ومنتظرة: {snap.waiting_backends} — بانتظار أقفال: {snap.lock_waiting_backends}
+                </p>
+                <p className="mt-0.5 text-[11px] text-slate-600">
+                  اتصالات خاملة (معلوماتي فقط): {snap.idle_clients ?? 0}
                 </p>
               </>
             ) : (
