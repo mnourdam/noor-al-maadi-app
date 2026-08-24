@@ -18,6 +18,7 @@
 // Rewards are NOT granted here. Reward idempotency lives in
 // `recordCompletion` (game_progress row + firstTime flag).
 
+import { recordTrace } from "@/lib/diag-trace";
 import { supabase } from "@/integrations/supabase/client";
 import { localDateKey } from "@/lib/daily-quest";
 import {
