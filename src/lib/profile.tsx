@@ -1037,42 +1037,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         next = { ...next, points: Math.max(0, stats.xp) };
         changed = true;
       }
-      if (typeof stats.dinars === "number" && stats.dinars !== (p.dinars ?? 0)) {
-        next = { ...next, dinars: Math.max(0, stats.dinars) };
-        changed = true;
-      }
-      if (typeof stats.streak === "number") {
-        const local = deriveStreak(p.streak, p.lastActiveDay, new Date(now));
-        if (local.status === "expired") {
-          if (next.streak !== 0) {
-            next = { ...next, streak: 0 };
-            changed = true;
-          }
-        } else if (local.status === "safe") {
-          const s = Math.max(p.streak, stats.streak);
-          if (next.streak !== s) {
-            next = { ...next, streak: s, longestStreak: Math.max(next.longestStreak, s) };
-            changed = true;
-          }
-        } else {
-          if (next.streak !== stats.streak) {
-            next = { ...next, streak: stats.streak, longestStreak: Math.max(next.longestStreak, stats.streak) };
-            changed = true;
-          }
-        }
-      }
-      if (typeof stats.hearts === "number") {
-        const eff = getEffectiveHearts(p, now);
-        if (eff !== stats.hearts) {
-          next = { ...next, ...commitHearts(p, stats.hearts, now) };
-          changed = true;
-        }
-      }
-      return changed ? next : p;
-    }),
-      const now = Date.now();
-      let next = p;
-      let changed = false;
       if (typeof stats.xp === "number" && stats.xp !== p.points) {
         next = { ...next, points: Math.max(0, stats.xp) };
         changed = true;
@@ -1082,14 +1046,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         changed = true;
       }
       if (typeof stats.streak === "number") {
-        // Streak is day-anchored locally. Server value is NEVER trusted
-        // on its own — if local `lastActiveDay` says the streak has
-        // expired (player missed a full day), force 0 regardless of
-        // what the server echoes. Otherwise:
-        //   - safe (played today):    keep max(local, server) so admin
-        //                             grants raise it but stale realtime
-        //                             echoes can't lower it.
-        //   - at-risk (yesterday):    accept server value.
         const target = Math.max(0, Math.floor(stats.streak));
         const derived = deriveStreak(p.streak, p.lastActiveDay);
         let nextStreak: number;
@@ -1100,56 +1056,11 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         } else {
           nextStreak = target;
         }
-        if (import.meta.env.DEV) {
-          console.debug("[streak] applyServerStats", {
-            today: todayKey(),
-            lastActiveDay: p.lastActiveDay,
-            storedStreak: p.streak,
-            serverStreak: target,
-            computedStreak: nextStreak,
-            reason: derived.status,
-          });
-        }
         if (nextStreak !== p.streak) {
           next = { ...next, streak: nextStreak };
           changed = true;
         }
       }
-
-
-
-
-
-      // V13 Hearts Fix: The `profiles` server-stats source contains raw `hearts`
-      // but does NOT contain the corresponding `heartsAt`. Therefore it does
-      // not contain enough information to calculate the player's effective
-      // regenerated Hearts safely. Hearts reconciliation during login must
-      // remain owned by the Cloud Save path / `mergeCloudSave`, which has
-      // both `hearts` and `heartsAt`.
-      /*
-      if (typeof stats.hearts === "number") {
-        const target = Math.max(0, Math.min(HEART_MAX, stats.hearts));
-        const localCommitted = Math.max(0, Math.min(HEART_MAX, p.hearts ?? HEART_MAX));
-          owner: getActiveOwner(),
-          localHearts: localCommitted,
-          localEffective: getEffectiveHearts(p, now),
-          serverHearts: target,
-          mergeRule: "Server Stats Apply",
-          localUpdatedAt: p.heartsAt
-        }));
-
-        if (target !== localCommitted) {
-          const patched = commitHearts(p, target, now);
-          next = { ...next, ...patched };
-          changed = true;
-          
-            chosenHearts: patched.hearts,
-            chosenHeartsAt: patched.heartsAt,
-            source: "server-stats"
-          }));
-        }
-      }
-      */
 
       return changed ? next : p;
     }),
