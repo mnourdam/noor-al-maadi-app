@@ -451,6 +451,9 @@ export async function flushOutbox(userId: string): Promise<{ flushed: number; fa
   
   if (inflight) return inflight;
   recordTrace("sync-forensics", "OUTBOX_FLUSH_START", JSON.stringify({ userId: userId.slice(0, 8) }));
+  
+  // Capture current epoch to detect identity switches after awaits.
+  const startEpoch = getIdentityEpochSafe();
   inflight = (async () => {
     let flushed = 0;
     let failed = 0;
