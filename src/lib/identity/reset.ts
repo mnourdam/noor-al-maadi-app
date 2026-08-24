@@ -43,15 +43,8 @@ export async function resetForIdentityChange(opts: {
   nextUserId: string | null;
   reason: IdentityChangeReason;
 }): Promise<{ changed: boolean; owner: OwnerKey; previous: OwnerKey }> {
-  recordTrace("sync-forensics", "IDENTITY_CHANGE_START", JSON.stringify({ reason: opts.reason, nextUserId: opts.nextUserId?.slice(0, 8) }));
   const next = opts.nextUserId ? userOwnerKey(opts.nextUserId) : guestOwnerKey();
   const previous = getActiveOwner();
-
-  recordTrace("logout-audit", "identity-reset:start", JSON.stringify({
-    previousOwner: previous,
-    requestedNextOwner: next,
-    reason: opts.reason
-  }));
 
   // Only collapse if identical identity is ALREADY active AND fully initialized.
   if (previous === next && lastInitializedOwner === next && !inflightReset) {
@@ -80,13 +73,8 @@ export async function resetForIdentityChange(opts: {
 
       // 3) Atomic owner swap — every personal storage key now resolves into the
       //    new namespace and the identity epoch invalidates every in-flight guard.
-      recordTrace("sync-forensics", "PARTITION_SWITCH_START", next);
-      recordTrace("logout-audit", "owner:before", previous);
       const res = setActiveOwnerInternal(next);
-      recordTrace("logout-audit", "owner:after", next);
-      recordTrace("sync-forensics", "PARTITION_SWITCH_DONE", next);
 
-      recordTrace("logout-audit", "cleanup:start");
 
       // 4) Drop in-memory module caches, then let providers re-hydrate.
       try {
@@ -137,7 +125,6 @@ export async function resetForIdentityChange(opts: {
           try { (invProgress.value as any).resetInvestigationIdentity?.(opts.nextUserId); } catch { /* ignore */ }
         }
 
-        recordTrace("logout-audit", "cleanup:end");
       } catch { /* ignore */ }
 
 
@@ -148,8 +135,6 @@ export async function resetForIdentityChange(opts: {
           reason: opts.reason,
         };
         try {
-          recordTrace("logout-audit", "identity-event:before-dispatch");
-          recordTrace("logout-audit", "identity-event:dispatch");
           window.dispatchEvent(new CustomEvent(IDENTITY_CHANGED_EVENT, { detail }));
         } catch { /* ignore */ }
       }
@@ -161,7 +146,6 @@ export async function resetForIdentityChange(opts: {
         setAuthReady(false);
       }
 
-      recordTrace("sync-forensics", "AUTH_READY", String(!!opts.nextUserId));
       lastInitializedOwner = next;
       return { changed: true, owner: next, previous: res.previous };
     } finally {

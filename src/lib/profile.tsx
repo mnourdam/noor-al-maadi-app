@@ -294,15 +294,6 @@ export function readPersistedProfileState(): ProfileState {
     if (typeof localStorage === "undefined") return initial;
     const owner = getActiveOwner();
     const raw = localStorage.getItem(STORAGE_KEY);
-    
-    recordTrace("hearts-audit", "HEARTS_SOURCE_READ", JSON.stringify({
-      owner,
-      source: "owner-partitioned localStorage",
-      logicalKey: STORAGE_KEY,
-      physicalKey: STORAGE_KEY,
-      hearts: raw ? JSON.parse(raw).hearts : undefined,
-      heartsAt: raw ? JSON.parse(raw).heartsAt : undefined
-    }));
 
     if (!raw) return initial;
     const parsed = JSON.parse(raw) as Partial<ProfileState>;
@@ -321,7 +312,6 @@ function hydrateFromStorage(): ProfileState | null {
   const ownerAtHydrate = getActiveOwner();
   recordTrace("sync-forensics", "LOCAL_PROFILE_HYDRATE_START", JSON.stringify({ owner: ownerAtHydrate }));
   const start = Date.now();
-  recordTrace("hearts-audit", "HEARTS_LOGIN_START");
 
   try {
     recordTrace("logout-audit", "profile-hydrate:initial");
@@ -389,17 +379,6 @@ function hydrateFromStorage(): ProfileState | null {
       returned: finalSource !== "none" ? finalSource : "null"
     }));
 
-    if (parsedData && typeof (parsedData as any).hearts !== 'undefined') {
-      recordTrace("hearts-audit", "HEARTS_SOURCE_READ", JSON.stringify({
-        owner: ownerAtHydrate,
-        source: finalSource,
-        logicalKey: STORAGE_KEY,
-        physicalKey: rawLocal ? "mapped-by-partition" : STORAGE_KEY,
-        hearts: (parsedData as any).hearts,
-        heartsAt: (parsedData as any).heartsAt,
-        sourceOwner: ownerAtHydrate
-      }));
-    }
 
 
 
@@ -415,13 +394,6 @@ function hydrateFromStorage(): ProfileState | null {
     if (derived.streak !== merged.streak) {
       merged = { ...merged, streak: derived.streak };
     }
-    
-    recordTrace("hearts-audit", "HEARTS_LOCAL_HYDRATED", JSON.stringify({
-      hearts: merged.hearts,
-      heartsAt: merged.heartsAt,
-      effective: getEffectiveHearts(merged, Date.now()),
-      elapsed: Date.now() - start
-    }));
 
     return merged;
   } catch (e) {
@@ -453,16 +425,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     if (typeof window === "undefined") return;
     const onIdentityChange = () => {
       const nextOwner = getActiveOwner();
-      import("@/lib/diag-trace").then(m => {
-        m.recordTrace("logout-audit", "profile-identity-event:received");
-        m.recordTrace("logout-audit", "owner-at-listener", nextOwner);
-        m.recordTrace("logout-audit", "ProfileProvider:onIdentityChange:start", JSON.stringify({
-          beforePoints: profile.points,
-          beforeName: profile.name,
-          beforeLoggedIn: profile.loggedIn,
-          profileOwnerRef: profileOwnerRef.current
-        }));
-      }).catch(() => {});
 
       // 1) IMMEDIATELY detach the previous owner's React profile state.
       // This prevents stale data (Account A's XP) from remaining visible
@@ -497,15 +459,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     // If we are about to write but the owner has ALREADY changed, this is a stale 
     // write from the previous identity's React closure.
     if (intendedOwner !== activeOwnerAtFlush) {
-      import("@/lib/diag-trace").then(m => {
-        m.recordTrace("logout-audit", "PROFILE_POLLUTION_PREVENTED", JSON.stringify({
-          intendedOwner,
-          activeOwnerAtFlush,
-          loggedIn: profile.loggedIn,
-          points: profile.points,
-          caller: "ProfileProvider:persistenceEffect"
-        }));
-      }).catch(() => {});
       return;
     }
 
@@ -538,14 +491,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
     const prev = readPersistedProfileState();
     if (prev.hearts !== profile.hearts || prev.heartsAt !== profile.heartsAt) {
-      recordTrace("hearts-audit", "HEARTS_WRITE", JSON.stringify({
-        intendedOwner,
-        activeOwner: activeOwnerAtFlush,
-        destination: "localStorage",
-        before: { hearts: prev.hearts, heartsAt: prev.heartsAt },
-        after: { hearts: profile.hearts, heartsAt: profile.heartsAt },
-        caller: "persistence-effect"
-      }));
     }
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
@@ -802,13 +747,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         const eff = getEffectiveHearts(p, now);
         const next = Math.max(0, eff - 1);
         result = next;
-      recordTrace("hearts-audit", "HEARTS_STATE_CHANGE", JSON.stringify({
-        owner: getActiveOwner(),
-        caller: "loseHeart",
-        previousHearts: getEffectiveHearts(p, now),
-        nextHearts: next,
-        reason: "Activity penalty"
-      }));
       return { ...p, ...commitHearts(p, next, now) };
 
       });
@@ -867,15 +805,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         if (eff >= HEART_MAX) return p;
         if ((p.dinars ?? 0) < HEART_COST_DINARS) return p;
         ok = true;
-      recordTrace("hearts-audit", "HEARTS_STATE_CHANGE", JSON.stringify({
-        owner: getActiveOwner(),
-        caller: "spendDinarsForHeart",
-        previousHearts: getEffectiveHearts(p, now),
-        nextHearts: eff + 1,
-        reason: "Purchase with Dinars"
-      }));
-      return { ...p, ...commitHearts(p, eff + 1, now), dinars: p.dinars - HEART_COST_DINARS };
-
+        return { ...p, ...commitHearts(p, eff + 1, now), dinars: p.dinars - HEART_COST_DINARS };
       });
       return ok;
     },
@@ -1038,17 +968,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       const localEff = getEffectiveHearts(p, now);
       const cloudEff = cloudAt !== null ? getEffectiveHearts({ ...p, hearts: cloudHearts, heartsAt: cloudAt }, now) : cloudHearts;
 
-      recordTrace("hearts-audit", "HEARTS_RECONCILIATION", JSON.stringify({
-        owner: getActiveOwner(),
-        localHearts: localCommitted,
-        localEffective: localEff,
-        cloudHearts: cloudHearts,
-        cloudEffective: cloudEff,
-        profileHearts: p.hearts,
-        mergeRule: "Cloud Hydration",
-        localUpdatedAt: p.heartsAt,
-        cloudUpdatedAt: cloudAt
-      }));
 
       // V13 MINIMAL SAFE FIX: Reconciliation must compare EFFECTIVE states and preserve the tuple.
       // Do NOT use commitHearts during hydration as it resets the anchor to 'now'.
@@ -1058,11 +977,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         ? { hearts: cloudHearts, heartsAt: cloudAt }
         : { hearts: p.hearts, heartsAt: p.heartsAt };
 
-      recordTrace("hearts-audit", "HEARTS_PROFILE_APPLIED", JSON.stringify({
-        chosenHearts: heartsPatch.hearts,
-        chosenHeartsAt: heartsPatch.heartsAt,
-        source: cloudHearts !== localCommitted ? "cloud" : "local/preserved"
-      }));
 
       const dailyDay = cloud.dailyClaimed?.day && cloud.dailyClaimed.day === p.dailyClaimed?.day
 
@@ -1124,19 +1038,15 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         next = { ...next, points: Math.max(0, stats.xp) };
         changed = true;
       }
+      if (typeof stats.xp === "number" && stats.xp !== p.points) {
+        next = { ...next, points: Math.max(0, stats.xp) };
+        changed = true;
+      }
       if (typeof stats.dinars === "number" && stats.dinars !== (p.dinars ?? 0)) {
         next = { ...next, dinars: Math.max(0, stats.dinars) };
         changed = true;
       }
       if (typeof stats.streak === "number") {
-        // Streak is day-anchored locally. Server value is NEVER trusted
-        // on its own — if local `lastActiveDay` says the streak has
-        // expired (player missed a full day), force 0 regardless of
-        // what the server echoes. Otherwise:
-        //   - safe (played today):    keep max(local, server) so admin
-        //                             grants raise it but stale realtime
-        //                             echoes can't lower it.
-        //   - at-risk (yesterday):    accept server value.
         const target = Math.max(0, Math.floor(stats.streak));
         const derived = deriveStreak(p.streak, p.lastActiveDay);
         let nextStreak: number;
@@ -1147,58 +1057,11 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         } else {
           nextStreak = target;
         }
-        if (import.meta.env.DEV) {
-          console.debug("[streak] applyServerStats", {
-            today: todayKey(),
-            lastActiveDay: p.lastActiveDay,
-            storedStreak: p.streak,
-            serverStreak: target,
-            computedStreak: nextStreak,
-            reason: derived.status,
-          });
-        }
         if (nextStreak !== p.streak) {
           next = { ...next, streak: nextStreak };
           changed = true;
         }
       }
-
-
-
-
-
-      // V13 Hearts Fix: The `profiles` server-stats source contains raw `hearts`
-      // but does NOT contain the corresponding `heartsAt`. Therefore it does
-      // not contain enough information to calculate the player's effective
-      // regenerated Hearts safely. Hearts reconciliation during login must
-      // remain owned by the Cloud Save path / `mergeCloudSave`, which has
-      // both `hearts` and `heartsAt`.
-      /*
-      if (typeof stats.hearts === "number") {
-        const target = Math.max(0, Math.min(HEART_MAX, stats.hearts));
-        const localCommitted = Math.max(0, Math.min(HEART_MAX, p.hearts ?? HEART_MAX));
-        recordTrace("hearts-audit", "HEARTS_RECONCILIATION", JSON.stringify({
-          owner: getActiveOwner(),
-          localHearts: localCommitted,
-          localEffective: getEffectiveHearts(p, now),
-          serverHearts: target,
-          mergeRule: "Server Stats Apply",
-          localUpdatedAt: p.heartsAt
-        }));
-
-        if (target !== localCommitted) {
-          const patched = commitHearts(p, target, now);
-          next = { ...next, ...patched };
-          changed = true;
-          
-          recordTrace("hearts-audit", "HEARTS_PROFILE_APPLIED", JSON.stringify({
-            chosenHearts: patched.hearts,
-            chosenHeartsAt: patched.heartsAt,
-            source: "server-stats"
-          }));
-        }
-      }
-      */
 
       return changed ? next : p;
     }),

@@ -3,7 +3,7 @@ import { countMyUnreadFeedback } from "@/lib/feedback/api";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AccountDiagPanel } from "@/components/AccountDiagPanel";
+
 import {
   Crown, Flame, Star, Trophy, LogOut, Volume2, BellRing, Sparkles, Info,
   ChevronLeft, IdCard, Pencil, Check, Calendar, Compass, Heart, MapPin,
@@ -99,20 +99,6 @@ function ProfilePage() {
 
   const { user, account, displayName: accountDisplayName, updateDisplayName, updateUsername, isUsernameAvailable, signOut } = useAccount();
   
-  // V13 Forensic Trace: Record identity mapping every render during diagnosis.
-  useEffect(() => {
-    import("@/lib/diag-trace").then(m => {
-      m.recordTrace("logout-audit", "ProfilePage:render", JSON.stringify({
-        hasUser: !!user,
-        userId: user?.id?.slice(0, 8),
-        accountName: accountDisplayName,
-        profileName: profile.name,
-        profilePoints: profile.points,
-        profileDinars: profile.dinars,
-        achCount: profile.campaignsCompleted?.length
-      }));
-    }).catch(() => {});
-  }, [user, accountDisplayName, profile.name, profile.points, profile.dinars, profile.campaignsCompleted?.length]);
 
   const displayName = user ? (accountDisplayName || "مستخدم إرث") : (profile.name || "ضيف");
   const androidNative = isAndroidNativeApp();
@@ -268,7 +254,6 @@ function ProfilePage() {
 
   return (
     <AppShell>
-      <AccountDiagPanel />
 
       <CinematicPageBackdrop image={profileHeaderArt} alt="عمارة إسلامية" />
       <Screen title="حسابي" subtitle="رحلتك التاريخية">
@@ -1423,8 +1408,6 @@ function SettingsTab({
         </button>
       )}
 
-      {/* ============== DIAGNOSTICS ============== */}
-      <AccountDiagPanel />
 
 
       {profile.loggedIn && <DeleteAccountSection />}

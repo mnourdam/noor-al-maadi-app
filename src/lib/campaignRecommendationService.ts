@@ -432,7 +432,6 @@ export function useCampaignRecommendation(
 
   const recommendation = useMemo<CampaignRecommendationResult>(() => {
     const started = performance.now();
-    recordTrace("sync-forensics", "CAMPAIGN_RECOMMENDATION_START");
     if (!campaigns.length) return null;
     const pool = worldCampaignIds
       ? campaigns.filter((c) => worldCampaignIds.includes(c.id))
@@ -446,7 +445,6 @@ export function useCampaignRecommendation(
       getProgress: buildProgressLookup(cloudCampaign),
     });
     const duration = Math.round(performance.now() - started);
-    recordTrace("sync-forensics", "CAMPAIGN_RECOMMENDATION_READY", `${duration}ms`);
     return res;
   }, [campaigns, worldCampaignIds, cloudCampaign, progressTick]);
 

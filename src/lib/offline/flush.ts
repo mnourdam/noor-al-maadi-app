@@ -450,7 +450,6 @@ export async function flushOutbox(userId: string): Promise<{ flushed: number; fa
   if (!userId) return { flushed: 0, failed: 0 };
   
   if (inflight) return inflight;
-  recordTrace("sync-forensics", "OUTBOX_FLUSH_START", JSON.stringify({ userId: userId.slice(0, 8) }));
   
   // Capture current epoch to detect identity switches after awaits.
   const startEpoch = getIdentityEpochSafe();
@@ -499,7 +498,6 @@ export async function flushOutbox(userId: string): Promise<{ flushed: number; fa
       inflight = null;
     }
     const duration = Math.round(performance.now() - started);
-    recordTrace("sync-forensics", "OUTBOX_FLUSH_DONE", `${duration}ms (flushed: ${flushed}, failed: ${failed})`);
     return { flushed, failed };
   })();
   return inflight;

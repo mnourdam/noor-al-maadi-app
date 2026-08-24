@@ -55,13 +55,7 @@ function writeLocalSticky(m: Record<string, LocalStickyRecord>, caller: string):
     const data = JSON.stringify(m);
     window.localStorage.setItem(LOCAL_STICKY_KEY, data); 
 
-    import("@/lib/diag-trace").then(m_diag => {
-      m_diag.recordTrace("logout-audit", "CAMPAIGN_WRITE_SOURCE", JSON.stringify({
-        logicalKey: LOCAL_STICKY_KEY,
-        count: Object.keys(m).length,
-        caller
-      }));
-    }).catch(() => {});
+    
   } catch { /* quota */ }
 }
 
@@ -98,16 +92,6 @@ export function localCompletedIds(): Set<string> {
   }
 
   // V13 Forensic Tracing
-  import("@/lib/diag-trace").then(m => {
-    const activeOwner = typeof getActiveOwner === 'function' ? getActiveOwner() : 'unknown';
-    m.recordTrace("logout-audit", "CAMPAIGN_LOCAL_SOURCE", JSON.stringify({
-      owner: activeOwner,
-      stickyCount: stickyIds.length,
-      legacyCount: legacyIds.length,
-      totalCount: ids.size,
-      idsSample: Array.from(ids).slice(0, 3)
-    }));
-  }).catch(() => {});
 
   return ids;
 }
@@ -219,7 +203,6 @@ export async function fetchServerCompletedIds(): Promise<{ userId: string | null
 
   const promise = (async (): Promise<{ userId: string | null; ids: Set<string> }> => {
     const started = performance.now();
-    recordTrace("sync-forensics", "CAMPAIGN_CLOUD_FETCH_START");
     try {
       const { data, error } = await supabase
         .from("user_campaign_progress")
@@ -228,7 +211,6 @@ export async function fetchServerCompletedIds(): Promise<{ userId: string | null
       
       // STALE CHECK: If identity switched during the request, discard result.
       if (getActiveUserId() !== uid) {
-        recordTrace("sync-forensics", "CAMPAIGN_CLOUD_FETCH_STALE_DISCARDED");
         return { userId: uid, ids: new Set<string>() };
       }
 
@@ -240,11 +222,9 @@ export async function fetchServerCompletedIds(): Promise<{ userId: string | null
         }
       }
       const duration = Math.round(performance.now() - started);
-      recordTrace("sync-forensics", "CAMPAIGN_CLOUD_FETCH_DONE", `${duration}ms (count: ${ids.size})`);
       return { userId: uid, ids };
     } catch {
       const duration = Math.round(performance.now() - started);
-      recordTrace("sync-forensics", "CAMPAIGN_CLOUD_FETCH_DONE", `${duration}ms (failed)`);
       return { userId: uid, ids: new Set<string>() };
     } finally {
       inflightFetch.delete(uid);
@@ -279,16 +259,13 @@ export async function unionCompletedIds(
   profileCompleted: readonly string[] | undefined,
 ): Promise<Set<string>> {
   const started = performance.now();
-  recordTrace("sync-forensics", "CAMPAIGN_RECONCILE_START");
   const out = new Set<string>();
   
   // 1) Immediate Local Evidence (Local Sticky + Legacy Mirror)
   const localStarted = performance.now();
-  recordTrace("sync-forensics", "CAMPAIGN_LOCAL_READ_START");
   for (const id of localCompletedIds()) {
     normalizeIdentifier(id).forEach(v => out.add(v));
   }
-  recordTrace("sync-forensics", "CAMPAIGN_LOCAL_READ_DONE", `${Math.round(performance.now() - localStarted)}ms`);
   
   // 2) Profile Projection (Union with Local)
   for (const id of profileCompleted ?? []) {
@@ -300,7 +277,6 @@ export async function unionCompletedIds(
   
   // STALE CHECK: Response is for a different user than who we're reconciling for.
   if (server.userId && server.userId !== getActiveUserId()) {
-    recordTrace("sync-forensics", "CAMPAIGN_RECONCILE_STALE_BLOCKED");
   } else {
     for (const id of server.ids) {
       normalizeIdentifier(id).forEach(v => out.add(v));
@@ -308,7 +284,6 @@ export async function unionCompletedIds(
   }
   
   const totalDuration = Math.round(performance.now() - started);
-  recordTrace("sync-forensics", "CAMPAIGN_RECONCILE_DONE", `${totalDuration}ms (total: ${out.size})`);
   return out;
 }
 
@@ -325,12 +300,6 @@ export function sanitizeGuestCampaignCompletions(): void {
   // V13: We clear Guest progress on logout/reset to ensure no leaks,
   // but we keep legitimate Guest data if we can distinguish it.
   // For now, the safest reset is a clean wipe of the Guest partition.
-  import("@/lib/diag-trace").then(m => {
-    m.recordTrace("logout-audit", "CAMPAIGN_GUEST_SANITIZED", JSON.stringify({
-      key: LOCAL_STICKY_KEY,
-      count
-    }));
-  }).catch(() => {});
   
   window.localStorage.removeItem(LOCAL_STICKY_KEY);
   window.localStorage.removeItem("irth_campaign_progress");
