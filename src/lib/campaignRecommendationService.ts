@@ -1,3 +1,4 @@
+import { recordTrace } from "@/lib/diag-trace";
 // ============================================================
 // Campaign Recommendation Service
 // ------------------------------------------------------------
@@ -396,6 +397,8 @@ export function useCampaignRecommendation(
   const cloudCampaign = useCloudCampaignProgressLocal();
 
   const recommendation = useMemo<CampaignRecommendationResult>(() => {
+    const started = performance.now();
+    recordTrace("sync-forensics", "CAMPAIGN_RECOMMENDATION_START");
     if (!campaigns.length) return null;
     const pool = worldCampaignIds
       ? campaigns.filter((c) => worldCampaignIds.includes(c.id))
@@ -408,7 +411,9 @@ export function useCampaignRecommendation(
       campaigns: ordered,
       getProgress: buildProgressLookup(cloudCampaign),
     });
-  }, [campaigns, worldCampaignIds, cloudCampaign, progressTick]);
+    const duration = Math.round(performance.now() - started);
+    recordTrace("sync-forensics", "CAMPAIGN_RECOMMENDATION_READY", `${duration}ms`);
+    return res;
 
   return { recommendation, ready: isSuccess && reconReady };
 }
