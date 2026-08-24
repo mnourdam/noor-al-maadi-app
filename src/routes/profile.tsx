@@ -268,7 +268,7 @@ function ProfilePage() {
 
   return (
     <AppShell>
-      <HeartsDiagPanel />
+      <AccountDiagPanel />
 
       <CinematicPageBackdrop image={profileHeaderArt} alt="عمارة إسلامية" />
       <Screen title="حسابي" subtitle="رحلتك التاريخية">
