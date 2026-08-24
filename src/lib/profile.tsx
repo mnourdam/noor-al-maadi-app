@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { recordTrace } from "@/lib/diag-trace";
 import { getActiveOwner } from "./identity/owner";
 function todayKey(d: Date = new Date()): string {
   const y = d.getFullYear();
@@ -318,6 +319,8 @@ export function readPersistedProfileState(): ProfileState {
 
 /** Read + normalise the persisted profile of the CURRENT owner namespace. */
 function hydrateFromStorage(): ProfileState | null {
+  recordTrace("sync-forensics", "LOCAL_PROFILE_HYDRATE_START");
+  const res = (function() {
   const start = Date.now();
   recordTrace("hearts-audit", "HEARTS_LOGIN_START");
 
