@@ -40,7 +40,6 @@ import { DEFAULT_AVATAR_ID } from "./avatars";
 import { DEFAULT_NOTIFICATION_PREFS, type NotificationPrefs } from "./notifications";
 import { androidMeasure, recordAndroidAction } from "./androidFreezeDiagnostics";
 import { supabase } from "@/integrations/supabase/client";
-import { recordTrace } from "@/lib/diag-trace";
 
 const STORAGE_KEY = "hakaya.profile.v2";
 
