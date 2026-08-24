@@ -40,6 +40,7 @@ export async function resetForIdentityChange(opts: {
   nextUserId: string | null;
   reason: IdentityChangeReason;
 }): Promise<{ changed: boolean; owner: OwnerKey; previous: OwnerKey }> {
+  recordTrace("sync-forensics", "IDENTITY_CHANGE_START", JSON.stringify({ reason: opts.reason, nextUserId: opts.nextUserId?.slice(0, 8) }));
   const next = opts.nextUserId ? userOwnerKey(opts.nextUserId) : guestOwnerKey();
   const previous = getActiveOwner();
 
@@ -72,9 +73,11 @@ export async function resetForIdentityChange(opts: {
 
   // 3) Atomic owner swap — every personal storage key now resolves into the
   //    new namespace and the identity epoch invalidates every in-flight guard.
+  recordTrace("sync-forensics", "PARTITION_SWITCH_START", next);
   recordTrace("logout-audit", "owner:before", previous);
   const res = setActiveOwnerInternal(next);
   recordTrace("logout-audit", "owner:after", next);
+  recordTrace("sync-forensics", "PARTITION_SWITCH_DONE", next);
 
   recordTrace("logout-audit", "cleanup:start");
 
@@ -152,5 +155,6 @@ export async function resetForIdentityChange(opts: {
     setAuthReady(false);
   }
 
+  recordTrace("sync-forensics", "AUTH_READY", String(!!opts.nextUserId));
   return { changed: true, owner: next, previous: res.previous };
 }
