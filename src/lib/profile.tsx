@@ -318,12 +318,12 @@ export function readPersistedProfileState(): ProfileState {
 
 /** Read + normalise the persisted profile of the CURRENT owner namespace. */
 function hydrateFromStorage(): ProfileState | null {
-  recordTrace("sync-forensics", "LOCAL_PROFILE_HYDRATE_START");
+  const ownerAtHydrate = getActiveOwner();
+  recordTrace("sync-forensics", "LOCAL_PROFILE_HYDRATE_START", JSON.stringify({ owner: ownerAtHydrate }));
   const start = Date.now();
   recordTrace("hearts-audit", "HEARTS_LOGIN_START");
 
   try {
-    const ownerAtHydrate = getActiveOwner();
     recordTrace("logout-audit", "profile-hydrate:initial");
     recordTrace("logout-audit", "owner:before", ownerAtHydrate);
     
@@ -428,7 +428,8 @@ function hydrateFromStorage(): ProfileState | null {
     recordTrace("logout-audit", "profile-hydrate:error", (e as Error).message);
     return null;
   } finally {
-    recordTrace("sync-forensics", "LOCAL_PROFILE_HYDRATE_DONE");
+    const duration = Date.now() - start;
+    recordTrace("sync-forensics", "LOCAL_PROFILE_HYDRATE_DONE", `${duration}ms`);
   }
 }
 
