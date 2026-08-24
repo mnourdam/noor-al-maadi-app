@@ -344,6 +344,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
                 recordStartupMark("server-reconciliation-failed", "late");
               }
             },
+            "onboarding"
           );
           if (outcome.kind === "success") {
             reconciled = true;
