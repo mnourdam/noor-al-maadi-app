@@ -1,73 +1,50 @@
-# Performance Fix Plan - Physical Android Sync Optimization (Corrected)
+# Production Hotfix Plan — Two Surgical Fixes
 
-This plan addresses severe synchronization performance issues identified in physical Android diagnostics (V13). It focuses on eliminating redundant network requests and coalescing burst events without changing data semantics or account isolation.
+## Problem 1: Locked Story Return
+Navigating from a locked story to a required encyclopedia entry loses the story context on "Back", returning the user to the generic encyclopedia list instead of the story.
 
-## User Review Required
+## Problem 2: Home Hero Reload Regression
+Navigating away from Home and back causes the Hero to show "جاري تحميل..." for up to 15s, even when trusted local progress exists, due to React Query re-validation and reconciliation state resets during remount.
 
-> [!IMPORTANT]
-> This fix optimizes *timing* and *concurrency*. It does not change how Hearts, XP, or Unlocks work. Account isolation remains strictly enforced.
-
-- **Soft Timeout**: The 5-second safety timer is preserved.
-- **Local-First**: Home will continue to render immediately from local state while cloud sync happens in the background.
+---
 
 ## Proposed Changes
 
-### Core Synchronization & Request Coalescing
+### Fix 1: Locked Story Navigation Origin
+1.  **`src/routes/story.$id.tsx`**: Add `useStashCurrentAsOrigin` to the `StoryRoute` component.
+2.  **`src/components/stories/LockedStoryDialog.tsx`**:
+    *   Inject the `stash` helper from `useStashCurrentAsOrigin`.
+    *   Update `go(to)` to call `stash(to)` before navigating, establishing the current story as the origin for the encyclopedia destination.
+3.  **`src/routes/encyclopedia.entity.$id.tsx`**: Ensure the back action uses the navigation engine's `useBack()` (which prioritizes origins) instead of a blind parent link.
 
-#### [src/lib/campaigns/completions.ts]
-- Implement a module-level `inflightFetch` promise map keyed by `userId`.
-- Multiple concurrent calls for the same user will share the same fetch promise.
-- Results are validated against the current `userId` before being returned.
-- Use `finally` to remove the promise from the map.
+### Fix 2: Home Hero Fast Path
+1.  **`src/lib/campaignRecommendationService.ts`**:
+    *   Update `useCampaignRecommendation` to track the identity epoch (`getIdentityEpoch`).
+    *   Introduce a `isFastPathReady` state that becomes true once reconciliation is terminal for the *current* identity epoch.
+    *   Allow `ready: true` if `isFastPathReady` is true AND `campaigns` are already available (even if `isSuccess` is false due to a background refetch).
+    *   Reset `isFastPathReady` immediately if the identity epoch changes.
 
-#### [src/lib/stories/summary.ts]
-- Implement a module-level `inflightSummary` promise map keyed by `(userId ?? 'guest') + (worldSlug ?? '')`.
-- Coalesce identical concurrent Story summary requests.
-- Use `finally` to remove the promise from the map.
-- Ensure stale results from a previous owner are never committed if identity changes while pending.
-
-#### [src/lib/campaignRecommendationService.ts]
-- Implement semantic equality suppression at the state source (`useCloudCampaignProgressLocal`).
-- Before calling `setMap`, check if the next Map has identical size, keys, and values. Return the current reference if identical.
-- Add a 100ms debounce to the `tick` and `progressTick` listeners to ignore high-frequency sync bursts.
-
-### Identity & Auth Lifecycle
-
-#### [src/lib/identity/reset.ts]
-- Correct same-user deduplication in `resetForIdentityChange`.
-- Only suppress the event if: same logical owner AND the same identity generation is already being initialized or has just finished AND the partition is already switched AND local hydration has started/completed.
-- Ensure first authenticated initialization after cold boot, Guest <-> User, and User A <-> User B transitions always perform full work.
-
-#### [src/lib/account.tsx]
-- Coalesce `INITIAL_SESSION` and `SIGNED_IN` events if they occur for the same user during the same boot cycle.
-- Ensure late cloud responses after soft-timeout converge data without triggering redundant fetch/recommendation storms.
-
-### Diagnostics & Outbox
-
-#### [src/lib/offline/flush.ts]
-- Move the `OUTBOX_FLUSH_START` log statement inside the `if (!inflight)` block to ensure logs accurately represent actual executions.
-- Preserve existing outbox single-flight and payload semantics.
+---
 
 ## Technical Details
 
-- **Semantic Map Equality**:
-  ```typescript
-  function mapsAreEqual(a: Map<string, Set<string>>, b: Map<string, Set<string>>) {
-    if (a.size !== b.size) return false;
-    for (const [k, v] of a) {
-      const bv = b.get(k);
-      if (!bv || bv.size !== v.size) return false;
-      for (const item of v) if (!bv.has(item)) return false;
-    }
-    return true;
-  }
-  ```
+### Navigation Engine Integration
+*   Use `useStashCurrentAsOrigin` to capture `{ route: "/story/$id", params: { id } }`.
+*   The `useBack()` hook in the engine already handles `Priority 3 — navigation origin` for player routes.
+
+### Identity Epoch Guard
+*   The `IdentityEpoch` (from `src/lib/identity/owner.ts`) is a monotonic counter bumped by `setActiveOwnerInternal`.
+*   By keying the "fast path" to this epoch, we guarantee that cached data from a previous user never leaks into a new session.
 
 ## Verification Plan
 
 ### Automated Tests
-- Run `vitest` on `progression.test.ts` and `identity.test.ts` to ensure no regressions in core logic.
+*   `npm run typecheck`
+*   `npm run build:android:web`
 
-### Manual Verification
-- Check `/tmp/observability/build-errors.log` for compilation errors.
-- The user will perform a final physical Android trace to verify the reduction in redundant logs/requests.
+### Manual Verification Scenarios
+1.  **Locked Story → Entity → Back**: Should land back in the Story Player/Dialog.
+2.  **Encyclopedia List → Entity → Back**: Should return to Encyclopedia List (normal behavior).
+3.  **Home (Ready) → Encyclopedia → Home**: Hero should show content immediately (no "Loading..." flash).
+4.  **Sign Out → Sign In (User B) → Home**: Should show "Loading..." until User B's reconciliation finishes (isolation check).
+5.  **Offline Home Return**: Should show cached content immediately if owner matches.
