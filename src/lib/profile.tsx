@@ -1163,14 +1163,14 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
 
 
+      // V13 Hearts Fix: The `profiles` server-stats source contains raw `hearts`
+      // but does NOT contain the corresponding `heartsAt`. Therefore it does
+      // not contain enough information to calculate the player's effective
+      // regenerated Hearts safely. Hearts reconciliation during login must
+      // remain owned by the Cloud Save path / `mergeCloudSave`, which has
+      // both `hearts` and `heartsAt`.
+      /*
       if (typeof stats.hearts === "number") {
-        // The server stores only the last *committed* hearts value — it has
-        // no notion of elapsed-time regeneration. Compare against the local
-        // committed `p.hearts` (NOT the effective regen-aware value); if
-        // they match, the server is just echoing what we already have and
-        // we MUST preserve the local `heartsAt` anchor so an in-flight
-        // regeneration timer keeps ticking across launches and realtime
-        // syncs. Only apply a true admin-side change.
         const target = Math.max(0, Math.min(HEART_MAX, stats.hearts));
         const localCommitted = Math.max(0, Math.min(HEART_MAX, p.hearts ?? HEART_MAX));
         recordTrace("hearts-audit", "HEARTS_RECONCILIATION", JSON.stringify({
@@ -1193,8 +1193,8 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
             source: "server-stats"
           }));
         }
-
       }
+      */
 
       return changed ? next : p;
     }),
