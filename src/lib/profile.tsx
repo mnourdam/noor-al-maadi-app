@@ -1046,13 +1046,13 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         cloudUpdatedAt: cloudAt
       }));
 
-      const anchorSource: ProfileState = cloudAt !== null && cloudAt < (p.heartsAt ?? now)
-        ? ({ ...p, heartsAt: cloudAt } as ProfileState)
-        : p;
-
-      const heartsPatch = cloudHearts !== localCommitted
-        ? commitHearts(anchorSource, cloudHearts, now)
-        : { hearts: anchorSource.hearts, heartsAt: anchorSource.heartsAt };
+      // V13 MINIMAL SAFE FIX: Reconciliation must compare EFFECTIVE states and preserve the tuple.
+      // Do NOT use commitHearts during hydration as it resets the anchor to 'now'.
+      const useCloud = cloudEff > localEff || (cloudEff === localEff && cloudAt !== null && cloudAt < (p.heartsAt ?? now));
+      
+      const heartsPatch = useCloud && cloudAt !== null
+        ? { hearts: cloudHearts, heartsAt: cloudAt }
+        : { hearts: p.hearts, heartsAt: p.heartsAt };
 
       recordTrace("hearts-audit", "HEARTS_PROFILE_APPLIED", JSON.stringify({
         chosenHearts: heartsPatch.hearts,
