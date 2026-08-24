@@ -3,6 +3,9 @@ import { setAuthReady } from "./guard";
 import { recordTrace } from "@/lib/diag-trace";
 
 let queryClient: any = null;
+let lastInitializedOwner: OwnerKey | null = null;
+let inflightReset: Promise<{ changed: boolean; owner: OwnerKey; previous: OwnerKey }> | null = null;
+
 export function setQueryClientForReset(client: any) {
   queryClient = client;
 }
