@@ -1,3 +1,4 @@
+import { recordTrace } from "@/lib/diag-trace";
 // ============================================================
 // Boot Reconciliation State Machine (Priority-Zero §4)
 // ------------------------------------------------------------
@@ -71,7 +72,11 @@ export function setReconciliationState(next: ReconciliationState, err: string | 
   state = next;
   lastError = err;
   if (next !== "idle" && startedAt === 0) startedAt = Date.now();
-  if (TERMINAL.has(next)) terminalAt = Date.now();
+  if (TERMINAL.has(next)) {
+    terminalAt = Date.now();
+    recordTrace("sync-forensics", "ACCOUNT_RECONCILIATION_DONE", JSON.stringify({ state: next }));
+  }
+  recordTrace("sync-forensics", "ACCOUNT_RECONCILIATION_STATE", next);
   emit();
 }
 
