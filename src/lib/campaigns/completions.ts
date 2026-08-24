@@ -55,11 +55,6 @@ function writeLocalSticky(m: Record<string, LocalStickyRecord>, caller: string):
     const data = JSON.stringify(m);
     window.localStorage.setItem(LOCAL_STICKY_KEY, data); 
 
-    import("@/lib/diag-trace").then(m_diag => {
-        logicalKey: LOCAL_STICKY_KEY,
-        count: Object.keys(m).length,
-        caller
-      }));
     }).catch(() => {});
   } catch { /* quota */ }
 }
@@ -97,15 +92,6 @@ export function localCompletedIds(): Set<string> {
   }
 
   // V13 Forensic Tracing
-  import("@/lib/diag-trace").then(m => {
-    const activeOwner = typeof getActiveOwner === 'function' ? getActiveOwner() : 'unknown';
-      owner: activeOwner,
-      stickyCount: stickyIds.length,
-      legacyCount: legacyIds.length,
-      totalCount: ids.size,
-      idsSample: Array.from(ids).slice(0, 3)
-    }));
-  }).catch(() => {});
 
   return ids;
 }
@@ -314,11 +300,6 @@ export function sanitizeGuestCampaignCompletions(): void {
   // V13: We clear Guest progress on logout/reset to ensure no leaks,
   // but we keep legitimate Guest data if we can distinguish it.
   // For now, the safest reset is a clean wipe of the Guest partition.
-  import("@/lib/diag-trace").then(m => {
-      key: LOCAL_STICKY_KEY,
-      count
-    }));
-  }).catch(() => {});
   
   window.localStorage.removeItem(LOCAL_STICKY_KEY);
   window.localStorage.removeItem("irth_campaign_progress");

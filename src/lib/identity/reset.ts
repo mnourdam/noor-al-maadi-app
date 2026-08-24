@@ -46,11 +46,6 @@ export async function resetForIdentityChange(opts: {
   const next = opts.nextUserId ? userOwnerKey(opts.nextUserId) : guestOwnerKey();
   const previous = getActiveOwner();
 
-    previousOwner: previous,
-    requestedNextOwner: next,
-    reason: opts.reason
-  }));
-
   // Only collapse if identical identity is ALREADY active AND fully initialized.
   if (previous === next && lastInitializedOwner === next && !inflightReset) {
     if (opts.nextUserId) setAuthReady(true);

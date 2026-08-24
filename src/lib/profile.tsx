@@ -294,14 +294,6 @@ export function readPersistedProfileState(): ProfileState {
     if (typeof localStorage === "undefined") return initial;
     const owner = getActiveOwner();
     const raw = localStorage.getItem(STORAGE_KEY);
-    
-      owner,
-      source: "owner-partitioned localStorage",
-      logicalKey: STORAGE_KEY,
-      physicalKey: STORAGE_KEY,
-      hearts: raw ? JSON.parse(raw).hearts : undefined,
-      heartsAt: raw ? JSON.parse(raw).heartsAt : undefined
-    }));
 
     if (!raw) return initial;
     const parsed = JSON.parse(raw) as Partial<ProfileState>;
@@ -387,16 +379,6 @@ function hydrateFromStorage(): ProfileState | null {
       returned: finalSource !== "none" ? finalSource : "null"
     }));
 
-    if (parsedData && typeof (parsedData as any).hearts !== 'undefined') {
-        owner: ownerAtHydrate,
-        source: finalSource,
-        logicalKey: STORAGE_KEY,
-        physicalKey: rawLocal ? "mapped-by-partition" : STORAGE_KEY,
-        hearts: (parsedData as any).hearts,
-        heartsAt: (parsedData as any).heartsAt,
-        sourceOwner: ownerAtHydrate
-      }));
-    }
 
 
 
@@ -412,12 +394,6 @@ function hydrateFromStorage(): ProfileState | null {
     if (derived.streak !== merged.streak) {
       merged = { ...merged, streak: derived.streak };
     }
-    
-      hearts: merged.hearts,
-      heartsAt: merged.heartsAt,
-      effective: getEffectiveHearts(merged, Date.now()),
-      elapsed: Date.now() - start
-    }));
 
     return merged;
   } catch (e) {
@@ -449,16 +425,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     if (typeof window === "undefined") return;
     const onIdentityChange = () => {
       const nextOwner = getActiveOwner();
-      import("@/lib/diag-trace").then(m => {
-        m.recordTrace("logout-audit", "profile-identity-event:received");
-        m.recordTrace("logout-audit", "owner-at-listener", nextOwner);
-        m.recordTrace("logout-audit", "ProfileProvider:onIdentityChange:start", JSON.stringify({
-          beforePoints: profile.points,
-          beforeName: profile.name,
-          beforeLoggedIn: profile.loggedIn,
-          profileOwnerRef: profileOwnerRef.current
-        }));
-      }).catch(() => {});
 
       // 1) IMMEDIATELY detach the previous owner's React profile state.
       // This prevents stale data (Account A's XP) from remaining visible

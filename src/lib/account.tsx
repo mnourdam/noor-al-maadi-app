@@ -93,12 +93,6 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       const u = session?.user ?? null;
       
       // V13 Forensic Trace: Record the auth event immediately.
-      import("@/lib/diag-trace").then(m => {
-          hasUser: !!u,
-          userId: u?.id?.slice(0, 8) ?? null,
-          reason: event
-        }));
-      }).catch(() => {});
 
       if (event === "SIGNED_OUT") {
         setReconciliationState("offline-local");
@@ -195,9 +189,6 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       if (isStale()) return;
 
       const started = performance.now();
-        userId: user.id.slice(0, 8),
-        elapsedFromSwitchStart: Math.round(performance.now() - switchStartRef.current)
-      }));
       androidMark("account.hydrate.start", { userId: user.id.slice(0, 8) });
       recordStartupMark("server-reconciliation-started");
       setSyncing(true);
@@ -209,9 +200,6 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       const softTimer = setTimeout(() => {
         if (isStale() || reconciled) return;
         recordStartupMark("server-reconciliation-soft-timeout");
-          duration: 5000,
-          elapsedFromSwitchStart: Math.round(performance.now() - switchStartRef.current)
-        }));
         recordStartupMark("offline-local-entered");
         setReconciliationState("offline-local", "soft-timeout");
       }, 5000);
@@ -221,17 +209,6 @@ export function AccountProvider({ children }: { children: ReactNode }) {
           fetchCloudSave(user.id),
         ]);
         if (isStale()) return;
-        
-          hasSave: !!save,
-          hearts: save?.data?.hearts,
-          heartsAt: save?.data?.heartsAt,
-          elapsed: performance.now() - started
-        }));
-
-          name: acc?.display_name,
-          username: acc?.username,
-          hasSave: !!save
-        }))).catch(() => {});
 
         setAccount(acc);
         if (!androidStable) void touchLastActive(user.id);
