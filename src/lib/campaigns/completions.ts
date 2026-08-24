@@ -20,8 +20,9 @@ import { recordTrace } from "@/lib/diag-trace";
 import { supabase } from "@/integrations/supabase/client";
 import { enqueueWithId } from "@/lib/offline/outbox";
 import { flushOutbox } from "@/lib/offline/flush";
-import { getActiveOwner } from "@/lib/identity/owner";
+import { getActiveOwner, getActiveUserId } from "@/lib/identity/owner";
 
+const inflightFetch = new Map<string, Promise<{ userId: string | null; ids: Set<string> }>>();
 const LOCAL_STICKY_KEY = "irth.campaign_completions.v1";
 
 interface LocalStickyRecord {
