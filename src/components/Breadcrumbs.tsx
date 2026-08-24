@@ -26,9 +26,11 @@ export type Crumb = {
 
 export function Breadcrumbs({
   items,
+  onBack,
   className,
 }: {
   items: Crumb[];
+  onBack?: () => void;
   className?: string;
 }) {
   if (!items.length) return null;
@@ -52,13 +54,19 @@ export function Breadcrumbs({
           return (
             <Fragment key={`${i}-${item.label}`}>
               {i > 0 && (
-                <ChevronLeft
+                <button
+                  type="button"
+                  onClick={onBack}
                   aria-hidden="true"
                   className={
-                    "size-3 shrink-0 text-gold/40 " +
+                    "group flex shrink-0 items-center justify-center p-1 -m-1 transition-transform active:scale-90 " +
                     (sepHideOnMobile ? "hidden sm:inline-flex" : "")
                   }
-                />
+                >
+                  <ChevronLeft
+                    className="size-3 text-gold/40 group-hover:text-gold/70"
+                  />
+                </button>
               )}
               <li
                 className={

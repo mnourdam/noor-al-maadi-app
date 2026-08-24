@@ -31,6 +31,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchPublishedCampaigns } from "@/lib/supabaseCampaigns";
+import { getIdentityEpoch } from "@/lib/identity/owner";
 import { isReconciliationTerminal, subscribeReconciliation } from "@/lib/boot/reconciliation";
 import { campaignSortKey, sortCampaignsChronological } from "@/lib/campaignChronology";
 import { getCampaignProgress } from "@/lib/importedCampaignProgress";
@@ -393,11 +394,33 @@ export function useCampaignRecommendation(
 
   // reconciliation trust state
   const [reconReady, setReconReady] = useState(isReconciliationTerminal());
+  const [activeEpoch, setActiveEpoch] = useState(getIdentityEpoch());
+  
+  // FAST PATH: If we were ready in the current epoch, we stay ready even if 
+  // React Query re-validates in the background.
+  const [fastPathReady, setFastPathReady] = useState(isReconciliationTerminal());
+
   useEffect(() => {
     return subscribeReconciliation(() => {
-      setReconReady(isReconciliationTerminal());
+      const isTerminal = isReconciliationTerminal();
+      const currentEpoch = getIdentityEpoch();
+      
+      setReconReady(isTerminal);
+      setActiveEpoch(currentEpoch);
+
+      if (isTerminal) {
+        setFastPathReady(true);
+      }
     });
   }, []);
+
+  // IDENTITY GUARD: Invalidate fast path immediately on owner/epoch change.
+  const currentEpoch = getIdentityEpoch();
+  if (currentEpoch !== activeEpoch) {
+    setFastPathReady(false);
+    setActiveEpoch(currentEpoch);
+    setReconReady(isReconciliationTerminal());
+  }
 
   const { data: campaigns = [], isSuccess } = useQuery({
     queryKey: ["campaign-recommendation-source"],
@@ -448,5 +471,8 @@ export function useCampaignRecommendation(
     return res;
   }, [campaigns, worldCampaignIds, cloudCampaign, progressTick]);
 
-  return { recommendation, ready: isSuccess && reconReady };
+  // Fast path allows 'ready' if we have campaigns AND (query success OR terminal reconciliation for this epoch)
+  const isActuallyReady = campaigns.length > 0 && (isSuccess || fastPathReady);
+
+  return { recommendation, ready: isActuallyReady && reconReady };
 }

@@ -10,7 +10,8 @@ import {
   Map as MapIcon,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { useRef } from "react";
+import { useRef, useMemo } from "react";
+import { useBack } from "@/lib/navigation/engine";
 import { useEntityReadCompletion } from "@/hooks/useEntityReadCompletion";
 
 
@@ -107,6 +108,7 @@ function Ornament({ label }: { label?: string }) {
 
 function EntityPage() {
   const { id } = Route.useParams();
+  const goBack = useBack();
   
 
 
@@ -303,7 +305,7 @@ function EntityPage() {
                 : []),
               { label: entity.title },
             ];
-            return <Breadcrumbs items={trail} />;
+            return <Breadcrumbs items={trail} onBack={goBack} />;
           })()}
 
           {/* ───────── Cinematic Hero ─────────
