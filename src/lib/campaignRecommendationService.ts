@@ -407,13 +407,14 @@ export function useCampaignRecommendation(
     // via compareCampaignsCanonical, but calling it here first keeps the
     // pre-filter stable when future callers inspect the pool directly.
     const ordered = sortCampaignsChronological(pool);
-    return pickCampaignRecommendation({
+    const res = pickCampaignRecommendation({
       campaigns: ordered,
       getProgress: buildProgressLookup(cloudCampaign),
     });
     const duration = Math.round(performance.now() - started);
     recordTrace("sync-forensics", "CAMPAIGN_RECOMMENDATION_READY", `${duration}ms`);
     return res;
+  }, [campaigns, worldCampaignIds, cloudCampaign, progressTick]);
 
   return { recommendation, ready: isSuccess && reconReady };
 }
