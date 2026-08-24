@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { recordTrace } from "@/lib/diag-trace";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -79,6 +80,8 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   // ============ Initial session + auth state listener ============
   useEffect(() => {
     let alive = true;
+    const switchStart = performance.now();
+    recordTrace("sync-forensics", "ACCOUNT_SWITCH_REQUESTED", JSON.stringify({ ts: Date.now() }));
     androidMark("account.session.start");
     supabase.auth.getSession().then(({ data }) => {
       if (!alive) return;
@@ -100,6 +103,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       }).catch(() => {});
 
       if (event === "SIGNED_OUT") {
+        recordTrace("sync-forensics", "AUTH_SIGNOUT_DONE", JSON.stringify({ userId: u?.id?.slice(0, 8) }));
         setReconciliationState("offline-local");
         // V13 Bug 2: Ensure the native PKCE client reference is reset on all 
         // SIGNED_OUT transitions, not just explicit logout.
@@ -110,6 +114,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
           }).catch(() => {});
         } catch { /* ignore dynamic import failure */ }
       } else if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
+        recordTrace("sync-forensics", "SESSION_DETECTED", JSON.stringify({ event, userId: u?.id?.slice(0, 8) }));
         setReconciliationState(u ? "loading-local" : "offline-local");
       }
 
@@ -195,6 +200,10 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       if (isStale()) return;
 
       const started = performance.now();
+      recordTrace("sync-forensics", "ACCOUNT_RECONCILIATION_START", JSON.stringify({ 
+        userId: user.id.slice(0, 8),
+        elapsedFromSwitchStart: Math.round(performance.now() - switchStart)
+      }));
       import("@/lib/diag-trace").then(m => m.recordTrace("logout-audit", "profile-hydrate:start", JSON.stringify({ userId: user.id.slice(0, 8) }))).catch(() => {});
       androidMark("account.hydrate.start", { userId: user.id.slice(0, 8) });
       recordStartupMark("server-reconciliation-started");
@@ -207,12 +216,19 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       const softTimer = setTimeout(() => {
         if (isStale() || reconciled) return;
         recordStartupMark("server-reconciliation-soft-timeout");
+        recordTrace("sync-forensics", "SOFT_TIMEOUT_TRIGGERED", JSON.stringify({ 
+          duration: 5000,
+          elapsedFromSwitchStart: Math.round(performance.now() - switchStart)
+        }));
         recordStartupMark("offline-local-entered");
         recordTrace("hearts-audit", "HEARTS_SYNC_COMPLETE", "soft-timeout");
         setReconciliationState("offline-local", "soft-timeout");
       }, 5000);
+      recordTrace("sync-forensics", "SOFT_TIMEOUT_ARMED", "5000ms");
       try {
         recordTrace("hearts-audit", "HEARTS_CLOUD_FETCH_START", JSON.stringify({ userId: user.id.slice(0, 8) }));
+        recordTrace("sync-forensics", "CLOUD_SAVE_FETCH_START");
+        recordTrace("sync-forensics", "SERVER_PROFILE_FETCH_START");
         const [acc, save] = await Promise.all([
           fetchAccountProfile(user.id),
           fetchCloudSave(user.id),

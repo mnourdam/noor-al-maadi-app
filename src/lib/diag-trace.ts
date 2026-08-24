@@ -17,7 +17,8 @@ export type TraceChannel =
   | "export-audit"
   | "logout-audit"
   | "pkce-audit"
-  | "hearts-audit";
+  | "hearts-audit"
+  | "sync-forensics";
 
 export interface TraceEntry {
   ts: string;          // ISO timestamp
