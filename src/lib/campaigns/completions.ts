@@ -210,30 +210,49 @@ export async function recordCampaignCompletion(p: {
  * V13: Returns the userId that produced this result to allow ownership validation.
  */
 export async function fetchServerCompletedIds(): Promise<{ userId: string | null; ids: Set<string> }> {
-  const started = performance.now();
-  recordTrace("sync-forensics", "CAMPAIGN_CLOUD_FETCH_START");
   const uid = await currentUserId();
   if (!uid) return { userId: null, ids: new Set() };
-  try {
-    const { data, error } = await supabase
-      .from("user_campaign_completions" as any)
-      .select("campaign_id")
-      .eq("user_id", uid);
-    if (error || !Array.isArray(data)) return { userId: uid, ids: new Set() };
-    const ids = new Set<string>();
-    for (const row of data as Array<{ campaign_id?: string | null }>) {
-      if (row?.campaign_id) {
-        normalizeIdentifier(row.campaign_id).forEach(v => ids.add(v));
+
+  // SINGLE-FLIGHT: Reuse in-flight promise for the same user.
+  const existing = inflightFetch.get(uid);
+  if (existing) return existing;
+
+  const promise = (async () => {
+    const started = performance.now();
+    recordTrace("sync-forensics", "CAMPAIGN_CLOUD_FETCH_START");
+    try {
+      const { data, error } = await supabase
+        .from("user_campaign_completions" as any)
+        .select("campaign_id")
+        .eq("user_id", uid);
+      
+      // STALE CHECK: If identity switched during the request, discard result.
+      if (getActiveUserId() !== uid) {
+        recordTrace("sync-forensics", "CAMPAIGN_CLOUD_FETCH_STALE_DISCARDED");
+        return { userId: uid, ids: new Set() };
       }
+
+      if (error || !Array.isArray(data)) return { userId: uid, ids: new Set() };
+      const ids = new Set<string>();
+      for (const row of data as Array<{ campaign_id?: string | null }>) {
+        if (row?.campaign_id) {
+          normalizeIdentifier(row.campaign_id).forEach(v => ids.add(v));
+        }
+      }
+      const duration = Math.round(performance.now() - started);
+      recordTrace("sync-forensics", "CAMPAIGN_CLOUD_FETCH_DONE", `${duration}ms (count: ${ids.size})`);
+      return { userId: uid, ids };
+    } catch {
+      const duration = Math.round(performance.now() - started);
+      recordTrace("sync-forensics", "CAMPAIGN_CLOUD_FETCH_DONE", `${duration}ms (failed)`);
+      return { userId: uid, ids: new Set() };
+    } finally {
+      inflightFetch.delete(uid);
     }
-    const duration = Math.round(performance.now() - started);
-    recordTrace("sync-forensics", "CAMPAIGN_CLOUD_FETCH_DONE", `${duration}ms (count: ${ids.size})`);
-    return { userId: uid, ids };
-  } catch {
-    const duration = Math.round(performance.now() - started);
-    recordTrace("sync-forensics", "CAMPAIGN_CLOUD_FETCH_DONE", `${duration}ms (failed)`);
-    return { userId: uid, ids: new Set() };
-  }
+  })();
+
+  inflightFetch.set(uid, promise);
+  return promise;
 }
 
 /**

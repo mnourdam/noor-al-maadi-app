@@ -383,11 +383,19 @@ export function useCampaignRecommendation(
   const [progressTick, setProgressTick] = useState(0);
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const bump = () => setProgressTick((t) => t + 1);
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const bump = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        setProgressTick((t) => t + 1);
+        timer = null;
+      }, 100);
+    };
     window.addEventListener("focus", bump);
     window.addEventListener("irth:campaign-progress:updated", bump);
     window.addEventListener("irth:campaign-progress:changed", bump);
     return () => {
+      if (timer) clearTimeout(timer);
       window.removeEventListener("focus", bump);
       window.removeEventListener("irth:campaign-progress:updated", bump);
       window.removeEventListener("irth:campaign-progress:changed", bump);
