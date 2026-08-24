@@ -13,6 +13,7 @@
 import { ArrowLeft, Check, Lock, X } from "lucide-react";
 import { useRouter } from "@tanstack/react-router";
 import { ModalPortal } from "@/components/ModalPortal";
+import { useStashCurrentAsOrigin } from "@/lib/navigation/engine";
 import { OverlayDismissRegistration } from "@/lib/navigation/overlay-registration";
 import type { StoryPrereq } from "@/lib/stories/summary";
 
@@ -70,6 +71,7 @@ export function LockedStoryDialog({
   onClose: () => void;
 }) {
   const router = useRouter();
+  const stash = useStashCurrentAsOrigin();
   const items = prereqs ?? [];
   const authored = (explanation ?? "").trim();
   const remaining = items.filter((p) => !p.satisfied);
@@ -78,6 +80,7 @@ export function LockedStoryDialog({
 
   const go = (to: string) => {
     onClose();
+    stash(to);
     router.navigate({ to: to as never }).catch(() => {
       if (typeof window !== "undefined") window.location.assign(to);
     });
