@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { recordTrace } from "@/lib/diag-trace";
 import { getActiveOwner } from "./identity/owner";
 function todayKey(d: Date = new Date()): string {
   const y = d.getFullYear();
@@ -39,7 +40,6 @@ import { DEFAULT_AVATAR_ID } from "./avatars";
 import { DEFAULT_NOTIFICATION_PREFS, type NotificationPrefs } from "./notifications";
 import { androidMeasure, recordAndroidAction } from "./androidFreezeDiagnostics";
 import { supabase } from "@/integrations/supabase/client";
-import { recordTrace } from "@/lib/diag-trace";
 
 const STORAGE_KEY = "hakaya.profile.v2";
 
@@ -318,11 +318,12 @@ export function readPersistedProfileState(): ProfileState {
 
 /** Read + normalise the persisted profile of the CURRENT owner namespace. */
 function hydrateFromStorage(): ProfileState | null {
+  const ownerAtHydrate = getActiveOwner();
+  recordTrace("sync-forensics", "LOCAL_PROFILE_HYDRATE_START", JSON.stringify({ owner: ownerAtHydrate }));
   const start = Date.now();
   recordTrace("hearts-audit", "HEARTS_LOGIN_START");
 
   try {
-    const ownerAtHydrate = getActiveOwner();
     recordTrace("logout-audit", "profile-hydrate:initial");
     recordTrace("logout-audit", "owner:before", ownerAtHydrate);
     
@@ -426,6 +427,9 @@ function hydrateFromStorage(): ProfileState | null {
   } catch (e) {
     recordTrace("logout-audit", "profile-hydrate:error", (e as Error).message);
     return null;
+  } finally {
+    const duration = Date.now() - start;
+    recordTrace("sync-forensics", "LOCAL_PROFILE_HYDRATE_DONE", `${duration}ms`);
   }
 }
 

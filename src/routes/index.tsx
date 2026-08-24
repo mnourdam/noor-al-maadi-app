@@ -1,3 +1,4 @@
+import { recordTrace } from "@/lib/diag-trace";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { markBootHealthy } from "@/lib/diagnostics/safe-boot";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -112,16 +113,23 @@ function HomeFull() {
     && document.documentElement.classList.contains("perf-lite");
 
   // Debug instrumentation — helps QA confirm Home cold-start on real devices.
+  const mountTimeRef = useRef<number>(performance.now());
   useEffect(() => {
+    recordTrace("sync-forensics", "HOME_ROUTE_MOUNT");
+    recordTrace("sync-forensics", "HOME_FIRST_RENDER");
     // Clean-boot contract: Home rendering is the app's proof of health. This
     // consumes the one-launch crash marker and resets the loop breaker.
     markBootHealthy();
     perfMark("home mounted", { perfLite });
+    recordTrace("sync-forensics", "HOME_SHELL_VISIBLE");
     // First paint marker — fires after React commits and the browser paints.
-    requestAnimationFrame(() => requestAnimationFrame(() => perfMark("first paint")));
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      perfMark("first paint");
+    }));
     // Home interactive — input handlers + carousel state are wired.
     const interactiveHandle = scheduleIdle(() => {
       perfMark("home interactive");
+      recordTrace("sync-forensics", "HOME_INTERACTIVE");
       perfMark("idle tasks started");
       // Pre-decode neighbor hero images so the next swap is instant, but
       // only once the main thread is idle.
@@ -304,6 +312,25 @@ function HomeFull() {
   const storyRecCover = useStoryCoverSrc(
     storyRec?.story ?? null
   ) ?? heroBgs[1] ?? "";
+  useEffect(() => {
+    if (profile.loggedIn) {
+      recordTrace("sync-forensics", "HOME_PROFILE_READY");
+    }
+  }, [profile.loggedIn]);
+
+  useEffect(() => {
+    if (campaignRecReady) {
+      recordTrace("sync-forensics", "HOME_CAMPAIGNS_READY");
+    }
+  }, [campaignRecReady]);
+
+  useEffect(() => {
+    if (stories.length > 0) {
+      recordTrace("sync-forensics", "HOME_STORIES_READY");
+    }
+  }, [stories.length]);
+
+
   // ===== Campaign hero artwork (Single Source of Truth) =====
   // The resolver picks Key Art when present, else the rotating hero
   // pool. Never read `coverImage` here — all campaign artwork routes
@@ -314,6 +341,12 @@ function HomeFull() {
     "home-hero",
     heroPoolFallback,
   );
+
+  useEffect(() => {
+    if (campaignSel && campaignHeroBg) {
+      recordTrace("sync-forensics", "HOME_HERO_READY");
+    }
+  }, [!!campaignSel, campaignHeroBg]);
 
   // ===== Hero slides =====
   const slides = useMemo<HeroSlide[]>(() => {

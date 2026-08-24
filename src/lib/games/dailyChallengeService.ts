@@ -18,6 +18,7 @@
 // Rewards are NOT granted here. Reward idempotency lives in
 // `recordCompletion` (game_progress row + firstTime flag).
 
+import { recordTrace } from "@/lib/diag-trace";
 import { supabase } from "@/integrations/supabase/client";
 import { localDateKey } from "@/lib/daily-quest";
 import {
@@ -275,6 +276,7 @@ export function useDailyChallengeState(opts: { enabled?: boolean } = {}): {
 
   useEffect(() => {
     if (!enabled) return;
+    recordTrace("sync-forensics", "HOME_DAILY_CHALLENGE_READY");
     let cancelled = false;
 
     async function run() {

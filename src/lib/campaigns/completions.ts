@@ -16,6 +16,7 @@
 // cloud save happily overwrites on login.
 // ============================================================
 
+import { recordTrace } from "@/lib/diag-trace";
 import { supabase } from "@/integrations/supabase/client";
 import { enqueueWithId } from "@/lib/offline/outbox";
 import { flushOutbox } from "@/lib/offline/flush";
@@ -208,6 +209,8 @@ export async function recordCampaignCompletion(p: {
  * V13: Returns the userId that produced this result to allow ownership validation.
  */
 export async function fetchServerCompletedIds(): Promise<{ userId: string | null; ids: Set<string> }> {
+  const started = performance.now();
+  recordTrace("sync-forensics", "CAMPAIGN_CLOUD_FETCH_START");
   const uid = await currentUserId();
   if (!uid) return { userId: null, ids: new Set() };
   try {
@@ -222,8 +225,14 @@ export async function fetchServerCompletedIds(): Promise<{ userId: string | null
         normalizeIdentifier(row.campaign_id).forEach(v => ids.add(v));
       }
     }
+    const duration = Math.round(performance.now() - started);
+    recordTrace("sync-forensics", "CAMPAIGN_CLOUD_FETCH_DONE", `${duration}ms (count: ${ids.size})`);
     return { userId: uid, ids };
-  } catch { return { userId: uid, ids: new Set() }; }
+  } catch {
+    const duration = Math.round(performance.now() - started);
+    recordTrace("sync-forensics", "CAMPAIGN_CLOUD_FETCH_DONE", `${duration}ms (failed)`);
+    return { userId: uid, ids: new Set() };
+  }
 }
 
 /**
@@ -249,12 +258,17 @@ function normalizeIdentifier(id: string | null | undefined): string[] {
 export async function unionCompletedIds(
   profileCompleted: readonly string[] | undefined,
 ): Promise<Set<string>> {
+  const started = performance.now();
+  recordTrace("sync-forensics", "CAMPAIGN_RECONCILE_START");
   const out = new Set<string>();
   
   // 1) Immediate Local Evidence (Local Sticky + Legacy Mirror)
+  const localStarted = performance.now();
+  recordTrace("sync-forensics", "CAMPAIGN_LOCAL_READ_START");
   for (const id of localCompletedIds()) {
     normalizeIdentifier(id).forEach(v => out.add(v));
   }
+  recordTrace("sync-forensics", "CAMPAIGN_LOCAL_READ_DONE", `${Math.round(performance.now() - localStarted)}ms`);
   
   // 2) Profile Projection (Union with Local)
   for (const id of profileCompleted ?? []) {
@@ -267,6 +281,8 @@ export async function unionCompletedIds(
     normalizeIdentifier(id).forEach(v => out.add(v));
   }
   
+  const totalDuration = Math.round(performance.now() - started);
+  recordTrace("sync-forensics", "CAMPAIGN_RECONCILE_DONE", `${totalDuration}ms (total: ${out.size})`);
   return out;
 }
 

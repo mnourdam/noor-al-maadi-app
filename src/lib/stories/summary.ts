@@ -1,3 +1,4 @@
+import { recordTrace } from "@/lib/diag-trace";
 // ============================================================
 // Stories — unified summary (P4.1)
 // ------------------------------------------------------------
@@ -80,6 +81,8 @@ export { CAMPAIGN_INTRO_TAG } from "./library-filter";
 export async function listStoriesSummary(
   worldSlug?: string | null,
 ): Promise<StorySummary[]> {
+  const started = performance.now();
+  recordTrace("sync-forensics", "STORY_PROGRESS_CLOUD_START");
   const online = typeof navigator === "undefined" || navigator.onLine !== false;
   const uid = await currentUid();
   if (online) {
@@ -141,6 +144,8 @@ export async function listStoriesSummary(
         } catch { /* ignore */ }
       })();
     }
+    const duration = Math.round(performance.now() - started);
+    recordTrace("sync-forensics", "STORY_PROGRESS_CLOUD_DONE", `${duration}ms`);
     return rows;
   }
   // Offline fallback: synthesize catalog entries from the local snapshot.

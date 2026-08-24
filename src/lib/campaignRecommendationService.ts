@@ -1,3 +1,4 @@
+import { recordTrace } from "@/lib/diag-trace";
 // ============================================================
 // Campaign Recommendation Service
 // ------------------------------------------------------------
@@ -396,6 +397,8 @@ export function useCampaignRecommendation(
   const cloudCampaign = useCloudCampaignProgressLocal();
 
   const recommendation = useMemo<CampaignRecommendationResult>(() => {
+    const started = performance.now();
+    recordTrace("sync-forensics", "CAMPAIGN_RECOMMENDATION_START");
     if (!campaigns.length) return null;
     const pool = worldCampaignIds
       ? campaigns.filter((c) => worldCampaignIds.includes(c.id))
@@ -404,10 +407,13 @@ export function useCampaignRecommendation(
     // via compareCampaignsCanonical, but calling it here first keeps the
     // pre-filter stable when future callers inspect the pool directly.
     const ordered = sortCampaignsChronological(pool);
-    return pickCampaignRecommendation({
+    const res = pickCampaignRecommendation({
       campaigns: ordered,
       getProgress: buildProgressLookup(cloudCampaign),
     });
+    const duration = Math.round(performance.now() - started);
+    recordTrace("sync-forensics", "CAMPAIGN_RECOMMENDATION_READY", `${duration}ms`);
+    return res;
   }, [campaigns, worldCampaignIds, cloudCampaign, progressTick]);
 
   return { recommendation, ready: isSuccess && reconReady };

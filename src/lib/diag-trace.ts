@@ -17,7 +17,8 @@ export type TraceChannel =
   | "export-audit"
   | "logout-audit"
   | "pkce-audit"
-  | "hearts-audit";
+  | "hearts-audit"
+  | "sync-forensics";
 
 export interface TraceEntry {
   ts: string;          // ISO timestamp
@@ -45,6 +46,11 @@ export function recordTrace(
   stage: string,
   detail?: string | number | boolean | null,
 ): void {
+  // Console mirror for easier debugging in dev
+  if (channel === "sync-forensics") {
+    console.log(`[${channel}] ${stage}`, detail || "");
+  }
+
   try {
     const s = safeStorage();
     if (!s) return;

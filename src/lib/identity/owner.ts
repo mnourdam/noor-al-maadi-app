@@ -146,6 +146,13 @@ export function setActiveOwnerInternal(next: OwnerKey): { changed: boolean; prev
   if (previous === next) return { changed: false, previous };
   activeOwner = next;
   epoch += 1;
+  // Diagnostics
+  try {
+    if (typeof window !== "undefined") {
+      (window as any).__irth_active_owner = next;
+      (window as any).__irth_identity_epoch = epoch;
+    }
+  } catch {}
   try { raw()?.setItem(ACTIVE_OWNER_KEY, next); } catch { /* ignore */ }
   for (const l of Array.from(listeners)) {
     try { l(next, previous); } catch { /* listener must never break the swap */ }

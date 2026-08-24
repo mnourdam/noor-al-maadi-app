@@ -3,7 +3,7 @@ import { countMyUnreadFeedback } from "@/lib/feedback/api";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { HeartsDiagPanel } from "@/components/HeartsDiagPanel";
+import { AccountDiagPanel } from "@/components/AccountDiagPanel";
 import {
   Crown, Flame, Star, Trophy, LogOut, Volume2, BellRing, Sparkles, Info,
   ChevronLeft, IdCard, Pencil, Check, Calendar, Compass, Heart, MapPin,
@@ -268,7 +268,7 @@ function ProfilePage() {
 
   return (
     <AppShell>
-      <HeartsDiagPanel />
+      <AccountDiagPanel />
 
       <CinematicPageBackdrop image={profileHeaderArt} alt="عمارة إسلامية" />
       <Screen title="حسابي" subtitle="رحلتك التاريخية">
@@ -1424,7 +1424,7 @@ function SettingsTab({
       )}
 
       {/* ============== DIAGNOSTICS ============== */}
-      <HeartsDiagPanel />
+      <AccountDiagPanel />
 
 
       {profile.loggedIn && <DeleteAccountSection />}
