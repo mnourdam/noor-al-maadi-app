@@ -805,15 +805,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         if (eff >= HEART_MAX) return p;
         if ((p.dinars ?? 0) < HEART_COST_DINARS) return p;
         ok = true;
-        owner: getActiveOwner(),
-        caller: "spendDinarsForHeart",
-        previousHearts: getEffectiveHearts(p, now),
-        nextHearts: eff + 1,
-        reason: "Purchase with Dinars"
-      }));
       return { ...p, ...commitHearts(p, eff + 1, now), dinars: p.dinars - HEART_COST_DINARS };
-
-      });
       return ok;
     },
     addDinars: (n) => update((p) => addDinarsTo(p, n)),
@@ -1038,6 +1030,46 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     }),
     resetProfile: () => setProfile(initial),
     applyServerStats: (stats) => update((p) => {
+      const now = Date.now();
+      let next = p;
+      let changed = false;
+      if (typeof stats.xp === "number" && stats.xp !== p.points) {
+        next = { ...next, points: Math.max(0, stats.xp) };
+        changed = true;
+      }
+      if (typeof stats.dinars === "number" && stats.dinars !== (p.dinars ?? 0)) {
+        next = { ...next, dinars: Math.max(0, stats.dinars) };
+        changed = true;
+      }
+      if (typeof stats.streak === "number") {
+        const local = deriveStreak(p.streak, p.lastActiveDay, new Date(now));
+        if (local.status === "expired") {
+          if (next.streak !== 0) {
+            next = { ...next, streak: 0 };
+            changed = true;
+          }
+        } else if (local.status === "safe") {
+          const s = Math.max(p.streak, stats.streak);
+          if (next.streak !== s) {
+            next = { ...next, streak: s, longestStreak: Math.max(next.longestStreak, s) };
+            changed = true;
+          }
+        } else {
+          if (next.streak !== stats.streak) {
+            next = { ...next, streak: stats.streak, longestStreak: Math.max(next.longestStreak, stats.streak) };
+            changed = true;
+          }
+        }
+      }
+      if (typeof stats.hearts === "number") {
+        const eff = getEffectiveHearts(p, now);
+        if (eff !== stats.hearts) {
+          next = { ...next, ...commitHearts(p, stats.hearts, now) };
+          changed = true;
+        }
+      }
+      return changed ? next : p;
+    }),
       const now = Date.now();
       let next = p;
       let changed = false;
