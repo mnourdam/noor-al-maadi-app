@@ -276,7 +276,6 @@ export function useDailyChallengeState(opts: { enabled?: boolean } = {}): {
 
   useEffect(() => {
     if (!enabled) return;
-    recordTrace("sync-forensics", "HOME_DAILY_CHALLENGE_READY");
     let cancelled = false;
 
     async function run() {

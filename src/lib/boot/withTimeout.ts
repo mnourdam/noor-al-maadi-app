@@ -33,7 +33,6 @@ export async function withBoundedTimeout<T>(
   onLate?: (outcome: BoundedOutcome<T>) => void,
   label?: string
 ): Promise<BoundedOutcome<T>> {
-  if (label) recordTrace("sync-forensics", "SOFT_TIMEOUT_ARMED", `${label} (${timeoutMs}ms)`);
   const p = typeof work === "function" ? (work as () => Promise<T>)() : work;
   let settled = false;
   let timer: ReturnType<typeof setTimeout> | null = null;
@@ -41,7 +40,6 @@ export async function withBoundedTimeout<T>(
   const timeoutPromise = new Promise<BoundedOutcome<T>>((resolve) => {
     timer = setTimeout(() => {
       if (settled) return;
-      if (label) recordTrace("sync-forensics", "SOFT_TIMEOUT_TRIGGERED", label);
       resolve({ kind: "timeout" });
     }, Math.max(0, timeoutMs));
   });
@@ -64,7 +62,6 @@ export async function withBoundedTimeout<T>(
   const first = await Promise.race([workPromise, timeoutPromise]);
   if (first.kind !== "timeout") {
     settled = true;
-    if (label) recordTrace("sync-forensics", "SOFT_TIMEOUT_CANCELLED", label);
   }
   if (timer && first.kind !== "timeout") clearTimeout(timer);
   return first;
