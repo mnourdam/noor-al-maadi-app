@@ -1,52 +1,69 @@
-# Profile Data Isolation and Guest Partition Sanitization
+# Performance Fix Plan - Physical Android Sync Optimization
 
-The forensic audit of physical Android logout behavior has identified that the Guest storage partition (`guest:<device-id>`) is being polluted with authenticated user profile data (e.g., `loggedIn: true`, Account A's points and name). This occurs because `ProfileProvider` writes its current state to the active partition, and there is a race condition or incorrect adoption of state during the identity transition.
-
-## Goals
-- Prevent authenticated user profile data from ever being written to a Guest partition.
-- Sanitize Guest partitions that have already been polluted with authenticated data.
-- Ensure strict ownership-bound writes for profile data to prevent async races.
-- Implement an invariant at the storage boundary to quarantine invalid profile writes.
+This plan addresses severe synchronization performance issues identified in physical Android diagnostics (V13). It focuses on eliminating redundant network requests and coalescing burst events without changing data semantics or account isolation.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> This fix will automatically reset any Guest profile that has `loggedIn: true` set. If a user was playing as a guest and somehow their local data got marked as `loggedIn: true` without a real account, that specific local guest progress will be reset to default values to ensure security and data isolation.
+> This fix optimizes *timing* and *concurrency*. It does not change how Hearts, XP, or Unlocks work. Account isolation remains strictly enforced.
 
-## Technical Details
-
-### 1. Storage Boundary Invariant
-Modify `src/lib/identity/partition.ts` to add a validation check in `setItem`. If the key is `hakaya.profile.v2` and the active owner is a Guest, it will reject any value that has `loggedIn: true`.
-
-### 2. Explicit Ownership in Profile Writes
-Modify `src/lib/profile.tsx` to bind the `localStorage.setItem` call to the owner who was active when the profile state was current. This prevents an async update intended for Account A from landing in the Guest partition if the identity switched mid-operation.
-
-### 3. Guest Partition Sanitization
-Modify `hydrateFromStorage` in `src/lib/profile.tsx` to detect "pollution" (Guest owner + `loggedIn: true`). If detected, it will return `null` (forcing a reset to defaults) and trigger a cleanup of the physical key.
-
-### 4. identity-changed sequencing
-Refine `resetForIdentityChange` in `src/lib/identity/reset.ts` to ensure all in-flight profile writes are neutralized before the owner swap is finalized.
+- **Soft Timeout**: The 5-second safety timer is preserved.
+- **Local-First**: Home will continue to render immediately from local state while cloud sync happens in the background.
 
 ## Proposed Changes
 
-### Storage Boundary
-- **File:** `src/lib/identity/partition.ts`
-- **Change:** Add `validateProfileWrite(owner, key, value)` to `proto.setItem`.
-- **Logic:** If `owner.startsWith("guest:")` and `key === "hakaya.profile.v2"`, parse `value`. If `parsed.loggedIn === true`, block the write and record a `quarantine` diagnostic event.
+### Core Synchronization & Request Coalescing
 
-### Profile Hydration & Sanitization
-- **File:** `src/lib/profile.tsx`
-- **Change:** Update `hydrateFromStorage`.
-- **Logic:** After parsing, if `ownerAtHydrate.startsWith("guest:") && parsed.loggedIn === true`, then:
-    1. Record `PROFILE_POLLUTION_DETECTED`.
-    2. Remove the polluted physical key.
-    3. Return `null`.
+#### [src/lib/campaigns/completions.ts]
+- Implement a module-level `inflightFetch` promise map keyed by `userId`.
+- Multiple concurrent calls for the same user will share the same fetch promise.
+- Results are validated against the current `userId` before being returned.
 
-### Profile Write Guard
-- **File:** `src/lib/profile.tsx`
-- **Change:** Update the persistence `useEffect`.
-- **Logic:** Capture the `activeOwner` at the time of the effect trigger. Ensure `localStorage.setItem` is only called if the owner is still active OR use an internal ref to track the owner for the current state.
+#### [src/lib/stories/summary.ts]
+- Implement a module-level `inflightSummary` promise map keyed by `(userId ?? 'guest') + worldSlug`.
+- Coalesce identical concurrent Story summary requests.
 
-### Identity Reset
-- **File:** `src/lib/identity/reset.ts`
-- **Change:** Add a more aggressive cleanup for the profile module during `resetForIdentityChange`.
+#### [src/lib/campaignRecommendationService.ts]
+- Implement a deep-equality check for the `cloudCampaign` Map.
+- Prevent publishing a new Map instance if the semantically identical data is received.
+- Add a 100ms debounce to the `tick` and `progressTick` listeners to ignore high-frequency sync bursts.
+
+### Identity & Auth Lifecycle
+
+#### [src/lib/identity/reset.ts]
+- Add an early-return check in `resetForIdentityChange`: if `previous === next`, bypass partition switching, cache clearing, and module resets.
+- Ensure `setAuthReady(true)` is still called to signal readiness.
+
+#### [src/lib/account.tsx]
+- Coalesce `INITIAL_SESSION` and `SIGNED_IN` events if they occur for the same user within the same boot cycle.
+
+### Diagnostics & Instrumentation
+
+#### [src/lib/offline/flush.ts]
+- Move the `OUTBOX_FLUSH_START` log statement inside the `if (!inflight)` block to ensure logs accurately represent actual executions.
+
+#### [src/components/AccountDiagPanel.tsx]
+- Update the title to "V13 Post-Optimization Forensic Trace".
+
+## Technical Details
+
+- **Single-Flight Pattern**:
+  ```typescript
+  const inflight = new Map<string, Promise<T>>();
+  async function fetch(uid: string) {
+    if (inflight.has(uid)) return inflight.get(uid);
+    const p = (async () => { ... })();
+    inflight.set(uid, p);
+    try { return await p; } finally { inflight.delete(uid); }
+  }
+  ```
+- **Map Equality**: We will compare Map size and keys/values to detect identity before `setMap(next)`.
+
+## Verification Plan
+
+### Automated Tests
+- Run `vitest` on `progression.test.ts` and `identity.test.ts` to ensure no regressions in core logic.
+
+### Manual Verification
+- Check `/tmp/observability/build-errors.log` for compilation errors.
+- The user will perform a final physical Android trace to verify the reduction in redundant logs/requests.
