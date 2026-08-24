@@ -48,7 +48,7 @@ export function AccountDiagPanel() {
       <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-4">
         <div className="flex items-center gap-2 text-gold">
           <Activity className="size-4" />
-          <span className="font-bold tracking-tight">Proceed with the MINIMAL SAFE PERFORMANCE FIX based on the completed physical Android forensic audit.</span>
+          <span className="font-bold tracking-tight">V13 — POST-OPTIMIZATION RESIDUAL PERFORMANCE AUDIT</span>
         </div>
         <div className="flex gap-2">
           <button onClick={copy} className="flex items-center gap-1 rounded-full bg-white/5 px-3 py-1.5 hover:bg-white/10 transition-colors border border-white/5">
