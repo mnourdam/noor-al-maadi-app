@@ -447,13 +447,13 @@ async function handleItem(item: OutboxItem): Promise<{ ok: boolean; error?: stri
  */
 export async function flushOutbox(userId: string): Promise<{ flushed: number; failed: number }> {
   const started = performance.now();
-  recordTrace("sync-forensics", "OUTBOX_FLUSH_START", JSON.stringify({ userId: userId.slice(0, 8) }));
   if (!userId) return { flushed: 0, failed: 0 };
+  
+  if (inflight) return inflight;
+  recordTrace("sync-forensics", "OUTBOX_FLUSH_START", JSON.stringify({ userId: userId.slice(0, 8) }));
   
   // Capture current epoch to detect identity switches after awaits.
   const startEpoch = getIdentityEpochSafe();
-
-  if (inflight) return inflight;
   inflight = (async () => {
     let flushed = 0;
     let failed = 0;

@@ -306,22 +306,34 @@ function useCloudCampaignProgressLocal(): Map<string, Set<string>> {
     let alive = true;
     supabase.auth.getSession().then(({ data }) => {
       if (!alive) return;
-      setUid(data.session?.user?.id ?? null);
+      const nextUid = data.session?.user?.id ?? null;
+      setUid(nextUid);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      setUid(session?.user?.id ?? null);
-      if (!session) setMap(new Map());
+      const nextUid = session?.user?.id ?? null;
+      if (nextUid !== uid) {
+        setUid(nextUid);
+        if (!session) setMap(new Map());
+      }
     });
     return () => { alive = false; sub.subscription.unsubscribe(); };
-  }, []);
+  }, [uid]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const bump = () => setTick((n) => n + 1);
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const bump = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        setTick((n) => n + 1);
+        timer = null;
+      }, 100); // 100ms coalescing window
+    };
     window.addEventListener("irth:outbox:flushed", bump);
     window.addEventListener("irth:campaign-progress:changed", bump);
     window.addEventListener("irth:campaign-progress:updated", bump);
     return () => {
+      if (timer) clearTimeout(timer);
       window.removeEventListener("irth:outbox:flushed", bump);
       window.removeEventListener("irth:campaign-progress:changed", bump);
       window.removeEventListener("irth:campaign-progress:updated", bump);
@@ -338,6 +350,11 @@ function useCloudCampaignProgressLocal(): Map<string, Set<string>> {
           .select("campaign_id,chapter_id,completed_at")
           .eq("user_id", uid);
         if (cancelled) return;
+
+        // IDENTITY GUARD: If identity switched during the request, discard result.
+        const { data: current } = await supabase.auth.getSession();
+        if (current.session?.user?.id !== uid) return;
+
         const next = new Map<string, Set<string>>();
         for (const r of (data ?? []) as Array<{ campaign_id: string; chapter_id: string; completed_at: string | null }>) {
           if (!r.campaign_id || !r.chapter_id || !r.completed_at) continue;
@@ -345,7 +362,17 @@ function useCloudCampaignProgressLocal(): Map<string, Set<string>> {
           if (!s) { s = new Set(); next.set(r.campaign_id, s); }
           s.add(r.chapter_id);
         }
-        setMap(next);
+
+        // SEMANTIC EQUALITY GUARD: Do not publish new Map if data is identical.
+        setMap((prev) => {
+          if (prev.size !== next.size) return next;
+          for (const [k, v] of next) {
+            const pv = prev.get(k);
+            if (!pv || pv.size !== v.size) return next;
+            for (const item of v) if (!pv.has(item)) return next;
+          }
+          return prev;
+        });
       } catch { /* offline — keep last known */ }
     })();
     return () => { cancelled = true; };
@@ -378,16 +405,23 @@ export function useCampaignRecommendation(
     staleTime: 60_000,
   });
 
-  // Local progress bump — mirror the pattern the Hero already used
-  // so a chapter completion refreshes the recommendation right away.
+  // Local progress bump — coalesced to prevent storms
   const [progressTick, setProgressTick] = useState(0);
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const bump = () => setProgressTick((t) => t + 1);
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const bump = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        setProgressTick((t) => t + 1);
+        timer = null;
+      }, 100);
+    };
     window.addEventListener("focus", bump);
     window.addEventListener("irth:campaign-progress:updated", bump);
     window.addEventListener("irth:campaign-progress:changed", bump);
     return () => {
+      if (timer) clearTimeout(timer);
       window.removeEventListener("focus", bump);
       window.removeEventListener("irth:campaign-progress:updated", bump);
       window.removeEventListener("irth:campaign-progress:changed", bump);
@@ -405,7 +439,7 @@ export function useCampaignRecommendation(
       : campaigns;
     // sortCampaignsChronological is applied inside pickCampaignRecommendation
     // via compareCampaignsCanonical, but calling it here first keeps the
-    // pre-filter stable when future callers inspect the pool directly.
+    // pool stable when future callers inspect the pool directly.
     const ordered = sortCampaignsChronological(pool);
     const res = pickCampaignRecommendation({
       campaigns: ordered,

@@ -10,6 +10,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { evaluateStoryUnlock, isAlwaysUnlockSpec } from "./unlock/local";
 import { buildGuestEvidence, guestUnlockState } from "./unlock/guest-evidence";
 import { isCampaignIntroRow, introStoryIdsFromCampaigns } from "./library-filter";
+import { getActiveUserId } from "../identity/owner";
+
+const inflightSummary = new Map<string, Promise<StorySummary[]>>();
+
 
 
 export type StoryPrereqKind =
@@ -85,68 +89,90 @@ export async function listStoriesSummary(
   recordTrace("sync-forensics", "STORY_PROGRESS_CLOUD_START");
   const online = typeof navigator === "undefined" || navigator.onLine !== false;
   const uid = await currentUid();
+
   if (online) {
-    // GUEST: the device is the unlock authority. `list_stories_guest_v3`
-    // is the anon-only mirror of the authoritative RPC — the server still
-    // renders the catalog, but `unlocked` is decided from local evidence,
-    // so a signed-out player gets the exact same progression experience.
-    const { data, error } = uid
-      ? await supabase.rpc("list_stories_v2" as never, {
-          p_world_slug: worldSlug ?? null,
-        } as never)
-      : await supabase.rpc("list_stories_guest_v3" as never, {
-          p_world_slug: worldSlug ?? null,
-          p_collection_id: null,
-          p_evidence: buildGuestEvidence(),
-        } as never);
+    const key = `${uid ?? "guest"}:${worldSlug ?? ""}`;
+    const existing = inflightSummary.get(key);
+    if (existing) return existing;
 
-    if (error) {
-      // Online but the authoritative RPC failed: DO NOT fall back to the
-      // local snapshot. Falling back would re-surface stale/legacy story
-      // rows and create ghost cards on Home. Surface the error so React
-      // Query treats it as a failure and callers show empty state.
-      throw new Error(error.message);
-    }
-    // Normalise the editorial taxonomy so filters never see undefined/null
-    // shapes coming from either the authoritative or the guest RPC.
-    const rows = ((data ?? []) as StorySummary[])
-      .filter((r) => !isCampaignIntroRow(r as never))
-      .map((r) => ({
-        ...r,
-        category: r.category ?? null,
-        rarity: r.rarity ?? null,
-        length_class: r.length_class ?? null,
-        historical_confidence: r.historical_confidence ?? null,
-        tags: Array.isArray(r.tags) ? r.tags.filter((t) => typeof t === "string") : [],
-        story_collection_id: r.story_collection_id ?? null,
-        collection_order: r.collection_order ?? null,
-      }));
+    const promise = (async () => {
+      try {
+        recordTrace("sync-forensics", "STORY_PROGRESS_CLOUD_START");
+        const started = performance.now();
+        // GUEST: the device is the unlock authority. `list_stories_guest_v3`
+        // is the anon-only mirror of the authoritative RPC — the server still
+        // renders the catalog, but `unlocked` is decided from local evidence,
+        // so a signed-out player gets the exact same progression experience.
+        const { data, error } = uid
+          ? await supabase.rpc("list_stories_v2" as never, {
+              p_world_slug: worldSlug ?? null,
+            } as never)
+          : await supabase.rpc("list_stories_guest_v3" as never, {
+              p_world_slug: worldSlug ?? null,
+              p_collection_id: null,
+              p_evidence: buildGuestEvidence(),
+            } as never);
 
-    if (!worldSlug) {
-      void (async () => {
-        try {
-          const { pruneStoriesToAuthoritative } = await import("@/lib/local-first-store");
-          pruneStoriesToAuthoritative(rows.map((r) => r.id));
-        } catch { /* ignore */ }
-      })();
-    }
-    if (uid) {
-      void (async () => {
-        try {
-          const { loadUnlockedIds, persistUnlockedIds } = await import("./unlock-cache");
-          const prev = await loadUnlockedIds(uid);
-          for (const r of rows) if (r.unlocked) prev.add(r.id);
-          if (!worldSlug) {
-            const authoritative = new Set(rows.filter((r) => r.unlocked).map((r) => r.id));
-            for (const id of [...prev]) if (!authoritative.has(id) && rows.find((r) => r.id === id)) prev.delete(id);
-          }
-          await persistUnlockedIds(uid, prev);
-        } catch { /* ignore */ }
-      })();
-    }
-    const duration = Math.round(performance.now() - started);
-    recordTrace("sync-forensics", "STORY_PROGRESS_CLOUD_DONE", `${duration}ms`);
-    return rows;
+        // STALE CHECK: Identity changed while request was in-flight.
+        if (getActiveUserId() !== uid) {
+          recordTrace("sync-forensics", "STORY_PROGRESS_CLOUD_STALE_DISCARDED");
+          return [];
+        }
+
+        if (error) {
+          // Online but the authoritative RPC failed: DO NOT fall back to the
+          // local snapshot. Falling back would re-surface stale/legacy story
+          // rows and create ghost cards on Home. Surface the error so React
+          // Query treats it as a failure and callers show empty state.
+          throw new Error(error.message);
+        }
+        // Normalise the editorial taxonomy so filters never see undefined/null
+        // shapes coming from either the authoritative or the guest RPC.
+        const rows = ((data ?? []) as StorySummary[])
+          .filter((r) => !isCampaignIntroRow(r as never))
+          .map((r) => ({
+            ...r,
+            category: r.category ?? null,
+            rarity: r.rarity ?? null,
+            length_class: r.length_class ?? null,
+            historical_confidence: r.historical_confidence ?? null,
+            tags: Array.isArray(r.tags) ? r.tags.filter((t) => typeof t === "string") : [],
+            story_collection_id: r.story_collection_id ?? null,
+            collection_order: r.collection_order ?? null,
+          }));
+
+        if (!worldSlug) {
+          void (async () => {
+            try {
+              const { pruneStoriesToAuthoritative } = await import("@/lib/local-first-store");
+              pruneStoriesToAuthoritative(rows.map((r) => r.id));
+            } catch { /* ignore */ }
+          })();
+        }
+        if (uid) {
+          void (async () => {
+            try {
+              const { loadUnlockedIds, persistUnlockedIds } = await import("./unlock-cache");
+              const prev = await loadUnlockedIds(uid);
+              for (const r of rows) if (r.unlocked) prev.add(r.id);
+              if (!worldSlug) {
+                const authoritative = new Set(rows.filter((r) => r.unlocked).map((r) => r.id));
+                for (const id of [...prev]) if (!authoritative.has(id) && rows.find((r) => r.id === id)) prev.delete(id);
+              }
+              await persistUnlockedIds(uid, prev);
+            } catch { /* ignore */ }
+          })();
+        }
+        const duration = Math.round(performance.now() - started);
+        recordTrace("sync-forensics", "STORY_PROGRESS_CLOUD_DONE", `${duration}ms`);
+        return rows;
+      } finally {
+        inflightSummary.delete(key);
+      }
+    })();
+
+    inflightSummary.set(key, promise);
+    return promise;
   }
   // Offline fallback: synthesize catalog entries from the local snapshot.
   // Unlocked flag uses the signed unlock cache so previously-unlocked

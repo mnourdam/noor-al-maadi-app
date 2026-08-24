@@ -20,8 +20,9 @@ import { recordTrace } from "@/lib/diag-trace";
 import { supabase } from "@/integrations/supabase/client";
 import { enqueueWithId } from "@/lib/offline/outbox";
 import { flushOutbox } from "@/lib/offline/flush";
-import { getActiveOwner } from "@/lib/identity/owner";
+import { getActiveOwner, getActiveUserId } from "@/lib/identity/owner";
 
+const inflightFetch = new Map<string, Promise<{ userId: string | null; ids: Set<string> }>>();
 const LOCAL_STICKY_KEY = "irth.campaign_completions.v1";
 
 interface LocalStickyRecord {
@@ -209,30 +210,49 @@ export async function recordCampaignCompletion(p: {
  * V13: Returns the userId that produced this result to allow ownership validation.
  */
 export async function fetchServerCompletedIds(): Promise<{ userId: string | null; ids: Set<string> }> {
-  const started = performance.now();
-  recordTrace("sync-forensics", "CAMPAIGN_CLOUD_FETCH_START");
-  const uid = await currentUserId();
-  if (!uid) return { userId: null, ids: new Set() };
-  try {
-    const { data, error } = await supabase
-      .from("user_campaign_completions" as any)
-      .select("campaign_id")
-      .eq("user_id", uid);
-    if (error || !Array.isArray(data)) return { userId: uid, ids: new Set() };
-    const ids = new Set<string>();
-    for (const row of data as Array<{ campaign_id?: string | null }>) {
-      if (row?.campaign_id) {
-        normalizeIdentifier(row.campaign_id).forEach(v => ids.add(v));
+  const uid = await getActiveUserId();
+  if (!uid) return { userId: null, ids: new Set<string>() };
+
+  // SINGLE-FLIGHT: Reuse in-flight promise for the same user.
+  const existing = inflightFetch.get(uid);
+  if (existing) return existing;
+
+  const promise = (async (): Promise<{ userId: string | null; ids: Set<string> }> => {
+    const started = performance.now();
+    recordTrace("sync-forensics", "CAMPAIGN_CLOUD_FETCH_START");
+    try {
+      const { data, error } = await supabase
+        .from("user_campaign_progress")
+        .select("campaign_id")
+        .eq("user_id", uid);
+      
+      // STALE CHECK: If identity switched during the request, discard result.
+      if (getActiveUserId() !== uid) {
+        recordTrace("sync-forensics", "CAMPAIGN_CLOUD_FETCH_STALE_DISCARDED");
+        return { userId: uid, ids: new Set<string>() };
       }
+
+      if (error || !Array.isArray(data)) return { userId: uid, ids: new Set<string>() };
+      const ids = new Set<string>();
+      for (const row of data as Array<{ campaign_id?: string | null }>) {
+        if (row?.campaign_id) {
+          normalizeIdentifier(row.campaign_id).forEach(v => ids.add(v));
+        }
+      }
+      const duration = Math.round(performance.now() - started);
+      recordTrace("sync-forensics", "CAMPAIGN_CLOUD_FETCH_DONE", `${duration}ms (count: ${ids.size})`);
+      return { userId: uid, ids };
+    } catch {
+      const duration = Math.round(performance.now() - started);
+      recordTrace("sync-forensics", "CAMPAIGN_CLOUD_FETCH_DONE", `${duration}ms (failed)`);
+      return { userId: uid, ids: new Set<string>() };
+    } finally {
+      inflightFetch.delete(uid);
     }
-    const duration = Math.round(performance.now() - started);
-    recordTrace("sync-forensics", "CAMPAIGN_CLOUD_FETCH_DONE", `${duration}ms (count: ${ids.size})`);
-    return { userId: uid, ids };
-  } catch {
-    const duration = Math.round(performance.now() - started);
-    recordTrace("sync-forensics", "CAMPAIGN_CLOUD_FETCH_DONE", `${duration}ms (failed)`);
-    return { userId: uid, ids: new Set() };
-  }
+  })();
+
+  inflightFetch.set(uid, promise);
+  return promise;
 }
 
 /**
@@ -277,8 +297,14 @@ export async function unionCompletedIds(
   
   // 3) Server Ledger (Stable Source of Truth)
   const server = await fetchServerCompletedIds();
-  for (const id of server.ids) {
-    normalizeIdentifier(id).forEach(v => out.add(v));
+  
+  // STALE CHECK: Response is for a different user than who we're reconciling for.
+  if (server.userId && server.userId !== getActiveUserId()) {
+    recordTrace("sync-forensics", "CAMPAIGN_RECONCILE_STALE_BLOCKED");
+  } else {
+    for (const id of server.ids) {
+      normalizeIdentifier(id).forEach(v => out.add(v));
+    }
   }
   
   const totalDuration = Math.round(performance.now() - started);
