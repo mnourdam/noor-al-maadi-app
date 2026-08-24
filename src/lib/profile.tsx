@@ -459,15 +459,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     // If we are about to write but the owner has ALREADY changed, this is a stale 
     // write from the previous identity's React closure.
     if (intendedOwner !== activeOwnerAtFlush) {
-      import("@/lib/diag-trace").then(m => {
-        m.recordTrace("logout-audit", "PROFILE_POLLUTION_PREVENTED", JSON.stringify({
-          intendedOwner,
-          activeOwnerAtFlush,
-          loggedIn: profile.loggedIn,
-          points: profile.points,
-          caller: "ProfileProvider:persistenceEffect"
-        }));
-      }).catch(() => {});
       return;
     }
 
@@ -500,13 +491,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
     const prev = readPersistedProfileState();
     if (prev.hearts !== profile.hearts || prev.heartsAt !== profile.heartsAt) {
-        intendedOwner,
-        activeOwner: activeOwnerAtFlush,
-        destination: "localStorage",
-        before: { hearts: prev.hearts, heartsAt: prev.heartsAt },
-        after: { hearts: profile.hearts, heartsAt: profile.heartsAt },
-        caller: "persistence-effect"
-      }));
     }
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
@@ -763,12 +747,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         const eff = getEffectiveHearts(p, now);
         const next = Math.max(0, eff - 1);
         result = next;
-        owner: getActiveOwner(),
-        caller: "loseHeart",
-        previousHearts: getEffectiveHearts(p, now),
-        nextHearts: next,
-        reason: "Activity penalty"
-      }));
       return { ...p, ...commitHearts(p, next, now) };
 
       });
@@ -997,16 +975,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       const localEff = getEffectiveHearts(p, now);
       const cloudEff = cloudAt !== null ? getEffectiveHearts({ ...p, hearts: cloudHearts, heartsAt: cloudAt }, now) : cloudHearts;
 
-        owner: getActiveOwner(),
-        localHearts: localCommitted,
-        localEffective: localEff,
-        cloudHearts: cloudHearts,
-        cloudEffective: cloudEff,
-        profileHearts: p.hearts,
-        mergeRule: "Cloud Hydration",
-        localUpdatedAt: p.heartsAt,
-        cloudUpdatedAt: cloudAt
-      }));
 
       // V13 MINIMAL SAFE FIX: Reconciliation must compare EFFECTIVE states and preserve the tuple.
       // Do NOT use commitHearts during hydration as it resets the anchor to 'now'.
@@ -1016,10 +984,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         ? { hearts: cloudHearts, heartsAt: cloudAt }
         : { hearts: p.hearts, heartsAt: p.heartsAt };
 
-        chosenHearts: heartsPatch.hearts,
-        chosenHeartsAt: heartsPatch.heartsAt,
-        source: cloudHearts !== localCommitted ? "cloud" : "local/preserved"
-      }));
 
       const dailyDay = cloud.dailyClaimed?.day && cloud.dailyClaimed.day === p.dailyClaimed?.day
 

@@ -55,7 +55,7 @@ function writeLocalSticky(m: Record<string, LocalStickyRecord>, caller: string):
     const data = JSON.stringify(m);
     window.localStorage.setItem(LOCAL_STICKY_KEY, data); 
 
-    }).catch(() => {});
+    
   } catch { /* quota */ }
 }
 
