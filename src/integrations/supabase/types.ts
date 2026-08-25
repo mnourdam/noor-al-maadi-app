@@ -3872,7 +3872,20 @@ export type Database = {
       }
       advance_referral_stage: { Args: { p_stage: number }; Returns: Json }
       analytics_atlas: { Args: never; Returns: Json }
+      analytics_comms: { Args: { p_from: string; p_to: string }; Returns: Json }
       analytics_content_health: { Args: never; Returns: Json }
+      analytics_content_progress: {
+        Args: { p_from: string; p_to: string }
+        Returns: Json
+      }
+      analytics_economy: {
+        Args: { p_from: string; p_to: string }
+        Returns: Json
+      }
+      analytics_growth_activity: {
+        Args: { p_from: string; p_to: string }
+        Returns: Json
+      }
       analytics_overview: { Args: never; Returns: Json }
       analytics_system_health: { Args: never; Returns: Json }
       analytics_timeseries: {
