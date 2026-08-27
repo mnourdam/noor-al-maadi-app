@@ -13,9 +13,12 @@ import type { StorySceneRow, StorySceneType } from "@/lib/stories/types";
 export function splitSentences(text: string): string[] {
   if (!text) return [];
   // Keep terminators attached; split on runs of . ؟ ! ؛ … followed by space/end.
+  // NOTE: no lookbehind — Safari/iOS < 16.4 throws a parse-time SyntaxError
+  // ("invalid group specifier name") for `(?<=...)`, which kills the whole bundle.
   const parts = text
     .replace(/\s+/g, " ")
-    .split(/(?<=[\.\!\?؟؛…])\s+/g)
+    .replace(/([\.\!\?؟؛…])\s+/g, "$1\u0000")
+    .split("\u0000")
     .map((s) => s.trim())
     .filter(Boolean);
   return parts.length > 0 ? parts : text.trim() ? [text.trim()] : [];
