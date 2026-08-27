@@ -8,8 +8,13 @@ const ALLOWED_ORIGINS = new Set<string>([
   "https://localhost",
   "http://localhost",
   "capacitor://localhost",
+  // Legacy origin — MUST stay: V15 Android hardcodes this host for every
+  // /api/public/* and /lovable/email/* call. Never remove.
   "https://irth-develop.lovable.app",
   "https://irth.lovable.app",
+  // Public web domain (additive only).
+  "https://playirth.com",
+  "https://www.playirth.com",
 ]);
 
 const ALLOWED_ORIGIN_SUFFIXES = [
