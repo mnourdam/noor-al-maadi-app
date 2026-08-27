@@ -40,8 +40,6 @@ import {
   TutorialFlagPublishers,
   TutorialOverlay,
 } from "../lib/tutorial";
-import { useIsOffline } from "../components/fallbacks";
-import { WifiOff } from "lucide-react";
 
 
 
@@ -388,7 +386,6 @@ function RootComponent() {
               <GoogleAuthResultDialog />
               <IrthAuthDialog />
               <RecoveryModeGuard />
-              <GlobalOfflinePill />
               <TutorialFlagPublishers />
               <TutorialOverlay />
             </TutorialProvider>
@@ -399,25 +396,4 @@ function RootComponent() {
   );
 }
 
-function GlobalOfflinePill() {
-  const offline = useIsOffline();
-  if (!offline) return null;
-  // The bottom tab bar (see AppShell) sits at
-  //   bottom: max(0.75rem, env(safe-area-inset-bottom))
-  // and its inner pill is ~3.5rem tall. We float the offline indicator
-  // ABOVE that — never overlapping nav buttons — and keep pointer-events
-  // off so it never blocks a tap on the tabs underneath.
-  return (
-    <div
-      dir="rtl"
-      role="status"
-      aria-live="polite"
-      className="fixed left-1/2 z-[60] -translate-x-1/2 rounded-full border border-amber-500/40 bg-amber-950/85 px-3 py-1 text-[10.5px] font-medium text-amber-100 shadow-lg backdrop-blur-sm flex items-center gap-1.5 pointer-events-none whitespace-nowrap"
-      style={{ bottom: "calc(5.25rem + env(safe-area-inset-bottom))" }}
-    >
-      <WifiOff className="h-3 w-3" />
-      <span>غير متصل — محتوى محفوظ</span>
-    </div>
-  );
-}
 
