@@ -13,7 +13,8 @@
  */
 import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { loadSnapshot, saveSnapshot, type OfflineSnapshot } from "./offline-storage";
-import { fetchContentManifest } from "./offline-manifest";
+import { fetchContentManifest, isManifestCountComparable } from "./offline-manifest";
+import { formatError, formatIssues } from "./offline-error-format";
 
 export interface ContentUpdateState {
   /** Server manifest reports content the local snapshot does not have. */
@@ -82,7 +83,9 @@ export function diffAgainstManifest(
     const key = mapManifestKey(item.collection);
     if (!(key in local.content_counts)) continue;
     const localCount = local.content_counts[key] ?? 0;
-    if (Number(item.total_count) !== localCount) {
+    // Visibility-filtered story subsets are legitimately smaller than the
+    // raw server table count — never treat that as a pending update.
+    if (isManifestCountComparable(key) && Number(item.total_count) !== localCount) {
       out.push(key);
       continue;
     }
@@ -131,7 +134,9 @@ export async function applyContentUpdate(): Promise<boolean> {
     const { validateSnapshot } = await import("./offline-snapshot-validate");
     const report = validateSnapshot(candidate);
     if (!report.ok) {
-      throw new Error(`candidate rejected: ${report.issues.join(", ")}`);
+      // `report.issues` holds OBJECTS — joining them produced the
+      // `[object Object]` the user saw. Always format them.
+      throw new Error(`تعذّر التحقّق من المحتوى الجديد: ${formatIssues(report.issues as any)}`);
     }
 
     // Persist FIRST — activation only happens once the candidate is durable.
@@ -155,7 +160,7 @@ export async function applyContentUpdate(): Promise<boolean> {
         applyLocalSnapshot(previous);
       }
     } catch { /* ignore */ }
-    setState({ applying: false, error: e instanceof Error ? e.message : String(e) });
+    setState({ applying: false, error: formatError(e) });
     return false;
   }
 }

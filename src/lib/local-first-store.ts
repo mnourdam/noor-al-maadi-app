@@ -17,7 +17,7 @@
  * Indexing is idempotent and best-effort; failures here never block UI.
  */
 import { loadBundledSnapshot } from "./offline-snapshot";
-import { loadSnapshot, saveSnapshot, MIN_PUBLIC_ENCYCLOPEDIA_ROWS, type OfflineSnapshot } from "./offline-storage";
+import { loadSnapshot, saveSnapshot, mergeSnapshots, MIN_PUBLIC_ENCYCLOPEDIA_ROWS, type OfflineSnapshot } from "./offline-storage";
 import { normalizeArabicName } from "./arabic-normalize";
 import {
   isDividerRow,
@@ -287,12 +287,17 @@ export function ensureLocalSnapshotLoaded(): Promise<void> {
       const localUsable = hasRequiredContent(local);
       if (localUsable) {
         applyLocalSnapshot(local);
-        // Best-effort: if bundled is newer (e.g. shipped APK update), merge it.
+        // Best-effort: if bundled is newer (e.g. shipped APK update), MERGE it.
+        // V16: this used to wholesale replace the local snapshot, which
+        // silently deleted every collection the APK bundle does not carry
+        // (baseline games / story collections) — the cause of Story Library
+        // covers vanishing after an app update.
         try {
           const bundled = await loadBundledSnapshot();
           if (hasRequiredContent(bundled) && bundled.snapshot_version > local.snapshot_version) {
-            applyLocalSnapshot(bundled);
-            await saveSnapshot(bundled).catch(() => {});
+            const merged = mergeSnapshots(local, bundled);
+            applyLocalSnapshot(merged);
+            await saveSnapshot(merged).catch(() => {});
           }
         } catch { /* ignore */ }
         return;

@@ -12,6 +12,25 @@ export interface ManifestComparison {
   needsUpdate: string[];
 }
 
+/** Map a server manifest collection name to the local snapshot key. */
+export function manifestKeyToLocalKey(collection: string): string {
+  if (collection === "campaigns_public") return "admin_campaigns";
+  if (collection === "investigations_public") return "investigations";
+  return collection;
+}
+
+/**
+ * Collections whose LOCAL row count is a legitimate subset of the server
+ * table count (visibility-filtered story scenes/media returned by
+ * `stories_snapshot_manifest_v2`). Count equality is meaningless for them —
+ * change detection uses `last_updated` only.
+ */
+const COUNT_NON_COMPARABLE = new Set(["story_scenes", "story_media", "story_collections"]);
+
+export function isManifestCountComparable(localKey: string): boolean {
+  return !COUNT_NON_COMPARABLE.has(localKey);
+}
+
 let _cachedManifest: ContentManifestItem[] | null = null;
 let _manifestPromise: Promise<ContentManifestItem[] | null> | null = null;
 
@@ -69,14 +88,14 @@ export async function checkManifestUpdates(): Promise<ManifestComparison> {
 
   for (const s of server) {
     // Map server manifest collection names to local snapshot collection keys
-    const localKey = (s.collection === 'campaigns_public' ? 'admin_campaigns' : 
-                      s.collection === 'investigations_public' ? 'investigations' : 
-                      s.collection);
-    
+    const localKey = manifestKeyToLocalKey(s.collection);
+
     const localCount = local.content_counts[localKey] ?? 0;
-    
-    // 1. Check for count changes (new additions or removals)
-    if (s.total_count !== localCount) {
+
+    // 1. Check for count changes (new additions or removals). Skipped for
+    //    visibility-filtered story subsets, whose local count is expected
+    //    to be smaller than the raw table count.
+    if (isManifestCountComparable(localKey) && s.total_count !== localCount) {
       needsUpdate.push(localKey);
       continue;
     }

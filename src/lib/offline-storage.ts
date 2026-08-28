@@ -45,7 +45,9 @@ export type OfflineCollectionKey =
   | "content_registry"
   | "stories"
   | "story_scenes"
-  | "story_media";
+  | "story_media"
+  | "story_collections"
+  | "games";
 
 /** Manifest entry — future-ready, allows incremental delta-sync per collection. */
 export interface CollectionManifestEntry {
@@ -301,4 +303,45 @@ export async function clearSnapshot(): Promise<void> {
   }
   try { localStorage.removeItem(LS_KEY); localStorage.removeItem(LEGACY_LS_KEY); }
   catch { /* ignore */ }
+}
+
+/**
+ * V16 — NON-DESTRUCTIVE snapshot adoption.
+ *
+ * A newer BUNDLED (APK) snapshot must never wholesale replace the local
+ * snapshot: the bundle intentionally does not carry every collection
+ * (baseline-seeded `games` / story collections used to be dropped this way,
+ * which is what made Story Library covers disappear after an app update).
+ *
+ * Merge rule: incoming wins per collection; a collection missing (or empty)
+ * in the incoming snapshot keeps the existing local rows.
+ * Metadata (`snapshot_version`, `generated_at`, `checksum`) comes from the
+ * incoming snapshot; dedicated baseline metadata is preserved.
+ */
+export function mergeSnapshots(
+  local: OfflineSnapshot | null | undefined,
+  incoming: OfflineSnapshot,
+): OfflineSnapshot {
+  if (!local?.collections) return incoming;
+  const collections: Record<string, any[]> = { ...local.collections };
+  for (const [key, rows] of Object.entries(incoming.collections ?? {})) {
+    if (!Array.isArray(rows)) continue;
+    if (rows.length === 0 && Array.isArray(collections[key]) && collections[key].length > 0) continue;
+    collections[key] = rows;
+  }
+  const content_counts: Record<string, number> = {};
+  for (const [key, rows] of Object.entries(collections)) content_counts[key] = rows.length;
+  const merged: OfflineSnapshot = {
+    ...local,
+    ...incoming,
+    collections,
+    content_counts,
+  };
+  // Keep the baseline bookkeeping fields, which live outside `collections`.
+  for (const field of ["baseline_version", "baseline_generated_at"]) {
+    if ((incoming as any)[field] === undefined && (local as any)[field] !== undefined) {
+      (merged as any)[field] = (local as any)[field];
+    }
+  }
+  return merged;
 }
