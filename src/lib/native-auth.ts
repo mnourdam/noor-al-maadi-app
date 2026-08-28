@@ -318,11 +318,15 @@ export async function handleNativeAuthCallback(url: string | null | undefined): 
     const refreshToken = params.get("refresh_token");
     recordTrace("pkce-audit", "deeplink:url-has-code", !!code);
 
-    // 1. Synchronous Idempotency & In-Flight Guard
+    // 1. Idempotency & In-Flight Guard.
+    //    In-memory Sets protect within one JS context; the durable marker
+    //    (fingerprint only, never the raw code) protects across WebView
+    //    reloads and Android process restarts.
     if (code) {
-      if (processedCodes.has(code)) {
+      if (processedCodes.has(code) || isCodeConsumedDurably(code)) {
         console.info("[IrthAuth] CALLBACK_ALREADY_PROCESSED", `code_len=${code.length}`);
         recordTrace("native-auth", "callback-already-processed");
+        await recoverAndContinueAfterReplay();
         return;
       }
       if (inFlightCodes.has(code)) {
@@ -330,7 +334,7 @@ export async function handleNativeAuthCallback(url: string | null | undefined): 
         recordTrace("native-auth", "callback-in-flight-ignored");
         return;
       }
-      
+
       // Mark as in-flight IMMEDIATELY before any async work
       inFlightCodes.add(code);
     }
