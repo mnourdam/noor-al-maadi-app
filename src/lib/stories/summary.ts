@@ -9,7 +9,7 @@ import { recordTrace } from "@/lib/diag-trace";
 import { supabase } from "@/integrations/supabase/client";
 import { evaluateStoryUnlock, isAlwaysUnlockSpec } from "./unlock/local";
 import { buildGuestEvidence, guestUnlockState } from "./unlock/guest-evidence";
-import { isCampaignIntroRow, introStoryIdsFromCampaigns } from "./library-filter";
+import { isCampaignIntroRow } from "./library-filter";
 import { getActiveUserId } from "../identity/owner";
 
 const inflightSummary = new Map<string, Promise<StorySummary[]>>();
