@@ -27,7 +27,8 @@ const needles = [];
 if (key.length >= 12) needles.push({ label: "service-role key", value: key });
 // Service-role JWTs carry this exact role claim segment.
 needles.push({ label: 'role:"service_role" claim', value: '"role":"service_role"' });
-needles.push({ label: "service_role literal", value: "service_role" });
+// NOTE: a bare `service_role` string is NOT a leak signal — the Supabase
+// auth library legitimately names the role in its own type/enum tables.
 needles.push({ label: "sb_secret_ key prefix", value: "sb_secret_" });
 
 const MAX_BYTES = 64 * 1024 * 1024;
