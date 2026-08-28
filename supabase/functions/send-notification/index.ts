@@ -208,6 +208,15 @@ Deno.serve(async (req) => {
         return jsonResponse({ error: "title and body are required" }, { status: 400 });
       }
 
+      // V16: validate the audience BEFORE creating a row, so a malformed or
+      // unverifiable segment request fails closed and never reaches send.
+      const preScope = resolveTokenScope(body);
+      if (!preScope.ok) {
+        console.error("[send-notification] audience rejected (pre-insert)", preScope.error);
+        return jsonResponse({ error: preScope.error, sent: 0, failed: 0, total: 0 }, { status: preScope.status });
+      }
+
+
       // ── Stable-ID dedupe ────────────────────────────────────────
       // `dedupe_key` is the caller-supplied identity of the LOGICAL
       // notification (e.g. "today_in_history:2026-07-28:slot=1").
