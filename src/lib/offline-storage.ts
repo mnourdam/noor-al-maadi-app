@@ -16,14 +16,24 @@
 export const SNAPSHOT_SCHEMA_VERSION = 5;
 
 /**
- * Hard floor for the player-facing public encyclopedia dataset. This is a
- * deliberate fail-closed guard: a bootstrap/full-sync result with 923/1000
- * rows is worse than no live sync at all, because it poisons IndexedDB and
- * hides most of the app offline. If the live public dataset intentionally
- * changes below this number, update this floor in the same release that ships
- * a newly verified bundled snapshot.
+ * Conservative sanity floor for the player-facing public encyclopedia
+ * dataset. This is a fail-closed guard against a catastrophically empty or
+ * gutted cache (e.g. an RLS change that hides everything), NOT an exact
+ * content census.
+ *
+ * V16 fix: this used to be pinned to an exact historical count (1778). Once
+ * editors legitimately disabled entries, the live enabled count fell below
+ * the floor and NO freshly synced snapshot could ever be persisted, so every
+ * device was frozen on bundled content. Exact-count integrity for a full
+ * fetch is enforced independently and precisely by the
+ * `out.length !== expectedTotal` check in `offline-snapshot.ts`
+ * (`fetchCollection`), which compares against the PostgREST count for the
+ * same filter — that check, not this floor, is what rejects truncated
+ * pagination. Keep this floor well below the live count so legitimate
+ * deletions/disables can converge.
  */
-export const MIN_PUBLIC_ENCYCLOPEDIA_ROWS = 1778;
+export const MIN_PUBLIC_ENCYCLOPEDIA_ROWS = 1500;
+
 
 export type OfflineCollectionKey =
   | "encyclopedia_entities"

@@ -89,8 +89,18 @@ export async function seedBaselineToPersistentStore(): Promise<void> {
     
     const existing = await loadSnapshot();
 
-    // Versioning check: only overwrite if baseline is newer or version mismatch
-    if (existing && existing.snapshot_version >= baseline.version) {
+    // Versioning check — tracked on a DEDICATED `baseline_version` field.
+    //
+    // V16 fix: the games/stories baseline MUST NOT read or write the shared
+    // `snapshot_version` / `generated_at`, which belong to the Encyclopedia
+    // content snapshot. Overwriting them made the Encyclopedia claim a
+    // future generation date, which suppressed staleness/manifest detection
+    // and blocked newer bundled snapshots from being adopted.
+    const existingBaselineVersion =
+      typeof (existing as any)?.baseline_version === "number"
+        ? ((existing as any).baseline_version as number)
+        : 0;
+    if (existing && existingBaselineVersion >= baseline.version) {
       console.info("[baseline] persistent store is already up to date");
       _isSeeding = false;
       return;
@@ -99,16 +109,18 @@ export async function seedBaselineToPersistentStore(): Promise<void> {
     const { collections } = baseline;
     
     const newSnapshot: OfflineSnapshot = existing ? { ...existing } : {
-      snapshot_version: baseline.version,
+      snapshot_version: 0,
       schema_version: SNAPSHOT_SCHEMA_VERSION,
-      generated_at: baseline.generated_at,
+      generated_at: new Date(0).toISOString(),
       source: "bundled",
       content_counts: {},
       collections: {}
     };
 
-    newSnapshot.snapshot_version = baseline.version;
-    newSnapshot.generated_at = baseline.generated_at;
+    // Baseline metadata lives on its own field only.
+    (newSnapshot as any).baseline_version = baseline.version;
+    (newSnapshot as any).baseline_generated_at = baseline.generated_at;
+
     
     // Merge baseline collections
     newSnapshot.collections.games = collections.games;
