@@ -23,6 +23,7 @@ import { ATLAS_PUBLIC_COLUMNS } from "./atlas-entities";
 import {
   loadSnapshot,
   saveSnapshot,
+  mergeSnapshots,
   MIN_PUBLIC_ENCYCLOPEDIA_ROWS,
   SNAPSHOT_SCHEMA_VERSION,
   type OfflineCollectionKey,
@@ -65,6 +66,13 @@ interface CollectionDef {
   columns?: string;
   /** Whether this collection is required for first-run playability. */
   required?: boolean;
+  /**
+   * Collection that has no network source at runtime (seeded from the
+   * bundled baseline / build-time pack). It is a first-class snapshot
+   * collection for validation and persistence, but sync never fetches or
+   * clears it.
+   */
+  localOnly?: boolean;
   label: string;
 }
 
@@ -110,6 +118,13 @@ export const COLLECTIONS: CollectionDef[] = [
     required: false, label: "مشاهد القصص (للقصص المفتوحة فقط)" },
   { key: "story_media", table: "__rpc:stories_snapshot_manifest_v2__",
     required: false, label: "وسائط القصص (للقصص المفتوحة، مُتحقّقة فقط)" },
+  { key: "story_collections", table: "__rpc:stories_snapshot_manifest_v2__",
+    required: false, label: "مجموعات القصص" },
+
+  // Games ship through the build-time baseline pack; there is no
+  // player-safe network read path, so sync leaves them untouched.
+  { key: "games", table: "__local:games__", localOnly: true,
+    required: false, label: "الألعاب (حزمة محتوى مُجمّعة مع الإصدار)" },
 
 ];
 
@@ -123,11 +138,13 @@ const NO_UPDATED_AT: ReadonlySet<OfflineCollectionKey> = new Set<OfflineCollecti
   "stories",
   "story_scenes",
   "story_media",
+  "story_collections",
+  "games",
 ]);
 
 /** Story collection keys that are served by the manifest RPC. */
 const STORY_MANIFEST_KEYS: ReadonlySet<OfflineCollectionKey> = new Set<OfflineCollectionKey>([
-  "stories", "story_scenes", "story_media",
+  "stories", "story_scenes", "story_media", "story_collections",
 ]);
 
 /**
@@ -172,10 +189,13 @@ function pickManifestSlice(key: OfflineCollectionKey, m: StoryManifestPayload): 
   if (key === "stories") return Array.isArray(m.stories) ? m.stories : [];
   if (key === "story_scenes") return Array.isArray(m.story_scenes) ? m.story_scenes : [];
   if (key === "story_media") return Array.isArray(m.story_media) ? m.story_media : [];
+  if (key === "story_collections") return Array.isArray(m.story_collections) ? m.story_collections : [];
   return [];
 }
 
 async function fetchCollection(def: CollectionDef): Promise<any[]> {
+  // Local-only collections (games baseline pack) have no network source.
+  if (def.localOnly) return [];
   // Story collections come from the M7A visibility-enforcing manifest RPC.
   if (STORY_MANIFEST_KEYS.has(def.key)) {
     const manifest = await fetchStoryManifest();
@@ -296,7 +316,7 @@ async function fetchCollectionSince(def: CollectionDef, since: string): Promise<
 async function fetchCollectionExpectedCount(def: CollectionDef): Promise<number | null> {
   // Story collections are served by the manifest RPC — there is no
   // countable underlying table endpoint. Skip the true-up check.
-  if (STORY_MANIFEST_KEYS.has(def.key)) return null;
+  if (STORY_MANIFEST_KEYS.has(def.key) || def.localOnly) return null;
   let query: any = supabase
     .from(def.table as any)
     .select("id", { count: "exact", head: true });
@@ -426,26 +446,26 @@ export async function generateAndStoreSnapshot(): Promise<OfflineSnapshot> {
   const previous = await loadSnapshot();
   
   // Differential Sync Strategy: Check manifest before starting any work.
-  const { fetchContentManifest } = await import("./offline-manifest");
+  const { fetchContentManifest, manifestKeyToLocalKey, isManifestCountComparable } =
+    await import("./offline-manifest");
   const serverManifest = await fetchContentManifest();
   
   if (previous?.collections && serverManifest) {
     let changed = false;
     for (const s of serverManifest) {
       // Map server collection name to local key
-      const localKey = (s.collection === 'campaigns_public' ? 'admin_campaigns' : 
-                        s.collection === 'investigations_public' ? 'investigations' : 
-                        s.collection);
-      
+      const localKey = manifestKeyToLocalKey(s.collection);
+
       // Collections the local snapshot does not carry (baseline-owned
       // stories) are not comparable and must not force endless syncs.
       if (!(localKey in previous.content_counts)) continue;
       const localCount = previous.content_counts[localKey] ?? 0;
       const serverDate = new Date(s.last_updated).getTime();
       const localDate = new Date(previous.generated_at).getTime();
-      
+      const countChanged = isManifestCountComparable(localKey) && s.total_count !== localCount;
+
       // If count differs or server has newer data, we need a sync
-      if (s.total_count !== localCount || serverDate > localDate) {
+      if (countChanged || serverDate > localDate) {
         changed = true;
         break;
       }
@@ -564,7 +584,7 @@ export async function refreshSnapshotIncremental(): Promise<OfflineSnapshot> {
     return generateSnapshot();
   }
 
-  const { fetchContentManifest } = await import("./offline-manifest");
+  const { fetchContentManifest, isManifestCountComparable } = await import("./offline-manifest");
   const serverManifest = await fetchContentManifest();
   
   const nextCollections: Record<string, any[]> = { ...previous.collections };
@@ -576,6 +596,15 @@ export async function refreshSnapshotIncremental(): Promise<OfflineSnapshot> {
     const prevRows = previous.collections[def.key] ?? [];
     const since = maxUpdatedAt(prevRows);
     let merged: any[] = prevRows;
+
+    // Local-only collections (games baseline pack) are never fetched and
+    // never cleared by a sync — they belong to the build-time pack.
+    if (def.localOnly) {
+      nextCollections[def.key] = prevRows;
+      nextCounts[def.key] = prevRows.length;
+      manifest.push({ key: def.key, count: prevRows.length, checksum: await sha256Hex(canonicalJSON(prevRows)) });
+      continue;
+    }
 
     try {
       // Find this collection in the manifest to see if a fetch is actually needed
@@ -590,7 +619,13 @@ export async function refreshSnapshotIncremental(): Promise<OfflineSnapshot> {
       // An upsert-only delta merge can never drop them, so retired rows
       // become sticky forever. Fetch the complete authoritative collection
       // instead (fetchCollection asserts the exact expected count).
-      const countMismatch = serverItem ? serverItem.total_count !== localCount : false;
+      //
+      // Story scenes/media are the visibility-filtered SUBSET returned by
+      // `stories_snapshot_manifest_v2`, so their local count can never
+      // equal the raw table count in the server manifest — comparing them
+      // would force an endless full re-fetch. Only their timestamps count.
+      const countComparable = isManifestCountComparable(def.key);
+      const countMismatch = serverItem && countComparable ? serverItem.total_count !== localCount : false;
       const needsSync = serverItem 
         ? (countMismatch || new Date(serverItem.last_updated).getTime() > new Date(previous.generated_at).getTime())
         : true; // fallback if manifest missing
@@ -759,8 +794,11 @@ export async function bootstrapOfflineSync(opts: { maxAgeMs?: number } = {}): Pr
     if (!hasRequiredSnapshotContent(local)) {
       const bundled = await loadBundledSnapshot();
       if (hasRequiredSnapshotContent(bundled)) {
-        await saveSnapshot(bundled);
-        local = bundled;
+        // Merge, never replace: keep any locally-seeded collections the
+        // APK bundle does not carry (baseline games / story collections).
+        const merged = mergeSnapshots(local, bundled);
+        await saveSnapshot(merged);
+        local = merged;
       }
     }
 

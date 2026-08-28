@@ -245,7 +245,7 @@ describe("runtime update detection", () => {
   });
 
   it("count mismatch triggers an authoritative full replacement, not a merge", () => {
-    expect(SNAPSHOT_SRC).toContain("const countMismatch = serverItem ? serverItem.total_count !== localCount : false;");
+    expect(SNAPSHOT_SRC).toContain("const countMismatch = serverItem && countComparable ? serverItem.total_count !== localCount : false;");
     expect(SNAPSHOT_SRC).toMatch(/if \(countMismatch\) \{\s*merged = await fetchCollection\(def\);/);
   });
 
@@ -292,6 +292,10 @@ vi.mock("@/lib/offline-snapshot", async (orig) => ({
 
 vi.mock("@/lib/offline-manifest", () => ({
   fetchContentManifest: vi.fn(async () => null),
+  manifestKeyToLocalKey: (c: string) =>
+    c === "campaigns_public" ? "admin_campaigns" : c === "investigations_public" ? "investigations" : c,
+  isManifestCountComparable: (k: string) =>
+    !["story_scenes", "story_media", "story_collections"].includes(k),
 }));
 
 function candidateSnapshot(rows: number, version = Date.now()) {
