@@ -29,7 +29,9 @@ export type OutboxKind =
   | "avatar_select"         // sync_my_public_stats RPC (durable Premium Emblem pick)
   | "reflection_save"       // user_reflections upsert (durable Reflective Moment)
   | "reflection_delete"     // user_reflections delete (durable, tombstoned)
-  | "campaign_intro";       // record_campaign_intro_v1 RPC (idempotent, monotonic)
+  | "campaign_intro"         // record_campaign_intro_v1 RPC (idempotent, monotonic)
+  | "streak_activity";      // record_streak_activity_v16 RPC (durable IRTH activity day)
+
 
 
 export interface OutboxItem {

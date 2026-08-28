@@ -181,7 +181,14 @@ export function StoryPlayer({
         setGrantedDinars(grantDin);
         if (grantXp > 0) addPoints(grantXp);
         if (grantDin > 0) addDinars(grantDin);
+        // V16 — Story completion is a qualifying streak activity. Durable:
+        // the recorder enqueues the IRTH activity day before any network call.
+        try {
+          const { recordStreakActivity } = await import("@/lib/streak-activity");
+          void recordStreakActivity("story", story.id);
+        } catch { /* never block completion UI */ }
       }
+
 
       try {
         void queryClient.invalidateQueries({ queryKey: ["stories-summary"] });

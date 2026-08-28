@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, memo } from "react";
 import { Heart, Coins, Flame, Bell, Star } from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import { useProfile } from "@/lib/profile";
+import { useProfile, deriveStreak } from "@/lib/profile";
 import { HEART_MAX, getEffectiveHearts, msUntilNextHeart, formatHeartTimer } from "@/lib/hearts";
 import { formatBadgeCount } from "@/lib/notifications";
 import { fetchMyUnreadCount, subscribeToMyNotifications } from "@/lib/notifications/server";
@@ -198,7 +198,9 @@ export const HUD = memo(function HUD() {
                 aria-label="الحماسة"
                 className="motion-tap inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-orange-400 transition hover:bg-white/5 active:bg-white/10"
               >
-                <Flame className="size-3.5" /> <AnimatedNumber value={profile.streak} />
+                {/* V16: display-only expiry derivation — persisted state is untouched. */}
+                <Flame className="size-3.5" /> <AnimatedNumber value={deriveStreak(profile.streak, profile.lastActiveDay).streak} />
+
 
               </button>
             </PopoverTrigger>

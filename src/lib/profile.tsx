@@ -1,20 +1,26 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { recordTrace } from "@/lib/diag-trace";
 import { getActiveOwner } from "./identity/owner";
+import { irthDayKey, irthYesterdayKey } from "./irth-day";
+
+/**
+ * V16 — the canonical streak day is the Asia/Riyadh calendar day, matching
+ * the server exactly. `todayKey()` used to be the DEVICE-local day, which
+ * disagreed with the server for part of every day on any non-UTC+3 device
+ * and caused false streak expiry.
+ */
 function todayKey(d: Date = new Date()): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+  return irthDayKey(d);
 }
 
 /**
- * Day-anchored streak validation. Single source of truth used at hydrate,
- * server-sync, and any HUD read. A stored streak number is NEVER trusted
- * on its own — it must be reconciled against `lastActiveDay`.
- *   - safe:      played today
- *   - at-risk:   played yesterday, will expire at next midnight if idle
- *   - expired:   missed a full day (or never played) → streak forced to 0
+ * Day-anchored streak DISPLAY status. V16: this is a pure derivation used
+ * for presentation only — it MUST NOT be used to persist a zero over a
+ * server-provided streak value (a wrong device clock or a stale
+ * `lastActiveDay` would otherwise destroy real progress).
+ *   - safe:      played today (IRTH day)
+ *   - at-risk:   played yesterday, expires at the next IRTH midnight
+ *   - expired:   missed a full day (or never played)
  */
 export type StreakStatus = "safe" | "at-risk" | "expired";
 export function deriveStreak(
@@ -22,14 +28,14 @@ export function deriveStreak(
   lastActiveDay: string | null | undefined,
   now: Date = new Date(),
 ): { streak: number; status: StreakStatus } {
-  const today = todayKey(now);
-  const y = new Date(now); y.setDate(y.getDate() - 1);
-  const yesterday = todayKey(y);
+  const today = irthDayKey(now);
+  const yesterday = irthYesterdayKey(now);
   const stored = Math.max(0, Math.floor(storedStreak || 0));
   if (lastActiveDay === today) return { streak: stored, status: "safe" };
   if (lastActiveDay === yesterday) return { streak: stored, status: "at-risk" };
   return { streak: 0, status: "expired" };
 }
+
 
 function dailyMissionsForDate(_d: Date = new Date()): { id: string }[] {
   return [];
@@ -390,10 +396,11 @@ function hydrateFromStorage(): ProfileState | null {
       ...parsed,
       settings: { ...initial.settings, ...(parsed.settings ?? {}) },
     };
-    const derived = deriveStreak(merged.streak, merged.lastActiveDay);
-    if (derived.streak !== merged.streak) {
-      merged = { ...merged, streak: derived.streak };
-    }
+    // V16: hydration is NON-DESTRUCTIVE. The stored streak is kept verbatim;
+    // expiry is a display derivation (`deriveStreak`), never a persisted 0.
+    // A stale/foreign `lastActiveDay` or a wrong device clock must not be
+    // able to destroy a valid server streak on boot.
+
 
     return merged;
   } catch (e) {
@@ -497,30 +504,24 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   }, [profile, hydrated]);
 
 
-  // Live streak-expiry watcher. While the app stays open across local
-  // midnight, the stored streak value would otherwise stay stale (e.g. 7)
-  // even though `lastActiveDay` is now older than yesterday → expired.
-  // Re-derive every 30s and on visibility change, resetting to 0 the
-  // moment the day rolls over without a qualifying activity.
+  // V16 — day-rollover TICK ONLY.
+  // Previously this watcher persisted `streak = 0` whenever the derived
+  // status was "expired". That was the single biggest cause of lost
+  // "الحماسة": one wrong day comparison wrote a fabricated zero over a
+  // valid server streak and persisted it to localStorage.
+  // It now only nudges a re-render so display-level derivations
+  // (`deriveStreak`) refresh across the IRTH midnight boundary. No writes.
+  const [, setDayTick] = useState(0);
   useEffect(() => {
     if (!hydrated) return;
+    let lastDay = todayKey();
     const check = () => {
-      setProfile((p) => {
-        const d = deriveStreak(p.streak, p.lastActiveDay);
-        if (d.status === "expired" && p.streak !== 0) {
-          if (import.meta.env.DEV) {
-            console.debug("[streak] live-expire", {
-              today: todayKey(),
-              lastActiveDay: p.lastActiveDay,
-              storedStreak: p.streak,
-            });
-          }
-          return { ...p, streak: 0 };
-        }
-        return p;
-      });
+      const now = todayKey();
+      if (now !== lastDay) {
+        lastDay = now;
+        setDayTick((n) => n + 1);
+      }
     };
-    check();
     const id = window.setInterval(check, 30_000);
     const onVis = () => { if (document.visibilityState === "visible") check(); };
     if (typeof document !== "undefined") {
@@ -532,7 +533,8 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         document.removeEventListener("visibilitychange", onVis);
       }
     };
-  }, [hydrated, profile.lastActiveDay, profile.streak]);
+  }, [hydrated]);
+
 
   const update = useCallback((fn: (p: ProfileState) => ProfileState) => setProfile((p) => {
     const started = performance.now();
@@ -866,25 +868,26 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       }
     },
 
-    // Phase 3A — canonical qualifying-activity call.
+    // V16 — durable qualifying-activity call.
     recordStreakActivity: async (source, sourceId) => {
-      // Local mirror first so the guest path stays instant.
       const { recordStreakActivity: rpc } = await import("./streak-activity");
       const outcome = await rpc(source, sourceId ?? null);
       if (outcome.ok !== true) {
-        // Guest / offline / rpc error — fall back to local increment so UX
-        // still reflects the activity. Server sync will reconcile on reconnect.
+        // Guest, offline, timeout or RPC error. The authenticated case is
+        // already DURABLY QUEUED (`streak_activity` outbox kind) and will
+        // replay with the original IRTH day, so the local mirror here is
+        // purely optimistic UI — it never fabricates server truth.
         update((p) => {
           const today = todayKey();
           if (p.lastActiveDay === today) return p;
-          const y = new Date(); y.setDate(y.getDate() - 1);
-          const yesterday = todayKey(y);
-          const streak = p.lastActiveDay === yesterday ? p.streak + 1 : 1;
+          const yesterday = irthYesterdayKey();
+          const streak = p.lastActiveDay === yesterday ? p.streak + 1 : Math.max(1, 1);
           const longestStreak = Math.max(p.longestStreak ?? 0, streak);
           return { ...p, streak, longestStreak, lastActiveDay: today };
         });
         return;
       }
+
       // Server authoritative — mirror totals into local state.
       update((p) => {
         let np: ProfileState = {
@@ -944,11 +947,13 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       for (const [k, v] of Object.entries(cloud.hintsPurchased ?? {})) {
         hints[k] = Math.max(hints[k] ?? 0, Number(v) || 0);
       }
-      // Streak: cloud is authoritative but must still respect day-anchored
-      // expiry. Reuse applyServerStats' semantics inline.
-      const target = numMax(p.streak, cloud.streak);
-      const derived = deriveStreak(p.streak, p.lastActiveDay);
-      const nextStreak = derived.status === "expired" ? 0 : target;
+      // V16 — Streak: cloud/server value is authoritative and is adopted
+      // verbatim (max with local so an in-flight local activity is not
+      // regressed). A client-side "expired" derivation NEVER zeroes it;
+      // expiry is display-only. This stops a stale local `lastActiveDay`
+      // from wiping a valid server streak during hydration.
+      const nextStreak = numMax(p.streak, cloud.streak);
+
 
       // Hearts: cloud value wins ONLY when it differs from the local
       // committed value; preserves regen anchor otherwise.
@@ -1047,16 +1052,10 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         changed = true;
       }
       if (typeof stats.streak === "number") {
-        const target = Math.max(0, Math.floor(stats.streak));
-        const derived = deriveStreak(p.streak, p.lastActiveDay);
-        let nextStreak: number;
-        if (derived.status === "expired") {
-          nextStreak = 0;
-        } else if (derived.status === "safe") {
-          nextStreak = Math.max(p.streak, target);
-        } else {
-          nextStreak = target;
-        }
+        // V16: server value is authoritative and adopted verbatim. Never
+        // zeroed from a client-side day derivation.
+        const nextStreak = Math.max(0, Math.floor(stats.streak));
+
         if (nextStreak !== p.streak) {
           next = { ...next, streak: nextStreak };
           changed = true;

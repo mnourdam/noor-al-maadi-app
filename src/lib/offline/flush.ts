@@ -291,7 +291,33 @@ async function handleItem(item: OutboxItem): Promise<{ ok: boolean; error?: stri
         return { ok: true };
       }
 
+      // V16 durable streak day. Replays the ORIGINAL Asia/Riyadh activity
+      // day captured at gameplay time — never the sync day. The server
+      // ledger is unique on (user_id, activity_day) so replays are safe.
+      case "streak_activity": {
+        const p = item.payload as {
+          source?: string; sourceId?: string | null;
+          activityDay?: string; clientKey?: string;
+        };
+        if (!p?.activityDay) return { ok: false, error: "invalid_activity_day" };
+        const { callRecordStreakActivityV16 } = await import("@/lib/streak-activity");
+        const res = await callRecordStreakActivityV16({
+          source: (p.source ?? "unknown") as never,
+          sourceId: p.sourceId ?? null,
+          activityDay: p.activityDay,
+          clientKey: p.clientKey ?? item.id,
+        });
+        if (!res.ok) return { ok: false, error: res.error ?? "rpc-not-ok" };
+        try {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("irth:streak:changed", { detail: res.data }));
+          }
+        } catch { /* ignore */ }
+        return { ok: true };
+      }
+
       case "story_completion": {
+
         const p = item.payload as { storyId: string };
         if (!p?.storyId) return { ok: false, error: "invalid_story_id" };
         const { data: res, error } = await supabase.rpc(
