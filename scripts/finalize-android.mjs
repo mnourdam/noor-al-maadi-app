@@ -17,7 +17,7 @@
  * This runs as part of `npm run sync:android` so the developer never has to
  * hand-edit index.html.
  */
-import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, readdirSync, statSync, rmSync } from "node:fs";
 import { join, relative, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
