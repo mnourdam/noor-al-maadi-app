@@ -21,6 +21,12 @@ import {
 import { consumeAuthOrigin } from "@/lib/authOrigin";
 import { recordTrace } from "@/lib/diag-trace";
 import { getDurableAuthStorage } from "@/lib/nativeAuthStorage";
+import {
+  isCodeConsumedDurably,
+  isLaunchUrlHandled,
+  markCodeConsumedDurably,
+  markLaunchUrlHandled,
+} from "@/lib/nativeAuthReplayGuard";
 import { setRecoveryMode } from "@/lib/recoveryMode";
 import { setAuthReady } from "./identity/guard";
 import { getActiveOwner } from "./identity/owner";
