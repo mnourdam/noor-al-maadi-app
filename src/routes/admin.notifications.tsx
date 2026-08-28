@@ -22,6 +22,10 @@ import {
 import { TemplateGallery } from "@/components/admin/notifications/TemplateGallery";
 import { DeliveryStatsPanel } from "@/components/admin/notifications/DeliveryStatsPanel";
 import { findTemplate, type NotificationTemplate } from "@/lib/notifications/admin/templates";
+import {
+  resolveAudience, validateNumericFilter, filterSegmentId,
+} from "@/lib/notifications/admin/segments";
+
 
 // ============================================================
 // /admin/notifications — Upgraded production composer.
