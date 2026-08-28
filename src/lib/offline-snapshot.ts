@@ -749,10 +749,8 @@ export async function bootstrapOfflineSync(opts: { maxAgeMs?: number } = {}): Pr
     if (!online) return;
 
     // Background Sync Strategy
-    const stale =
-      !local ||
-      local.schema_version !== SNAPSHOT_SCHEMA_VERSION ||
-      Date.now() - new Date(local.generated_at).getTime() > maxAge;
+    const stale = isSnapshotStale(local, maxAge);
+
     
     if (!stale) {
       // Even if not stale, check the manifest for deltas (lightweight)
