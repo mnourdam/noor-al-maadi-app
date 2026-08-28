@@ -14,6 +14,8 @@
 
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { resolveTokenScope, assertNoSegmentWidening } from "./audience-guard.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -206,6 +208,15 @@ Deno.serve(async (req) => {
         return jsonResponse({ error: "title and body are required" }, { status: 400 });
       }
 
+      // V16: validate the audience BEFORE creating a row, so a malformed or
+      // unverifiable segment request fails closed and never reaches send.
+      const preScope = resolveTokenScope(body);
+      if (!preScope.ok) {
+        console.error("[send-notification] audience rejected (pre-insert)", preScope.error);
+        return jsonResponse({ error: preScope.error, sent: 0, failed: 0, total: 0 }, { status: preScope.status });
+      }
+
+
       // ── Stable-ID dedupe ────────────────────────────────────────
       // `dedupe_key` is the caller-supplied identity of the LOGICAL
       // notification (e.g. "today_in_history:2026-07-28:slot=1").
@@ -239,9 +250,14 @@ Deno.serve(async (req) => {
         type: body.type ?? "manual",
         target_type: body.target_type ?? "all",
         target_user_id: body.target_user_id ?? null,
+        // V16: the audience MUST be persisted. Dropping these fields is what
+        // silently turned a segment send into a full broadcast.
+        target_user_ids: Array.isArray(body.target_user_ids) ? body.target_user_ids : null,
+        target_segment_id: typeof body.target_segment_id === "string" ? body.target_segment_id : null,
         deep_link: body.deep_link ?? null,
         image_url: body.image_url ?? null,
         dedupe_key: dedupeKey,
+
         // Mark as sent immediately. Push delivery is best-effort; in-app
         // visibility (banner, bell badge, notification center, realtime
         // listeners) MUST work even when the user has no FCM token or the
@@ -288,20 +304,44 @@ Deno.serve(async (req) => {
       notif.status = "sent";
     }
 
-    // Load tokens. New: when `target_user_ids` is present (smart-segment
-    // send from the admin composer), restrict tokens to those users. This
-    // is purely additive — legacy "all" and "user" paths are unchanged.
+    // ── V16 audience scoping + hard anti-broadcast guard ───────────────
+    // `resolveTokenScope` fails closed for any segment send whose audience
+    // is missing, malformed or unverifiable. Only an explicit all-users
+    // target may reach `broadcast`.
+    const scope = resolveTokenScope(notif);
+    if (!scope.ok) {
+      await admin.from("notifications").update({ status: "failed" }).eq("id", notif.id);
+      console.error("[send-notification] audience rejected", scope.error);
+      return jsonResponse({ error: scope.error, sent: 0, failed: 0, total: 0 }, { status: scope.status });
+    }
+    try {
+      assertNoSegmentWidening(notif, scope);
+    } catch (guardErr) {
+      await admin.from("notifications").update({ status: "failed" }).eq("id", notif.id);
+      console.error("[send-notification]", (guardErr as Error).message);
+      return jsonResponse({ error: (guardErr as Error).message, sent: 0, failed: 0, total: 0 }, { status: 500 });
+    }
+
+    // Legitimate zero audience: the notification row stays (in-app value),
+    // but zero pushes are attempted. This must never become a broadcast.
+    if (scope.scope === "list" && scope.userIds.length === 0) {
+      console.log(`[send-notification] zero-audience segment (notif=${notif.id})`);
+      return jsonResponse({
+        ok: true,
+        zero_audience: true,
+        notification_id: notif.id,
+        sent: 0,
+        failed: 0,
+        total: 0,
+      });
+    }
+
     let tokensQuery = admin
       .from("device_tokens")
       .select("token, user_id")
       .eq("enabled", true);
-    if (notif.target_type === "user") {
-      if (!notif.target_user_id) {
-        return jsonResponse({ error: "target_user_id required for target_type=user" }, { status: 400 });
-      }
-      tokensQuery = tokensQuery.eq("user_id", notif.target_user_id);
-    } else if (Array.isArray(notif.target_user_ids) && notif.target_user_ids.length > 0) {
-      tokensQuery = tokensQuery.in("user_id", notif.target_user_ids);
+    if (scope.scope === "user" || scope.scope === "list") {
+      tokensQuery = tokensQuery.in("user_id", scope.userIds);
     }
 
     const { data: tokens, error: tokensErr } = await tokensQuery;
@@ -310,7 +350,8 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: tokensErr.message }, { status: 500 });
     }
 
-    console.log(`[send-notification] sending to ${tokens?.length ?? 0} tokens (notif=${notif.id})`);
+    console.log(`[send-notification] scope=${scope.scope} sending to ${tokens?.length ?? 0} tokens (notif=${notif.id})`);
+
 
     const accessToken = await getGoogleAccessToken(clientEmail, privateKey);
 

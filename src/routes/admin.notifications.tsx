@@ -22,6 +22,10 @@ import {
 import { TemplateGallery } from "@/components/admin/notifications/TemplateGallery";
 import { DeliveryStatsPanel } from "@/components/admin/notifications/DeliveryStatsPanel";
 import { findTemplate, type NotificationTemplate } from "@/lib/notifications/admin/templates";
+import {
+  resolveAudience, validateNumericFilter, filterSegmentId,
+} from "@/lib/notifications/admin/segments";
+
 
 // ============================================================
 // /admin/notifications — Upgraded production composer.
@@ -236,7 +240,7 @@ function Composer({
 
   useEffect(() => { loadRecent(); }, [loadRecent]);
 
-  const buildPayload = () => {
+  const buildPayload = (override?: { resolvedIds?: string[] }) => {
     let extra: Record<string, unknown> = {};
     if (payloadText.trim()) {
       try { extra = JSON.parse(payloadText); }
@@ -245,8 +249,8 @@ function Composer({
     const mergedPayload = { ...destination.payload, ...extra };
 
     // Audience → legacy fields kept for backwards compatibility with the
-    // edge function. The new target_user_ids array activates only for
-    // segment sends; all/user paths stay byte-identical to the legacy flow.
+    // edge function. `target_user_ids` activates only for segment/filter
+    // sends; all/user paths stay byte-identical to the legacy flow.
     let target_type: string = "all";
     let target_user_id: string | null = null;
     let target_user_ids: string[] | null = null;
@@ -254,10 +258,14 @@ function Composer({
     if (audience.mode === "user") {
       target_type = "user";
       target_user_id = (audience.userId ?? "").trim() || null;
-    } else if (audience.mode === "segment") {
+    } else if (audience.mode === "segment" || audience.mode === "filter") {
       target_type = "segment";
-      target_user_ids = audience.resolvedIds ?? [];
-      target_segment_id = audience.segmentId ?? null;
+      const resolution = audience.resolution;
+      target_user_ids = override?.resolvedIds
+        ?? (resolution && resolution.status === "ok" ? resolution.userIds : []);
+      target_segment_id = audience.mode === "segment"
+        ? (audience.segmentId ?? null)
+        : (audience.filter ? filterSegmentId(audience.filter) : null);
     }
 
     return {
@@ -283,11 +291,19 @@ function Composer({
     if (!body.trim()) return "المحتوى مطلوب.";
     if (audience.mode === "user" && !(audience.userId ?? "").trim()) return "حدّد معرّف المستخدم.";
     if (audience.mode === "segment" && !audience.segmentId) return "اختر شريحة.";
-    if (audience.mode === "segment" && (audience.resolvedIds?.length ?? 0) === 0) {
-      return "الشريحة المختارة لا تحتوي على مستلمين.";
+    if (audience.mode === "filter") {
+      const invalid = validateNumericFilter(audience.filter);
+      if (invalid) return invalid;
+    }
+    if (audience.mode === "segment" || audience.mode === "filter") {
+      const resolution = audience.resolution;
+      if (!resolution || resolution.status === "loading") return "جارٍ حساب الجمهور — انتظر لحظة.";
+      if (resolution.status === "error") return `تعذّر تحديد الجمهور: ${resolution.message}`;
+      if (resolution.userIds.length === 0) return "الشريحة المختارة لا تحتوي على مستلمين.";
     }
     return null;
   };
+
 
   const createDraft = async () => {
     const err = validate();
@@ -315,8 +331,28 @@ function Composer({
     if (err) { toast.error(err); return; }
     setBusy(true);
     try {
+      let override: { resolvedIds: string[] } | undefined;
+      // Re-resolve immediately before sending: the composer may have been
+      // open for a long time, and the send must use a freshly validated
+      // audience — never a stale array. A failure here aborts the send.
+      if (audience.mode === "segment" || audience.mode === "filter") {
+        const fresh = await resolveAudience({
+          segmentId: audience.mode === "segment" ? audience.segmentId : null,
+          filter: audience.mode === "filter" ? audience.filter : null,
+        });
+        setAudience({ ...audience, resolution: fresh });
+        if (fresh.status === "error") {
+          toast.error(`أُلغي الإرسال — تعذّر تحديد الجمهور: ${fresh.message}`);
+          return;
+        }
+        if (fresh.userIds.length === 0) {
+          toast.error("أُلغي الإرسال — الشريحة لا تطابق أي مستخدم الآن.");
+          return;
+        }
+        override = { resolvedIds: fresh.userIds };
+      }
       const { data, error } = await supabase.functions.invoke("send-notification", {
-        body: buildPayload(),
+        body: buildPayload(override),
       });
       if (error) throw error;
       toast.success(`تم الإرسال — ${data?.sent ?? 0} ناجح / ${data?.failed ?? 0} فاشل من أصل ${data?.total ?? 0}.`);
@@ -327,6 +363,7 @@ function Composer({
       setBusy(false);
     }
   };
+
 
   const sendTestToMe = async () => {
     if (!title.trim() || !body.trim()) { toast.error("العنوان والمحتوى مطلوبان."); return; }
