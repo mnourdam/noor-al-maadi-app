@@ -293,20 +293,44 @@ Deno.serve(async (req) => {
       notif.status = "sent";
     }
 
-    // Load tokens. New: when `target_user_ids` is present (smart-segment
-    // send from the admin composer), restrict tokens to those users. This
-    // is purely additive — legacy "all" and "user" paths are unchanged.
+    // ── V16 audience scoping + hard anti-broadcast guard ───────────────
+    // `resolveTokenScope` fails closed for any segment send whose audience
+    // is missing, malformed or unverifiable. Only an explicit all-users
+    // target may reach `broadcast`.
+    const scope = resolveTokenScope(notif);
+    if (!scope.ok) {
+      await admin.from("notifications").update({ status: "failed" }).eq("id", notif.id);
+      console.error("[send-notification] audience rejected", scope.error);
+      return jsonResponse({ error: scope.error, sent: 0, failed: 0, total: 0 }, { status: scope.status });
+    }
+    try {
+      assertNoSegmentWidening(notif, scope);
+    } catch (guardErr) {
+      await admin.from("notifications").update({ status: "failed" }).eq("id", notif.id);
+      console.error("[send-notification]", (guardErr as Error).message);
+      return jsonResponse({ error: (guardErr as Error).message, sent: 0, failed: 0, total: 0 }, { status: 500 });
+    }
+
+    // Legitimate zero audience: the notification row stays (in-app value),
+    // but zero pushes are attempted. This must never become a broadcast.
+    if (scope.scope === "list" && scope.userIds.length === 0) {
+      console.log(`[send-notification] zero-audience segment (notif=${notif.id})`);
+      return jsonResponse({
+        ok: true,
+        zero_audience: true,
+        notification_id: notif.id,
+        sent: 0,
+        failed: 0,
+        total: 0,
+      });
+    }
+
     let tokensQuery = admin
       .from("device_tokens")
       .select("token, user_id")
       .eq("enabled", true);
-    if (notif.target_type === "user") {
-      if (!notif.target_user_id) {
-        return jsonResponse({ error: "target_user_id required for target_type=user" }, { status: 400 });
-      }
-      tokensQuery = tokensQuery.eq("user_id", notif.target_user_id);
-    } else if (Array.isArray(notif.target_user_ids) && notif.target_user_ids.length > 0) {
-      tokensQuery = tokensQuery.in("user_id", notif.target_user_ids);
+    if (scope.scope === "user" || scope.scope === "list") {
+      tokensQuery = tokensQuery.in("user_id", scope.userIds);
     }
 
     const { data: tokens, error: tokensErr } = await tokensQuery;
@@ -315,7 +339,8 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: tokensErr.message }, { status: 500 });
     }
 
-    console.log(`[send-notification] sending to ${tokens?.length ?? 0} tokens (notif=${notif.id})`);
+    console.log(`[send-notification] scope=${scope.scope} sending to ${tokens?.length ?? 0} tokens (notif=${notif.id})`);
+
 
     const accessToken = await getGoogleAccessToken(clientEmail, privateKey);
 
