@@ -9,7 +9,7 @@ import { recordTrace } from "@/lib/diag-trace";
 import { supabase } from "@/integrations/supabase/client";
 import { evaluateStoryUnlock, isAlwaysUnlockSpec } from "./unlock/local";
 import { buildGuestEvidence, guestUnlockState } from "./unlock/guest-evidence";
-import { isCampaignIntroRow, introStoryIdsFromCampaigns } from "./library-filter";
+import { isCampaignIntroRow } from "./library-filter";
 import { getActiveUserId } from "../identity/owner";
 
 const inflightSummary = new Map<string, Promise<StorySummary[]>>();
@@ -82,116 +82,45 @@ export { CAMPAIGN_INTRO_TAG } from "./library-filter";
 
 
 
-export async function listStoriesSummary(
+/**
+ * V16 — Home Stories are LOCAL FIRST.
+ *
+ * The rail must paint from bundled/local content on the first frame even in
+ * airplane mode with a clean install. The authoritative RPC is an ENHANCEMENT
+ * that runs with a short timeout; if it hangs, fails, or `navigator.onLine`
+ * lies (Android WebView reports `true` in airplane mode), the local catalog
+ * is returned instead. The rail is never hidden because of the network.
+ */
+export const STORY_SUMMARY_RPC_TIMEOUT_MS = 2500;
+
+export async function buildLocalStorySummaries(
   worldSlug?: string | null,
+  uid?: string | null,
 ): Promise<StorySummary[]> {
-  const started = performance.now();
-  const online = typeof navigator === "undefined" || navigator.onLine !== false;
-  const uid = await currentUid();
-
-  if (online) {
-    const key = `${uid ?? "guest"}:${worldSlug ?? ""}`;
-    const existing = inflightSummary.get(key);
-    if (existing) return existing;
-
-    const promise = (async () => {
-      try {
-        const started = performance.now();
-        // GUEST: the device is the unlock authority. `list_stories_guest_v3`
-        // is the anon-only mirror of the authoritative RPC — the server still
-        // renders the catalog, but `unlocked` is decided from local evidence,
-        // so a signed-out player gets the exact same progression experience.
-        const { data, error } = uid
-          ? await supabase.rpc("list_stories_v2" as never, {
-              p_world_slug: worldSlug ?? null,
-            } as never)
-          : await supabase.rpc("list_stories_guest_v3" as never, {
-              p_world_slug: worldSlug ?? null,
-              p_collection_id: null,
-              p_evidence: buildGuestEvidence(),
-            } as never);
-
-        // STALE CHECK: Identity changed while request was in-flight.
-        if (getActiveUserId() !== uid) {
-          return [];
-        }
-
-        if (error) {
-          // Online but the authoritative RPC failed: DO NOT fall back to the
-          // local snapshot. Falling back would re-surface stale/legacy story
-          // rows and create ghost cards on Home. Surface the error so React
-          // Query treats it as a failure and callers show empty state.
-          throw new Error(error.message);
-        }
-        // Normalise the editorial taxonomy so filters never see undefined/null
-        // shapes coming from either the authoritative or the guest RPC.
-        const rows = ((data ?? []) as StorySummary[])
-          .filter((r) => !isCampaignIntroRow(r as never))
-          .map((r) => ({
-            ...r,
-            category: r.category ?? null,
-            rarity: r.rarity ?? null,
-            length_class: r.length_class ?? null,
-            historical_confidence: r.historical_confidence ?? null,
-            tags: Array.isArray(r.tags) ? r.tags.filter((t) => typeof t === "string") : [],
-            story_collection_id: r.story_collection_id ?? null,
-            collection_order: r.collection_order ?? null,
-          }));
-
-        if (!worldSlug) {
-          void (async () => {
-            try {
-              const { pruneStoriesToAuthoritative } = await import("@/lib/local-first-store");
-              pruneStoriesToAuthoritative(rows.map((r) => r.id));
-            } catch { /* ignore */ }
-          })();
-        }
-        if (uid) {
-          void (async () => {
-            try {
-              const { loadUnlockedIds, persistUnlockedIds } = await import("./unlock-cache");
-              const prev = await loadUnlockedIds(uid);
-              for (const r of rows) if (r.unlocked) prev.add(r.id);
-              if (!worldSlug) {
-                const authoritative = new Set(rows.filter((r) => r.unlocked).map((r) => r.id));
-                for (const id of [...prev]) if (!authoritative.has(id) && rows.find((r) => r.id === id)) prev.delete(id);
-              }
-              await persistUnlockedIds(uid, prev);
-            } catch { /* ignore */ }
-          })();
-        }
-        const duration = Math.round(performance.now() - started);
-        return rows;
-      } finally {
-        inflightSummary.delete(key);
-      }
-    })();
-
-    inflightSummary.set(key, promise);
-    return promise;
-  }
-  // Offline fallback: synthesize catalog entries from the local snapshot.
-  // Unlocked flag uses the signed unlock cache so previously-unlocked
-  // stories remain playable; new unlocks NEVER happen offline.
   try {
     const {
-      ensureLocalSnapshotLoaded,
-      localStoriesAll,
-      localStoryScenes,
-      localPublishedCampaigns,
-    } = await import("@/lib/local-first-store");
-    await ensureLocalSnapshotLoaded();
+      getLocalLibraryStories,
+      getLocalSceneCount,
+      isBaselineInMemory,
+      getBaselineContent,
+    } = await import("@/lib/offline-baseline-resolver");
+
+    let rows = getLocalLibraryStories();
+    if (rows.length === 0 && !isBaselineInMemory()) {
+      // Nothing indexed yet and the bundled baseline was never parsed:
+      // parse it now (memory only — no IndexedDB wait).
+      await getBaselineContent();
+      rows = getLocalLibraryStories();
+    }
+
     const { loadUnlockedIds } = await import("./unlock-cache");
     const unlockedIds = uid ? await loadUnlockedIds(uid) : new Set<string>();
     // Guest: the device is the authority, so offline unlocks are evaluated
     // locally against the same evidence the online guest RPC receives.
     const guestState = uid ? null : guestUnlockState();
-    // The snapshot intentionally ships campaign intro rows (the intro player
-    // reads them offline), so the library feed filters them out here.
-    const introIds = introStoryIdsFromCampaigns(localPublishedCampaigns());
-    const all = localStoriesAll()
+
+    const all = rows
       .filter((s: any) => !worldSlug || s.world_slug === worldSlug)
-      .filter((s: any) => !isCampaignIntroRow(s, introIds))
       .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0));
 
     return all.map((s: any) => {
@@ -215,7 +144,7 @@ export async function listStoriesSummary(
         cover_media_id: s.cover_media_id ?? null,
         content_version: s.content_version ?? 1,
         published_at: s.published_at ?? null,
-        scene_count: localStoryScenes(String(s.id)).length,
+        scene_count: getLocalSceneCount(String(s.id)),
         category: s.category ?? null,
         rarity: s.rarity ?? null,
         length_class: s.length_class ?? null,
@@ -233,6 +162,107 @@ export async function listStoriesSummary(
   } catch {
     return [];
   }
+}
+
+export async function listStoriesSummary(
+  worldSlug?: string | null,
+): Promise<StorySummary[]> {
+  const online = typeof navigator === "undefined" || navigator.onLine !== false;
+  const uid = await currentUid();
+
+  if (!online) return buildLocalStorySummaries(worldSlug, uid);
+
+  const key = `${uid ?? "guest"}:${worldSlug ?? ""}`;
+  const existing = inflightSummary.get(key);
+  if (existing) return existing;
+
+  const promise = (async () => {
+    try {
+      // GUEST: the device is the unlock authority. `list_stories_guest_v3`
+      // is the anon-only mirror of the authoritative RPC — the server still
+      // renders the catalog, but `unlocked` is decided from local evidence,
+      // so a signed-out player gets the exact same progression experience.
+      const rpc = uid
+        ? supabase.rpc("list_stories_v2" as never, {
+            p_world_slug: worldSlug ?? null,
+          } as never)
+        : supabase.rpc("list_stories_guest_v3" as never, {
+            p_world_slug: worldSlug ?? null,
+            p_collection_id: null,
+            p_evidence: buildGuestEvidence(),
+          } as never);
+
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const timeout = new Promise<"timeout">((resolve) => {
+        timer = setTimeout(() => resolve("timeout"), STORY_SUMMARY_RPC_TIMEOUT_MS);
+      });
+      let settled: any;
+      try {
+        settled = await Promise.race([Promise.resolve(rpc), timeout]);
+      } finally {
+        if (timer) clearTimeout(timer);
+      }
+
+      // STALE CHECK: Identity changed while request was in-flight.
+      if (getActiveUserId() !== uid) {
+        return [];
+      }
+
+      if (settled === "timeout" || settled?.error || !settled?.data) {
+        // Network is unavailable, lying, or slow: local content wins.
+        return buildLocalStorySummaries(worldSlug, uid);
+      }
+
+      const data = settled.data;
+      // Normalise the editorial taxonomy so filters never see undefined/null
+      // shapes coming from either the authoritative or the guest RPC.
+      const rows = ((data ?? []) as StorySummary[])
+        .filter((r) => !isCampaignIntroRow(r as never))
+        .map((r) => ({
+          ...r,
+          category: r.category ?? null,
+          rarity: r.rarity ?? null,
+          length_class: r.length_class ?? null,
+          historical_confidence: r.historical_confidence ?? null,
+          tags: Array.isArray(r.tags) ? r.tags.filter((t) => typeof t === "string") : [],
+          story_collection_id: r.story_collection_id ?? null,
+          collection_order: r.collection_order ?? null,
+        }));
+
+      if (rows.length === 0) return buildLocalStorySummaries(worldSlug, uid);
+
+      if (!worldSlug) {
+        void (async () => {
+          try {
+            const { pruneStoriesToAuthoritative } = await import("@/lib/local-first-store");
+            pruneStoriesToAuthoritative(rows.map((r) => r.id));
+          } catch { /* ignore */ }
+        })();
+      }
+      if (uid) {
+        void (async () => {
+          try {
+            const { loadUnlockedIds, persistUnlockedIds } = await import("./unlock-cache");
+            const prev = await loadUnlockedIds(uid);
+            for (const r of rows) if (r.unlocked) prev.add(r.id);
+            if (!worldSlug) {
+              const authoritative = new Set(rows.filter((r) => r.unlocked).map((r) => r.id));
+              for (const id of [...prev]) if (!authoritative.has(id) && rows.find((r) => r.id === id)) prev.delete(id);
+            }
+            await persistUnlockedIds(uid, prev);
+          } catch { /* ignore */ }
+        })();
+      }
+      return rows;
+    } catch {
+      return buildLocalStorySummaries(worldSlug, uid);
+    } finally {
+      inflightSummary.delete(key);
+    }
+  })();
+
+  inflightSummary.set(key, promise);
+  return promise;
 }
 
 async function currentUid(): Promise<string | null> {

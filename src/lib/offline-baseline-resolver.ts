@@ -186,6 +186,28 @@ export function getLocalLibraryStories(): any[] {
   return [];
 }
 
+/** True when the bundled baseline is already parsed in memory. */
+export function isBaselineInMemory(): boolean {
+  return !!_memoryBaseline;
+}
+
+/**
+ * Synchronous scene count for a story, local-first:
+ * local-first-store index → in-memory bundled baseline → 0.
+ */
+export function getLocalSceneCount(storyId: string): number {
+  if (lfs.isLocalReady()) {
+    const scenes = lfs.localStoryScenes(String(storyId)) || [];
+    if (scenes.length > 0) return scenes.length;
+  }
+  if (_memoryBaseline) {
+    return _memoryBaseline.collections.story_scenes.filter(
+      (s: any) => String(s.story_id) === String(storyId),
+    ).length;
+  }
+  return 0;
+}
+
 /**
  * Synchronous local list of published games, following the Phase 2 priority.
  */

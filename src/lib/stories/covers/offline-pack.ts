@@ -24,18 +24,41 @@ import {
   OFFLINE_STORY_COVER_IDS,
   OFFLINE_STORY_COVER_VERSIONS,
 } from "./offline-pack.generated";
+import { STORY_COVER_MEDIA_MAP, STORIES_WITHOUT_COVER } from "./cover-map.generated";
+import { localStoryMediaPath } from "@/lib/stories/media/offline-pack";
+
+const NO_COVER: ReadonlySet<string> = new Set(STORIES_WITHOUT_COVER);
 
 const BUNDLED: ReadonlySet<string> = new Set(OFFLINE_STORY_COVER_IDS);
 
+// V16: the authoritative cover source is the Story Media Pack
+// (`/story-media/<cover_media_id>.webp`), generated for EVERY published
+// story by scripts/generate-story-cover-map.mjs. The legacy 3-entry
+// `/story-covers` pack is kept only as a secondary fallback.
+
+/** Packaged cover media id for this story, if any. */
+export function packagedCoverMediaId(storyId: string | null | undefined): string | null {
+  if (!storyId) return null;
+  const id = STORY_COVER_MEDIA_MAP[storyId];
+  return typeof id === "string" && id ? id : null;
+}
+
 /** True when this story's card cover ships with the app — no network needed. */
 export function hasOfflineStoryCover(storyId: string | null | undefined): boolean {
-  return !!storyId && BUNDLED.has(storyId);
+  return !!packagedCoverMediaId(storyId) || (!!storyId && BUNDLED.has(storyId));
 }
 
 /** Local, same-origin path for a bundled story cover. */
 export function localStoryCoverPath(storyId: string | null | undefined): string | null {
-  if (!hasOfflineStoryCover(storyId)) return null;
+  const mediaId = packagedCoverMediaId(storyId);
+  if (mediaId) return localStoryMediaPath(mediaId);
+  if (!storyId || !BUNDLED.has(storyId)) return null;
   return `/story-covers/${storyId}.webp`;
+}
+
+/** True when the story is published with no authored cover at all. */
+export function storyHasNoAuthoredCover(storyId: string | null | undefined): boolean {
+  return !!storyId && NO_COVER.has(storyId);
 }
 
 /**
