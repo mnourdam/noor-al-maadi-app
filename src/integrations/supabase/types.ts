@@ -3767,6 +3767,10 @@ export type Database = {
         Args: { p_segment_id: string }
         Returns: string[]
       }
+      admin_resolve_segment_v16: {
+        Args: { p_filter?: Json; p_segment_id?: string }
+        Returns: string[]
+      }
       admin_restore_campaign_version: {
         Args: { p_as_draft?: boolean; p_id: string; p_version: number }
         Returns: Json
@@ -3823,6 +3827,10 @@ export type Database = {
           p_id: string
           p_version_signal?: string
         }
+        Returns: Json
+      }
+      admin_segment_audience_v16: {
+        Args: { p_filter?: Json; p_segment_id?: string }
         Returns: Json
       }
       admin_set_account_status: {
