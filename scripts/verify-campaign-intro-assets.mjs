@@ -32,18 +32,44 @@ try {
   fatal(`${SNAPSHOT_PATH} is not valid JSON: ${e?.message ?? e}`);
 }
 
-const collections = snap?.collections ?? {};
+const collections = { ...(snap?.collections ?? {}) };
+
+// V16 — story rows (library + campaign intros) are exported at build time
+// into `public/baseline-content.json` and shipped alongside the snapshot.
+// The gate must judge the FULL packaged content, not the snapshot alone.
+const BASELINE_PATH = process.argv[3] ?? "public/baseline-content.json";
+const baselineAbs = resolve(process.cwd(), BASELINE_PATH);
+if (existsSync(baselineAbs)) {
+  try {
+    const baseline = JSON.parse(readFileSync(baselineAbs, "utf8"));
+    for (const [key, rows] of Object.entries(baseline?.collections ?? {})) {
+      if (!Array.isArray(rows) || rows.length === 0) continue;
+      const existing = Array.isArray(collections[key]) ? collections[key] : [];
+      const byId = new Map(existing.map((r) => [r?.id, r]));
+      for (const row of rows) if (row?.id) byId.set(row.id, row);
+      collections[key] = [...byId.values()];
+    }
+  } catch (e) {
+    fatal(`${BASELINE_PATH} is not valid JSON: ${e?.message ?? e}`);
+  }
+} else {
+  fatal(`missing ${BASELINE_PATH} — run \`npm run content:stories\` before the intro gate`);
+}
+
+// Physical media pack — an intro is only "playable offline" when its bytes
+// are actually on the device.
+const packManifestPath = resolve(process.cwd(), "public/story-media/manifest.json");
+if (!existsSync(packManifestPath)) {
+  fatal("missing public/story-media/manifest.json — run `npm run pack:story-media`");
+}
+const packedMedia = new Set(
+  Object.keys(JSON.parse(readFileSync(packManifestPath, "utf8"))?.assets ?? {}),
+);
 
 const auditUrl = pathToFileURL(
   resolve(process.cwd(), "src/lib/campaigns/intro/audit.ts"),
 ).href;
 const { auditCampaignIntroAssets, INTRO_ENGINE_VERSION } = await import(auditUrl);
-
-// Story rows are synced at runtime through `stories_snapshot_manifest_v2`
-// and are not part of every bundled snapshot file. When the snapshot ships
-// no story collection at all there is nothing to verify — the gate warns
-// instead of failing a build it cannot judge.
-const hasStoryCollections = Array.isArray(collections.stories);
 
 const result = auditCampaignIntroAssets({
   campaigns: collections.admin_campaigns ?? [],
@@ -56,16 +82,47 @@ const authored = result.entries.length;
 const skipped = result.entries.filter((e) => e.skippedFutureEngine).length;
 const ready = result.entries.filter((e) => e.ready).length;
 
-if (!result.ok && !hasStoryCollections) {
-  console.warn(
-    `[campaign-intro-gate] WARN: snapshot carries no story collections; ` +
-      `${authored - skipped} authored intro(s) not verified offline.`,
-  );
-} else if (!result.ok) {
+if (!result.ok) {
   for (const err of result.errors) console.error(`  - ${err}`);
   fatal(
     `${result.errors.length} missing intro asset(s) across ${authored - ready - skipped} campaign(s)`,
   );
+}
+
+// Every intro declared ready must ALSO have every referenced media byte
+// packaged locally, otherwise "playable offline" is a lie.
+const storyById = new Map((collections.stories ?? []).map((s) => [s.id, s]));
+const scenesByStory = new Map();
+for (const sc of collections.story_scenes ?? []) {
+  const list = scenesByStory.get(sc.story_id);
+  if (list) list.push(sc);
+  else scenesByStory.set(sc.story_id, [sc]);
+}
+const { sceneMediaIds } = await import(
+  pathToFileURL(resolve(process.cwd(), "scripts/lib/story-export.mjs")).href
+);
+const mediaProblems = [];
+for (const entry of result.entries) {
+  if (entry.skippedFutureEngine) continue;
+  const story = storyById.get(entry.storyId);
+  const needed = new Set();
+  if (story?.cover_media_id) needed.add(story.cover_media_id);
+  for (const sc of scenesByStory.get(entry.storyId) ?? []) {
+    for (const id of sceneMediaIds(sc)) needed.add(id);
+  }
+  for (const id of needed) {
+    if (!packedMedia.has(id)) {
+      mediaProblems.push(`campaign ${entry.campaignId}: intro media ${id} is not in the local media pack`);
+    }
+  }
+}
+if (mediaProblems.length > 0) {
+  for (const p of mediaProblems.slice(0, 25)) console.error(`  - ${p}`);
+  fatal(`${mediaProblems.length} campaign intro media asset(s) missing from the offline pack`);
+}
+
+if (authored - skipped > 0 && ready === 0) {
+  fatal(`${authored - skipped} authored intro(s) but 0 playable offline`);
 }
 
 

@@ -25,6 +25,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { StoryMediaRow } from "./dao";
+import { localStoryMediaPath } from "./offline-pack";
 
 type MediaLike = Pick<StoryMediaRow, "storage_bucket" | "storage_path"> &
   Partial<Pick<StoryMediaRow, "id" | "processing_version">>;
@@ -100,6 +101,11 @@ export function storyMediaCacheKey(row: MediaLike | null | undefined): string | 
 export async function resolveCachedStoryMediaUrl(
   row: MediaLike | null | undefined,
 ): Promise<string | null> {
+  // V16 — LOCAL FIRST. A media asset bundled in this build always wins:
+  // it needs no signing, no network, and works on a clean airplane-mode
+  // install. Signed URLs are the online-only fallback below.
+  const bundled = localStoryMediaPath(row?.id ?? null);
+  if (bundled) return bundled;
   const key = storyMediaCacheKey(row);
   if (!key) return null;
   const { resolveKeyedImageUrl } = await import("@/lib/image-cache");
@@ -115,6 +121,8 @@ export async function prefetchStoryMediaRows(
   const entries: { key: string; getUrl: () => Promise<string | null> }[] = [];
   for (const row of rows) {
     if (row?.verified === false) continue;
+    // Bundled assets are already on disk — never spend a signing round-trip.
+    if (localStoryMediaPath(row?.id ?? null)) continue;
     const key = storyMediaCacheKey(row);
     if (!key) continue;
     entries.push({ key, getUrl: () => signStoryMediaUrl(row) });
