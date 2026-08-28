@@ -17,7 +17,7 @@
 // ============================================================
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
-import { sceneMediaIds } from "./lib/story-export.mjs";
+import { sceneMediaIds, isIntroStory } from "./lib/story-export.mjs";
 
 const BASELINE = resolve(process.cwd(), process.argv[2] ?? "public/baseline-content.json");
 const PACK_DIR = resolve(process.cwd(), "public/story-media");
@@ -63,11 +63,14 @@ let sceneRefs = 0;
 
 for (const story of stories) {
   const required = new Set();
+  // Campaign intros are launched from campaign Key Art (a bundled app asset),
+  // so they legitimately carry no story cover. Library stories must have one.
+  const intro = isIntroStory(story, new Set());
   if (story.cover_media_id) {
     required.add(story.cover_media_id);
     coversChecked++;
-  } else {
-    problems.push(`story ${story.id} has no cover_media_id`);
+  } else if (!intro) {
+    problems.push(`library story ${story.id} has no cover_media_id`);
   }
   for (const scene of scenesByStory.get(story.id) ?? []) {
     for (const id of sceneMediaIds(scene)) {
