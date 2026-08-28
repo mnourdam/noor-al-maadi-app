@@ -104,16 +104,6 @@ export function StoryPlayer({
     });
   }, [phase, scene, story.id, alreadyCompleted]);
 
-  // --- Auto advance ----------------------------------------------
-  useEffect(() => {
-    // Disable auto-advance during export or when paused.
-    if (phase !== "playing" || !autoAdvance || paused || isLongPressing || exportLockScene !== null) return;
-    const t = window.setTimeout(() => {
-      void goNext();
-    }, dwellMs);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, idx, paused, dwellMs, autoAdvance, exportLockScene]);
 
   // --- Sync long-press halo with pause state ---------------------
   useEffect(() => {
@@ -215,6 +205,16 @@ export function StoryPlayer({
     addDinars,
     queryClient,
   ]);
+
+  // --- Auto advance ----------------------------------------------
+  useEffect(() => {
+    // Disable auto-advance during export or when paused.
+    if (phase !== "playing" || !autoAdvance || paused || isLongPressing || exportLockScene !== null) return;
+    const t = window.setTimeout(() => {
+      void goNext();
+    }, dwellMs);
+    return () => clearTimeout(t);
+  }, [phase, idx, paused, dwellMs, autoAdvance, exportLockScene, isLongPressing, goNext]);
 
   const goPrev = useCallback(() => {
     setIdx((n) => Math.max(0, n - 1));
