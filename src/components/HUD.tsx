@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, memo } from "react";
 import { Heart, Coins, Flame, Bell, Star } from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import { useProfile } from "@/lib/profile";
+import { useProfile, deriveStreak } from "@/lib/profile";
 import { HEART_MAX, getEffectiveHearts, msUntilNextHeart, formatHeartTimer } from "@/lib/hearts";
 import { formatBadgeCount } from "@/lib/notifications";
 import { fetchMyUnreadCount, subscribeToMyNotifications } from "@/lib/notifications/server";
