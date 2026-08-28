@@ -17,7 +17,7 @@
  * This runs as part of `npm run sync:android` so the developer never has to
  * hand-edit index.html.
  */
-import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, readdirSync, statSync, rmSync } from "node:fs";
 import { join, relative, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -69,6 +69,26 @@ function main() {
     console.error("[finalize-android] failed: dist/android/assets is missing.");
     process.exit(1);
   }
+
+  // Android/Capacitor asset merging treats `offline-snapshot.json` and
+  // `offline-snapshot.json.gz` as duplicate resources for the same asset and
+  // fails at :app:mergeDebugAssets. The runtime only ever fetches the plain
+  // JSON, so the compressed twin (a repository artifact only) is dropped from
+  // the Android web bundle here — after Vite copied /public, before cap sync.
+  const runtimeSnapshot = join(OUT_DIR, "offline-snapshot.json");
+  const gzSnapshot = `${runtimeSnapshot}.gz`;
+  if (!existsSync(runtimeSnapshot)) {
+    console.error("[finalize-android] failed: dist/android/offline-snapshot.json is missing.");
+    process.exit(1);
+  }
+  if (existsSync(gzSnapshot)) {
+    rmSync(gzSnapshot);
+    console.log("[finalize-android] removed dist/android/offline-snapshot.json.gz from the Android bundle");
+  }
+  console.log(
+    `[finalize-android] verified runtime snapshot (${statSync(runtimeSnapshot).size} bytes)`,
+  );
+
 
   const emblemDir = join(OUT_DIR, "emblems");
   const emblemManifest = join(emblemDir, "manifest.json");
