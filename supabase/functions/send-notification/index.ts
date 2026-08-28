@@ -239,9 +239,14 @@ Deno.serve(async (req) => {
         type: body.type ?? "manual",
         target_type: body.target_type ?? "all",
         target_user_id: body.target_user_id ?? null,
+        // V16: the audience MUST be persisted. Dropping these fields is what
+        // silently turned a segment send into a full broadcast.
+        target_user_ids: Array.isArray(body.target_user_ids) ? body.target_user_ids : null,
+        target_segment_id: typeof body.target_segment_id === "string" ? body.target_segment_id : null,
         deep_link: body.deep_link ?? null,
         image_url: body.image_url ?? null,
         dedupe_key: dedupeKey,
+
         // Mark as sent immediately. Push delivery is best-effort; in-app
         // visibility (banner, bell badge, notification center, realtime
         // listeners) MUST work even when the user has no FCM token or the
