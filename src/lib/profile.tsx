@@ -868,25 +868,26 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       }
     },
 
-    // Phase 3A — canonical qualifying-activity call.
+    // V16 — durable qualifying-activity call.
     recordStreakActivity: async (source, sourceId) => {
-      // Local mirror first so the guest path stays instant.
       const { recordStreakActivity: rpc } = await import("./streak-activity");
       const outcome = await rpc(source, sourceId ?? null);
       if (outcome.ok !== true) {
-        // Guest / offline / rpc error — fall back to local increment so UX
-        // still reflects the activity. Server sync will reconcile on reconnect.
+        // Guest, offline, timeout or RPC error. The authenticated case is
+        // already DURABLY QUEUED (`streak_activity` outbox kind) and will
+        // replay with the original IRTH day, so the local mirror here is
+        // purely optimistic UI — it never fabricates server truth.
         update((p) => {
           const today = todayKey();
           if (p.lastActiveDay === today) return p;
-          const y = new Date(); y.setDate(y.getDate() - 1);
-          const yesterday = todayKey(y);
-          const streak = p.lastActiveDay === yesterday ? p.streak + 1 : 1;
+          const yesterday = irthYesterdayKey();
+          const streak = p.lastActiveDay === yesterday ? p.streak + 1 : Math.max(1, 1);
           const longestStreak = Math.max(p.longestStreak ?? 0, streak);
           return { ...p, streak, longestStreak, lastActiveDay: today };
         });
         return;
       }
+
       // Server authoritative — mirror totals into local state.
       update((p) => {
         let np: ProfileState = {
@@ -1049,16 +1050,10 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         changed = true;
       }
       if (typeof stats.streak === "number") {
-        const target = Math.max(0, Math.floor(stats.streak));
-        const derived = deriveStreak(p.streak, p.lastActiveDay);
-        let nextStreak: number;
-        if (derived.status === "expired") {
-          nextStreak = 0;
-        } else if (derived.status === "safe") {
-          nextStreak = Math.max(p.streak, target);
-        } else {
-          nextStreak = target;
-        }
+        // V16: server value is authoritative and adopted verbatim. Never
+        // zeroed from a client-side day derivation.
+        const nextStreak = Math.max(0, Math.floor(stats.streak));
+
         if (nextStreak !== p.streak) {
           next = { ...next, streak: nextStreak };
           changed = true;
