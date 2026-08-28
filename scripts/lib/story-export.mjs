@@ -124,7 +124,7 @@ export async function fetchStoryGraph(env) {
     restAll(env, "games?select=*&status=eq.published&order=id.asc"),
     restAll(env, "stories?select=*&status=eq.published&order=id.asc"),
     restAll(env, "story_collections?select=*&order=display_order.asc"),
-    restAll(env, "admin_campaigns?select=id,data"),
+    restAll(env, "admin_campaigns?select=id,data&order=id.asc"),
   ]);
 
   const introIds = new Set(
