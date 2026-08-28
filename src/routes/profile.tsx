@@ -37,6 +37,8 @@ import {
   useAchievementCompletion, useNearestAchievement, useLatestUnlockedAchievement,
 } from "@/lib/achievements/v2/selectors";
 import { useProfile } from "@/lib/profile";
+import { irthDayKey } from "@/lib/irth-day";
+
 import { useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
 import { useAllWorldsProgress } from "@/lib/worlds-progress";
 import { useCampaignRecommendation } from "@/lib/campaignRecommendationService";
