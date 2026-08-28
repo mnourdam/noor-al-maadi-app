@@ -15,7 +15,7 @@
 // ============================================================
 
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
+import { readBundledSnapshotText } from "../helpers/bundled-snapshot";
 import { buildFeed, groupFeedIntoSections } from "@/lib/campaignDividers";
 import { partitionCampaignRows } from "@/lib/campaigns/entities";
 import { sortCampaignsChronological } from "@/lib/campaignChronology";
@@ -50,7 +50,7 @@ function adminSequence(rows: Row[]) {
 }
 
 function loadSnapshotRows(): Row[] {
-  const raw = readFileSync("public/offline-snapshot.json", "utf-8");
+  const raw = readBundledSnapshotText();
   return JSON.parse(raw).collections.admin_campaigns as Row[];
 }
 

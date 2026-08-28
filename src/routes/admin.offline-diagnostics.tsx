@@ -16,6 +16,8 @@ import {
   generateAndStoreSnapshot,
 } from "@/lib/offline-snapshot";
 import { localSnapshotInfo, ensureLocalSnapshotLoaded, applyLocalSnapshot } from "@/lib/local-first-store";
+import { fetchContentManifest, type ContentManifestItem } from "@/lib/offline-manifest";
+import { checkForContentUpdate, applyContentUpdate, getContentUpdateState } from "@/lib/offline-content-update";
 import { supabase } from "@/integrations/supabase/client";
 import { peekAll, type OutboxItem } from "@/lib/offline/outbox";
 import { flushOutbox, getLastFlushAt } from "@/lib/offline/flush";
@@ -245,6 +247,9 @@ function OfflineDiagnostics() {
             value={snap ? `v${snap.snapshot_version} (schema ${snap.schema_version}/${SNAPSHOT_SCHEMA_VERSION})` : "—"}
           />
         </section>
+
+        {/* Content release-pipeline card (V16) */}
+        <ContentPipelineCard onLog={appendLog} />
 
         {/* Required warnings */}
         {requiredMissing.length > 0 && (
@@ -511,3 +516,99 @@ function CinematicOpeningReset() {
   );
 }
 
+
+
+/**
+ * V16 content release pipeline diagnostics: distinguishes the ACTIVE local
+ * snapshot, the snapshot bundled inside the APK, the current server
+ * manifest, and whether a user-facing update is available.
+ */
+function ContentPipelineCard({ onLog }: { onLog: (msg: string) => void }) {
+  const [local, setLocal] = useState<OfflineSnapshot | null>(null);
+  const [bundled, setBundled] = useState<OfflineSnapshot | null>(null);
+  const [manifest, setManifest] = useState<ContentManifestItem[] | null>(null);
+  const [update, setUpdate] = useState(getContentUpdateState());
+  const [busy, setBusy] = useState<string | null>(null);
+
+  useEffect(() => {
+    void (async () => {
+      setLocal(await loadSnapshot());
+      setManifest(await fetchContentManifest());
+      await checkForContentUpdate();
+      setUpdate(getContentUpdateState());
+    })();
+  }, []);
+
+  const inspectBundled = async () => {
+    setBusy("bundled");
+    try {
+      const { loadBundledSnapshot } = await import("@/lib/offline-snapshot");
+      const b = await loadBundledSnapshot();
+      setBundled(b);
+      onLog(b ? `النسخة المرفقة: v${b.snapshot_version} (${b.generated_at})` : "تعذّر قراءة النسخة المرفقة.");
+    } finally { setBusy(null); }
+  };
+
+  const runUpdate = async () => {
+    setBusy("update");
+    onLog("بدء تحديث المحتوى (مرحلي: تحقق ← حفظ ← تفعيل)…");
+    try {
+      const ok = await applyContentUpdate();
+      onLog(ok ? "تم تفعيل المحتوى الجديد." : "فشل التحديث — تم الإبقاء على النسخة السابقة.");
+      setLocal(await loadSnapshot());
+      setUpdate(getContentUpdateState());
+    } finally { setBusy(null); }
+  };
+
+  return (
+    <section className="rounded-xl border border-slate-700 bg-slate-900/50 p-4">
+      <h2 className="mb-3 text-sm font-semibold text-amber-200">مسار إصدار المحتوى (V16)</h2>
+      <div className="grid gap-3 md:grid-cols-3">
+        <div className="rounded-lg border border-slate-800 bg-slate-950/40 p-3">
+          <p className="text-xs text-slate-400">النسخة الفعّالة محليًا</p>
+          <p className="mt-1 text-sm text-slate-100">{local ? `v${local.snapshot_version}` : "—"}</p>
+          <p className="text-[11px] text-slate-500">{fmtDate(local?.generated_at)}</p>
+          <p className="text-[11px] text-slate-400">
+            الموسوعة: {local?.content_counts?.encyclopedia_entities ?? 0}
+          </p>
+        </div>
+        <div className="rounded-lg border border-slate-800 bg-slate-950/40 p-3">
+          <p className="text-xs text-slate-400">النسخة المرفقة داخل التطبيق</p>
+          <p className="mt-1 text-sm text-slate-100">{bundled ? `v${bundled.snapshot_version}` : "غير مفحوصة"}</p>
+          <p className="text-[11px] text-slate-500">{fmtDate(bundled?.generated_at)}</p>
+          <button
+            onClick={() => void inspectBundled()}
+            disabled={busy !== null}
+            className="mt-2 rounded-md border border-slate-700 px-2 py-1 text-[11px] text-slate-200 hover:bg-slate-800 disabled:opacity-50"
+          >
+            فحص النسخة المرفقة
+          </button>
+        </div>
+        <div className="rounded-lg border border-slate-800 bg-slate-950/40 p-3">
+          <p className="text-xs text-slate-400">محتوى الخادم (Manifest)</p>
+          <ul className="mt-1 space-y-0.5 text-[11px] text-slate-300">
+            {(manifest ?? []).map((m) => (
+              <li key={m.collection} className="tabular-nums">{m.collection}: {m.total_count}</li>
+            ))}
+            {!manifest && <li className="text-slate-500">غير متاح</li>}
+          </ul>
+        </div>
+      </div>
+      <div className="mt-3 flex items-center gap-3">
+        <span className={`text-xs ${update.available ? "text-amber-300" : "text-emerald-300"}`}>
+          {update.available ? `يتوفر تحديث للمحتوى (${update.collections.join("، ")})` : "المحتوى المحلي مطابق للخادم"}
+        </span>
+        {update.available && (
+          <button
+            onClick={() => void runUpdate()}
+            disabled={busy !== null}
+            className="rounded-md border border-amber-500/40 bg-amber-500/10 px-2.5 py-1 text-[11px] text-amber-200 hover:bg-amber-500/20 disabled:opacity-50"
+          >
+            {busy === "update" ? "جارٍ التحديث…" : "تحديث المحتوى الآن"}
+          </button>
+        )}
+        {update.error && <span className="text-[11px] text-rose-300">{update.error}</span>}
+      </div>
+    </section>
+  );
+}

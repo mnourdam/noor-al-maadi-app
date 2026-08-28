@@ -20,6 +20,7 @@ import { AccountProvider } from "../lib/account";
 import { FirstLaunchGate } from "../components/FirstLaunchGate";
 import { CinematicOpening } from "../components/cinematic/CinematicOpening";
 import { Toaster } from "../components/ui/sonner";
+import { ContentUpdateBanner } from "../components/ContentUpdateBanner";
 import { AudioInitializer } from "../components/AudioInitializer";
 import { AchievementWatcher } from "../components/AchievementWatcher";
 import { AchievementEngineBoot } from "../lib/achievements/v2/driver";
@@ -378,6 +379,7 @@ function RootComponent() {
               <InvestigationLegacyBackfill />
               <LevelUpWatcher />
               <StoryUnlockCelebration />
+              <ContentUpdateBanner />
               <Toaster position="top-center" richColors closeButton />
               <SplashSequence />
               {/* Hardware Back + exit dialog now owned by <NavigationProvider>. */}

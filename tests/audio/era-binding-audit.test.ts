@@ -12,6 +12,7 @@
 // ============================================================
 import { describe, it, expect } from "bun:test";
 import { readFileSync, existsSync } from "node:fs";
+import { readBundledSnapshot } from "../helpers/bundled-snapshot";
 import { createHash } from "node:crypto";
 import { join, basename } from "node:path";
 import { resolveAmbienceSection } from "@/lib/audio/campaignAmbienceResolver";
@@ -45,8 +46,7 @@ interface Row {
 }
 
 function publishedCampaigns(): Row[] {
-  const path = join(ROOT, "public/offline-snapshot.json");
-  const snap = JSON.parse(readFileSync(path, "utf8"));
+  const snap = readBundledSnapshot();
   const rows: any[] = snap.collections?.admin_campaigns ?? [];
   return rows
     .map((r) => ({ raw: r, d: (r.data ?? {}) as any }))

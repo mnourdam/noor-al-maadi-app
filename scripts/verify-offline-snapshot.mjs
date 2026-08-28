@@ -32,6 +32,7 @@
 import { existsSync, statSync, readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { resolve } from "node:path";
+import { compareWithManifest } from "./lib/offline-snapshot-build.mjs";
 
 const MODE = process.argv[2] ?? "pre"; // "pre" | "post"
 
@@ -113,6 +114,17 @@ function loadAndValidate(rel) {
     fatal(`${rel} missing collections object`);
   }
 
+  // generated_at must be a real, non-future timestamp. A well-formed but
+  // future-dated snapshot reads as "always fresh" at runtime and silently
+  // suppresses every update check.
+  const generatedAt = Date.parse(parsed.generated_at ?? "");
+  if (!Number.isFinite(generatedAt)) {
+    fatal(`${rel} generated_at is missing or not a valid date (${parsed.generated_at})`);
+  }
+  if (generatedAt > Date.now() + 60_000) {
+    fatal(`${rel} generated_at is in the future (${parsed.generated_at})`);
+  }
+
   const counts = {};
   for (const key of REQUIRED_COLLECTIONS) {
     const val = parsed.collections[key];
@@ -154,8 +166,62 @@ function loadAndValidate(rel) {
   return { size: st.size, digest, parsed, counts };
 }
 
+/**
+ * Freshness gate: a well-formed but STALE snapshot must not give false
+ * confidence. Cross-check the candidate against the live content manifest.
+ * Fails closed — an unreachable manifest during a normal Android build is
+ * treated as "cannot prove freshness", not as success.
+ */
+async function assertFreshAgainstProduction(parsed) {
+  if (process.env.ALLOW_STALE_SNAPSHOT === "1" || process.env.SKIP_SNAPSHOT_GEN === "1") {
+    console.warn("[offline-snapshot-guard] freshness check skipped (developer opt-out)");
+    return;
+  }
+  let url = process.env.VITE_SUPABASE_URL;
+  let key = process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  if ((!url || !key) && existsSync(resolve(process.cwd(), ".env"))) {
+    for (const line of readFileSync(resolve(process.cwd(), ".env"), "utf8").split("\n")) {
+      const i = line.indexOf("=");
+      if (i < 1 || line.trim().startsWith("#")) continue;
+      const k = line.slice(0, i).trim();
+      const v = line.slice(i + 1).trim().replace(/^["']|["']$/g, "");
+      if (k === "VITE_SUPABASE_URL" && !url) url = v;
+      if (k === "VITE_SUPABASE_PUBLISHABLE_KEY" && !key) key = v;
+    }
+  }
+  if (!url || !key) {
+    fatal("cannot verify snapshot freshness: Supabase credentials unavailable (set ALLOW_STALE_SNAPSHOT=1 to override)");
+  }
+
+  let manifest;
+  try {
+    const res = await fetch(`${url}/rest/v1/rpc/get_content_manifest`, {
+      method: "POST",
+      headers: { apikey: key, "content-type": "application/json" },
+      body: "{}",
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    manifest = await res.json();
+  } catch (e) {
+    fatal(
+      `cannot verify snapshot freshness against production (${e?.message ?? e}). ` +
+        `Refusing to package possibly stale content — set ALLOW_STALE_SNAPSHOT=1 for an intentional offline build.`
+    );
+  }
+
+  const stale = compareWithManifest(parsed, manifest);
+  if (stale.length > 0) {
+    fatal(
+      `snapshot is STALE versus production content:\n  - ${stale.join("\n  - ")}\n` +
+        `Run \`npm run snapshot:generate\` to regenerate.`
+    );
+  }
+  console.log("[offline-snapshot-guard] freshness verified against production content manifest");
+}
+
 if (MODE === "pre") {
-  loadAndValidate(SOURCE_PATH);
+  const src = loadAndValidate(SOURCE_PATH);
+  await assertFreshAgainstProduction(src.parsed);
 } else if (MODE === "post") {
   const src = loadAndValidate(SOURCE_PATH);
   const dst = loadAndValidate(SYNCED_PATH);

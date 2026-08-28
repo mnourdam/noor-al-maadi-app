@@ -123,8 +123,8 @@ describe("era transitions swap the track immediately", () => {
 // ------------------------------------------------------------
 describe("authored campaign content ↔ era music integrity", () => {
   it("every published campaign resolves to a known era with a track", async () => {
-    const fs = await import("node:fs");
-    const snap = JSON.parse(fs.readFileSync("public/offline-snapshot.json", "utf8"));
+    const { readBundledSnapshot } = await import("../helpers/bundled-snapshot");
+    const snap = readBundledSnapshot();
     const rows: any[] = snap.collections.admin_campaigns ?? [];
     const campaigns = rows.filter((r) => !String(r.id).startsWith("div_"));
     const unknown: string[] = [];
