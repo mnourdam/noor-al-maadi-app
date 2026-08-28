@@ -479,12 +479,89 @@ export async function handleNativeAuthCallback(url: string | null | undefined): 
       }
     }
   } else {
+    // FAIL-SOFT: a replayed / already-consumed code produces an exchange
+    // failure even though the session was created on the first pass. Never
+    // show the error screen while a recoverable session exists.
+    const recovered = await recoverExistingSession();
+    if (recovered) {
+      console.info("[IrthAuth] AUTH_RECOVERED_AFTER_FAILED_EXCHANGE");
+      recordTrace("native-auth", "AUTH_RECOVERED_AFTER_FAILED_EXCHANGE");
+      if (isRecoveryLink) {
+        if (typeof window !== "undefined") window.location.replace("/reset-password");
+      } else if (typeof window !== "undefined") {
+        const dest = consumeAuthOrigin("/profile");
+        console.info("[IrthAuth] NAVIGATING to", dest);
+        window.location.replace(dest);
+      }
+      return;
+    }
+
     console.error("[IrthAuth] AUTH_FAILED", exchangeError);
     if (isRecoveryLink) setRecoveryMode(false);
     if (typeof window !== "undefined") {
       try { window.sessionStorage.setItem("irth.oauth_error.v1", "1"); } catch { /* ignore */ }
       window.location.replace("/auth?oauth_error=1");
     }
+  }
+}
+
+/**
+ * Fail-soft session probe.
+ * 1. Main client session → authoritative, nothing to do.
+ * 2. Native PKCE client session → bridge it onto the main client and verify.
+ * Returns true only when the main client ends up holding a valid session.
+ */
+async function recoverExistingSession(): Promise<boolean> {
+  try {
+    const { data: main } = await supabase.auth.getSession();
+    if (main.session) {
+      recordTrace("native-auth", "recover:main-session-present");
+      return true;
+    }
+  } catch { /* fall through to the native client */ }
+
+  try {
+    const nativeClient = getNativePkceSupabaseClient();
+    const { data: nat } = await nativeClient.auth.getSession();
+    const session = nat.session;
+    if (!session?.access_token || !session?.refresh_token) {
+      recordTrace("native-auth", "recover:no-session-anywhere");
+      return false;
+    }
+    recordTrace("native-auth", "recover:native-session-present");
+    const { error } = await supabase.auth.setSession({
+      access_token: session.access_token,
+      refresh_token: session.refresh_token,
+    });
+    if (error) {
+      recordTrace("native-auth", "recover:bridge-failed", error.message);
+      return false;
+    }
+    const { data: verify } = await supabase.auth.getSession();
+    const ok = Boolean(verify.session);
+    recordTrace("native-auth", ok ? "recover:bridge-verified" : "recover:bridge-unverified");
+    return ok;
+  } catch (e) {
+    recordTrace("native-auth", "recover:crash", e instanceof Error ? e.message : String(e));
+    return false;
+  }
+}
+
+/**
+ * Called when a duplicate/already-consumed callback arrives. If the earlier
+ * pass really did sign the user in, continue to the intended destination
+ * instead of silently stalling on whatever screen the reload landed on.
+ */
+async function recoverAndContinueAfterReplay(): Promise<void> {
+  const recovered = await recoverExistingSession();
+  if (!recovered) return;
+  recordTrace("native-auth", "replay:session-already-valid");
+  if (typeof window === "undefined") return;
+  // Already on a real app screen — do not yank the user around.
+  const path = window.location.pathname;
+  if (path.startsWith("/auth")) {
+    const dest = consumeAuthOrigin("/profile");
+    window.location.replace(dest);
   }
 }
 
