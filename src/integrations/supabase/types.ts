@@ -3118,6 +3118,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_streak_days: {
+        Row: {
+          activity_day: string
+          client_key: string | null
+          created_at: string
+          source: string | null
+          source_id: string | null
+          user_id: string
+        }
+        Insert: {
+          activity_day: string
+          client_key?: string | null
+          created_at?: string
+          source?: string | null
+          source_id?: string | null
+          user_id: string
+        }
+        Update: {
+          activity_day?: string
+          client_key?: string | null
+          created_at?: string
+          source?: string | null
+          source_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_streak_reward_claims: {
         Row: {
           artifact_id: string | null
@@ -4502,6 +4529,15 @@ export type Database = {
       }
       record_streak_activity: {
         Args: { p_source?: string; p_source_id?: string }
+        Returns: Json
+      }
+      record_streak_activity_v16: {
+        Args: {
+          p_activity_day?: string
+          p_client_key?: string
+          p_source?: string
+          p_source_id?: string
+        }
         Returns: Json
       }
       record_tutorial_completion: {
