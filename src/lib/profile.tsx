@@ -504,30 +504,24 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   }, [profile, hydrated]);
 
 
-  // Live streak-expiry watcher. While the app stays open across local
-  // midnight, the stored streak value would otherwise stay stale (e.g. 7)
-  // even though `lastActiveDay` is now older than yesterday → expired.
-  // Re-derive every 30s and on visibility change, resetting to 0 the
-  // moment the day rolls over without a qualifying activity.
+  // V16 — day-rollover TICK ONLY.
+  // Previously this watcher persisted `streak = 0` whenever the derived
+  // status was "expired". That was the single biggest cause of lost
+  // "الحماسة": one wrong day comparison wrote a fabricated zero over a
+  // valid server streak and persisted it to localStorage.
+  // It now only nudges a re-render so display-level derivations
+  // (`deriveStreak`) refresh across the IRTH midnight boundary. No writes.
+  const [, setDayTick] = useState(0);
   useEffect(() => {
     if (!hydrated) return;
+    let lastDay = todayKey();
     const check = () => {
-      setProfile((p) => {
-        const d = deriveStreak(p.streak, p.lastActiveDay);
-        if (d.status === "expired" && p.streak !== 0) {
-          if (import.meta.env.DEV) {
-            console.debug("[streak] live-expire", {
-              today: todayKey(),
-              lastActiveDay: p.lastActiveDay,
-              storedStreak: p.streak,
-            });
-          }
-          return { ...p, streak: 0 };
-        }
-        return p;
-      });
+      const now = todayKey();
+      if (now !== lastDay) {
+        lastDay = now;
+        setDayTick((n) => n + 1);
+      }
     };
-    check();
     const id = window.setInterval(check, 30_000);
     const onVis = () => { if (document.visibilityState === "visible") check(); };
     if (typeof document !== "undefined") {
@@ -539,7 +533,8 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         document.removeEventListener("visibilitychange", onVis);
       }
     };
-  }, [hydrated, profile.lastActiveDay, profile.streak]);
+  }, [hydrated]);
+
 
   const update = useCallback((fn: (p: ProfileState) => ProfileState) => setProfile((p) => {
     const started = performance.now();
