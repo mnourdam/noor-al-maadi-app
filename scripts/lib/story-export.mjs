@@ -61,6 +61,12 @@ function readDotEnv(name) {
 
 /** Paginated PostgREST read with the build-time service role. */
 export async function restAll({ url, key }, path) {
+  // Offset pagination is only correct with a deterministic total order.
+  // Without it PostgREST may repeat/skip rows between pages, which silently
+  // produced a different 1797-row media set on every export run.
+  if (!path.includes("order=")) {
+    throw new Error(`[story-export] refusing unordered pagination for ${path.split("?")[0]}`);
+  }
   const out = [];
   for (let from = 0; ; from += PAGE) {
     const sep = path.includes("?") ? "&" : "?";
@@ -143,7 +149,7 @@ export async function fetchStoryGraph(env) {
       )),
     );
     media.push(
-      ...(await restAll(env, `story_media?select=*&story_id=in.(${chunk})&verified=eq.true`)),
+      ...(await restAll(env, `story_media?select=*&story_id=in.(${chunk})&verified=eq.true&order=id.asc`)),
     );
   }
 
