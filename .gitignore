@@ -30,3 +30,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Offline snapshot: canonical artifact is committed gzipped (public/offline-snapshot.json.gz).
+# The expanded JSON is regenerated/inflated at build time (npm run snapshot:ensure).
+public/offline-snapshot.json
+public/offline-snapshot.json.tmp

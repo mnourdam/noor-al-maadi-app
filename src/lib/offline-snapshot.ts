@@ -437,6 +437,9 @@ export async function generateAndStoreSnapshot(): Promise<OfflineSnapshot> {
                         s.collection === 'investigations_public' ? 'investigations' : 
                         s.collection);
       
+      // Collections the local snapshot does not carry (baseline-owned
+      // stories) are not comparable and must not force endless syncs.
+      if (!(localKey in previous.content_counts)) continue;
       const localCount = previous.content_counts[localKey] ?? 0;
       const serverDate = new Date(s.last_updated).getTime();
       const localDate = new Date(previous.generated_at).getTime();
@@ -583,12 +586,19 @@ export async function refreshSnapshotIncremental(): Promise<OfflineSnapshot> {
       );
 
       const localCount = prevRows.length;
+      // V16: a COUNT mismatch means rows were removed/disabled upstream.
+      // An upsert-only delta merge can never drop them, so retired rows
+      // become sticky forever. Fetch the complete authoritative collection
+      // instead (fetchCollection asserts the exact expected count).
+      const countMismatch = serverItem ? serverItem.total_count !== localCount : false;
       const needsSync = serverItem 
-        ? (serverItem.total_count !== localCount || new Date(serverItem.last_updated).getTime() > new Date(previous.generated_at).getTime())
+        ? (countMismatch || new Date(serverItem.last_updated).getTime() > new Date(previous.generated_at).getTime())
         : true; // fallback if manifest missing
 
       if (needsSync) {
-        if (since && !NO_UPDATED_AT.has(def.key)) {
+        if (countMismatch) {
+          merged = await fetchCollection(def);
+        } else if (since && !NO_UPDATED_AT.has(def.key)) {
           const deltas = await fetchCollectionSince(def, since);
           if (deltas === null) {
             merged = await fetchCollection(def);
@@ -789,10 +799,20 @@ export async function bootstrapOfflineSync(opts: { maxAgeMs?: number } = {}): Pr
       sessionStorage.setItem(SYNC_LOCK_KEY, String(Date.now()));
     } catch { /* ignore */ }
 
-    // Phase 3: Background Server Convergence (Atomic)
-    void generateAndStoreSnapshot().catch((e) =>
-      console.warn("[offline-sync] background convergence failed:", e),
-    );
+    // Phase 3 (V16): canonical content is NEVER replaced silently once the
+    // device already holds a usable snapshot. We only DETECT that newer
+    // content exists and surface "يتوفر تحديث للمحتوى"; the player decides.
+    if (hasRequiredSnapshotContent(local)) {
+      void import("./offline-content-update")
+        .then((m) => m.checkForContentUpdate())
+        .catch((e) => console.warn("[offline-sync] update check failed:", e));
+    } else {
+      // No usable local content at all — first run online. Building the
+      // initial snapshot is not a "replacement", so it may proceed.
+      void generateAndStoreSnapshot().catch((e) =>
+        console.warn("[offline-sync] initial convergence failed:", e),
+      );
+    }
 
     // Warm high-priority images from the current snapshot
     void (async () => {
