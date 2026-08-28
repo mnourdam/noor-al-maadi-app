@@ -146,8 +146,7 @@ export class IntroPlaybackMachine {
     this.swipeArmed = false;
     this.downAt = this.opts.now();
     this.downX = x;
-    this.state = "paused";
-    this.emit();
+    this.pause();
   }
 
   pointerMove(x: number): void {

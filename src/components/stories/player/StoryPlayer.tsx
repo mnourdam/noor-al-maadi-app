@@ -112,8 +112,7 @@ export function StoryPlayer({
       void goNext();
     }, dwellMs);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, idx, paused, dwellMs, autoAdvance, exportLockScene]);
+  }, [phase, idx, paused, dwellMs, autoAdvance, exportLockScene, isLongPressing, goNext]);
 
   // --- Sync long-press halo with pause state ---------------------
   useEffect(() => {
