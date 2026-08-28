@@ -129,11 +129,16 @@ export async function recordStreakActivity(
   };
 
   // 1. DURABLE FIRST — survives offline, kill, restart, RPC failure.
+  let durable = true;
   try {
     await enqueueWithId(uid, clientKey, "streak_activity", { ...payload });
   } catch (e) {
+    // Storage unavailable (private mode / quota). We still try the live RPC,
+    // but we must NOT later claim the activity is safely queued.
+    durable = false;
     console.warn("[streak] enqueue failed", e);
   }
+
 
   // 2. Live attempt (never gated on navigator.onLine — the queue already holds it).
   const res = await withTimeout(
