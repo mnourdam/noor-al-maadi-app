@@ -565,16 +565,35 @@ async function recoverAndContinueAfterReplay(): Promise<void> {
   }
 }
 
+/**
+ * `App.getLaunchUrl()` keeps returning the ORIGINAL launching intent for the
+ * whole process lifetime, and the post-login `window.location.replace` reboots
+ * the WebView. Without a durable marker the same OAuth deep link is replayed
+ * on the next boot. The marker stores a fingerprint of the URL, never the URL
+ * itself, and expires after the replay-guard TTL.
+ */
+async function consumeLaunchUrlOnce(context: string): Promise<void> {
+  const { App } = await import("@capacitor/app");
+  const launch = await App.getLaunchUrl();
+  const url = launch?.url;
+  if (!url) return;
+  if (!url.startsWith(`${NATIVE_DEEP_LINK_SCHEME}://`)) return;
+  if (isLaunchUrlHandled(url)) {
+    console.info("[IrthAuth] CALLBACK_LAUNCH_URL_ALREADY_HANDLED", context);
+    recordTrace("native-auth", "launch-url-replay-skipped", context);
+    return;
+  }
+  markLaunchUrlHandled(url);
+  console.info("[IrthAuth] CALLBACK_LAUNCH_URL caught", context);
+  recordTrace("native-auth", "launch-url-captured", context);
+  void handleNativeAuthCallback(url);
+}
+
 export async function installNativeAuthDeepLinkListener(): Promise<void> {
   if (listenerInstalled) {
     console.info("[native-auth] listener already installed — checking launch URL");
     try {
-      const { App } = await import("@capacitor/app");
-      const launch = await App.getLaunchUrl();
-      if (launch?.url) {
-        console.info("[IrthAuth] CALLBACK_LAUNCH_URL caught in double-install check");
-        void handleNativeAuthCallback(launch.url);
-      }
+      await consumeLaunchUrlOnce("double-install");
     } catch { /* ignore */ }
     return;
   }
@@ -592,12 +611,7 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
     });
 
     // 2. Capture Cold-Boot events (Recovery Path)
-    const launch = await App.getLaunchUrl();
-    if (launch?.url) {
-      console.info("[IrthAuth] CALLBACK_LAUNCH_URL caught during boot");
-      recordTrace("native-auth", "cold-boot-intent-captured");
-      void handleNativeAuthCallback(launch.url);
-    }
+    await consumeLaunchUrlOnce("cold-boot");
     
     listenerRegistered = true;
     console.info("[IrthAuth] LISTENER_READY");
