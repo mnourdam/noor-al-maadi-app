@@ -947,11 +947,13 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       for (const [k, v] of Object.entries(cloud.hintsPurchased ?? {})) {
         hints[k] = Math.max(hints[k] ?? 0, Number(v) || 0);
       }
-      // Streak: cloud is authoritative but must still respect day-anchored
-      // expiry. Reuse applyServerStats' semantics inline.
-      const target = numMax(p.streak, cloud.streak);
-      const derived = deriveStreak(p.streak, p.lastActiveDay);
-      const nextStreak = derived.status === "expired" ? 0 : target;
+      // V16 — Streak: cloud/server value is authoritative and is adopted
+      // verbatim (max with local so an in-flight local activity is not
+      // regressed). A client-side "expired" derivation NEVER zeroes it;
+      // expiry is display-only. This stops a stale local `lastActiveDay`
+      // from wiping a valid server streak during hydration.
+      const nextStreak = numMax(p.streak, cloud.streak);
+
 
       // Hearts: cloud value wins ONLY when it differs from the local
       // committed value; preserves regen anchor otherwise.
