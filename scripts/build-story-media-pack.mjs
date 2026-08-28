@@ -25,9 +25,11 @@ import { createHash } from "node:crypto";
 import { mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
+  CONTENT_MODE_LIVE,
   downloadStoryMedia,
   fetchStoryGraph,
   requiredMediaFor,
+  resolveContentMode,
   serviceEnv,
 } from "./lib/story-export.mjs";
 
@@ -57,7 +59,68 @@ async function encode(buf) {
   return last;
 }
 
+const BASELINE = "public/baseline-content.json";
+
+// Keyless local builds NEVER touch Supabase. They reuse the committed pack and
+// prove — against the pre-generated baseline — that every referenced asset is
+// physically present. Missing asset count must be exactly 0.
+async function verifyPregeneratedPack() {
+  const baselineRaw = await readFile(BASELINE, "utf8").catch(() => null);
+  if (!baselineRaw) fail(`missing ${BASELINE} — cannot verify the pre-generated media pack`);
+  let baseline;
+  try {
+    baseline = JSON.parse(baselineRaw);
+  } catch (e) {
+    fail(`${BASELINE} is malformed JSON: ${e?.message ?? e}`);
+  }
+  const c = baseline?.collections ?? {};
+  const needed = requiredMediaFor(c.stories ?? [], c.story_scenes ?? [], c.story_media ?? []);
+  if (needed.length === 0) fail("no referenced story media resolved from the pre-generated baseline");
+
+  const manifestRaw = await readFile(join(ROOT, "manifest.json"), "utf8").catch(() => null);
+  if (!manifestRaw) fail("missing public/story-media/manifest.json — the committed media pack is incomplete");
+  const manifest = JSON.parse(manifestRaw);
+  const assets = manifest.assets ?? {};
+
+  const missing = [];
+  let total = 0;
+  for (const row of needed) {
+    const entry = assets[row.id];
+    const file = join(ROOT, entry?.file ?? `${row.id}.webp`);
+    const st = await stat(file).catch(() => null);
+    if (!entry) missing.push(`${row.id}: no manifest entry`);
+    else if (!st?.isFile() || st.size === 0) missing.push(`${row.id}: asset file missing or empty`);
+    else total += st.size;
+  }
+  if (missing.length > 0) {
+    for (const m of missing.slice(0, 20)) console.error(`  - ${m}`);
+    fail(`${missing.length} referenced media asset(s) are absent from the committed pack`);
+  }
+
+  const generated = await readFile(GENERATED, "utf8").catch(() => null);
+  if (!generated) fail(`missing ${GENERATED} — regenerate the pack with the build secret`);
+  for (const row of needed) {
+    if (!generated.includes(JSON.stringify(row.id))) {
+      fail(`${GENERATED} does not list packaged media ${row.id}`);
+    }
+  }
+
+  console.log(
+    "[story-media-pack] using pre-generated verified artifact; regeneration skipped because build secret is unavailable",
+  );
+  console.log(
+    `[story-media-pack] mode=PREGENERATED_VERIFIED generated_at=${manifest.generated_at} · ` +
+      `${needed.length}/${needed.length} referenced assets present · 0 missing · ` +
+      `${(total / 1024 / 1024).toFixed(1)}MB`,
+  );
+}
+
 async function main() {
+  const mode = resolveContentMode("story-media-pack");
+  if (mode !== CONTENT_MODE_LIVE) {
+    await verifyPregeneratedPack();
+    return;
+  }
   const env = serviceEnv();
   const graph = await fetchStoryGraph(env);
   const needed = requiredMediaFor(graph.stories, graph.scenes, graph.media);
@@ -151,7 +214,7 @@ ${ids.map((id) => `  ${JSON.stringify(id)},`).join("\n")}
   );
 
   console.log(
-    `[story-media-pack] ${ids.length}/${needed.length} assets · ` +
+    `[story-media-pack] mode=GENERATED_LIVE · ${ids.length}/${needed.length} assets · ` +
       `${(total / 1024 / 1024).toFixed(1)}MB total`,
   );
   if (failures.length > 0) {
