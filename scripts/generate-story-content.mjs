@@ -20,9 +20,14 @@
 // Usage: node scripts/generate-story-content.mjs
 // Opt-out (offline dev builds): SKIP_STORY_CONTENT_GEN=1
 // ============================================================
-import { renameSync, writeFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, renameSync, writeFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
-import { fetchStoryGraph, serviceEnv } from "./lib/story-export.mjs";
+import {
+  CONTENT_MODE_LIVE,
+  fetchStoryGraph,
+  resolveContentMode,
+  serviceEnv,
+} from "./lib/story-export.mjs";
 
 const OUT = resolve(process.cwd(), "public/baseline-content.json");
 
@@ -36,7 +41,76 @@ function fail(msg) {
   process.exit(1);
 }
 
+// Strict integrity gate for the committed, pre-generated artifact used by
+// keyless local builds. Never weakens a release gate: it only decides whether
+// the already-verified branch artifact is trustworthy enough to reuse.
+function verifyPregenerated() {
+  if (!existsSync(OUT)) {
+    fail(
+      "public/baseline-content.json is missing and SUPABASE_SERVICE_ROLE_KEY is unavailable — " +
+        "cannot regenerate and no pre-generated artifact to reuse",
+    );
+  }
+  let baseline;
+  try {
+    baseline = JSON.parse(readFileSync(OUT, "utf8"));
+  } catch (e) {
+    fail(`public/baseline-content.json is malformed JSON: ${e?.message ?? e}`);
+  }
+  const c = baseline?.collections ?? {};
+  const required = ["games", "stories", "story_scenes", "story_media", "story_collections"];
+  for (const key of required) {
+    if (!Array.isArray(c[key])) fail(`pre-generated baseline is missing collection "${key}"`);
+  }
+  if (typeof baseline.version !== "number") fail("pre-generated baseline has no numeric version");
+  if (typeof baseline.generated_at !== "string" || Number.isNaN(Date.parse(baseline.generated_at))) {
+    fail("pre-generated baseline has no valid generated_at timestamp");
+  }
+  const counts = baseline.counts ?? {};
+  const actual = {
+    games: c.games.length,
+    stories: c.stories.length,
+    story_scenes: c.story_scenes.length,
+    story_media: c.story_media.length,
+    story_collections: c.story_collections.length,
+  };
+  for (const [key, value] of Object.entries(actual)) {
+    if (typeof counts[key] === "number" && counts[key] !== value) {
+      fail(`pre-generated baseline count mismatch for ${key}: header ${counts[key]} vs actual ${value}`);
+    }
+  }
+  // Intro/library split is authored on campaign rows, not on the story, so the
+  // trustworthy source is the header the live generator wrote.
+  const intros = typeof counts.campaign_intro_stories === "number" ? counts.campaign_intro_stories : 0;
+  const library =
+    typeof counts.library_stories === "number" ? counts.library_stories : c.stories.length - intros;
+  if (typeof counts.stories === "number" && library + intros !== counts.stories) {
+    fail(`pre-generated baseline story split is inconsistent: ${library} + ${intros} != ${counts.stories}`);
+  }
+  if (library === 0) fail("pre-generated baseline has no library stories");
+  if (c.story_scenes.length === 0) fail("pre-generated baseline has no story scenes");
+  if (c.story_collections.length === 0) fail("pre-generated baseline has no story collections");
+  const ids = new Set(c.stories.map((s) => s?.id));
+  const orphanScenes = c.story_scenes.filter((s) => !ids.has(s?.story_id)).length;
+  if (orphanScenes > 0) fail(`pre-generated baseline has ${orphanScenes} scene(s) with no parent story`);
+
+  console.log(
+    "[story-content] using pre-generated verified artifact; regeneration skipped because build secret is unavailable",
+  );
+  console.log(
+    `[story-content] mode=PREGENERATED_VERIFIED version=${baseline.version} ` +
+      `generated_at=${baseline.generated_at} — ${library} library stories, ${intros} campaign intros, ` +
+      `${actual.story_scenes} scenes, ${actual.story_media} media rows, ` +
+      `${actual.story_collections} collections, ${actual.games} games`,
+  );
+}
+
 async function main() {
+  const mode = resolveContentMode("story-content");
+  if (mode !== CONTENT_MODE_LIVE) {
+    verifyPregenerated();
+    return;
+  }
   const env = serviceEnv();
   const graph = await fetchStoryGraph(env);
 
@@ -71,6 +145,9 @@ async function main() {
   renameSync(tmp, OUT);
 
   const kb = (statSync(OUT).size / 1024).toFixed(0);
+  console.log(
+    "[story-content] mode=GENERATED_LIVE",
+  );
   console.log(
     `[story-content] wrote public/baseline-content.json (${kb}KB) — ` +
       `${graph.library.length} library stories, ${graph.intros.length} campaign intros, ` +

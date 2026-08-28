@@ -199,3 +199,39 @@ export function sceneMediaIds(scene) {
   return ids;
 }
 
+
+// ============================================================
+// Dual-mode build support (V16).
+// ------------------------------------------------------------
+// Managed Lovable builds expose SUPABASE_SERVICE_ROLE_KEY as a
+// build-time secret and regenerate canonical content live.
+// Local builds (the key is NOT retrievable by project owners)
+// reuse the committed, strictly verified artifacts instead.
+// ============================================================
+export const CONTENT_MODE_LIVE = "GENERATED_LIVE";
+export const CONTENT_MODE_PREGENERATED = "PREGENERATED_VERIFIED";
+
+export function hasServiceKey() {
+  return Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
+}
+
+/**
+ * Release workflows that must regenerate canonical content set
+ * REQUIRE_LIVE_CONTENT=1 — then a missing key is a hard failure
+ * instead of a fall back to the committed pack.
+ */
+export function requireLiveContent() {
+  return process.env.REQUIRE_LIVE_CONTENT === "1";
+}
+
+export function resolveContentMode(label) {
+  if (hasServiceKey()) return CONTENT_MODE_LIVE;
+  if (requireLiveContent()) {
+    throw new Error(
+      `[${label}] REQUIRE_LIVE_CONTENT=1 but SUPABASE_SERVICE_ROLE_KEY is unavailable.\n` +
+        "  Release builds must regenerate canonical story content from production.\n" +
+        "  Supply the key as a BUILD-TIME environment secret only.",
+    );
+  }
+  return CONTENT_MODE_PREGENERATED;
+}
