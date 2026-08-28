@@ -396,10 +396,11 @@ function hydrateFromStorage(): ProfileState | null {
       ...parsed,
       settings: { ...initial.settings, ...(parsed.settings ?? {}) },
     };
-    const derived = deriveStreak(merged.streak, merged.lastActiveDay);
-    if (derived.streak !== merged.streak) {
-      merged = { ...merged, streak: derived.streak };
-    }
+    // V16: hydration is NON-DESTRUCTIVE. The stored streak is kept verbatim;
+    // expiry is a display derivation (`deriveStreak`), never a persisted 0.
+    // A stale/foreign `lastActiveDay` or a wrong device clock must not be
+    // able to destroy a valid server streak on boot.
+
 
     return merged;
   } catch (e) {
