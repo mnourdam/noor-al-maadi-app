@@ -327,8 +327,28 @@ function Composer({
     if (err) { toast.error(err); return; }
     setBusy(true);
     try {
+      let override: { resolvedIds: string[] } | undefined;
+      // Re-resolve immediately before sending: the composer may have been
+      // open for a long time, and the send must use a freshly validated
+      // audience — never a stale array. A failure here aborts the send.
+      if (audience.mode === "segment" || audience.mode === "filter") {
+        const fresh = await resolveAudience({
+          segmentId: audience.mode === "segment" ? audience.segmentId : null,
+          filter: audience.mode === "filter" ? audience.filter : null,
+        });
+        setAudience({ ...audience, resolution: fresh });
+        if (fresh.status === "error") {
+          toast.error(`أُلغي الإرسال — تعذّر تحديد الجمهور: ${fresh.message}`);
+          return;
+        }
+        if (fresh.userIds.length === 0) {
+          toast.error("أُلغي الإرسال — الشريحة لا تطابق أي مستخدم الآن.");
+          return;
+        }
+        override = { resolvedIds: fresh.userIds };
+      }
       const { data, error } = await supabase.functions.invoke("send-notification", {
-        body: buildPayload(),
+        body: buildPayload(override),
       });
       if (error) throw error;
       toast.success(`تم الإرسال — ${data?.sent ?? 0} ناجح / ${data?.failed ?? 0} فاشل من أصل ${data?.total ?? 0}.`);
@@ -339,6 +359,7 @@ function Composer({
       setBusy(false);
     }
   };
+
 
   const sendTestToMe = async () => {
     if (!title.trim() || !body.trim()) { toast.error("العنوان والمحتوى مطلوبان."); return; }
