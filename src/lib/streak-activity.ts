@@ -148,9 +148,15 @@ export async function recordStreakActivity(
   );
 
   if (!res.ok || !res.data) {
-    void flushOutbox(uid);
-    return { ok: false, reason: "queued", queued: true, error: res.error };
+    if (durable) void flushOutbox(uid);
+    return {
+      ok: false,
+      reason: durable ? "queued" : "rpc_error",
+      queued: durable,
+      error: res.error,
+    };
   }
+
 
   // 3. Acknowledge — the day is now durably recorded server-side.
   try { await removeFromOutbox(clientKey); } catch { /* ignore */ }
