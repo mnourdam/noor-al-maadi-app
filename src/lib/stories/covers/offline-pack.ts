@@ -24,6 +24,10 @@ import {
   OFFLINE_STORY_COVER_IDS,
   OFFLINE_STORY_COVER_VERSIONS,
 } from "./offline-pack.generated";
+import { STORY_COVER_MEDIA_MAP, STORIES_WITHOUT_COVER } from "./cover-map.generated";
+import { localStoryMediaPath } from "@/lib/stories/media/offline-pack";
+
+const NO_COVER: ReadonlySet<string> = new Set(STORIES_WITHOUT_COVER);
 
 const BUNDLED: ReadonlySet<string> = new Set(OFFLINE_STORY_COVER_IDS);
 
