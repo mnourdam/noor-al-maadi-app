@@ -290,16 +290,16 @@ export function isNativeAuthListenerRegistered(): boolean { return listenerRegis
 let callbackCounter = 0;
 
 /** Unified handler for all native auth callbacks (appUrlOpen + getLaunchUrl) */
-export async function handleNativeAuthCallback(url: string | null | undefined): Promise<void> {
+export async function handleNativeAuthCallback(url: string | null | undefined): Promise<boolean> {
   const callId = ++callbackCounter;
   if (!url) {
     console.info("[IrthAuth] CALLBACK_IGNORED reason=empty_url");
-    return;
+    return false;
   }
   
   if (!url.startsWith(`${NATIVE_DEEP_LINK_SCHEME}://`)) {
     console.info("[IrthAuth] CALLBACK_IGNORED reason=wrong_scheme", url.slice(0, 30));
-    return;
+    return false;
   }
 
   console.info("[IrthAuth] CALLBACK_ACCEPTED", sanitizeOAuthUrl(url));
@@ -309,6 +309,7 @@ export async function handleNativeAuthCallback(url: string | null | undefined): 
   let exchangedOk = false;
   let exchangeError: string | null = null;
   let isRecoveryLink = false;
+  let suppressReplay = false;
 
   try {
     const u = new URL(url);
@@ -327,12 +328,12 @@ export async function handleNativeAuthCallback(url: string | null | undefined): 
         console.info("[IrthAuth] CALLBACK_ALREADY_PROCESSED", `code_len=${code.length}`);
         recordTrace("native-auth", "callback-already-processed");
         await recoverAndContinueAfterReplay();
-        return;
+        return true;
       }
       if (inFlightCodes.has(code)) {
         console.info("[IrthAuth] CALLBACK_IN_FLIGHT_IGNORED", `code_len=${code.length}`);
         recordTrace("native-auth", "callback-in-flight-ignored");
-        return;
+        return false;
       }
 
       // Mark as in-flight IMMEDIATELY before any async work
@@ -370,6 +371,7 @@ export async function handleNativeAuthCallback(url: string | null | undefined): 
           stashOAuthError({ reason: "OAUTH_EXCHANGE_FAILED", message: error.message, ts: Date.now() });
         } else {
           exchangedOk = !!data.session;
+          suppressReplay = exchangedOk;
           recordTrace("native-auth", "SESSION_VERIFIED");
         }
       } else if (code) {
@@ -413,6 +415,7 @@ export async function handleNativeAuthCallback(url: string | null | undefined): 
               recordTrace("native-auth", "MAIN_SESSION_BRIDGE_FAILED", setErr.message);
             } else {
               exchangedOk = true;
+              suppressReplay = true;
               console.info("[IrthAuth] MAIN_SESSION_READY");
               recordTrace("native-auth", "MAIN_SESSION_READY");
             }
@@ -430,6 +433,8 @@ export async function handleNativeAuthCallback(url: string | null | undefined): 
         if (!sess.session) {
           exchangedOk = false;
           exchangeError = "تعذر تأكيد الجلسة النهائية";
+        } else {
+          suppressReplay = true;
         }
       }
     } finally {
@@ -453,6 +458,7 @@ export async function handleNativeAuthCallback(url: string | null | undefined): 
 
   if (exchangedOk) {
     console.info("[IrthAuth] AUTH_COMPLETE");
+    suppressReplay = true;
     if (isRecoveryLink) {
       if (typeof window !== "undefined") window.location.replace("/reset-password");
     } else {
@@ -486,6 +492,7 @@ export async function handleNativeAuthCallback(url: string | null | undefined): 
     if (recovered) {
       console.info("[IrthAuth] AUTH_RECOVERED_AFTER_FAILED_EXCHANGE");
       recordTrace("native-auth", "AUTH_RECOVERED_AFTER_FAILED_EXCHANGE");
+      suppressReplay = true;
       if (isRecoveryLink) {
         if (typeof window !== "undefined") window.location.replace("/reset-password");
       } else if (typeof window !== "undefined") {
@@ -493,7 +500,7 @@ export async function handleNativeAuthCallback(url: string | null | undefined): 
         console.info("[IrthAuth] NAVIGATING to", dest);
         window.location.replace(dest);
       }
-      return;
+      return true;
     }
 
     console.error("[IrthAuth] AUTH_FAILED", exchangeError);
@@ -503,6 +510,8 @@ export async function handleNativeAuthCallback(url: string | null | undefined): 
       window.location.replace("/auth?oauth_error=1");
     }
   }
+
+  return suppressReplay;
 }
 
 /**
@@ -583,10 +592,17 @@ async function consumeLaunchUrlOnce(context: string): Promise<void> {
     recordTrace("native-auth", "launch-url-replay-skipped", context);
     return;
   }
-  markLaunchUrlHandled(url);
   console.info("[IrthAuth] CALLBACK_LAUNCH_URL caught", context);
   recordTrace("native-auth", "launch-url-captured", context);
-  void handleNativeAuthCallback(url);
+  const handled = await handleNativeAuthCallback(url);
+  if (handled) {
+    markLaunchUrlHandled(url);
+    console.info("[IrthAuth] CALLBACK_LAUNCH_URL_MARKED_HANDLED", context);
+    recordTrace("native-auth", "launch-url-marked-handled", context);
+  } else {
+    console.info("[IrthAuth] CALLBACK_LAUNCH_URL_NOT_HANDLED", context);
+    recordTrace("native-auth", "launch-url-not-marked", context);
+  }
 }
 
 export async function installNativeAuthDeepLinkListener(): Promise<void> {
