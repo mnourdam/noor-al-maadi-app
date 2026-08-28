@@ -104,15 +104,6 @@ export function StoryPlayer({
     });
   }, [phase, scene, story.id, alreadyCompleted]);
 
-  // --- Auto advance ----------------------------------------------
-  useEffect(() => {
-    // Disable auto-advance during export or when paused.
-    if (phase !== "playing" || !autoAdvance || paused || isLongPressing || exportLockScene !== null) return;
-    const t = window.setTimeout(() => {
-      void goNext();
-    }, dwellMs);
-    return () => clearTimeout(t);
-  }, [phase, idx, paused, dwellMs, autoAdvance, exportLockScene, isLongPressing, goNext]);
 
   // --- Sync long-press halo with pause state ---------------------
   useEffect(() => {
