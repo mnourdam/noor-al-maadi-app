@@ -391,9 +391,12 @@ export async function handleNativeAuthCallback(url: string | null | undefined): 
           console.info("[IrthAuth] EXCHANGE_SUCCESS");
           recordTrace("native-auth", "EXCHANGE_SUCCESS");
           recordTrace("pkce-audit", "pkce:exchangeSuccess");
-          
-          // SUCCESS: Mark as processed to prevent any late duplicate calls from showing errors
+
+          // SUCCESS: Mark as processed to prevent any late duplicate calls from
+          // showing errors. The durable marker is written BEFORE any navigation
+          // so a WebView reload / process restart cannot replay this code.
           processedCodes.add(code);
+          markCodeConsumedDurably(code);
           if (processedCodes.size > 20) {
             const first = processedCodes.values().next().value;
             if (first !== undefined) processedCodes.delete(first);
