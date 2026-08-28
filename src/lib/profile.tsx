@@ -1,20 +1,26 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { recordTrace } from "@/lib/diag-trace";
 import { getActiveOwner } from "./identity/owner";
+import { irthDayKey, irthYesterdayKey } from "./irth-day";
+
+/**
+ * V16 — the canonical streak day is the Asia/Riyadh calendar day, matching
+ * the server exactly. `todayKey()` used to be the DEVICE-local day, which
+ * disagreed with the server for part of every day on any non-UTC+3 device
+ * and caused false streak expiry.
+ */
 function todayKey(d: Date = new Date()): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+  return irthDayKey(d);
 }
 
 /**
- * Day-anchored streak validation. Single source of truth used at hydrate,
- * server-sync, and any HUD read. A stored streak number is NEVER trusted
- * on its own — it must be reconciled against `lastActiveDay`.
- *   - safe:      played today
- *   - at-risk:   played yesterday, will expire at next midnight if idle
- *   - expired:   missed a full day (or never played) → streak forced to 0
+ * Day-anchored streak DISPLAY status. V16: this is a pure derivation used
+ * for presentation only — it MUST NOT be used to persist a zero over a
+ * server-provided streak value (a wrong device clock or a stale
+ * `lastActiveDay` would otherwise destroy real progress).
+ *   - safe:      played today (IRTH day)
+ *   - at-risk:   played yesterday, expires at the next IRTH midnight
+ *   - expired:   missed a full day (or never played)
  */
 export type StreakStatus = "safe" | "at-risk" | "expired";
 export function deriveStreak(
@@ -22,14 +28,14 @@ export function deriveStreak(
   lastActiveDay: string | null | undefined,
   now: Date = new Date(),
 ): { streak: number; status: StreakStatus } {
-  const today = todayKey(now);
-  const y = new Date(now); y.setDate(y.getDate() - 1);
-  const yesterday = todayKey(y);
+  const today = irthDayKey(now);
+  const yesterday = irthYesterdayKey(now);
   const stored = Math.max(0, Math.floor(storedStreak || 0));
   if (lastActiveDay === today) return { streak: stored, status: "safe" };
   if (lastActiveDay === yesterday) return { streak: stored, status: "at-risk" };
   return { streak: 0, status: "expired" };
 }
+
 
 function dailyMissionsForDate(_d: Date = new Date()): { id: string }[] {
   return [];
