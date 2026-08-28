@@ -710,6 +710,29 @@ function hasRequiredSnapshotContent(snap: OfflineSnapshot | null | undefined): s
   });
 }
 
+/**
+ * Staleness decision for the boot-time background sync.
+ *
+ * V16 fix: a snapshot whose `generated_at` lies in the FUTURE (corrupt or
+ * externally-written metadata) produced a negative age, which read as
+ * "fresh" and permanently suppressed the background sync. A negative age —
+ * and an unparseable date — now fail open: treat as stale and sync.
+ */
+export function isSnapshotStale(
+  local: OfflineSnapshot | null | undefined,
+  maxAgeMs: number,
+  nowMs: number = Date.now(),
+): boolean {
+  if (!local) return true;
+  if (local.schema_version !== SNAPSHOT_SCHEMA_VERSION) return true;
+  const generatedAt = new Date(local.generated_at).getTime();
+  if (!Number.isFinite(generatedAt)) return true;
+  const age = nowMs - generatedAt;
+  if (age < 0) return true; // future-dated metadata → never trust as fresh
+  return age > maxAgeMs;
+}
+
+
 export async function bootstrapOfflineSync(opts: { maxAgeMs?: number } = {}): Promise<void> {
   const maxAge = opts.maxAgeMs ?? 6 * 60 * 60 * 1000; // 6h
   try {
@@ -749,10 +772,8 @@ export async function bootstrapOfflineSync(opts: { maxAgeMs?: number } = {}): Pr
     if (!online) return;
 
     // Background Sync Strategy
-    const stale =
-      !local ||
-      local.schema_version !== SNAPSHOT_SCHEMA_VERSION ||
-      Date.now() - new Date(local.generated_at).getTime() > maxAge;
+    const stale = isSnapshotStale(local, maxAge);
+
     
     if (!stale) {
       // Even if not stale, check the manifest for deltas (lightweight)
