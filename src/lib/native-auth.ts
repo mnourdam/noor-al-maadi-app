@@ -21,6 +21,12 @@ import {
 import { consumeAuthOrigin } from "@/lib/authOrigin";
 import { recordTrace } from "@/lib/diag-trace";
 import { getDurableAuthStorage } from "@/lib/nativeAuthStorage";
+import {
+  isCodeConsumedDurably,
+  isLaunchUrlHandled,
+  markCodeConsumedDurably,
+  markLaunchUrlHandled,
+} from "@/lib/nativeAuthReplayGuard";
 import { setRecoveryMode } from "@/lib/recoveryMode";
 import { setAuthReady } from "./identity/guard";
 import { getActiveOwner } from "./identity/owner";
@@ -312,11 +318,15 @@ export async function handleNativeAuthCallback(url: string | null | undefined): 
     const refreshToken = params.get("refresh_token");
     recordTrace("pkce-audit", "deeplink:url-has-code", !!code);
 
-    // 1. Synchronous Idempotency & In-Flight Guard
+    // 1. Idempotency & In-Flight Guard.
+    //    In-memory Sets protect within one JS context; the durable marker
+    //    (fingerprint only, never the raw code) protects across WebView
+    //    reloads and Android process restarts.
     if (code) {
-      if (processedCodes.has(code)) {
+      if (processedCodes.has(code) || isCodeConsumedDurably(code)) {
         console.info("[IrthAuth] CALLBACK_ALREADY_PROCESSED", `code_len=${code.length}`);
         recordTrace("native-auth", "callback-already-processed");
+        await recoverAndContinueAfterReplay();
         return;
       }
       if (inFlightCodes.has(code)) {
@@ -324,7 +334,7 @@ export async function handleNativeAuthCallback(url: string | null | undefined): 
         recordTrace("native-auth", "callback-in-flight-ignored");
         return;
       }
-      
+
       // Mark as in-flight IMMEDIATELY before any async work
       inFlightCodes.add(code);
     }
@@ -381,9 +391,12 @@ export async function handleNativeAuthCallback(url: string | null | undefined): 
           console.info("[IrthAuth] EXCHANGE_SUCCESS");
           recordTrace("native-auth", "EXCHANGE_SUCCESS");
           recordTrace("pkce-audit", "pkce:exchangeSuccess");
-          
-          // SUCCESS: Mark as processed to prevent any late duplicate calls from showing errors
+
+          // SUCCESS: Mark as processed to prevent any late duplicate calls from
+          // showing errors. The durable marker is written BEFORE any navigation
+          // so a WebView reload / process restart cannot replay this code.
           processedCodes.add(code);
+          markCodeConsumedDurably(code);
           if (processedCodes.size > 20) {
             const first = processedCodes.values().next().value;
             if (first !== undefined) processedCodes.delete(first);
@@ -466,6 +479,23 @@ export async function handleNativeAuthCallback(url: string | null | undefined): 
       }
     }
   } else {
+    // FAIL-SOFT: a replayed / already-consumed code produces an exchange
+    // failure even though the session was created on the first pass. Never
+    // show the error screen while a recoverable session exists.
+    const recovered = await recoverExistingSession();
+    if (recovered) {
+      console.info("[IrthAuth] AUTH_RECOVERED_AFTER_FAILED_EXCHANGE");
+      recordTrace("native-auth", "AUTH_RECOVERED_AFTER_FAILED_EXCHANGE");
+      if (isRecoveryLink) {
+        if (typeof window !== "undefined") window.location.replace("/reset-password");
+      } else if (typeof window !== "undefined") {
+        const dest = consumeAuthOrigin("/profile");
+        console.info("[IrthAuth] NAVIGATING to", dest);
+        window.location.replace(dest);
+      }
+      return;
+    }
+
     console.error("[IrthAuth] AUTH_FAILED", exchangeError);
     if (isRecoveryLink) setRecoveryMode(false);
     if (typeof window !== "undefined") {
@@ -475,16 +505,95 @@ export async function handleNativeAuthCallback(url: string | null | undefined): 
   }
 }
 
+/**
+ * Fail-soft session probe.
+ * 1. Main client session → authoritative, nothing to do.
+ * 2. Native PKCE client session → bridge it onto the main client and verify.
+ * Returns true only when the main client ends up holding a valid session.
+ */
+async function recoverExistingSession(): Promise<boolean> {
+  try {
+    const { data: main } = await supabase.auth.getSession();
+    if (main.session) {
+      recordTrace("native-auth", "recover:main-session-present");
+      return true;
+    }
+  } catch { /* fall through to the native client */ }
+
+  try {
+    const nativeClient = getNativePkceSupabaseClient();
+    const { data: nat } = await nativeClient.auth.getSession();
+    const session = nat.session;
+    if (!session?.access_token || !session?.refresh_token) {
+      recordTrace("native-auth", "recover:no-session-anywhere");
+      return false;
+    }
+    recordTrace("native-auth", "recover:native-session-present");
+    const { error } = await supabase.auth.setSession({
+      access_token: session.access_token,
+      refresh_token: session.refresh_token,
+    });
+    if (error) {
+      recordTrace("native-auth", "recover:bridge-failed", error.message);
+      return false;
+    }
+    const { data: verify } = await supabase.auth.getSession();
+    const ok = Boolean(verify.session);
+    recordTrace("native-auth", ok ? "recover:bridge-verified" : "recover:bridge-unverified");
+    return ok;
+  } catch (e) {
+    recordTrace("native-auth", "recover:crash", e instanceof Error ? e.message : String(e));
+    return false;
+  }
+}
+
+/**
+ * Called when a duplicate/already-consumed callback arrives. If the earlier
+ * pass really did sign the user in, continue to the intended destination
+ * instead of silently stalling on whatever screen the reload landed on.
+ */
+async function recoverAndContinueAfterReplay(): Promise<void> {
+  const recovered = await recoverExistingSession();
+  if (!recovered) return;
+  recordTrace("native-auth", "replay:session-already-valid");
+  if (typeof window === "undefined") return;
+  // Already on a real app screen — do not yank the user around.
+  const path = window.location.pathname;
+  if (path.startsWith("/auth")) {
+    const dest = consumeAuthOrigin("/profile");
+    window.location.replace(dest);
+  }
+}
+
+/**
+ * `App.getLaunchUrl()` keeps returning the ORIGINAL launching intent for the
+ * whole process lifetime, and the post-login `window.location.replace` reboots
+ * the WebView. Without a durable marker the same OAuth deep link is replayed
+ * on the next boot. The marker stores a fingerprint of the URL, never the URL
+ * itself, and expires after the replay-guard TTL.
+ */
+async function consumeLaunchUrlOnce(context: string): Promise<void> {
+  const { App } = await import("@capacitor/app");
+  const launch = await App.getLaunchUrl();
+  const url = launch?.url;
+  if (!url) return;
+  if (!url.startsWith(`${NATIVE_DEEP_LINK_SCHEME}://`)) return;
+  if (isLaunchUrlHandled(url)) {
+    console.info("[IrthAuth] CALLBACK_LAUNCH_URL_ALREADY_HANDLED", context);
+    recordTrace("native-auth", "launch-url-replay-skipped", context);
+    return;
+  }
+  markLaunchUrlHandled(url);
+  console.info("[IrthAuth] CALLBACK_LAUNCH_URL caught", context);
+  recordTrace("native-auth", "launch-url-captured", context);
+  void handleNativeAuthCallback(url);
+}
+
 export async function installNativeAuthDeepLinkListener(): Promise<void> {
   if (listenerInstalled) {
     console.info("[native-auth] listener already installed — checking launch URL");
     try {
-      const { App } = await import("@capacitor/app");
-      const launch = await App.getLaunchUrl();
-      if (launch?.url) {
-        console.info("[IrthAuth] CALLBACK_LAUNCH_URL caught in double-install check");
-        void handleNativeAuthCallback(launch.url);
-      }
+      await consumeLaunchUrlOnce("double-install");
     } catch { /* ignore */ }
     return;
   }
@@ -502,12 +611,7 @@ export async function installNativeAuthDeepLinkListener(): Promise<void> {
     });
 
     // 2. Capture Cold-Boot events (Recovery Path)
-    const launch = await App.getLaunchUrl();
-    if (launch?.url) {
-      console.info("[IrthAuth] CALLBACK_LAUNCH_URL caught during boot");
-      recordTrace("native-auth", "cold-boot-intent-captured");
-      void handleNativeAuthCallback(launch.url);
-    }
+    await consumeLaunchUrlOnce("cold-boot");
     
     listenerRegistered = true;
     console.info("[IrthAuth] LISTENER_READY");
