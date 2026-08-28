@@ -206,6 +206,16 @@ export function StoryPlayer({
     queryClient,
   ]);
 
+  // --- Auto advance ----------------------------------------------
+  useEffect(() => {
+    // Disable auto-advance during export or when paused.
+    if (phase !== "playing" || !autoAdvance || paused || isLongPressing || exportLockScene !== null) return;
+    const t = window.setTimeout(() => {
+      void goNext();
+    }, dwellMs);
+    return () => clearTimeout(t);
+  }, [phase, idx, paused, dwellMs, autoAdvance, exportLockScene, isLongPressing, goNext]);
+
   const goPrev = useCallback(() => {
     setIdx((n) => Math.max(0, n - 1));
   }, []);
