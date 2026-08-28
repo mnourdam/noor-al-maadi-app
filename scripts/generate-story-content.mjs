@@ -79,8 +79,14 @@ function verifyPregenerated() {
       fail(`pre-generated baseline count mismatch for ${key}: header ${counts[key]} vs actual ${value}`);
     }
   }
-  const intros = c.stories.filter((s) => s?.story_type === "campaign_intro").length;
-  const library = c.stories.length - intros;
+  // Intro/library split is authored on campaign rows, not on the story, so the
+  // trustworthy source is the header the live generator wrote.
+  const intros = typeof counts.campaign_intro_stories === "number" ? counts.campaign_intro_stories : 0;
+  const library =
+    typeof counts.library_stories === "number" ? counts.library_stories : c.stories.length - intros;
+  if (typeof counts.stories === "number" && library + intros !== counts.stories) {
+    fail(`pre-generated baseline story split is inconsistent: ${library} + ${intros} != ${counts.stories}`);
+  }
   if (library === 0) fail("pre-generated baseline has no library stories");
   if (c.story_scenes.length === 0) fail("pre-generated baseline has no story scenes");
   if (c.story_collections.length === 0) fail("pre-generated baseline has no story collections");
