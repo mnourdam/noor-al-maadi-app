@@ -1270,7 +1270,7 @@ function SettingsTab({
           <div className="min-w-0">
             <p className="font-display text-[12px] font-bold">حالة اليوم</p>
             <p className="text-[10px] text-muted-foreground">
-              {profile.lastActiveDay === new Date().toISOString().slice(0, 10)
+              {profile.lastActiveDay === irthDayKey()
                 ? "تم احتساب اليوم ✓"
                 : "أكمل نشاطًا مؤهلاً اليوم لمتابعة السلسلة"}
             </p>

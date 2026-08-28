@@ -198,7 +198,9 @@ export const HUD = memo(function HUD() {
                 aria-label="الحماسة"
                 className="motion-tap inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-orange-400 transition hover:bg-white/5 active:bg-white/10"
               >
-                <Flame className="size-3.5" /> <AnimatedNumber value={profile.streak} />
+                {/* V16: display-only expiry derivation — persisted state is untouched. */}
+                <Flame className="size-3.5" /> <AnimatedNumber value={deriveStreak(profile.streak, profile.lastActiveDay).streak} />
+
 
               </button>
             </PopoverTrigger>
