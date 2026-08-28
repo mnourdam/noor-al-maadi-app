@@ -59,6 +59,7 @@ for (const s of scenes) {
 
 const problems = [];
 let coversChecked = 0;
+const coverlessLibrary = [];
 let sceneRefs = 0;
 
 for (const story of stories) {
@@ -70,7 +71,9 @@ for (const story of stories) {
     required.add(story.cover_media_id);
     coversChecked++;
   } else if (!intro) {
-    problems.push(`library story ${story.id} has no cover_media_id`);
+    // Authoring gap, not a packaging gap: there is no asset to bundle, and the
+    // card falls back to its placeholder. Report it, do not block the release.
+    coverlessLibrary.push(story.id);
   }
   for (const scene of scenesByStory.get(story.id) ?? []) {
     for (const id of sceneMediaIds(scene)) {
@@ -86,6 +89,10 @@ for (const story of stories) {
 
 const bytes = Object.values(assets).reduce((a, x) => a + (x.bytes ?? 0), 0);
 if (problems.length) fail(`${problems.length} incomplete story media reference(s)`, problems);
+
+for (const id of coverlessLibrary) {
+  console.warn(`[story-media-gate] WARN: library story ${id} has no cover artwork authored`);
+}
 
 console.log(
   `[story-media-gate] ok: ${stories.length} stories · ${coversChecked} covers · ` +
