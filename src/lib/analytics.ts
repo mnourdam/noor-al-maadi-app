@@ -140,3 +140,26 @@ export const seriesQuery = (metric: "new_users" | "active_users", r: TimeRange) 
   }),
   staleTime: 60_000,
 });
+
+// ── V16 engagement + content performance ───────────────────────
+// One bounded server-side aggregate. Distinguishes HISTORICAL EVENT
+// counts (inside the selected range) from CURRENT STATE totals.
+export interface RankedItem { id: string; title: string; completions?: number; players?: number; discoveries?: number }
+export interface EngagementData {
+  range: { from: string; to: string };
+  events: Record<string, number>;
+  state: Record<string, number>;
+  top_stories: RankedItem[];
+  top_campaigns: RankedItem[];
+  top_entities: RankedItem[];
+}
+
+export const engagementQuery = (r: TimeRange) => queryOptions({
+  queryKey: ["analytics", "engagement", r.from.toISOString(), r.to.toISOString()] as const,
+  queryFn: () => rpc<EngagementData>("analytics_engagement_v16", {
+    p_from: r.from.toISOString(),
+    p_to: r.to.toISOString(),
+  }),
+  staleTime: 60_000,
+  retry: false,
+});
