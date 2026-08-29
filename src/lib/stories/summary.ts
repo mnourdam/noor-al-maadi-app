@@ -19,16 +19,24 @@ const inflightSummary = new Map<string, Promise<StorySummary[]>>();
 
 export type StoryPrereqKind =
   | "campaign_completed"
+  | "campaign_chapter_complete"
   | "investigation_completed"
   | "story_completed"
-  | "entity_discovered";
+  | "entity_discovered"
+  | "entities_discovered"
+  | "artifact_owned"
+  | "atlas_location_visited"
+  | "achievement_unlocked"
+  | "player_level"
+  | "date_window";
 
 export interface StoryPrereq {
-  kind: StoryPrereqKind;
+  kind: StoryPrereqKind | (string & {});
   ref: string;
   title: string | null;
   satisfied: boolean;
 }
+
 
 export type StoryCategory =
   | "event" | "character" | "city" | "landmark" | "battle"
