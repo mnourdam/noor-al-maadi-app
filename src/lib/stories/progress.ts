@@ -113,8 +113,10 @@ export async function fetchStoryAccess(storyId: string): Promise<StoryAccessBund
       }
     }
 
-    const { isAlwaysUnlockSpec, evaluateStoryUnlock } = await import("./unlock/local");
-    const alwaysOn = isAlwaysUnlockSpec((story as any).unlock_spec);
+    const { isStoryRowAlwaysUnlocked, evaluateStoryRowUnlock } = await import("./unlock/story-row");
+    // FAIL CLOSED: a redacted local row (no `unlock_spec` key) must never
+    // grant direct access to a gated story.
+    const alwaysOn = isStoryRowAlwaysUnlocked(story);
     const uid = authUid;
     let unlocked = alwaysOn;
     if (!unlocked && uid) {
@@ -128,7 +130,7 @@ export async function fetchStoryAccess(storyId: string): Promise<StoryAccessBund
       // Guest offline: same authority as guest online — local evidence.
       try {
         const { guestUnlockState } = await import("./unlock/guest-evidence");
-        unlocked = evaluateStoryUnlock({ unlock_spec: (story as any).unlock_spec }, guestUnlockState());
+        unlocked = evaluateStoryRowUnlock(story, guestUnlockState());
       } catch { /* ignore */ }
     }
 

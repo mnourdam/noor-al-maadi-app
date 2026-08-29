@@ -37,6 +37,10 @@ export type PlayerUnlockState = Partial<UnlockContext>;
 
 const EMPTY = new Set<string>();
 
+export function toUnlockContext(state: PlayerUnlockState): UnlockContext {
+  return toContext(state);
+}
+
 function toContext(state: PlayerUnlockState): UnlockContext {
   return {
     completed_story_ids: state.completed_story_ids ?? EMPTY,

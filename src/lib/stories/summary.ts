@@ -7,7 +7,8 @@ import { recordTrace } from "@/lib/diag-trace";
 // ============================================================
 
 import { supabase } from "@/integrations/supabase/client";
-import { evaluateStoryUnlock, isAlwaysUnlockSpec } from "./unlock/local";
+
+import { evaluateStoryRowUnlock, isStoryRowAlwaysUnlocked } from "./unlock/story-row";
 import { buildGuestEvidence, guestUnlockState } from "./unlock/guest-evidence";
 import { isCampaignIntroRow } from "./library-filter";
 import { getActiveUserId } from "../identity/owner";
@@ -69,6 +70,12 @@ export interface StorySummary {
     last_scene_index: number;
     max_scene_index_reached: number;
   } | null;
+  /**
+   * Provenance of this row. `server` = authoritative RPC result,
+   * `local` = offline/bundled fallback. Unlock celebrations may only
+   * observe `server` rows (V16 regression fix #3).
+   */
+  source?: "server" | "local";
 }
 
 // Campaign cinematic intros are authored as stories so they can reuse the
@@ -124,9 +131,11 @@ export async function buildLocalStorySummaries(
       .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0));
 
     return all.map((s: any) => {
-      const alwaysOn = isAlwaysUnlockSpec(s.unlock_spec);
+      // FAIL CLOSED: a row whose `unlock_spec` KEY was stripped by a
+      // redacting server projection must never read as "always open".
+      const alwaysOn = isStoryRowAlwaysUnlocked(s);
       const guestUnlocked = guestState
-        ? evaluateStoryUnlock({ unlock_spec: s.unlock_spec }, guestState)
+        ? evaluateStoryRowUnlock(s, guestState)
         : false;
 
       return ({
@@ -157,6 +166,9 @@ export async function buildLocalStorySummaries(
         unlocked: alwaysOn || guestUnlocked || unlockedIds.has(s.id),
         completed: guestState ? guestState.completed_story_ids?.has(s.id) ?? false : false,
         progress: null,
+        // Local fallback rows are NOT authoritative: unlock celebrations
+        // must never be derived from them.
+        source: "local",
       } as StorySummary);
     });
   } catch {
@@ -227,6 +239,7 @@ export async function listStoriesSummary(
           tags: Array.isArray(r.tags) ? r.tags.filter((t) => typeof t === "string") : [],
           story_collection_id: r.story_collection_id ?? null,
           collection_order: r.collection_order ?? null,
+          source: "server" as const,
         }));
 
       if (rows.length === 0) return buildLocalStorySummaries(worldSlug, uid);

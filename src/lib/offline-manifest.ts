@@ -31,6 +31,21 @@ export function isManifestCountComparable(localKey: string): boolean {
   return !COUNT_NON_COMPARABLE.has(localKey);
 }
 
+/**
+ * V16 — collections whose server `last_updated` is NOT a content-identity
+ * signal. `stories.updated_at` is bumped by player reactions and other
+ * user-generated activity, so timestamp comparison produced a permanent
+ * false-positive "update available" loop. Change detection for these
+ * collections uses published-row COUNT identity only.
+ */
+const TIMESTAMP_NON_CANONICAL = new Set([
+  "stories", "story_scenes", "story_media", "story_collections",
+]);
+
+export function isManifestTimestampCanonical(localKey: string): boolean {
+  return !TIMESTAMP_NON_CANONICAL.has(localKey);
+}
+
 let _cachedManifest: ContentManifestItem[] | null = null;
 let _manifestPromise: Promise<ContentManifestItem[] | null> | null = null;
 
@@ -102,6 +117,8 @@ export async function checkManifestUpdates(): Promise<ManifestComparison> {
 
     // 2. Check for timestamp changes
     // generated_at serves as the upper bound for the current snapshot.
+    if (!isManifestTimestampCanonical(localKey)) continue;
+
     const serverDate = new Date(s.last_updated).getTime();
     const snapshotDate = new Date(local.generated_at).getTime();
 

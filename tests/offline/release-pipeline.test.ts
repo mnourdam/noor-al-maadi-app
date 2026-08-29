@@ -296,6 +296,8 @@ vi.mock("@/lib/offline-manifest", () => ({
     c === "campaigns_public" ? "admin_campaigns" : c === "investigations_public" ? "investigations" : c,
   isManifestCountComparable: (k: string) =>
     !["story_scenes", "story_media", "story_collections"].includes(k),
+  isManifestTimestampCanonical: (k: string) =>
+    !["stories", "story_scenes", "story_media", "story_collections"].includes(k),
 }));
 
 function candidateSnapshot(rows: number, version = Date.now()) {
