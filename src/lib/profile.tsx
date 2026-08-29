@@ -219,6 +219,14 @@ interface Ctx {
   spendDinarsForHeart: () => boolean;
   addDinars: (n: number) => void;
   spendDinars: (n: number) => boolean;
+  /**
+   * React-safe spend: affordability is decided synchronously against the last
+   * committed profile (plus in-tick reservations) BEFORE the state update is
+   * scheduled, so `true` always means the debit will land and `false` always
+   * means zero dinars were deducted.
+   */
+  trySpendDinars: (n: number) => boolean;
+
   buyHint: (scopeKey: string, hintIndex: number, cost: number) => boolean;
   hintsRevealed: (scopeKey: string) => number;
   /**
@@ -553,6 +561,26 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   const latestProfileRef = useRef(profile);
   latestProfileRef.current = profile;
 
+  // V16 — REACT-SAFE SPEND.
+  // `spendDinars` decides affordability *inside* a `setProfile` updater, so its
+  // boolean is only truthful when React happens to run the updater eagerly.
+  // Under batching it can report failure while the debit still lands later
+  // (paid no-op). `trySpendDinars` decides synchronously against the last
+  // committed profile plus the amount already reserved in this tick, then
+  // schedules the mutation. The existing `spendDinars` contract is untouched
+  // for its other callers (games / crossword help).
+  const reservedDinarsRef = useRef(0);
+  useEffect(() => { reservedDinarsRef.current = 0; }, [profile.dinars]);
+  const trySpendDinars = useCallback((n: number): boolean => {
+    if (!Number.isFinite(n) || n <= 0) return false;
+    const available = (latestProfileRef.current.dinars ?? 0) - reservedDinarsRef.current;
+    if (available < n) return false;
+    reservedDinarsRef.current += n;
+    update((p) => ({ ...p, dinars: Math.max(0, (p.dinars ?? 0) - n) }));
+    return true;
+  }, [update]);
+
+
   // Premium Emblem — DURABLE, REVERTIBLE write.
   // Local state flips instantly for responsiveness, but the promise resolves
   // only once the pick is durable. On a hard failure the previous emblem is
@@ -821,6 +849,8 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       });
       return ok;
     },
+    trySpendDinars,
+
     buyHint: (scopeKey, hintIndex, cost) => {
       let ok = false;
       update((p) => {
@@ -1067,7 +1097,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     grantTitle: (title) => update((p) => p.titlesEarned.includes(title) ? p : { ...p, titlesEarned: [...p.titlesEarned, title] }),
     grantArtifact: (id) => update((p) => p.artifactsFound.includes(id) ? p : { ...p, artifactsFound: [...p.artifactsFound, id] }),
     // `markAchievementEarned` removed - Achievement Engine v2 owns unlocks.
-  }), [profile, hydrated, update, awardBadge]);
+  }), [profile, hydrated, update, awardBadge, trySpendDinars]);
 
   return <ProfileContext.Provider value={ctx}>{children}</ProfileContext.Provider>;
 }

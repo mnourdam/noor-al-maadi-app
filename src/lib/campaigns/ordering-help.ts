@@ -12,9 +12,17 @@ export interface OrderingHelpState {
     itemId: string;
     txId: string;
     at: string;
+    /**
+     * V16: set (and persisted) the moment the debit is confirmed, BEFORE the
+     * pin is committed. Recovery only restores a pin when this marker exists,
+     * so a crash before payment can never grant a free hint and a crash after
+     * payment never loses a paid hint. Legacy entries without it are unpaid.
+     */
+    paidAt?: string;
   };
   fingerprint: string;
 }
+
 
 interface Store {
   [logicalKey: string]: OrderingHelpState;
@@ -105,6 +113,12 @@ export function purchaseOrderingHelp(
     return null;
   }
 
+  // 2b. Persist the PAID marker before committing, so a crash in the window
+  //     between debit and commit is recoverable — and only then.
+  state.pending = { ...state.pending, paidAt: new Date().toISOString() };
+  store[logicalKey] = state;
+  saveHelpStore(store);
+
   // 3. Commit
   state.pinnedIds = [...state.pinnedIds, selectedId];
   delete state.pending;
@@ -116,23 +130,35 @@ export function purchaseOrderingHelp(
 
 /**
  * Recovery flow for crashes between debit and commit.
+ *
+ * V16 semantics (no backend dependency):
+ * - pending WITH `paidAt`  → the debit was confirmed → recover exactly one pin.
+ * - pending WITHOUT `paidAt` → payment was never confirmed → drop it, no free pin.
+ * Already-committed pins are deduped, so recovery can never duplicate a hint.
  */
 export function recoverPendingOrderingHelp(
   logicalKey: string,
   fingerprint: string,
-  isPaid: (txId: string) => boolean,
-  onRecovered: (itemId: string) => void
+  onRecovered: (itemId: string) => void,
 ) {
   const store = getHelpStore();
   const state = store[logicalKey];
   if (!state || state.fingerprint !== fingerprint || !state.pending) return;
 
-  if (isPaid(state.pending.txId)) {
-    const itemId = state.pending.itemId;
-    state.pinnedIds = [...new Set([...state.pinnedIds, itemId])];
-    delete state.pending;
+  const { itemId, paidAt } = state.pending;
+  delete state.pending;
+
+  if (!paidAt) {
+    // Unpaid / unknown (includes legacy entries): discard, grant nothing.
     store[logicalKey] = state;
     saveHelpStore(store);
-    onRecovered(itemId);
+    return;
   }
+
+  const already = state.pinnedIds.includes(itemId);
+  state.pinnedIds = [...new Set([...state.pinnedIds, itemId])];
+  store[logicalKey] = state;
+  saveHelpStore(store);
+  if (!already) onRecovered(itemId);
 }
+
