@@ -339,11 +339,20 @@ export function pickNextStory(
   return pool[0];
 }
 
-export function labelPrereqKind(k: StoryPrereqKind): string {
+export function labelPrereqKind(k: StoryPrereqKind | (string & {})): string {
   switch (k) {
-    case "campaign_completed":      return "إتمام حملة";
-    case "investigation_completed": return "إتمام تحقيق";
-    case "story_completed":         return "إتمام قصة";
-    case "entity_discovered":       return "اكتشاف في الموسوعة";
+    case "campaign_completed":         return "إتمام حملة";
+    case "campaign_chapter_complete":  return "إتمام فصل حملة";
+    case "investigation_completed":    return "إتمام تحقيق";
+    case "story_completed":            return "إتمام قصة";
+    case "entity_discovered":          return "اكتشاف في الموسوعة";
+    case "entities_discovered":        return "اكتشافات في الموسوعة";
+    case "artifact_owned":             return "امتلاك مقتنى";
+    case "atlas_location_visited":     return "زيارة موقع في الأطلس";
+    case "achievement_unlocked":       return "فتح إنجاز";
+    case "player_level":               return "بلوغ المستوى";
+    case "date_window":                return "متاح في فترة محددة";
+    default:                           return "متطلب";
   }
 }
+
