@@ -36,7 +36,7 @@
 //   - Reflection scope migration integrity (no null scopes,
 //      unique(user_id, source_type, source_id, context_id))
 // ============================================================
-import { describe, it, expect, beforeAll, afterAll } from "bun:test";
+import { describe, it, expect } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 
@@ -62,12 +62,14 @@ function sqlFails(q: string, needle: string) {
 const d = HAS_DB ? describe : describe.skip;
 
 // -----------------------------------------------------------
-// Fixture: two temporary stories.
+// Fixture: three temporary stories + 3 scenes.
 //   pub_*   → published, xp=25 dinar=10, 3 scenes
-//   draft_* → draft, xp=0 dinar=0, 1 scene
-// Ids are prefixed with `p1e2e_` so an admin can identify and
-// remove them if a test aborts before the afterAll hook runs
-// (see cleanup notes at the bottom of this file).
+//   draft_* → draft, xp=0 dinar=0
+//
+// V16 hardening: fixtures are NEVER committed. Every statement
+// that needs them runs inside a single psql transaction that is
+// always rolled back, so an aborted run can no longer leave
+// published `p1e2e_*` rows behind in production content.
 // -----------------------------------------------------------
 const runId = randomUUID().slice(0, 8);
 const publishedId = `p1e2e_pub_${runId}`;
@@ -79,45 +81,48 @@ const scenesPub = [
   { id: `${publishedId}_s2`, idx: 2, type: "reflection" },
 ];
 
+const FIXTURE_SQL = `
+  INSERT INTO public.stories
+    (id, slug, title_ar, status, content_version, xp_reward, dinar_reward, unlock_spec, production_status)
+  VALUES
+    ('${publishedId}','${publishedId}','قصة تحقق','published',1,25,10,
+       '{"type":"always"}'::jsonb,'completed'),
+    ('${draftId}','${draftId}','مسودة تحقق','draft',1,0,0,
+       '{"type":"always"}'::jsonb,'testing'),
+    ('${otherStoryId}','${otherStoryId}','قصة أخرى','published',1,0,0,
+       '{"type":"always"}'::jsonb,'completed');
+  INSERT INTO public.story_scenes
+    (id, story_id, scene_index, scene_type, title_ar, payload)
+  VALUES
+${scenesPub
+  .map((s) => `    ('${s.id}','${publishedId}',${s.idx},'${s.type}','مشهد ${s.idx}','{}'::jsonb)`)
+  .join(",\n")};
+`;
+
+/** Run `body` with the fixtures present, then always roll back. */
+function sqlFixtureTx(body: string): string {
+  return sql(`BEGIN; ${FIXTURE_SQL} ${body} ROLLBACK;`);
+}
+
+/** Same, but the body is expected to fail with `needle`. */
+function sqlFixtureFails(body: string, needle: string) {
+  // ON_ERROR_STOP aborts the script, so the open transaction is
+  // discarded by psql on exit — nothing is ever committed.
+  sqlFails(`BEGIN; ${FIXTURE_SQL} ${body} ROLLBACK;`, needle);
+}
+
 d("Stories P1 — E2E backend contract verification", () => {
-  beforeAll(() => {
-    sql(`INSERT INTO public.stories
-           (id, slug, title_ar, status, content_version, xp_reward, dinar_reward, unlock_spec, production_status)
-         VALUES
-           ('${publishedId}','${publishedId}','قصة تحقق','published',1,25,10,
-              '{"type":"always"}'::jsonb,'completed'),
-           ('${draftId}','${draftId}','مسودة تحقق','draft',1,0,0,
-              '{"type":"always"}'::jsonb,'testing'),
-           ('${otherStoryId}','${otherStoryId}','قصة أخرى','published',1,0,0,
-              '{"type":"always"}'::jsonb,'completed')`);
-    for (const s of scenesPub) {
-      sql(`INSERT INTO public.story_scenes
-             (id, story_id, scene_index, scene_type, title_ar, payload)
-           VALUES
-             ('${s.id}','${publishedId}',${s.idx},'${s.type}','مشهد ${s.idx}','{}'::jsonb)`);
-    }
-  });
-
-  afterAll(() => {
-    // Best-effort cleanup: sandbox lacks DELETE, but a follow-up
-    // admin sweep can target rows via the `p1e2e_` prefix. We
-    // record the fixture ids in the log so the report is
-    // reproducible even if cleanup is deferred to the DB owner.
-    // eslint-disable-next-line no-console
-    console.log("[p1-e2e] fixture ids:", { publishedId, draftId, otherStoryId });
-  });
-
   // ---------- 1) Domain setup + constraints ----------
 
   it("creates the published test story with 3 scenes", () => {
-    const count = sql(
-      `SELECT count(*) FROM public.story_scenes WHERE story_id='${publishedId}'`,
+    const count = sqlFixtureTx(
+      `SELECT count(*) FROM public.story_scenes WHERE story_id='${publishedId}';`,
     );
-    expect(count).toBe("3");
+    expect(count).toContain("3");
   });
 
   it("rejects duplicate scene ordinal", () => {
-    sqlFails(
+    sqlFixtureFails(
       `INSERT INTO public.story_scenes (id, story_id, scene_index, scene_type, payload)
        VALUES ('${publishedId}_dup', '${publishedId}', 0, 'reading', '{}'::jsonb)`,
       "story_scenes_story_id_scene_index_key",
@@ -125,7 +130,7 @@ d("Stories P1 — E2E backend contract verification", () => {
   });
 
   it("rejects duplicate scene id", () => {
-    sqlFails(
+    sqlFixtureFails(
       `INSERT INTO public.story_scenes (id, story_id, scene_index, scene_type, payload)
        VALUES ('${scenesPub[0].id}', '${publishedId}', 99, 'reading', '{}'::jsonb)`,
       "story_scenes_pkey",
@@ -133,7 +138,7 @@ d("Stories P1 — E2E backend contract verification", () => {
   });
 
   it("rejects duplicate story slug", () => {
-    sqlFails(
+    sqlFixtureFails(
       `INSERT INTO public.stories (id, slug, title_ar, status, production_status)
        VALUES ('p1e2e_extra_${runId}', '${publishedId}', 'x', 'draft', 'testing')`,
       "stories_slug_key",
@@ -141,7 +146,7 @@ d("Stories P1 — E2E backend contract verification", () => {
   });
 
   it("rejects an invalid scene_type", () => {
-    sqlFails(
+    sqlFixtureFails(
       `INSERT INTO public.story_scenes (id, story_id, scene_index, scene_type, payload)
        VALUES ('p1e2e_bad_${runId}', '${publishedId}', 42, 'not_a_type', '{}'::jsonb)`,
       "story_scenes_scene_type_check",
@@ -152,7 +157,7 @@ d("Stories P1 — E2E backend contract verification", () => {
 
   it("get_story_access returns ok=false for a draft to anon", () => {
     const res = sql(
-      `BEGIN;
+      `BEGIN; ${FIXTURE_SQL}
        SELECT set_config('request.jwt.claims', json_build_object('role','anon')::text, true);
        SELECT public.get_story_access('${draftId}')::text;
        ROLLBACK;`,
@@ -162,7 +167,7 @@ d("Stories P1 — E2E backend contract verification", () => {
 
   it("get_story_access returns a published bundle to anon", () => {
     const res = sql(
-      `BEGIN;
+      `BEGIN; ${FIXTURE_SQL}
        SELECT set_config('request.jwt.claims', json_build_object('role','anon')::text, true);
        SELECT public.get_story_access('${publishedId}')::text;
        ROLLBACK;`,
@@ -261,7 +266,7 @@ d("Stories P1 — E2E backend contract verification", () => {
   it("complete_story_v2 refuses a draft story with not_published", () => {
     const uid = randomUUID();
     const res = sql(
-      `BEGIN;
+      `BEGIN; ${FIXTURE_SQL}
        SELECT set_config('request.jwt.claims',
          json_build_object('sub','${uid}','role','authenticated')::text, true);
        SELECT public.complete_story_v2('${draftId}')->>'reason';
