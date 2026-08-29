@@ -162,7 +162,10 @@ function ProjectHealthSection({ range }: { range: TimeRange }) {
   );
 }
 
-function ChartCard({ title, points }: { title: string; points: { t: string; v: number }[] }) {
+function ChartCard({ title, points, loading, error }: {
+  title: string; points: { t: string; v: number }[];
+  loading?: boolean; error?: Error | null;
+}) {
   const data = useMemo(
     () => points.map((p) => ({ t: new Date(p.t).toLocaleDateString("en-CA"), v: Number(p.v) })),
     [points],
@@ -170,9 +173,18 @@ function ChartCard({ title, points }: { title: string; points: { t: string; v: n
   return (
     <div className="rounded-xl border border-slate-700/50 bg-slate-900/50 p-3">
       <div className="mb-2 text-xs font-semibold text-slate-300">{title}</div>
-      {data.length === 0 ? (
+      {/* Never render a failed metric as an empty/zero chart. */}
+      {error ? (
+        <div className="h-40 flex items-center justify-center text-center text-xs text-red-300 px-3">
+          تعذّر جلب هذا المؤشر — القيمة غير متاحة (وليست صفرًا).
+          <br />{error.message}
+        </div>
+      ) : loading ? (
+        <div className="h-40 flex items-center justify-center text-xs text-slate-400">جارٍ التحميل…</div>
+      ) : data.length === 0 ? (
         <div className="h-40 flex items-center justify-center text-xs text-slate-500">لا توجد بيانات لهذا النطاق.</div>
       ) : (
+
         <ResponsiveContainer width="100%" height={160}>
           <AreaChart data={data} margin={{ top: 5, right: 8, bottom: 0, left: -20 }}>
             <defs>
