@@ -97,7 +97,7 @@ describe("feedback backend contract", () => {
   });
 
   it("13. a new normal comment no longer opens the report-only queue", () => {
-    const trg = code.split("notify_admins_new_comment_v16")[1] ?? "";
+    const trg = code.split("notify_admins_new_comment_v16").slice(1).join("\n");
     expect(trg).not.toContain("/admin/moderation");
     expect(trg).toContain("'/encyclopedia/entity/'");
     expect(trg).toContain("'?comment='");
