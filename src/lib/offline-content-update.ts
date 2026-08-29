@@ -13,7 +13,7 @@
  */
 import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { loadSnapshot, saveSnapshot, type OfflineSnapshot } from "./offline-storage";
-import { fetchContentManifest, isManifestCountComparable } from "./offline-manifest";
+import { fetchContentManifest, isManifestCountComparable, isManifestTimestampCanonical } from "./offline-manifest";
 import { formatError, formatIssues } from "./offline-error-format";
 
 export interface ContentUpdateState {
@@ -89,6 +89,9 @@ export function diffAgainstManifest(
       out.push(key);
       continue;
     }
+    // Story timestamps are polluted by player reactions — count identity
+    // above is the only canonical signal for them (V16 regression fix #4).
+    if (!isManifestTimestampCanonical(key)) continue;
     const serverDate = Date.parse(item.last_updated ?? "");
     if (!generatedTrustworthy || (Number.isFinite(serverDate) && serverDate > generated)) {
       out.push(key);

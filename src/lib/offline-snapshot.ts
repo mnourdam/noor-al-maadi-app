@@ -339,6 +339,77 @@ function maxUpdatedAt(rows: any[]): string | null {
   return best;
 }
 
+/**
+ * V16 — NON-DESTRUCTIVE story merge.
+ *
+ * `stories_snapshot_manifest_v2()` evaluates visibility as ANON, so every
+ * locked-visible story arrives REDACTED: no `unlock_spec`, no scenes, no
+ * media. Full-replacing the packaged 186-row baseline with that subset
+ * both destroyed offline content and (because a row without an
+ * `unlock_spec` key used to normalize to ALWAYS) unlocked everything.
+ *
+ * Rules:
+ *   * merge by stable `id`;
+ *   * a field ABSENT from the incoming row keeps its existing value
+ *     (absent ≠ explicitly cleared);
+ *   * PROTECTED fields are never overwritten by a redacted row;
+ *   * rows missing from the incoming subset are preserved (no shrinkage).
+ */
+const PROTECTED_STORY_FIELDS = [
+  "unlock_spec", "lock_visibility", "lock_explanation", "prereqs",
+  "cover_media_id", "metadata", "tags", "scene_count",
+] as const;
+
+function isRedactedStoryRow(row: any): boolean {
+  if (!row || typeof row !== "object") return false;
+  if (row.is_redacted === true) return true;
+  if (row.is_locked === true) return true;
+  return !("unlock_spec" in row);
+}
+
+export function mergeStoryRowsPreserving(existing: any[], incoming: any[]): any[] {
+  const byId = new Map<string, any>();
+  for (const r of existing) if (r?.id != null) byId.set(String(r.id), r);
+  for (const inc of incoming) {
+    if (inc?.id == null) continue;
+    const id = String(inc.id);
+    const prev = byId.get(id);
+    if (!prev) { byId.set(id, inc); continue; }
+    // Absent keys keep their existing values.
+    const merged: any = { ...prev, ...inc };
+    if (isRedactedStoryRow(inc)) {
+      for (const f of PROTECTED_STORY_FIELDS) {
+        if (f in prev && !(f in inc)) merged[f] = prev[f];
+        else if (f in prev && prev[f] != null && inc[f] == null) merged[f] = prev[f];
+      }
+    }
+    byId.set(id, merged);
+  }
+  return Array.from(byId.values());
+}
+
+/** Union merge for story children (scenes/media): a subset never deletes. */
+export function mergeStoryChildRows(existing: any[], incoming: any[]): any[] {
+  const byId = new Map<string, any>();
+  for (const r of existing) if (r?.id != null) byId.set(String(r.id), r);
+  for (const r of incoming) {
+    if (r?.id == null) continue;
+    const id = String(r.id);
+    const prev = byId.get(id);
+    byId.set(id, prev ? { ...prev, ...r } : r);
+  }
+  return Array.from(byId.values());
+}
+
+/** Apply the correct non-destructive strategy for a story collection key. */
+export function mergeStoryCollection(key: string, existing: any[], incoming: any[]): any[] {
+  const merged = key === "stories"
+    ? mergeStoryRowsPreserving(existing, incoming)
+    : mergeStoryChildRows(existing, incoming);
+  // Reject shrinkage: a redacted subset can never degrade the baseline.
+  return merged.length >= existing.length ? merged : existing;
+}
+
 /** Merge deltas into an existing row set by `id`, replacing on conflict. */
 function mergeRows(existing: any[], deltas: any[]): any[] {
   if (deltas.length === 0) return existing;
@@ -631,7 +702,12 @@ export async function refreshSnapshotIncremental(): Promise<OfflineSnapshot> {
         : true; // fallback if manifest missing
 
       if (needsSync) {
-        if (countMismatch) {
+        if (STORY_MANIFEST_KEYS.has(def.key)) {
+          // Story collections come from the visibility-redacting manifest
+          // RPC — merge, never replace (V16 regression fix #2).
+          const fetched = await fetchCollection(def);
+          merged = mergeStoryCollection(def.key, prevRows, fetched);
+        } else if (countMismatch) {
           merged = await fetchCollection(def);
         } else if (since && !NO_UPDATED_AT.has(def.key)) {
           const deltas = await fetchCollectionSince(def, since);
