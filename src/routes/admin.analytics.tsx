@@ -322,51 +322,80 @@ function SystemHealthSection() {
 
 
 // ── Engagement + content performance (V16) ─────────────────────
-function EngagementSection({ range }: { range: TimeRange }) {
-  const { data, isLoading, error } = useQuery(engagementQuery(range));
-  if (isLoading) return <p className="text-xs text-slate-400">جارٍ التحميل…</p>;
-  if (error) return (
-    <p className="text-xs text-red-300">
-      تعذّر جلب مؤشرات التفاعل — القيم غير متاحة (وليست صفرًا): {(error as Error).message}
-    </p>
+function Group({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div>
+      <div className="mb-2 text-[11px] font-semibold text-amber-200">{title}</div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">{children}</div>
+    </div>
   );
+}
+
+function EngagementSection({ range }: { range: TimeRange }) {
+  const { data, isLoading, error, refetch } = useQuery(engagementQuery(range));
+  if (isLoading) return <p className="text-xs text-slate-400">جارٍ التحميل…</p>;
+  if (error) return <MetricUnavailable onRetry={() => void refetch()} />;
   if (!data) return null;
   const ev = data.events, st = data.state;
   return (
-    <div className="space-y-4">
-      <div>
-        <div className="mb-2 text-[11px] font-semibold text-amber-200">أحداث خلال النطاق المحدّد</div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-          <Kpi label="إكمال قصص" value={fmt(ev.story_completions)} hint={`${fmt(ev.story_completions_users)} لاعب`} accent />
-          <Kpi label="إكمال حملات" value={fmt(ev.campaign_completions)} hint={`${fmt(ev.campaign_completions_users)} لاعب`} />
-          <Kpi label="اكتشافات الموسوعة" value={fmt(ev.discoveries)} hint={`${fmt(ev.discoveries_users)} لاعب`} />
-          <Kpi label="إكمال تحقيقات" value={fmt(ev.investigation_completions)} />
-          <Kpi label="مقتنيات المتحف" value={fmt(ev.museum_unlocks)} />
-          <Kpi label="تعليقات" value={fmt(ev.comments)} />
-          <Kpi label="تفاعلات" value={fmt(ev.reactions)} />
-          <Kpi label="مساهمات" value={fmt(ev.contributions)} />
-        </div>
-      </div>
+    <div className="space-y-5">
+      <p className="text-[11px] text-slate-500">
+        «أحداث» = وقعت داخل النطاق المحدّد ({range.label}) · «إجمالي» = حالة تراكمية لا تتأثر بالنطاق.
+      </p>
 
-      <div>
-        <div className="mb-2 text-[11px] font-semibold text-slate-300">الحالة الحالية (تراكمي — لا يتأثر بالنطاق)</div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-          <Kpi label="قصص قيد التقدّم" value={fmt(st.story_progress_rows)} hint={`${fmt(st.story_progress_users)} لاعب`} />
-          <Kpi label="تقدّم الحملات" value={fmt(st.campaign_progress_rows)} hint={`${fmt(st.campaign_progress_users)} لاعب`} />
-          <Kpi label="إجمالي إكمال القصص" value={fmt(st.story_completions_total)} />
-          <Kpi label="إجمالي الاكتشافات" value={fmt(st.discoveries_total)} />
-          <Kpi label="مقتنيات المتحف" value={fmt(st.museum_items)} />
-          <Kpi label="تحقيقات" value={fmt(st.investigation_progress_rows)} />
-          <Kpi label="تعليقات المجتمع" value={fmt(st.comments_total)} />
-          <Kpi label="المساهمات" value={fmt(st.contributions_total)} />
-        </div>
-      </div>
+      <Group title="القصص">
+        <Kpi label="إكمالات القصص (أحداث)" value={fmt(ev.story_completions)} hint={`${fmt(ev.story_completions_users)} لاعب فريد`} accent />
+        <Kpi label="إجمالي إكمالات القصص" value={fmt(st.story_completions_total)} hint="إجمالي — سجلات" />
+        <Kpi label="اللاعبون الذين أكملوا قصصًا" value={fmt(st.story_completions_users_total)} hint="إجمالي — لاعبون فريدون" />
+        <Kpi label="سجلات تقدّم القصص" value={fmt(st.story_progress_rows)} hint={`إجمالي — ${fmt(st.story_progress_users)} لاعب`} />
+      </Group>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-        <RankCard title="الأكثر إكمالًا (قصص)" items={data.top_stories.map((s) => ({ title: s.title, n: s.completions ?? 0 }))} />
-        <RankCard title="الأكثر لعبًا (حملات)" items={data.top_campaigns.map((c) => ({ title: c.title, n: c.players ?? 0 }))} />
-        <RankCard title="الأكثر اكتشافًا (الموسوعة)" items={data.top_entities.map((e) => ({ title: e.title, n: e.discoveries ?? 0 }))} />
-      </div>
+      <Group title="الحملات">
+        <Kpi label="إكمالات الحملات (أحداث)" value={fmt(ev.campaign_completions)} hint={`${fmt(ev.campaign_completions_users)} لاعب فريد`} />
+        <Kpi label="إجمالي إكمالات الحملات" value={fmt(st.campaign_completions_total)} hint="إجمالي — سجلات" />
+        <Kpi label="سجلات تقدّم الحملات" value={fmt(st.campaign_progress_rows)} hint={`إجمالي — ${fmt(st.campaign_progress_users)} لاعب`} />
+      </Group>
+
+      <Group title="الموسوعة">
+        <Kpi label="اكتشافات (أحداث)" value={fmt(ev.discoveries)} hint={`${fmt(ev.discoveries_users)} لاعب فريد`} />
+        <Kpi label="إجمالي الاكتشافات" value={fmt(st.discoveries_total)} hint="إجمالي — سجلات" />
+      </Group>
+
+      <Group title="التحقيقات">
+        <Kpi label="إكمالات (أحداث)" value={fmt(ev.investigation_completions)} />
+        <Kpi label="سجلات التقدّم" value={fmt(st.investigation_progress_rows)} hint="إجمالي — سجلات" />
+        <Kpi label="إجمالي الإكمالات" value={fmt(st.investigation_completions_total)} hint="إجمالي — سجلات" />
+      </Group>
+
+      <Group title="المتحف">
+        <Kpi label="مقتنيات جديدة (أحداث)" value={fmt(ev.museum_unlocks)} />
+        <Kpi label="إجمالي المقتنيات" value={fmt(st.museum_items)} hint="إجمالي — سجلات" />
+      </Group>
+
+      <Group title="المجتمع">
+        <Kpi label="تعليقات (أحداث)" value={fmt(ev.comments)} />
+        <Kpi label="إجمالي التعليقات" value={fmt(st.comments_total)} hint="إجمالي — سجلات" />
+        <Kpi label="تفاعلات (أحداث)" value={fmt(ev.reactions)} />
+        <Kpi label="إجمالي التفاعلات" value={fmt(st.reactions_total)} hint="إجمالي — سجلات" />
+        <Kpi label="مساهمات (أحداث)" value={fmt(ev.contributions)} />
+        <Kpi label="إجمالي المساهمات" value={fmt(st.contributions_total)} hint="إجمالي — سجلات" />
+        <Kpi label="لاعبون بسلسلة نشطة" value={fmt(st.streak_active_users)} hint="آخر 7 أيام" />
+      </Group>
+    </div>
+  );
+}
+
+function ContentPerformanceSection({ range }: { range: TimeRange }) {
+  const { data, isLoading, error, refetch } = useQuery(engagementQuery(range));
+  if (isLoading) return <p className="text-xs text-slate-400">جارٍ التحميل…</p>;
+  if (error) return <MetricUnavailable onRetry={() => void refetch()} />;
+  if (!data) return null;
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      <RankCard title="أكثر القصص إكمالًا (إجمالي)" items={data.top_stories.map((s) => ({ title: s.title, n: s.completions ?? 0 }))} />
+      <RankCard title="أكثر القصص تقدّمًا (لاعبون)" items={(data.top_stories_progress ?? []).map((s) => ({ title: s.title, n: s.players ?? 0 }))} />
+      <RankCard title="أكثر الحملات نشاطًا (لاعبون)" items={data.top_campaigns.map((c) => ({ title: c.title, n: c.players ?? 0 }))} />
+      <RankCard title="أكثر عناصر الموسوعة اكتشافًا" items={data.top_entities.map((e) => ({ title: e.title, n: e.discoveries ?? 0 }))} />
     </div>
   );
 }
