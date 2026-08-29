@@ -61,6 +61,20 @@ function mapManifestKey(collection: string): string {
   return collection;
 }
 
+export interface ManifestDiffDetail {
+  /** Collections that certainly trail the server (Stage 1 evidence). */
+  updates: string[];
+  /**
+   * `stories.last_updated` moved with no count change — reaction-polluted,
+   * so it is a Stage 2 CANDIDATE, never a banner on its own.
+   */
+  storiesCandidate: string | null;
+  /** Server counts per local key (persisted on apply). */
+  counts: Record<string, number>;
+  /** Server editorial timestamps per local key (persisted on apply). */
+  editorial: Record<string, string | null>;
+}
+
 /**
  * Compare a local snapshot against the server manifest.
  *
@@ -68,19 +82,31 @@ function mapManifestKey(collection: string): string {
  * baseline-owned collections (stories/scenes/media) are not part of the
  * bundled snapshot and must not raise a permanent "update available".
  */
-export function diffAgainstManifest(
+export function diffManifestDetailed(
   local: Pick<OfflineSnapshot, "content_counts" | "generated_at"> | null | undefined,
   manifest: { collection: string; total_count: number; last_updated: string }[] | null,
   nowMs: number = Date.now(),
-): string[] {
-  if (!local?.content_counts || !Array.isArray(manifest)) return [];
+): ManifestDiffDetail {
+  const empty: ManifestDiffDetail = {
+    updates: [],
+    storiesCandidate: null,
+    counts: {},
+    editorial: {},
+  };
+  if (!local?.content_counts || !Array.isArray(manifest)) return empty;
   const generated = Date.parse(local.generated_at ?? "");
   // Corrupt / future-dated local metadata (the legacy inflated
   // snapshot_version case) can never be trusted as "fresh".
   const generatedTrustworthy = Number.isFinite(generated) && generated <= nowMs;
   const out: string[] = [];
+  const counts: Record<string, number> = {};
+  const editorial: Record<string, string | null> = {};
+  let storiesCandidate: string | null = null;
+
   for (const item of manifest) {
     const key = mapManifestKey(item.collection);
+    counts[key] = Number(item.total_count);
+    editorial[key] = item.last_updated ?? null;
     if (!(key in local.content_counts)) continue;
     const localCount = local.content_counts[key] ?? 0;
     // Visibility-filtered story subsets are legitimately smaller than the
@@ -89,27 +115,67 @@ export function diffAgainstManifest(
       out.push(key);
       continue;
     }
-    // Story timestamps are polluted by player reactions — count identity
-    // above is the only canonical signal for them (V16 regression fix #4).
-    if (!isManifestTimestampCanonical(key)) continue;
     const serverDate = Date.parse(item.last_updated ?? "");
-    if (!generatedTrustworthy || (Number.isFinite(serverDate) && serverDate > generated)) {
-      out.push(key);
+    const newer =
+      !generatedTrustworthy || (Number.isFinite(serverDate) && serverDate > generated);
+    if (!isManifestTimestampCanonical(key)) {
+      // `stories.updated_at` is bumped by player reactions → candidate only.
+      if (newer) storiesCandidate = item.last_updated ?? null;
+      continue;
     }
+    if (newer) out.push(key);
   }
-  return out;
+  return { updates: out, storiesCandidate, counts, editorial };
+}
+
+/** Back-compatible Stage 1 view: certain updates only. */
+export function diffAgainstManifest(
+  local: Pick<OfflineSnapshot, "content_counts" | "generated_at"> | null | undefined,
+  manifest: { collection: string; total_count: number; last_updated: string }[] | null,
+  nowMs: number = Date.now(),
+): string[] {
+  return diffManifestDetailed(local, manifest, nowMs).updates;
 }
 
 /**
  * Detect (never apply) whether newer canonical content exists.
  * Safe to call on boot, on reconnect and periodically.
+ *
+ * Stage 1 = cheap manifest (counts + editorial-only timestamps).
+ * Stage 2 = canonical Story fingerprint, throttled, only for a stories-only
+ * candidate, and always fail-quiet.
  */
 export async function checkForContentUpdate(): Promise<boolean> {
   if (typeof navigator !== "undefined" && navigator.onLine === false) return state.available;
   try {
     const [local, manifest] = await Promise.all([loadSnapshot(), fetchContentManifest()]);
     if (!local || !manifest) return state.available;
-    const collections = diffAgainstManifest(local, manifest);
+    const diff = diffManifestDetailed(local, manifest);
+    let collections = diff.updates;
+
+    if (collections.length === 0 && diff.storiesCandidate) {
+      const { readStoryIdentity, shouldRunStage2 } = await import(
+        "./stories/content-identity-store"
+      );
+      const online = typeof navigator === "undefined" || navigator.onLine !== false;
+      if (
+        shouldRunStage2({
+          identity: readStoryIdentity(),
+          candidateTimestamp: diff.storiesCandidate,
+          nowMs: Date.now(),
+          online,
+        })
+      ) {
+        const { verifyStoryEditorialChange } = await import(
+          "./stories/content-identity-check"
+        );
+        const { result } = await verifyStoryEditorialChange({
+          candidateTimestamp: diff.storiesCandidate,
+        });
+        if (result === "changed") collections = ["stories"];
+      }
+    }
+
     setState({
       available: collections.length > 0,
       collections,
@@ -118,6 +184,33 @@ export async function checkForContentUpdate(): Promise<boolean> {
     return collections.length > 0;
   } catch {
     return state.available;
+  }
+}
+
+/**
+ * Record the applied Story editorial identity after a successful update.
+ * Best-effort: a failure here can only cost one extra Stage 2 check later.
+ */
+export async function persistAppliedStoryIdentity(
+  stored: Pick<OfflineSnapshot, "content_counts" | "generated_at">,
+): Promise<void> {
+  try {
+    const manifest = await fetchContentManifest();
+    const detail = diffManifestDetailed(stored, manifest);
+    const { fetchStoryEditorialFingerprint } = await import(
+      "./stories/content-identity-check"
+    );
+    const { recordAppliedIdentity } = await import("./stories/content-identity-store");
+    const fingerprint = await fetchStoryEditorialFingerprint();
+    recordAppliedIdentity({
+      fingerprint,
+      counts: detail.counts,
+      editorial: detail.editorial,
+      observedStoriesUpdatedAt: detail.editorial["stories"] ?? null,
+      nowMs: Date.now(),
+    });
+  } catch {
+    /* identity is an optimisation; never fail an applied update over it */
   }
 }
 
@@ -151,6 +244,10 @@ export async function applyContentUpdate(): Promise<boolean> {
 
     const { applyLocalSnapshot } = await import("./local-first-store");
     applyLocalSnapshot(stored);
+
+    // Convergence (D): persist fingerprint + counts + editorial timestamps +
+    // the observed reaction-polluted `stories.last_updated` together.
+    await persistAppliedStoryIdentity(stored);
 
     setState({ applying: false, available: false, collections: [], error: null, checkedAt: Date.now() });
     return true;
