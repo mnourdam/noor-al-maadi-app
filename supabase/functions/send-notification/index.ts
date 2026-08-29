@@ -128,6 +128,7 @@ async function sendFcm(
       data: {
         type: payload.type ?? "manual",
         ...(payload.deep_link ? { deep_link: payload.deep_link } : {}),
+        ...(payload.external_url ? { external_url: payload.external_url } : {}),
         ...(payload.notification_id ? { notification_id: payload.notification_id } : {}),
       },
       android: {
