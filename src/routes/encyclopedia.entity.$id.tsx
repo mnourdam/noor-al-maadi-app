@@ -13,6 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRef, useMemo } from "react";
 import { useBack } from "@/lib/navigation/engine";
 import { useEntityReadCompletion } from "@/hooks/useEntityReadCompletion";
+import { useStalled } from "@/hooks/useStalled";
 
 
 import { useAccount } from "@/lib/account";
@@ -77,7 +78,7 @@ export const Route = createFileRoute("/encyclopedia/entity/$id")({
       { name: "description", content: "عنصر في موسوعة إرث." },
     ],
   }),
-  component: EntityPage,
+  component: EntityRoute,
   notFoundComponent: () => (
     <AppShell>
       <EntityNotFound />
@@ -106,19 +107,18 @@ function Ornament({ label }: { label?: string }) {
   );
 }
 
-function EntityPage() {
-  const { id } = Route.useParams();
-  const goBack = useBack();
-  
-
-
-  const query = useQuery({
-    queryKey: ["encyclopedia", "entity", id, "v3"],
+/**
+ * Canonical resolution for one encyclopedia reference (UUID or slug).
+ * Follows canonical_id / merged_into / converted_to / redirect_to chains so
+ * old references to converted entities still land on the canonical row.
+ * Cycle-guarded, depth-limited, and always settles (null on any miss).
+ */
+export function entityQueryOptions(id: string) {
+  return {
+    queryKey: ["encyclopedia", "entity", id, "v3"] as const,
     staleTime: 10 * 60_000,
+    retry: 1,
     queryFn: async (): Promise<SupabaseEncyclopediaEntity | null> => {
-      // Follow canonical_id / merged_into / converted_to / redirect_to
-      // chains so old references to converted entities still land on the
-      // canonical destination. Cycle-guarded, depth-limited.
       const readTargetId = (row: SupabaseEncyclopediaEntity | null): string | null => {
         if (!row) return null;
         const meta = (row.metadata && typeof row.metadata === "object")
@@ -160,24 +160,68 @@ function EntityPage() {
         ? followed
         : null;
     },
-  });
+  };
+}
 
+/** True when a resolved row must be served by the dedicated state route. */
+export function shouldForwardToStateRoute(
+  entity: { entity_type?: string | null; slug?: string | null } | null | undefined,
+): boolean {
+  return !!entity && entity.entity_type === "state" && !!entity.slug?.trim();
+}
 
+/**
+ * Routing gate. Resolves the reference with a single lightweight query and
+ * decides ONCE: forward to the state route, show the controlled unavailable
+ * state, or mount the full entity page. No content hook runs before this
+ * decision, so a state UUID redirects exactly once and never loops.
+ */
+function EntityRoute() {
+  const { id } = Route.useParams();
+  const query = useQuery(entityQueryOptions(id));
+  const stalled = useStalled(query.isLoading);
   const entity = query.data ?? null;
+
+  if (shouldForwardToStateRoute(entity)) {
+    return <Navigate to="/encyclopedia/state/$id" params={{ id: entity!.slug }} replace />;
+  }
+
+  if (query.isLoading && !stalled) {
+    return (
+      <AppShell>
+        <div className="px-5 pt-10 text-center text-muted-foreground text-sm">جارٍ التحميل…</div>
+      </AppShell>
+    );
+  }
+
+  if (!entity) {
+    return (
+      <AppShell>
+        <EntityNotFound />
+      </AppShell>
+    );
+  }
+
+  return <EntityPage entity={entity} />;
+}
+
+function EntityPage({ entity }: { entity: SupabaseEncyclopediaEntity }) {
+  const goBack = useBack();
 
   // Daily Quest completion — shared hook covers dwell + intersection +
   // 88 % scroll fallback for every encyclopedia detail route.
   const { user } = useAccount();
   const userKey = user?.id ?? "guest";
   const relNetworkRef = useRef<HTMLElement | null>(null);
-  // V16 — discovery readiness: the canonical entity must be fetched,
+  // V16 — discovery readiness: the canonical entity must be resolved,
   // displayable and carry real content before any engagement signal counts.
+  // Redirect hops never reach this component, so navigation alone can never
+  // record a discovery.
   const contentReady =
-    query.isSuccess &&
-    !!entity &&
     isDisplayableEntity(entity) &&
     (!!entity.summary?.trim() ||
       (!!entity.body && Object.keys(entity.body as object).length > 0));
+
   useEntityReadCompletion({
     entityId: entity?.id ?? null,
     entitySlug: entity?.slug ?? null,
@@ -226,27 +270,13 @@ function EntityPage() {
         : 3.5
     : 3.5;
 
-  // If the redirect chain landed on a state, forward to the state route.
-  if (entity && entity.entity_type === "state") {
-    return <Navigate to="/encyclopedia/state/$id" params={{ id: entity.slug }} replace />;
-  }
-
-  if (query.isLoading) {
-    return (
-      <AppShell>
-        <div className="px-5 pt-10 text-center text-muted-foreground text-sm">جارٍ التحميل…</div>
-      </AppShell>
-    );
-  }
+  // NOTE: state forwarding and loading/not-found gating happen in
+  // `EntityRoute` BEFORE this component (and its discovery / atlas /
+  // relationship hooks) ever mounts. Never re-introduce a render-time
+  // navigation redirect here: combined with the hooks above it produced the V16
+  // "Maximum update depth exceeded" loop that froze Android.
 
 
-  if (!entity) {
-    return (
-      <AppShell>
-        <EntityNotFound />
-      </AppShell>
-    );
-  }
 
   const meta = (entity.metadata && typeof entity.metadata === "object"
     ? (entity.metadata as Record<string, unknown>)

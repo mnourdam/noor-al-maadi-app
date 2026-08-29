@@ -28,6 +28,10 @@ export const APPROVED_STATE_SLUGS = [
   "ottoman",
   "mongols",
   "timurid",
+  // V16 — approved product decision: مملكة غرناطة is public Encyclopedia
+  // content (canonical row `nasrid-kingdom-of-granada`). Added explicitly,
+  // NOT aliased onto `andalus`, so it keeps its own canonical identity.
+  "nasrid-kingdom-of-granada",
 ] as const;
 
 // Alias variants → canonical state slug. Extend here if the database stores

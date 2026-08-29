@@ -2,6 +2,7 @@ import { ReadingProgress } from "@/components/ReadingProgress";
 import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { useMemo, useRef } from "react";
 import { useEntityReadCompletion } from "@/hooks/useEntityReadCompletion";
+import { useStalled } from "@/hooks/useStalled";
 import { useAccount } from "@/lib/account";
 import {
   ChevronRight,
@@ -135,6 +136,9 @@ function StatePage() {
     },
   });
 
+  const stalled = useStalled(stateQuery.isLoading);
+
+
   const state = stateQuery.data && isDisplayableEntity(stateQuery.data) && stateQuery.data.entity_type === "state"
     ? stateQuery.data
     : null;
@@ -209,10 +213,14 @@ function StatePage() {
     stateQuery.data.entity_type !== "state" &&
     isDisplayableEntity(stateQuery.data);
   if (resolvedButNotState) {
-    return <Navigate to="/encyclopedia/entity/$id" params={{ id: stateQuery.data!.slug }} replace />;
+    // Forward by canonical UUID (not slug) so the entity route resolves this
+    // exact non-state row and can never bounce back here.
+    return <Navigate to="/encyclopedia/entity/$id" params={{ id: stateQuery.data!.id }} replace />;
   }
 
-  if (stateQuery.isLoading) {
+  // Fail-safe: a lookup that never settles must eventually show a controlled
+  // unavailable state instead of an endless spinner.
+  if (stateQuery.isLoading && !stalled) {
     return (
       <AppShell>
         <div className="px-5 pt-10 text-center text-muted-foreground text-sm">جارٍ التحميل…</div>

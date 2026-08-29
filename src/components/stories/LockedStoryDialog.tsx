@@ -57,10 +57,12 @@ function prereqTarget(p: StoryPrereq): { to: string; label: string } | null {
       const resolved = resolveCanonicalCtaTarget(p.ref, (id) =>
         localEncyclopediaById(id) as CtaEntityRow | null,
       );
-      if (!resolved.targetId) return null; // dead end — never render a broken CTA
+      if (!resolved.targetId || !resolved.path) return null; // dead end — never render a broken CTA
       const label = name ?? resolved.title ?? null;
       return {
-        to: `/encyclopedia/entity/${resolved.targetId}`,
+        // `path` is the shortest canonical route: state entities go straight
+        // to /encyclopedia/state/<slug>, everything else to the entity route.
+        to: resolved.path,
         label: label ? `📖 الانتقال إلى ${label}` : "📖 الانتقال إلى الموسوعة",
       };
     }
