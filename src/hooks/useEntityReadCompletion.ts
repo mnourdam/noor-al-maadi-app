@@ -37,6 +37,13 @@ interface Options {
   relationshipSectionRef: RefObject<HTMLElement | null>;
   /** Optional label for discovery telemetry (default "encyclopedia"). */
   source?: string;
+  /**
+   * V16 — READINESS GATE. Discovery may only be recorded once the canonical
+   * entity has actually loaded and rendered meaningful content. Route entry,
+   * component mount, loading skeletons, unavailable entities, failed fetches
+   * and empty bodies must all pass `false`. Defaults to `false` (fail closed).
+   */
+  contentReady?: boolean;
 }
 
 export function useEntityReadCompletion({
@@ -46,11 +53,14 @@ export function useEntityReadCompletion({
   userKey,
   relationshipSectionRef,
   source,
+  contentReady = false,
 }: Options): void {
   const firedRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!entityId) return;
+    // Fail closed: nothing is observed until real content is on screen.
+    if (!contentReady) return;
     if (firedRef.current && firedRef.current !== entityId) firedRef.current = null;
 
     // Telemetry — powers the daily-quest "never opened" priority tier.
@@ -125,7 +135,10 @@ export function useEntityReadCompletion({
       if (total > 0 && scrolled / total >= 0.88) fire();
     };
     window.addEventListener("scroll", onScroll, { passive: true });
-    onScroll();
+    // NO mount-time completion. A short or stalled document trivially
+    // satisfies `scrolled / total >= 0.88` on the first frame, which used to
+    // record discovery before the player read anything. Discovery now
+    // requires a real engagement signal AFTER the content is ready.
 
     return () => {
       cancelled = true;
@@ -133,5 +146,5 @@ export function useEntityReadCompletion({
       window.removeEventListener("scroll", onScroll);
       if (dwellTimer != null) window.clearTimeout(dwellTimer);
     };
-  }, [entityId, entitySlug, entityType, userKey, relationshipSectionRef, source]);
+  }, [entityId, entitySlug, entityType, userKey, relationshipSectionRef, source, contentReady]);
 }
