@@ -15,6 +15,10 @@
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { resolveTokenScope, assertNoSegmentWidening } from "./audience-guard.ts";
+import {
+  extractBearer, isServiceRoleBearer, authorizeUserEnvelope, rolesGrantAdmin,
+  type CallerKind,
+} from "./authorize.ts";
 
 
 const corsHeaders = {
@@ -189,6 +193,62 @@ Deno.serve(async (req) => {
     });
 
     const body = await req.json().catch(() => ({}));
+
+    // ── V16 AUTHORSHIP AUTHORIZATION ──────────────────────────────────
+    // Authentication alone is NOT authorization. Only the service role
+    // (cron/system producers) and verified IRTH admins may author arbitrary
+    // notifications; every other authenticated user is restricted to the
+    // app's own peer envelope. Client-supplied role/admin flags are ignored.
+    const bearer = extractBearer(req.headers.get("authorization"));
+    if (!bearer) {
+      return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    let callerKind: CallerKind;
+    if (isServiceRoleBearer(bearer, serviceKey)) {
+      callerKind = "service";
+    } else {
+      const { data: userData, error: userErr } = await admin.auth.getUser(bearer);
+      const caller = userData?.user ?? null;
+      if (userErr || !caller) {
+        return jsonResponse({ error: "Unauthorized" }, { status: 401 });
+      }
+
+      const { data: roleRows } = await admin
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", caller.id);
+      const roles = (roleRows ?? []).map((r: any) => String(r.role));
+      const bootstrapOwner =
+        (caller.email ?? "").trim().toLowerCase() === "mnourdam@gmail.com";
+
+      if (rolesGrantAdmin(roles) || bootstrapOwner) {
+        callerKind = "admin";
+      } else {
+        const decision = authorizeUserEnvelope(caller.id, body);
+        if (!decision.ok) {
+          console.warn("[send-notification] authorship denied", caller.id, decision.error);
+          return jsonResponse({ error: decision.error }, { status: decision.status });
+        }
+        if (decision.requiresFriendship) {
+          const [a, b] = [caller.id, decision.targetUserId].sort();
+          const { data: friendship } = await admin
+            .from("friendships")
+            .select("id")
+            .eq("user_a", a)
+            .eq("user_b", b)
+            .maybeSingle();
+          if (!friendship) {
+            return jsonResponse(
+              { error: "forbidden: no friendship relation with the target user" },
+              { status: 403 },
+            );
+          }
+        }
+        callerKind = "user";
+      }
+    }
+    console.log(`[send-notification] caller kind=${callerKind}`);
     let notificationId: string | undefined = body.notification_id;
 
     // Resolve or create notification row.
