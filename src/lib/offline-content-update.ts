@@ -187,6 +187,32 @@ export async function checkForContentUpdate(): Promise<boolean> {
   }
 }
 
+/**
+ * Record the applied Story editorial identity after a successful update.
+ * Best-effort: a failure here can only cost one extra Stage 2 check later.
+ */
+export async function persistAppliedStoryIdentity(
+  stored: Pick<OfflineSnapshot, "content_counts" | "generated_at">,
+): Promise<void> {
+  try {
+    const manifest = await fetchContentManifest();
+    const detail = diffManifestDetailed(stored, manifest);
+    const { fetchStoryEditorialFingerprint } = await import(
+      "./stories/content-identity-check"
+    );
+    const { recordAppliedIdentity } = await import("./stories/content-identity-store");
+    const fingerprint = await fetchStoryEditorialFingerprint();
+    recordAppliedIdentity({
+      fingerprint,
+      counts: detail.counts,
+      editorial: detail.editorial,
+      observedStoriesUpdatedAt: detail.editorial["stories"] ?? null,
+      nowMs: Date.now(),
+    });
+  } catch {
+    /* identity is an optimisation; never fail an applied update over it */
+  }
+}
 
 /**
  * User-triggered staged update:
