@@ -4046,6 +4046,10 @@ export type Database = {
         Args: { p_from: string; p_to: string }
         Returns: Json
       }
+      analytics_engagement_v16: {
+        Args: { p_from: string; p_to: string }
+        Returns: Json
+      }
       analytics_growth_activity: {
         Args: { p_from: string; p_to: string }
         Returns: Json
