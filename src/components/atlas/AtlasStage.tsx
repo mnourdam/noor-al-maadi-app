@@ -6,13 +6,14 @@
 // • Pinch zoom keeps the world point under the finger midpoint stable
 //   (Google-Maps-style). Clamp is RELAXED during the active pinch and
 //   reapplied on release to prevent horizontal drift snapping.
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AtlasEntityPinsLayer } from "./AtlasEntityPins";
 import { ATLAS_BASE_URL } from "@/lib/atlas/atlas-source";
 import { ATLAS_VIEWBOX, ATLAS_ASPECT } from "@/lib/atlas/aps";
 import type { AtlasEntityRow } from "@/lib/atlas-entities";
 import { androidMark, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 import { atlasTrace, beginAtlasTrace } from "@/lib/atlas/render-trace";
+import { tierForScale, type AtlasTier } from "@/lib/atlas/atlas-tiers";
 
 
 const MIN_SCALE = 1;
@@ -337,9 +338,13 @@ export function AtlasStage({
   }, [focusAps, clamp, cancelAnimations, androidStable]);
 
   const inv = 1 / view.scale;
-  // Quantize zoom into 4 tiers so pins/labels don't re-mount every frame.
-  const labelTier =
-    view.scale >= 6 ? 3 : view.scale >= 3 ? 2 : view.scale >= 1.6 ? 1 : 0;
+  // V16 — canonical replacement-oriented tier with hysteresis. The previous
+  // tier is carried in a ref so jitter around a threshold (2.99 ↔ 3.01)
+  // cannot toggle large marker sets. Never derive tiers anywhere else.
+  const tierRef = useRef<AtlasTier | null>(null);
+  const tier = tierForScale(view.scale, tierRef.current);
+  tierRef.current = tier;
+
 
   // ── Camera ────────────────────────────────────────────────────────────
   // The camera is the SVG viewBox, NOT a transform on a <g>.
@@ -370,12 +375,13 @@ export function AtlasStage({
   // Generous margin so pins entering view don't pop in late.
   const _mx = _visW * 0.15;
   const _my = _visH * 0.15;
-  const cullBounds = {
+  const cullBounds = useMemo(() => ({
     minX: camera.x - _mx,
     maxX: camera.x + _visW + _mx,
     minY: camera.y - _my,
     maxY: camera.y + _visH + _my,
-  };
+  }), [camera.x, camera.y, _visW, _visH, _mx, _my]);
+
 
   const framed = useRef(false);
   useEffect(() => {
@@ -436,7 +442,7 @@ export function AtlasStage({
             entities={entities}
             selectedId={selectedId}
             inv={inv}
-            labelTier={labelTier}
+            tier={tier}
             onSelect={onSelect}
             cullBounds={cullBounds}
             disableGlow={androidStable}
