@@ -271,6 +271,15 @@ Deno.serve(async (req) => {
         return jsonResponse({ error: "title and body are required" }, { status: 400 });
       }
 
+      // V16: mutually-exclusive action contract. An internal deep_link and an
+      // external https URL can never coexist, and an unsafe/malformed
+      // external URL is rejected BEFORE any row is created or push is sent.
+      const action = resolveRequestAction(body);
+      if (!action.ok) {
+        console.error("[send-notification] action rejected", action.error);
+        return jsonResponse({ error: action.error, sent: 0, failed: 0, total: 0 }, { status: 400 });
+      }
+
       // V16: validate the audience BEFORE creating a row, so a malformed or
       // unverifiable segment request fails closed and never reaches send.
       const preScope = resolveTokenScope(body);
