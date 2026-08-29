@@ -22,7 +22,7 @@
     "verify:no-secrets": "node scripts/verify-no-build-secrets.mjs",
     "build:android:web": "npm run snapshot:generate && npm run snapshot:ensure && npm run content:stories && npm run pack:story-media && npm run content:cover-map && npm run verify:story-media && npm run verify:offline-snapshot && npm run verify:campaign-intros && vite build --config vite.android.config.ts && node scripts/finalize-android.mjs && npm run verify:no-secrets",
     "verify:android:release": "node scripts/verify-android-release-version.mjs",
-    "build:android:web:release": "npm run verify:android:release && REQUIRE_LIVE_CONTENT=1 npm run build:android:web",
+    "build:android:web:release": "npm run verify:android:release && ANDROID_BUILD_TYPE=release REQUIRE_LIVE_CONTENT=1 npm run build:android:web",
     "sync:android": "npm run build:android:web && node scripts/generate-android-branding.mjs && npx cap sync android && npm run verify:offline-snapshot:post",
     "open:android": "npx cap open android",
     "apk:debug": "npm run sync:android && node scripts/run-android-gradle.mjs",

@@ -148,6 +148,7 @@ export function SplashSequence({ ready = true }: SplashSequenceProps) {
 
   return (
     <div
+      data-irth-splash=""
       aria-hidden="true"
       className={`splash-root fixed inset-0 z-[300] overflow-hidden bg-[#05080f] ${phase === "fadeout" ? "splash-root--out" : ""}`}
       style={{ pointerEvents: "none" }}

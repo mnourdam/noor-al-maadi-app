@@ -160,6 +160,7 @@ export function InAppBanner() {
   return (
     <div
       dir="rtl"
+      data-irth-banner-slot="top"
       className="pointer-events-none fixed left-0 right-0 z-[60] flex justify-center px-3"
       style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}
     >
