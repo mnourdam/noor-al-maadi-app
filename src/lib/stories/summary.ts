@@ -124,9 +124,11 @@ export async function buildLocalStorySummaries(
       .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0));
 
     return all.map((s: any) => {
-      const alwaysOn = isAlwaysUnlockSpec(s.unlock_spec);
+      // FAIL CLOSED: a row whose `unlock_spec` KEY was stripped by a
+      // redacting server projection must never read as "always open".
+      const alwaysOn = isStoryRowAlwaysUnlocked(s);
       const guestUnlocked = guestState
-        ? evaluateStoryUnlock({ unlock_spec: s.unlock_spec }, guestState)
+        ? evaluateStoryRowUnlock(s, guestState)
         : false;
 
       return ({
@@ -157,6 +159,9 @@ export async function buildLocalStorySummaries(
         unlocked: alwaysOn || guestUnlocked || unlockedIds.has(s.id),
         completed: guestState ? guestState.completed_story_ids?.has(s.id) ?? false : false,
         progress: null,
+        // Local fallback rows are NOT authoritative: unlock celebrations
+        // must never be derived from them.
+        source: "local",
       } as StorySummary);
     });
   } catch {
