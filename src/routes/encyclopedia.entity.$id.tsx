@@ -13,6 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRef, useMemo } from "react";
 import { useBack } from "@/lib/navigation/engine";
 import { useEntityReadCompletion } from "@/hooks/useEntityReadCompletion";
+import { useStalled } from "@/hooks/useStalled";
 
 
 import { useAccount } from "@/lib/account";
@@ -77,7 +78,7 @@ export const Route = createFileRoute("/encyclopedia/entity/$id")({
       { name: "description", content: "عنصر في موسوعة إرث." },
     ],
   }),
-  component: EntityPage,
+  component: EntityRoute,
   notFoundComponent: () => (
     <AppShell>
       <EntityNotFound />

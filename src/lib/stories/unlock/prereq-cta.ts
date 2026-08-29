@@ -21,6 +21,8 @@ export interface CtaEntityRow {
   id: string;
   enabled?: boolean;
   title?: string | null;
+  slug?: string | null;
+  entity_type?: string | null;
   metadata?: unknown;
 }
 
@@ -31,8 +33,41 @@ export interface CanonicalCtaResult {
   targetId: string | null;
   /** Title of the resolved destination, when locally known. */
   title: string | null;
+  /** Canonical entity type of the destination, when locally known. */
+  entityType: string | null;
+  /** Canonical slug of the destination, when locally known. */
+  slug: string | null;
+  /**
+   * Shortest canonical path for the destination. State entities go straight
+   * to the dedicated state route (no generic-entity redirect hop); every
+   * other type keeps the normal entity route.
+   */
+  path: string | null;
   reason: "canonical" | "redirected" | "missing" | "disabled";
 }
+
+function buildResult(
+  row: CtaEntityRow,
+  fallbackId: string,
+  reason: "canonical" | "redirected",
+): CanonicalCtaResult {
+  const targetId = row.id ?? fallbackId;
+  const slug = typeof row.slug === "string" && row.slug.trim() ? row.slug.trim() : null;
+  const entityType = typeof row.entity_type === "string" ? row.entity_type : null;
+  const path = entityType === "state" && slug
+    ? `/encyclopedia/state/${slug}`
+    : `/encyclopedia/entity/${targetId}`;
+  return { targetId, title: row.title ?? null, entityType, slug, path, reason };
+}
+
+const NO_TARGET = (reason: "missing" | "disabled"): CanonicalCtaResult => ({
+  targetId: null,
+  title: null,
+  entityType: null,
+  slug: null,
+  path: null,
+  reason,
+});
 
 const REDIRECT_KEYS = ["canonical_id", "merged_into", "converted_to", "redirect_to"] as const;
 
