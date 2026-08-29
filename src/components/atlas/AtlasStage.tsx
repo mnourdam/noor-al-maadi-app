@@ -374,12 +374,13 @@ export function AtlasStage({
   // Generous margin so pins entering view don't pop in late.
   const _mx = _visW * 0.15;
   const _my = _visH * 0.15;
-  const cullBounds = {
+  const cullBounds = useMemo(() => ({
     minX: camera.x - _mx,
     maxX: camera.x + _visW + _mx,
     minY: camera.y - _my,
     maxY: camera.y + _visH + _my,
-  };
+  }), [camera.x, camera.y, _visW, _visH, _mx, _my]);
+
 
   const framed = useRef(false);
   useEffect(() => {
