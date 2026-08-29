@@ -14,10 +14,17 @@ const lib = readFileSync("src/lib/analytics.ts", "utf8");
 
 describe("analytics access", () => {
   it("1. staff gate accepts owner and admin", () => {
-    // is_content_editor() widened in the V16 migration.
-    const sql = readFileSync("supabase/migrations", "utf8").toString?.() ?? "";
-    expect(sql === "" || sql.length >= 0).toBe(true);
+    const { readdirSync } = require("node:fs") as typeof import("node:fs");
+    const dir = "supabase/migrations";
+    const gate = readdirSync(dir)
+      .map((f) => readFileSync(`${dir}/${f}`, "utf8"))
+      .filter((sql) => sql.includes("FUNCTION public.is_content_editor"))
+      .pop() ?? "";
+    expect(gate).toContain("'owner'");
+    expect(gate).toContain("'admin'");
+    expect(gate).not.toContain("'player'");
   });
+
 
   it("2. normal players are not granted analytics by the client", () => {
     expect(page).toContain("AdminGate");
