@@ -33,18 +33,25 @@ export function isManifestCountComparable(localKey: string): boolean {
 
 /**
  * V16 — collections whose server `last_updated` is NOT a content-identity
- * signal. `stories.updated_at` is bumped by player reactions and other
- * user-generated activity, so timestamp comparison produced a permanent
- * false-positive "update available" loop. Change detection for these
- * collections uses published-row COUNT identity only.
+ * signal. Only `stories` qualifies: `social_reactions_sync_counter()` writes
+ * `reaction_count` on the story row, which fires the generic touch trigger, so
+ * every like/unlike bumps `stories.updated_at`.
+ *
+ * `story_scenes`, `story_media` and `story_collections` are editorial-only —
+ * no user-activity trigger writes them — so their timestamps stay canonical
+ * and may raise the banner directly (Stage 1).
+ *
+ * A `stories.last_updated` bump is a CANDIDATE only; it is resolved by the
+ * Stage 2 canonical fingerprint (`src/lib/stories/content-identity.ts`).
  */
-const TIMESTAMP_NON_CANONICAL = new Set([
-  "stories", "story_scenes", "story_media", "story_collections",
-]);
+const TIMESTAMP_NON_CANONICAL = new Set(["stories"]);
 
 export function isManifestTimestampCanonical(localKey: string): boolean {
   return !TIMESTAMP_NON_CANONICAL.has(localKey);
 }
+
+/** The local collection key whose timestamp is reaction-polluted. */
+export const STORIES_CANDIDATE_KEY = "stories";
 
 let _cachedManifest: ContentManifestItem[] | null = null;
 let _manifestPromise: Promise<ContentManifestItem[] | null> | null = null;
