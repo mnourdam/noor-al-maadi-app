@@ -4,7 +4,8 @@ import { Trash2, ChevronLeft, MailOpen, CheckCheck, Image as ImageIcon } from "l
 import { AppShell, Screen } from "@/components/AppShell";
 import { CachedImage } from "@/components/CachedImage";
 import { resolveCategory } from "@/lib/notifications/categories";
-import { resolveDeepLink, isInformationalNotification, type NotificationPayload } from "@/lib/notifications/deepLink";
+import { resolveNotificationAction, openExternalUrl } from "@/lib/notifications/action";
+import { isInformationalNotification, type NotificationPayload } from "@/lib/notifications/deepLink";
 import {
   fetchMyNotifications,
   markNotificationRead,
@@ -79,13 +80,22 @@ function NotificationsCenter() {
     }
     // Reminder / informational entries are read-only inside the center —
     // tapping them just marks as read; no navigation.
-    if (isInformationalNotification({ type: n.type, category: n.category, deep_link: n.deep_link, payload: n.payload as NotificationPayload })) {
-      return;
-    }
-    const to = resolveDeepLink({
+    const like = {
+      id: n.id,
       type: n.type, category: n.category, deep_link: n.deep_link,
       payload: n.payload as NotificationPayload,
-    });
+    };
+    // V16: one canonical action resolver for push taps and Center taps.
+    const action = resolveNotificationAction(like);
+    if (action.kind === "external") {
+      await openExternalUrl(action.url);
+      return;
+    }
+    if (action.kind === "none") return;
+    if (isInformationalNotification(like)) {
+      return;
+    }
+    const to = action.path;
     const [path, hashPart] = to.split("#");
     // Stash /notifications as origin so Back from the target returns
     // here rather than falling through to the target's structural parent.

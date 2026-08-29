@@ -15,6 +15,7 @@
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { resolveTokenScope, assertNoSegmentWidening } from "./audience-guard.ts";
+import { resolveRequestAction } from "./external-url.ts";
 import {
   extractBearer, isServiceRoleBearer, authorizeUserEnvelope, rolesGrantAdmin,
   type CallerKind,
@@ -110,6 +111,7 @@ async function sendFcm(
     title: string;
     body: string;
     deep_link?: string | null;
+    external_url?: string | null;
     image_url?: string | null;
     type?: string | null;
     notification_id?: string | null;
@@ -126,6 +128,7 @@ async function sendFcm(
       data: {
         type: payload.type ?? "manual",
         ...(payload.deep_link ? { deep_link: payload.deep_link } : {}),
+        ...(payload.external_url ? { external_url: payload.external_url } : {}),
         ...(payload.notification_id ? { notification_id: payload.notification_id } : {}),
       },
       android: {
@@ -268,6 +271,15 @@ Deno.serve(async (req) => {
         return jsonResponse({ error: "title and body are required" }, { status: 400 });
       }
 
+      // V16: mutually-exclusive action contract. An internal deep_link and an
+      // external https URL can never coexist, and an unsafe/malformed
+      // external URL is rejected BEFORE any row is created or push is sent.
+      const action = resolveRequestAction(body);
+      if (!action.ok) {
+        console.error("[send-notification] action rejected", action.error);
+        return jsonResponse({ error: action.error, sent: 0, failed: 0, total: 0 }, { status: 400 });
+      }
+
       // V16: validate the audience BEFORE creating a row, so a malformed or
       // unverifiable segment request fails closed and never reaches send.
       const preScope = resolveTokenScope(body);
@@ -315,6 +327,17 @@ Deno.serve(async (req) => {
         target_user_ids: Array.isArray(body.target_user_ids) ? body.target_user_ids : null,
         target_segment_id: typeof body.target_segment_id === "string" ? body.target_segment_id : null,
         deep_link: body.deep_link ?? null,
+        // V16: the validated external action MUST be persisted so the
+        // Notification Center resolves the SAME action later. Every other
+        // send keeps the legacy behavior (payload untouched by this fn).
+        ...(action.kind === "external"
+          ? {
+            payload: {
+              ...(body.payload && typeof body.payload === "object" ? body.payload : {}),
+              external_url: action.url,
+            },
+          }
+          : {}),
         image_url: body.image_url ?? null,
         dedupe_key: dedupeKey,
 
@@ -422,6 +445,11 @@ Deno.serve(async (req) => {
         title: notif.title,
         body: notif.body,
         deep_link: notif.deep_link,
+        // Carried in the FCM data payload so a background tap can act on it.
+        // Re-validated client-side before anything is opened.
+        external_url: (notif.payload && typeof notif.payload === "object"
+          ? ((notif.payload as any).external_url ?? null)
+          : null),
         image_url: notif.image_url,
         type: notif.type,
         notification_id: notif.id,

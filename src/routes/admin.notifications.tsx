@@ -25,6 +25,7 @@ import { findTemplate, type NotificationTemplate } from "@/lib/notifications/adm
 import {
   resolveAudience, validateNumericFilter, filterSegmentId,
 } from "@/lib/notifications/admin/segments";
+import { validateExternalUrl } from "@/lib/notifications/externalUrl";
 
 
 // ============================================================
@@ -203,6 +204,9 @@ function Composer({
     payload: {} as Record<string, unknown>,
   });
   const [payloadText, setPayloadText] = useState("");
+  // V16: mutually-exclusive action model — no action / internal / external.
+  const [actionMode, setActionMode] = useState<"none" | "internal" | "external">("internal");
+  const [externalUrl, setExternalUrl] = useState("");
   const [scheduled, setScheduled] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
   const [busy, setBusy] = useState(false);
@@ -218,6 +222,7 @@ function Composer({
     setIcon(initialTemplate.icon);
     if (initialTemplate.deepLink) {
       const out = buildOutput(initialTemplate.deepLink.id, initialTemplate.deepLink.params ?? {}, "");
+      setActionMode("internal");
       setDestination({
         destinationId: initialTemplate.deepLink.id,
         params: initialTemplate.deepLink.params ?? {},
@@ -246,7 +251,18 @@ function Composer({
       try { extra = JSON.parse(payloadText); }
       catch { throw new Error("payload JSON غير صالح"); }
     }
-    const mergedPayload = { ...destination.payload, ...extra };
+    const mergedPayload: Record<string, unknown> = { ...destination.payload, ...extra };
+    // The action is mutually exclusive: an external link never ships with an
+    // internal deep_link, and a non-external send never carries external_url.
+    delete mergedPayload["external_url"];
+    let deepLinkOut: string | null = null;
+    if (actionMode === "internal") {
+      deepLinkOut = destination.deep_link || null;
+    } else if (actionMode === "external") {
+      const res = validateExternalUrl(externalUrl);
+      if (!res.ok) throw new Error(res.error);
+      mergedPayload["external_url"] = res.url;
+    }
 
     // Audience → legacy fields kept for backwards compatibility with the
     // edge function. `target_user_ids` activates only for segment/filter
@@ -281,7 +297,7 @@ function Composer({
       target_user_id,
       target_user_ids,
       target_segment_id,
-      deep_link: destination.deep_link || null,
+      deep_link: deepLinkOut,
       payload: mergedPayload,
     };
   };
@@ -289,6 +305,10 @@ function Composer({
   const validate = (): string | null => {
     if (!title.trim()) return "العنوان مطلوب.";
     if (!body.trim()) return "المحتوى مطلوب.";
+    if (actionMode === "external") {
+      const res = validateExternalUrl(externalUrl);
+      if (!res.ok) return res.error;
+    }
     if (audience.mode === "user" && !(audience.userId ?? "").trim()) return "حدّد معرّف المستخدم.";
     if (audience.mode === "segment" && !audience.segmentId) return "اختر شريحة.";
     if (audience.mode === "filter") {
@@ -487,12 +507,47 @@ function Composer({
         </Group>
 
         <Group title="الوجهة">
+          <div className="mb-3 flex flex-wrap gap-3 text-sm">
+            {([
+              ["none", "بدون إجراء"],
+              ["internal", "رابط داخل إرث"],
+              ["external", "رابط خارجي"],
+            ] as const).map(([mode, label]) => (
+              <label key={mode} className="flex items-center gap-1.5">
+                <input
+                  type="radio"
+                  name="notification-action-mode"
+                  checked={actionMode === mode}
+                  onChange={() => setActionMode(mode)}
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+          {actionMode === "external" && (
+            <Field label="الرابط الخارجي (https فقط)">
+              <input
+                value={externalUrl}
+                onChange={(e) => setExternalUrl(e.target.value)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-xs"
+                placeholder="https://youtube.com/…"
+                dir="ltr"
+              />
+              {externalUrl.trim() !== "" && !validateExternalUrl(externalUrl).ok && (
+                <p className="mt-1 text-xs text-destructive">
+                  {validateExternalUrl(externalUrl).ok ? "" : (validateExternalUrl(externalUrl) as { error: string }).error}
+                </p>
+              )}
+            </Field>
+          )}
+          {actionMode === "internal" && (
           <DeepLinkPicker
             destinationId={destination.destinationId}
             params={destination.params}
             rawDeepLink={destination.rawDeepLink}
             onChange={setDestination}
           />
+          )}
           <details className="mt-2 rounded-md border border-border p-2 text-xs">
             <summary className="cursor-pointer text-muted-foreground">payload إضافي (JSON متقدّم — اختياري)</summary>
             <textarea
@@ -672,7 +727,7 @@ function HistoryTab() {
           target_user_id: n.target_user_id,
           target_user_ids: n.target_user_ids ?? null,
           deep_link: n.deep_link ?? null,
-          payload: {},
+          payload: (n as { payload?: Record<string, unknown> | null }).payload ?? {},
         },
       });
       if (error) throw error;

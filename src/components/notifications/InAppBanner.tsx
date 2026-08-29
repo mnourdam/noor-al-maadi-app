@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "@tanstack/react-router";
 import { X } from "lucide-react";
 import { resolveCategory } from "@/lib/notifications/categories";
-import { resolveDeepLink, type NotificationLike, type NotificationPayload } from "@/lib/notifications/deepLink";
+import { type NotificationLike, type NotificationPayload } from "@/lib/notifications/deepLink";
+import { resolveNotificationAction, openExternalUrl } from "@/lib/notifications/action";
 import {
   markNotificationRead,
   recordDismissed,
@@ -133,7 +134,19 @@ export function InAppBanner() {
   const onTap = () => {
     clearTimer();
     void markNotificationRead(current.id);
-    const to = resolveDeepLink(current);
+    // V16: canonical action contract — external links open a browser,
+    // unsafe/ambiguous actions fail closed and only dismiss the banner.
+    const action = resolveNotificationAction(current);
+    if (action.kind !== "internal") {
+      setLeaving(true);
+      const url = action.kind === "external" ? action.url : null;
+      window.setTimeout(() => {
+        dequeue();
+        if (url) void openExternalUrl(url);
+      }, 200);
+      return;
+    }
+    const to = action.path;
     const [path, hashPart] = to.split("#");
     setLeaving(true);
     window.setTimeout(() => {
