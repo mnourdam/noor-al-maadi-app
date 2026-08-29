@@ -241,8 +241,11 @@ function RatingPanel({ issueId, initialRating, onRated }: { issueId: string; ini
   );
 }
 
-function MessageBubble({ message }: { message: FeedbackMessage }) {
-  const isAdmin = message.author_role === "admin";
+function MessageBubble({ message, reporterId }: { message: FeedbackMessage; reporterId: string | null }) {
+  // Canonical classifier — legacy rows mislabelled `admin` but authored by
+  // the contribution owner still render as the player.
+  const isAdmin = isStaffMessage(message, reporterId);
+
   return (
     <li className={`flex ${isAdmin ? "justify-start" : "justify-end"}`}>
       <div
