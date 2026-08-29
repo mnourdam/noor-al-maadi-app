@@ -152,8 +152,11 @@ function ProjectHealthSection({ range }: { range: TimeRange }) {
       </ManagerOnly>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <ChartCard title={`مسجّلون جدد · ${range.label}`} points={series.data?.points ?? []} />
-        <ChartCard title={`المستخدمون النشطون · ${range.label}`} points={active.data?.points ?? []} />
+        <ChartCard title={`مسجّلون جدد · ${range.label}`} points={series.data?.points ?? []}
+          loading={series.isLoading} error={series.error as Error | null} />
+        <ChartCard title={`المستخدمون النشطون · ${range.label}`} points={active.data?.points ?? []}
+          loading={active.isLoading} error={active.error as Error | null} />
+
       </div>
     </div>
   );
