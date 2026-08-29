@@ -109,27 +109,41 @@ const fmt = (n: number | null | undefined) =>
   typeof n === "number" ? new Intl.NumberFormat("en-US").format(n) : "—";
 
 // ── Sections ───────────────────────────────────────────────────
-function ProjectHealthSection({ range }: { range: TimeRange }) {
-  const { data, isLoading, error } = useQuery(overviewQuery());
-  const series = useQuery(seriesQuery("new_users", range));
-  const active = useQuery(seriesQuery("active_users", range));
+function MetricUnavailable({ onRetry }: { onRetry?: () => void }) {
+  return (
+    <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-3 text-xs text-red-200">
+      تعذّر جلب المؤشر — القيمة غير متاحة (وليست صفرًا).
+      {onRetry ? (
+        <button onClick={onRetry} className="ms-2 rounded-lg border border-red-400/40 px-2 py-0.5 hover:bg-red-500/10">
+          إعادة المحاولة
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function ProjectHealthSection() {
+  const { data, isLoading, error, refetch } = useQuery(overviewQuery());
 
   if (isLoading) return <p className="text-xs text-slate-400">جارٍ التحميل…</p>;
-  if (error) return <p className="text-xs text-red-300">تعذّر الجلب: {(error as Error).message}</p>;
+  if (error) return <MetricUnavailable onRetry={() => void refetch()} />;
   if (!data) return null;
   const u = data.users;
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-        <Kpi label="إجمالي المسجلين" value={fmt(u.total)} accent />
-        <Kpi label="متصلون الآن" value={fmt(u.online_now)} hint="آخر 5 دقائق" />
-        <Kpi label="نشاط اليوم (DAU)" value={fmt(u.dau)} />
-        <Kpi label="نشاط الأسبوع (WAU)" value={fmt(u.wau)} />
-        <Kpi label="نشاط الشهر (MAU)" value={fmt(u.mau)} />
+        <Kpi label="إجمالي اللاعبين" value={fmt(u.total)} hint="إجمالي" accent />
+        <Kpi label="لاعبون جدد اليوم" value={fmt(u.new_today)} hint="آخر 24 ساعة" />
+        <Kpi label="لاعبون جدد · 7 أيام" value={fmt(u.new_week)} />
+        <Kpi label="لاعبون جدد · 30 يومًا" value={fmt(u.new_month)} />
+        <Kpi label="DAU" value={fmt(u.dau)} hint="نشطون خلال 24 ساعة" accent />
+        <Kpi label="WAU" value={fmt(u.wau)} hint="نشطون خلال 7 أيام" />
+        <Kpi label="MAU" value={fmt(u.mau)} hint="نشطون خلال 30 يومًا" />
         <Kpi label="DAU / MAU" value={`${u.dau_mau_ratio ?? 0}%`} hint="مؤشر المداومة" />
-        <Kpi label="مسجّلون جدد اليوم" value={fmt(u.new_today)} />
-        <Kpi label="مسجّلون جدد · 7 أيام" value={fmt(u.new_week)} />
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <Kpi label="متصلون الآن" value={fmt(u.online_now)} hint="آخر 5 دقائق" />
       </div>
 
       <ManagerOnly>
@@ -141,14 +155,19 @@ function ProjectHealthSection({ range }: { range: TimeRange }) {
           <Kpi label="معطّلون" value={fmt(u.disabled)} />
         </div>
       </ManagerOnly>
+    </div>
+  );
+}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <ChartCard title={`مسجّلون جدد · ${range.label}`} points={series.data?.points ?? []}
-          loading={series.isLoading} error={series.error as Error | null} />
-        <ChartCard title={`المستخدمون النشطون · ${range.label}`} points={active.data?.points ?? []}
-          loading={active.isLoading} error={active.error as Error | null} />
-
-      </div>
+function ActivityChartsSection({ range }: { range: TimeRange }) {
+  const series = useQuery(seriesQuery("new_users", range));
+  const active = useQuery(seriesQuery("active_users", range));
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      <ChartCard title={`مسجّلون جدد · ${range.label}`} points={series.data?.points ?? []}
+        loading={series.isLoading} error={series.error as Error | null} />
+      <ChartCard title={`المستخدمون النشطون · ${range.label}`} points={active.data?.points ?? []}
+        loading={active.isLoading} error={active.error as Error | null} />
     </div>
   );
 }
