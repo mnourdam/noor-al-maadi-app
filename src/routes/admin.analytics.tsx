@@ -380,21 +380,25 @@ function AnalyticsHome() {
           </p>
         </Section>
 
-        <Section title="تقدّم اللاعبين" icon={<Boxes className="h-4 w-4" />} defaultOpen={false}>
-          <Pending label="توزيع XP/الدنانير ونسب الإكمال" />
+        <Section title={`التفاعل · ${range.label}`} icon={<Boxes className="h-4 w-4" />}>
+          <EngagementSection range={range} />
         </Section>
 
-        <Section title="تحليلات الحملات" icon={<Boxes className="h-4 w-4" />} defaultOpen={false}>
-          <Pending label="بدء/إنهاء/نقاط التسرّب لكل حملة" />
+        <Section title="الاحتفاظ والأجهزة والدول" icon={<Users className="h-4 w-4" />} defaultOpen={false}>
+          <div className="space-y-2 text-xs text-slate-400">
+            <p className="rounded-xl border border-dashed border-slate-700/60 bg-slate-900/30 p-3">
+              <span className="font-semibold text-slate-300">الاحتفاظ (D1/D7/D30): </span>
+              لا تتوفر بيانات تاريخية كافية بعد — لا يوجد سجل نشاط يومي لكل لاعب
+              (الموجود حاليًا آخر ظهور فقط)، لذلك لا يمكن حساب الاحتفاظ بدقة ولن يُعرض رقم تقديري.
+            </p>
+            <p className="rounded-xl border border-dashed border-slate-700/60 bg-slate-900/30 p-3">
+              <span className="font-semibold text-slate-300">الدولة/الجهاز/المنصّة/إصدار التطبيق: </span>
+              غير مُجمَّعة حاليًا في الإنتاج — تتطلّب أدوات قياس مستقبلية (Firebase Analytics).
+              لن يتم استنتاجها من البريد أو الملف الشخصي.
+            </p>
+          </div>
         </Section>
 
-        <Section title="تحليلات الموسوعة" icon={<BookOpen className="h-4 w-4" />} defaultOpen={false}>
-          <Pending label="المقالات الأكثر مشاهدة وعمليات البحث" />
-        </Section>
-
-        <Section title="الاجتماعي والإشعارات" icon={<Users className="h-4 w-4" />} defaultOpen={false}>
-          <Pending label="معدّل الفتح للإشعارات وتحويلات الإحالات" />
-        </Section>
       </div>
     </div>
   );
