@@ -462,48 +462,42 @@ function AnalyticsHome() {
           <TimeRangeBar value={rangeKey} onChange={setRangeKey} />
         </header>
 
-        <Section title="إجراءات سريعة" icon={<Zap className="h-4 w-4" />}>
-          <QuickActionsSection />
+        <Section title="صحة المجتمع / اللاعبين" icon={<Users className="h-4 w-4" />}>
+          <ProjectHealthSection />
         </Section>
 
-        <Section title="صحة المشروع" icon={<Users className="h-4 w-4" />}>
-          <ProjectHealthSection range={range} />
-        </Section>
-
-        <Section title="صحة المحتوى" icon={<BookOpen className="h-4 w-4" />}>
-          <ContentHealthSection />
-        </Section>
-
-        <Section title="تحليلات الأطلس" icon={<Compass className="h-4 w-4" />}>
-          <AtlasSection />
-        </Section>
-
-        <Section title="صحة النظام" icon={<Database className="h-4 w-4" />}>
-          <SystemHealthSection />
-        </Section>
-
-        <Section title="حالة اللقطة (دون اتصال)" icon={<Download className="h-4 w-4" />} defaultOpen={false}>
-          <p className="text-xs text-slate-400">
-            تفاصيل اللقطة المضمّنة والمحلية متوفّرة في{" "}
-            <Link to="/admin/offline" className="text-amber-300 underline">مركز اللقطة</Link>.
-          </p>
-        </Section>
-
-        <Section title={`التفاعل · ${range.label}`} icon={<Boxes className="h-4 w-4" />}>
+        <Section title={`التفاعل والمحتوى · ${range.label}`} icon={<Boxes className="h-4 w-4" />}>
           <EngagementSection range={range} />
         </Section>
 
-        <Section title="الاحتفاظ والأجهزة والدول" icon={<Users className="h-4 w-4" />} defaultOpen={false}>
+        <Section title="أداء المحتوى" icon={<BookOpen className="h-4 w-4" />}>
+          <ContentPerformanceSection range={range} />
+        </Section>
+
+        <Section title={`منحنيات النشاط · ${range.label}`} icon={<Activity className="h-4 w-4" />}>
+          <ActivityChartsSection range={range} />
+        </Section>
+
+        <Section title="مؤشرات غير متاحة حاليًا" icon={<Users className="h-4 w-4" />} defaultOpen={false}>
           <div className="space-y-2 text-xs text-slate-400">
             <p className="rounded-xl border border-dashed border-slate-700/60 bg-slate-900/30 p-3">
-              <span className="font-semibold text-slate-300">الاحتفاظ (D1/D7/D30): </span>
-              لا تتوفر بيانات تاريخية كافية بعد — لا يوجد سجل نشاط يومي لكل لاعب
-              (الموجود حاليًا آخر ظهور فقط)، لذلك لا يمكن حساب الاحتفاظ بدقة ولن يُعرض رقم تقديري.
+              الاحتفاظ التفصيلي D1 / D7 / D30 يحتاج إلى بيانات جلسات تاريخية، وسيبدأ بعد إضافة نظام التتبع.
             </p>
             <p className="rounded-xl border border-dashed border-slate-700/60 bg-slate-900/30 p-3">
-              <span className="font-semibold text-slate-300">الدولة/الجهاز/المنصّة/إصدار التطبيق: </span>
-              غير مُجمَّعة حاليًا في الإنتاج — تتطلّب أدوات قياس مستقبلية (Firebase Analytics).
-              لن يتم استنتاجها من البريد أو الملف الشخصي.
+              بيانات البلد والجهاز والمنصة غير متاحة قبل تفعيل Analytics instrumentation.
+            </p>
+          </div>
+        </Section>
+
+        <Section title="تشخيص النظام" icon={<Database className="h-4 w-4" />} defaultOpen={false}>
+          <div className="space-y-4">
+            <QuickActionsSection />
+            <ContentHealthSection />
+            <AtlasSection />
+            <SystemHealthSection />
+            <p className="text-xs text-slate-400">
+              تفاصيل اللقطة المضمّنة والمحلية متوفّرة في{" "}
+              <Link to="/admin/offline" className="text-amber-300 underline">مركز اللقطة</Link>.
             </p>
           </div>
         </Section>
