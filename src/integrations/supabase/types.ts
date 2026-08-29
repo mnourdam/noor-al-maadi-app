@@ -3470,6 +3470,16 @@ export type Database = {
         Args: { p_depth: number; p_node: Json; p_user_id: string }
         Returns: boolean
       }
+      _feedback_dispatch_push: {
+        Args: {
+          p_body: string
+          p_dedupe: string
+          p_deep_link: string
+          p_title: string
+          p_user: string
+        }
+        Returns: boolean
+      }
       _feedback_main_admin_id: { Args: never; Returns: string }
       _feedback_notify_admin: {
         Args: {
@@ -4291,6 +4301,7 @@ export type Database = {
       }
       is_content_admin: { Args: never; Returns: boolean }
       is_content_editor: { Args: never; Returns: boolean }
+      is_feedback_staff: { Args: { _uid?: string }; Returns: boolean }
       is_newsletter_admin: { Args: never; Returns: boolean }
       is_user_manager: { Args: never; Returns: boolean }
       is_username_available: { Args: { p_username: string }; Returns: boolean }
