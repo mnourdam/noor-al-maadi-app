@@ -136,6 +136,9 @@ function StatePage() {
     },
   });
 
+  const stalled = useStalled(stateQuery.isLoading);
+
+
   const state = stateQuery.data && isDisplayableEntity(stateQuery.data) && stateQuery.data.entity_type === "state"
     ? stateQuery.data
     : null;
