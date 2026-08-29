@@ -186,8 +186,7 @@ function ChartCard({ title, points, loading, error }: {
       {/* Never render a failed metric as an empty/zero chart. */}
       {error ? (
         <div className="h-40 flex items-center justify-center text-center text-xs text-red-300 px-3">
-          تعذّر جلب هذا المؤشر — القيمة غير متاحة (وليست صفرًا).
-          <br />{error.message}
+          تعذّر جلب المؤشر — القيمة غير متاحة (وليست صفرًا).
         </div>
       ) : loading ? (
         <div className="h-40 flex items-center justify-center text-xs text-slate-400">جارٍ التحميل…</div>
