@@ -445,6 +445,11 @@ Deno.serve(async (req) => {
         title: notif.title,
         body: notif.body,
         deep_link: notif.deep_link,
+        // Carried in the FCM data payload so a background tap can act on it.
+        // Re-validated client-side before anything is opened.
+        external_url: (notif.payload && typeof notif.payload === "object"
+          ? ((notif.payload as any).external_url ?? null)
+          : null),
         image_url: notif.image_url,
         type: notif.type,
         notification_id: notif.id,
