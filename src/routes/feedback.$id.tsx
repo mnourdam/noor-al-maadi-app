@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { getIssueThread, markIssueRead, rateIssue, replyToIssue } from "@/lib/feedback/api";
 import { CATEGORY_MAP, STATUS_LABELS, type FeedbackIssue, type FeedbackMessage } from "@/lib/feedback/types";
+import { isStaffMessage } from "@/lib/feedback/sender";
+
 import { supabase } from "@/integrations/supabase/client";
 import { useFeedbackPresence } from "@/lib/feedback/usePresence";
 import { FeedbackPresenceBadge } from "@/components/feedback/FeedbackPresenceBadge";
