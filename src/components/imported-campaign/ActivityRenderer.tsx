@@ -43,6 +43,7 @@ import {
   purchaseOrderingHelp,
   recoverPendingOrderingHelp,
 } from "@/lib/campaigns/ordering-help";
+import { seatPinnedItems, correctIndexOfOrderingId } from "@/lib/campaigns/ordering-seating";
 import { activityKey } from "@/lib/campaignLedger";
 
 
