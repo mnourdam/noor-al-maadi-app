@@ -142,8 +142,9 @@ function FeedbackThread() {
 
             <ul className="my-4 space-y-3">
               {messages.map((m) => (
-                <MessageBubble key={m.id} message={m} />
+                <MessageBubble key={m.id} message={m} reporterId={issue.reporter_id ?? null} />
               ))}
+
             </ul>
 
             {issue.status === "closed" ? (
