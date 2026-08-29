@@ -153,22 +153,10 @@ export async function buildLocalStorySummaries(
       .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0));
 
     return all.map((s: any) => {
-      // FAIL CLOSED: a row whose `unlock_spec` KEY was stripped by a
-      // redacting server projection must never read as "always open".
-      const alwaysOn = isStoryRowAlwaysUnlocked(s);
-      // V16 — ONE LOCAL UNLOCK SEMANTIC.
-      // The card state and the derived prerequisite list below run the SAME
-      // canonical evaluator over the SAME `unlock_spec` and the SAME
-      // `evidenceState`. They can therefore never contradict each other
-      // (all leaves satisfied ⇒ parent `all(...)` evaluates true).
-      const localEvaluation = evaluateStoryRowUnlock(s, evidenceState);
-      // Last-known SERVER-CONFIRMED unlock (signed cache). Display floor
-      // only — it is never derived from progress and never grants player
-      // access; `get_story_bundle_v2` stays the access authority.
-      const serverConfirmedFloor = unlockedIds.has(s.id);
-      const unlocked = alwaysOn || localEvaluation || serverConfirmedFloor;
+      const unlocked = resolveLocalUnlocked(s, evidenceState, unlockedIds);
 
       const cached = mirror?.entries?.[String(s.id)] ?? null;
+
 
 
       return ({
