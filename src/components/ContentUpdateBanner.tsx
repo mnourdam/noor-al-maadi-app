@@ -19,6 +19,7 @@ export function ContentUpdateBanner() {
       role="status"
       aria-live="polite"
       dir="rtl"
+      data-irth-banner-slot="bottom"
       className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+4.75rem)] z-[60] flex justify-center px-3"
     >
       <div className="animate-fade-in pointer-events-auto flex w-full max-w-md items-center gap-3 rounded-2xl border border-gold/40 bg-gradient-to-l from-gold/12 via-background/85 to-background/80 px-4 py-3 shadow-[0_10px_30px_-18px_oklch(0.82_0.14_82/0.55)] backdrop-blur-md">
