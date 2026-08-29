@@ -374,6 +374,7 @@ export function CinematicOpening() {
 
   const node = (
     <div
+      data-irth-cinematic-opening=""
       className="fixed inset-0 z-[2000] bg-black touch-none select-none"
       role="dialog"
       aria-modal="true"
