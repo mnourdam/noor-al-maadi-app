@@ -186,7 +186,12 @@ export async function initPushNotifications(): Promise<void> {
             category: data.category ?? data.type ?? null,
             image_url: data.image_url ?? data.image ?? null,
             deep_link: data.deep_link ?? null,
-            payload: safeParse(data.payload),
+            // Foreground arrival NEVER opens anything automatically — the
+            // external action is only carried so a tap can act on it.
+            payload: {
+              ...safeParse(data.payload),
+              ...(data.external_url ? { external_url: data.external_url } : {}),
+            },
           };
           window.dispatchEvent(new CustomEvent("irth:notifications:banner", { detail }));
           window.dispatchEvent(new CustomEvent("irth:notifications:updated"));
