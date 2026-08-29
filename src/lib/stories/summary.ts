@@ -134,6 +134,18 @@ export async function buildLocalStorySummaries(
     // locally against the same evidence the online guest RPC receives.
     const guestState = uid ? null : guestUnlockState();
 
+    // V16 — signed-in local fallback: read the READ-ONLY progress mirror of
+    // the last authoritative response so previously read/completed stories
+    // never flash as "جديدة" during a cold start. Never a write path.
+    const { readMirror } = await import("./progress-mirror");
+    const mirror = uid ? readMirror(uid) : null;
+
+    // Evidence used ONLY to explain lock requirements (never to unlock).
+    const evidenceState = guestState ?? (uid ? await authedEvidenceState(uid, mirror) : {});
+    const { deriveStoryPrereqs } = await import("./unlock/derive-prereqs");
+    const { defaultLocalTitleResolver } = await import("./unlock/local-titles");
+    const resolveTitle = await defaultLocalTitleResolver();
+
     const all = rows
       .filter((s: any) => !worldSlug || s.world_slug === worldSlug)
       .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0));
@@ -145,6 +157,9 @@ export async function buildLocalStorySummaries(
       const guestUnlocked = guestState
         ? evaluateStoryRowUnlock(s, guestState)
         : false;
+      const unlocked = alwaysOn || guestUnlocked || unlockedIds.has(s.id);
+
+      const cached = mirror?.entries?.[String(s.id)] ?? null;
 
       return ({
         id: s.id,
@@ -167,18 +182,29 @@ export async function buildLocalStorySummaries(
         length_class: s.length_class ?? null,
         historical_confidence: s.historical_confidence ?? null,
         tags: Array.isArray(s.tags) ? s.tags.filter((t: unknown) => typeof t === "string") : [],
-        prereqs: [],
+        // Real requirements derived from the packaged `unlock_spec` — only
+        // meaningful while the story is still locked.
+        prereqs: unlocked ? [] : deriveStoryPrereqs(s, evidenceState, resolveTitle),
         story_collection_id: s.story_collection_id ?? null,
         collection_order: s.collection_order ?? null,
         lock_explanation: s.lock_explanation ?? null,
-        unlocked: alwaysOn || guestUnlocked || unlockedIds.has(s.id),
-        completed: guestState ? guestState.completed_story_ids?.has(s.id) ?? false : false,
-        progress: null,
+        unlocked,
+        completed: guestState
+          ? guestState.completed_story_ids?.has(s.id) ?? false
+          : cached?.completed ?? false,
+        progress:
+          cached && (cached.lastSceneIndex != null || cached.maxSceneIndexReached != null)
+            ? {
+                last_scene_index: cached.lastSceneIndex ?? 0,
+                max_scene_index_reached: cached.maxSceneIndexReached ?? cached.lastSceneIndex ?? 0,
+              }
+            : null,
         // Local fallback rows are NOT authoritative: unlock celebrations
         // must never be derived from them.
         source: "local",
       } as StorySummary);
     });
+
   } catch {
     return [];
   }
