@@ -12,7 +12,7 @@ import {
 import { AdminGate, ManagerOnly } from "@/lib/admin-guard";
 import {
   resolveRange, overviewQuery, contentHealthQuery, atlasQuery,
-  systemHealthQuery, seriesQuery,
+  systemHealthQuery, seriesQuery, engagementQuery,
   type RangeKey, type TimeRange,
 } from "@/lib/analytics";
 
@@ -105,15 +105,6 @@ function Section({
   );
 }
 
-function Pending({ label }: { label: string }) {
-  return (
-    <div className="rounded-xl border border-dashed border-slate-700/60 bg-slate-900/30 p-4 text-xs text-slate-400">
-      <div className="font-semibold text-slate-300">{label}</div>
-      <div className="mt-1">قيد التحضير — يتطلّب تفعيل جدول الأحداث (telemetry) في إصدار قادم.</div>
-    </div>
-  );
-}
-
 const fmt = (n: number | null | undefined) =>
   typeof n === "number" ? new Intl.NumberFormat("en-US").format(n) : "—";
 
@@ -152,14 +143,20 @@ function ProjectHealthSection({ range }: { range: TimeRange }) {
       </ManagerOnly>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <ChartCard title={`مسجّلون جدد · ${range.label}`} points={series.data?.points ?? []} />
-        <ChartCard title={`المستخدمون النشطون · ${range.label}`} points={active.data?.points ?? []} />
+        <ChartCard title={`مسجّلون جدد · ${range.label}`} points={series.data?.points ?? []}
+          loading={series.isLoading} error={series.error as Error | null} />
+        <ChartCard title={`المستخدمون النشطون · ${range.label}`} points={active.data?.points ?? []}
+          loading={active.isLoading} error={active.error as Error | null} />
+
       </div>
     </div>
   );
 }
 
-function ChartCard({ title, points }: { title: string; points: { t: string; v: number }[] }) {
+function ChartCard({ title, points, loading, error }: {
+  title: string; points: { t: string; v: number }[];
+  loading?: boolean; error?: Error | null;
+}) {
   const data = useMemo(
     () => points.map((p) => ({ t: new Date(p.t).toLocaleDateString("en-CA"), v: Number(p.v) })),
     [points],
@@ -167,9 +164,18 @@ function ChartCard({ title, points }: { title: string; points: { t: string; v: n
   return (
     <div className="rounded-xl border border-slate-700/50 bg-slate-900/50 p-3">
       <div className="mb-2 text-xs font-semibold text-slate-300">{title}</div>
-      {data.length === 0 ? (
+      {/* Never render a failed metric as an empty/zero chart. */}
+      {error ? (
+        <div className="h-40 flex items-center justify-center text-center text-xs text-red-300 px-3">
+          تعذّر جلب هذا المؤشر — القيمة غير متاحة (وليست صفرًا).
+          <br />{error.message}
+        </div>
+      ) : loading ? (
+        <div className="h-40 flex items-center justify-center text-xs text-slate-400">جارٍ التحميل…</div>
+      ) : data.length === 0 ? (
         <div className="h-40 flex items-center justify-center text-xs text-slate-500">لا توجد بيانات لهذا النطاق.</div>
       ) : (
+
         <ResponsiveContainer width="100%" height={160}>
           <AreaChart data={data} margin={{ top: 5, right: 8, bottom: 0, left: -20 }}>
             <defs>
@@ -296,6 +302,77 @@ function SystemHealthSection() {
   );
 }
 
+
+// ── Engagement + content performance (V16) ─────────────────────
+function EngagementSection({ range }: { range: TimeRange }) {
+  const { data, isLoading, error } = useQuery(engagementQuery(range));
+  if (isLoading) return <p className="text-xs text-slate-400">جارٍ التحميل…</p>;
+  if (error) return (
+    <p className="text-xs text-red-300">
+      تعذّر جلب مؤشرات التفاعل — القيم غير متاحة (وليست صفرًا): {(error as Error).message}
+    </p>
+  );
+  if (!data) return null;
+  const ev = data.events, st = data.state;
+  return (
+    <div className="space-y-4">
+      <div>
+        <div className="mb-2 text-[11px] font-semibold text-amber-200">أحداث خلال النطاق المحدّد</div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          <Kpi label="إكمال قصص" value={fmt(ev.story_completions)} hint={`${fmt(ev.story_completions_users)} لاعب`} accent />
+          <Kpi label="إكمال حملات" value={fmt(ev.campaign_completions)} hint={`${fmt(ev.campaign_completions_users)} لاعب`} />
+          <Kpi label="اكتشافات الموسوعة" value={fmt(ev.discoveries)} hint={`${fmt(ev.discoveries_users)} لاعب`} />
+          <Kpi label="إكمال تحقيقات" value={fmt(ev.investigation_completions)} />
+          <Kpi label="مقتنيات المتحف" value={fmt(ev.museum_unlocks)} />
+          <Kpi label="تعليقات" value={fmt(ev.comments)} />
+          <Kpi label="تفاعلات" value={fmt(ev.reactions)} />
+          <Kpi label="مساهمات" value={fmt(ev.contributions)} />
+        </div>
+      </div>
+
+      <div>
+        <div className="mb-2 text-[11px] font-semibold text-slate-300">الحالة الحالية (تراكمي — لا يتأثر بالنطاق)</div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          <Kpi label="قصص قيد التقدّم" value={fmt(st.story_progress_rows)} hint={`${fmt(st.story_progress_users)} لاعب`} />
+          <Kpi label="تقدّم الحملات" value={fmt(st.campaign_progress_rows)} hint={`${fmt(st.campaign_progress_users)} لاعب`} />
+          <Kpi label="إجمالي إكمال القصص" value={fmt(st.story_completions_total)} />
+          <Kpi label="إجمالي الاكتشافات" value={fmt(st.discoveries_total)} />
+          <Kpi label="مقتنيات المتحف" value={fmt(st.museum_items)} />
+          <Kpi label="تحقيقات" value={fmt(st.investigation_progress_rows)} />
+          <Kpi label="تعليقات المجتمع" value={fmt(st.comments_total)} />
+          <Kpi label="المساهمات" value={fmt(st.contributions_total)} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        <RankCard title="الأكثر إكمالًا (قصص)" items={data.top_stories.map((s) => ({ title: s.title, n: s.completions ?? 0 }))} />
+        <RankCard title="الأكثر لعبًا (حملات)" items={data.top_campaigns.map((c) => ({ title: c.title, n: c.players ?? 0 }))} />
+        <RankCard title="الأكثر اكتشافًا (الموسوعة)" items={data.top_entities.map((e) => ({ title: e.title, n: e.discoveries ?? 0 }))} />
+      </div>
+    </div>
+  );
+}
+
+function RankCard({ title, items }: { title: string; items: { title: string; n: number }[] }) {
+  return (
+    <div className="rounded-xl border border-slate-700/50 bg-slate-900/50 p-3">
+      <div className="mb-2 text-xs font-semibold text-slate-300">{title}</div>
+      {items.length === 0 ? (
+        <div className="text-xs text-slate-500">لا توجد بيانات.</div>
+      ) : (
+        <ol className="space-y-1 text-xs text-slate-300">
+          {items.map((it, i) => (
+            <li key={i} className="flex justify-between gap-2 border-b border-slate-800/60 py-1">
+              <span className="truncate">{it.title}</span>
+              <span className="shrink-0 text-amber-200">{fmt(it.n)}</span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
+  );
+}
+
 function QuickActionsSection() {
   const items: { to: string; label: string; icon: ReactNode }[] = [
     { to: "/admin/offline",            label: "لقطة دون اتصال",  icon: <HardDrive className="h-4 w-4" /> },
@@ -365,21 +442,25 @@ function AnalyticsHome() {
           </p>
         </Section>
 
-        <Section title="تقدّم اللاعبين" icon={<Boxes className="h-4 w-4" />} defaultOpen={false}>
-          <Pending label="توزيع XP/الدنانير ونسب الإكمال" />
+        <Section title={`التفاعل · ${range.label}`} icon={<Boxes className="h-4 w-4" />}>
+          <EngagementSection range={range} />
         </Section>
 
-        <Section title="تحليلات الحملات" icon={<Boxes className="h-4 w-4" />} defaultOpen={false}>
-          <Pending label="بدء/إنهاء/نقاط التسرّب لكل حملة" />
+        <Section title="الاحتفاظ والأجهزة والدول" icon={<Users className="h-4 w-4" />} defaultOpen={false}>
+          <div className="space-y-2 text-xs text-slate-400">
+            <p className="rounded-xl border border-dashed border-slate-700/60 bg-slate-900/30 p-3">
+              <span className="font-semibold text-slate-300">الاحتفاظ (D1/D7/D30): </span>
+              لا تتوفر بيانات تاريخية كافية بعد — لا يوجد سجل نشاط يومي لكل لاعب
+              (الموجود حاليًا آخر ظهور فقط)، لذلك لا يمكن حساب الاحتفاظ بدقة ولن يُعرض رقم تقديري.
+            </p>
+            <p className="rounded-xl border border-dashed border-slate-700/60 bg-slate-900/30 p-3">
+              <span className="font-semibold text-slate-300">الدولة/الجهاز/المنصّة/إصدار التطبيق: </span>
+              غير مُجمَّعة حاليًا في الإنتاج — تتطلّب أدوات قياس مستقبلية (Firebase Analytics).
+              لن يتم استنتاجها من البريد أو الملف الشخصي.
+            </p>
+          </div>
         </Section>
 
-        <Section title="تحليلات الموسوعة" icon={<BookOpen className="h-4 w-4" />} defaultOpen={false}>
-          <Pending label="المقالات الأكثر مشاهدة وعمليات البحث" />
-        </Section>
-
-        <Section title="الاجتماعي والإشعارات" icon={<Users className="h-4 w-4" />} defaultOpen={false}>
-          <Pending label="معدّل الفتح للإشعارات وتحويلات الإحالات" />
-        </Section>
       </div>
     </div>
   );
