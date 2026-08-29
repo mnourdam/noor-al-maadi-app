@@ -34,7 +34,7 @@ describe("analytics access", () => {
 
 describe("no silent zero", () => {
   it("3. failed metric renders an unavailable state, not 0", () => {
-    expect(page).toMatch(/تعذّر جلب هذا المؤشر/);
+    expect(page).toMatch(/تعذّر جلب المؤشر/);
     expect(page).toMatch(/وليست صفرًا/);
     // engagement failures never fall back to a numeric value
     expect(page).not.toMatch(/engagementQuery\([^)]*\)\)\.data \?\? 0/);
@@ -73,12 +73,12 @@ describe("content rankings", () => {
 
 describe("unsupported dimensions are not fabricated", () => {
   it("7. retention is declared unavailable", () => {
-    expect(page).toMatch(/لا تتوفر بيانات تاريخية كافية بعد/);
+    expect(page).toMatch(/الاحتفاظ التفصيلي D1 \/ D7 \/ D30/);
     expect(page).not.toMatch(/D1\s*=|retention_rate/);
   });
 
   it("8. country/device/platform are declared unavailable", () => {
-    expect(page).toMatch(/الدولة\/الجهاز\/المنصّة/);
+    expect(page).toMatch(/بيانات البلد والجهاز والمنصة غير متاحة/);
     expect(page).not.toMatch(/country_from_email|guessCountry/);
   });
 });
@@ -88,5 +88,45 @@ describe("aggregate RPC", () => {
     expect(lib).toContain("analytics_engagement_v16");
     expect(lib).toContain("p_from");
     expect(lib).toContain("p_to");
+  });
+});
+
+describe("V16 UI correction", () => {
+  it("11. no raw postgres error text is rendered", () => {
+    expect(page).not.toContain("{error.message}");
+    expect(page).not.toContain("{(error as Error).message}");
+  });
+
+  it("12. primary player KPIs are present", () => {
+    for (const k of ["إجمالي اللاعبين", "لاعبون جدد اليوم", "new_week", "new_month", "u.dau", "u.wau", "u.mau", "dau_mau_ratio"]) {
+      expect(page).toContain(k);
+    }
+  });
+
+  it("13. engagement groups label events vs totals", () => {
+    for (const g of ["القصص", "الحملات", "الموسوعة", "التحقيقات", "المتحف", "المجتمع"]) {
+      expect(page).toContain(g);
+    }
+    expect(page).toContain("(أحداث)");
+    expect(page).toContain("إجمالي — سجلات");
+  });
+
+  it("14. technical diagnostics are collapsed and demoted", () => {
+    expect(page).toMatch(/title="تشخيص النظام"[\s\S]*?defaultOpen=\{false\}/);
+    const players = page.indexOf("صحة المجتمع / اللاعبين");
+    const diag = page.indexOf('title="تشخيص النظام"');
+    expect(players).toBeGreaterThan(-1);
+    expect(players).toBeLessThan(diag);
+  });
+
+  it("15. engagement RPC no longer references the non-existent day column", () => {
+    const { readdirSync } = require("node:fs") as typeof import("node:fs");
+    const dir = "supabase/migrations";
+    const sql = readdirSync(dir)
+      .map((f) => readFileSync(`${dir}/${f}`, "utf8"))
+      .filter((t) => t.includes("analytics_engagement_v16"))
+      .pop() ?? "";
+    expect(sql).toContain("activity_day >=");
+    expect(sql).not.toMatch(/WHERE day >=/);
   });
 });
