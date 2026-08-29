@@ -5,7 +5,7 @@ import { AppShell, Screen } from "@/components/AppShell";
 import { CachedImage } from "@/components/CachedImage";
 import { resolveCategory } from "@/lib/notifications/categories";
 import { resolveNotificationAction, openExternalUrl } from "@/lib/notifications/action";
-import { resolveDeepLink, isInformationalNotification, type NotificationPayload } from "@/lib/notifications/deepLink";
+import { isInformationalNotification, type NotificationPayload } from "@/lib/notifications/deepLink";
 import {
   fetchMyNotifications,
   markNotificationRead,
