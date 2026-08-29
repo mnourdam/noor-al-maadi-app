@@ -598,6 +598,7 @@ function ImportedChapterPlayer() {
                       onAdvance={acknowledgeAndAdvance}
                       alreadyDone={chProgress?.completedActivityIds.includes(activity.id) && currentAck !== "correct"}
                       campaignId={campaign.id}
+                      chapterId={chapter.id}
                     />
                   ) : null}
                 </div>

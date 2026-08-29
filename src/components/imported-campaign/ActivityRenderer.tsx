@@ -83,6 +83,8 @@ export interface RendererProps {
    *  auxiliary state (chosen option, personal note) can be keyed and
    *  restored on resume. Optional for other renderers. */
   campaignId?: string;
+  /** Route-provided chapter id (activities do NOT carry one). */
+  chapterId?: string;
 }
 
 
