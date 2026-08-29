@@ -118,6 +118,7 @@ export function FirstLaunchGate() {
 
   return (
     <div
+      data-irth-first-launch=""
       role="dialog"
       aria-modal="true"
       className="fixed inset-0 z-[200] flex items-center justify-center bg-black/85 p-5"
