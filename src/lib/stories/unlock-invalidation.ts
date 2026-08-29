@@ -70,8 +70,16 @@ export function useStoryUnlockInvalidation(queryClient: QueryClient): void {
 
     // Identity transitions change WHO the server evaluates the spec for:
     // a guest-computed answer must never survive sign-in (or sign-out).
+    // `INITIAL_SESSION` is included on purpose (V16): on Android cold start
+    // the persisted session is restored through that event, and without it
+    // the guest-era answer stayed cached as the authenticated player's state.
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") schedule();
+      if (
+        event === "SIGNED_IN" ||
+        event === "SIGNED_OUT" ||
+        event === "USER_UPDATED" ||
+        event === "INITIAL_SESSION"
+      ) schedule();
     });
 
     return () => {

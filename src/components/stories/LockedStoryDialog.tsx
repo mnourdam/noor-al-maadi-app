@@ -15,6 +15,11 @@ import { useRouter } from "@tanstack/react-router";
 import { ModalPortal } from "@/components/ModalPortal";
 import { useStashCurrentAsOrigin } from "@/lib/navigation/engine";
 import { OverlayDismissRegistration } from "@/lib/navigation/overlay-registration";
+import { localEncyclopediaById } from "@/lib/local-first-store";
+import {
+  resolveCanonicalCtaTarget,
+  type CtaEntityRow,
+} from "@/lib/stories/unlock/prereq-cta";
 import type { StoryPrereq } from "@/lib/stories/summary";
 
 /** Arabic phrasing per prerequisite family. */
@@ -39,13 +44,26 @@ const KIND_LABEL: Record<string, string> = {
  * Deep-link target for a prerequisite, when it is directly actionable.
  * Kinds without a canonical destination (or deliberately mysterious ones)
  * return null and keep the teaser copy only — no dead-end buttons.
+ *
+ * Encyclopedia refs are canonicalized first (V16): a ref pointing at a
+ * duplicate disabled by a merge navigates to its canonical replacement,
+ * and an unresolvable/disabled ref without a replacement produces NO CTA.
  */
 function prereqTarget(p: StoryPrereq): { to: string; label: string } | null {
   if (p.satisfied || !p.ref) return null;
   const name = p.title ?? null;
   switch (p.kind) {
-    case "entity_discovered":
-      return { to: `/encyclopedia/entity/${p.ref}`, label: name ? `📖 الانتقال إلى ${name}` : "📖 الانتقال إلى الموسوعة" };
+    case "entity_discovered": {
+      const resolved = resolveCanonicalCtaTarget(p.ref, (id) =>
+        localEncyclopediaById(id) as CtaEntityRow | null,
+      );
+      if (!resolved.targetId) return null; // dead end — never render a broken CTA
+      const label = name ?? resolved.title ?? null;
+      return {
+        to: `/encyclopedia/entity/${resolved.targetId}`,
+        label: label ? `📖 الانتقال إلى ${label}` : "📖 الانتقال إلى الموسوعة",
+      };
+    }
     case "campaign_completed":
       return { to: `/campaigns/imported/${p.ref}`, label: name ? `🏛️ الانتقال إلى ${name}` : "🏛️ الانتقال إلى الحملة" };
     case "investigation_completed":
@@ -56,6 +74,7 @@ function prereqTarget(p: StoryPrereq): { to: string; label: string } | null {
       return null;
   }
 }
+
 
 
 export function LockedStoryDialog({

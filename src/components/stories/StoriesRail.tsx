@@ -12,10 +12,12 @@ import { BookOpenText, ArrowLeft } from "lucide-react";
 import { listStoriesSummary, pickHomeStories } from "@/lib/stories/summary";
 import { StoryCard } from "@/components/stories/StoryCard";
 import { useEffect } from "react";
+import { storySummaryQueryKey, useStoryIdentityKey } from "@/lib/stories/query-keys";
 
 export function StoriesRail({ worldSlug }: { worldSlug?: string | null }) {
+  const storyIdentity = useStoryIdentityKey();
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["stories-summary", worldSlug ?? null],
+    queryKey: storySummaryQueryKey(storyIdentity, worldSlug ?? null, "rail"),
     queryFn: () => listStoriesSummary(worldSlug ?? null),
     staleTime: 60_000,
   });

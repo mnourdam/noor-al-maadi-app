@@ -37,6 +37,7 @@ import {
   type StoryStatusFilter,
 } from "@/lib/stories/catalog-filters";
 import { z } from "zod";
+import { storySummaryQueryKey, useStoryIdentityKey } from "@/lib/stories/query-keys";
 
 const storiesSearchSchema = z.object({
   collection: z.string().optional(),
@@ -68,8 +69,9 @@ function StoriesIndex() {
   const { collection: activeCollectionId } = useSearch({ from: "/stories/" });
   
 
+  const storyIdentity = useStoryIdentityKey();
   const { data: storiesData, isLoading: storiesLoading } = useQuery({
-    queryKey: ["stories-summary", null, "catalog"],
+    queryKey: storySummaryQueryKey(storyIdentity, null, "catalog"),
     queryFn: () => listStoriesSummary(null),
     staleTime: 30_000,
   });

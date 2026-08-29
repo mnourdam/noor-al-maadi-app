@@ -222,16 +222,18 @@ export async function buildLocalStorySummaries(
         completed: guestState
           ? guestState.completed_story_ids?.has(s.id) ?? false
           : cached?.completed ?? false,
-        // PROGRESS NEVER GRANTS ACCESS. Stale progress for a story whose
-        // requirements are no longer met is preserved in the mirror but must
-        // not surface as "استئناف".
+        // PROGRESS NEVER GRANTS ACCESS. It is preserved for display
+        // (`storyState` still reports "locked" for a locked row, and the
+        // player CTA is authorised by `get_story_bundle_v2`), so a cold
+        // start with incomplete local evidence cannot erase real progress.
         progress:
-          unlocked && cached && (cached.lastSceneIndex != null || cached.maxSceneIndexReached != null)
+          cached && (cached.lastSceneIndex != null || cached.maxSceneIndexReached != null)
             ? {
                 last_scene_index: cached.lastSceneIndex ?? 0,
                 max_scene_index_reached: cached.maxSceneIndexReached ?? cached.lastSceneIndex ?? 0,
               }
             : null,
+
 
         // Local fallback rows are NOT authoritative: unlock celebrations
         // must never be derived from them.
@@ -413,8 +415,11 @@ export function progressFraction(s: StorySummary): number {
 
 export type StoryState = "locked" | "new" | "in_progress" | "completed";
 export function storyState(s: StorySummary): StoryState {
-  if (!s.unlocked) return "locked";
+  // V16 — completion is HISTORICAL player progress. A temporarily
+  // incomplete local unlock evaluation (cold start, missing evidence)
+  // must never erase a story the player has already finished.
   if (s.completed) return "completed";
+  if (!s.unlocked) return "locked";
   if (s.progress) return "in_progress";
   return "new";
 }

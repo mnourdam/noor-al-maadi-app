@@ -11,10 +11,12 @@ import { useQuery } from "@tanstack/react-query";
 import { BookOpenText, ArrowLeft } from "lucide-react";
 import { listStoriesSummary } from "@/lib/stories/summary";
 import { StoryCard } from "@/components/stories/StoryCard";
+import { storySummaryQueryKey, useStoryIdentityKey } from "@/lib/stories/query-keys";
 
 export function WorldStoriesSection({ worldSlug }: { worldSlug: string }) {
+  const storyIdentity = useStoryIdentityKey();
   const { data, isLoading } = useQuery({
-    queryKey: ["stories-summary", worldSlug],
+    queryKey: storySummaryQueryKey(storyIdentity, worldSlug, "world"),
     queryFn: () => listStoriesSummary(worldSlug),
     staleTime: 60_000,
   });
