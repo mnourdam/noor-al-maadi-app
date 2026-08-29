@@ -110,6 +110,38 @@ export { CAMPAIGN_INTRO_TAG } from "./library-filter";
  */
 export const STORY_SUMMARY_RPC_TIMEOUT_MS = 2500;
 
+/**
+ * V16 — ONE LOCAL UNLOCK SEMANTIC.
+ *
+ * The ONLY place local/offline story-card unlock state is decided:
+ *
+ *   unlocked = alwaysOn
+ *            || canonicalLocalEvaluation(unlock_spec, evidenceState)
+ *            || serverConfirmedFloor
+ *
+ * The SAME `unlock_spec`, the SAME evaluator and the SAME `evidenceState`
+ * also drive `deriveStoryPrereqs`, so the card and the locked dialog can
+ * never contradict each other.
+ *
+ * Invariants:
+ *   • fail closed — a row without an `unlock_spec` KEY is NEVER unlocked;
+ *   • progress / the progress mirror / resume state are NOT evidence;
+ *   • the signed unlock cache is a last-known SERVER-CONFIRMED display
+ *     floor only — player access still goes through `get_story_bundle_v2`.
+ */
+export function resolveLocalUnlocked(
+  row: unknown,
+  evidenceState: PlayerUnlockState,
+  serverConfirmedIds?: ReadonlySet<string> | null,
+): boolean {
+  if (isStoryRowAlwaysUnlocked(row)) return true;
+  if (evaluateStoryRowUnlock(row, evidenceState)) return true;
+  const id = (row as { id?: unknown } | null)?.id;
+  return !!serverConfirmedIds && typeof id !== "undefined" && serverConfirmedIds.has(String(id));
+}
+
+
+
 export async function buildLocalStorySummaries(
   worldSlug?: string | null,
   uid?: string | null,
