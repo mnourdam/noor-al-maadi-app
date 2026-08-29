@@ -337,9 +337,13 @@ export function AtlasStage({
   }, [focusAps, clamp, cancelAnimations, androidStable]);
 
   const inv = 1 / view.scale;
-  // Quantize zoom into 4 tiers so pins/labels don't re-mount every frame.
-  const labelTier =
-    view.scale >= 6 ? 3 : view.scale >= 3 ? 2 : view.scale >= 1.6 ? 1 : 0;
+  // V16 — canonical replacement-oriented tier with hysteresis. The previous
+  // tier is carried in a ref so jitter around a threshold (2.99 ↔ 3.01)
+  // cannot toggle large marker sets. Never derive tiers anywhere else.
+  const tierRef = useRef<AtlasTier | null>(null);
+  const tier = tierForScale(view.scale, tierRef.current);
+  tierRef.current = tier;
+
 
   // ── Camera ────────────────────────────────────────────────────────────
   // The camera is the SVG viewBox, NOT a transform on a <g>.
