@@ -219,6 +219,14 @@ interface Ctx {
   spendDinarsForHeart: () => boolean;
   addDinars: (n: number) => void;
   spendDinars: (n: number) => boolean;
+  /**
+   * React-safe spend: affordability is decided synchronously against the last
+   * committed profile (plus in-tick reservations) BEFORE the state update is
+   * scheduled, so `true` always means the debit will land and `false` always
+   * means zero dinars were deducted.
+   */
+  trySpendDinars: (n: number) => boolean;
+
   buyHint: (scopeKey: string, hintIndex: number, cost: number) => boolean;
   hintsRevealed: (scopeKey: string) => number;
   /**
