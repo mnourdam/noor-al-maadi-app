@@ -849,6 +849,8 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       });
       return ok;
     },
+    trySpendDinars,
+
     buyHint: (scopeKey, hintIndex, cost) => {
       let ok = false;
       update((p) => {
