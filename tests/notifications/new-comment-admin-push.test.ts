@@ -20,6 +20,9 @@ const sql = readdirSync(MIG_DIR)
   .map((f) => readFileSync(join(MIG_DIR, f), "utf8"))
   .find((s) => s.includes("notify_admins_new_comment_v16"));
 
+/** Executable SQL only — commentary must not satisfy or break assertions. */
+const code = (sql ?? "").split("\n").filter((l) => !l.trim().startsWith("--")).join("\n");
+
 const TITLE = "تعليق جديد";
 const BODY = "وصل تعليق جديد من أحد اللاعبين وينتظر المراجعة.";
 const ROUTE = "/admin/moderation";
@@ -54,16 +57,16 @@ describe("V16 new-comment admin push", () => {
 
   it("1. fires only on genuinely new comment rows (no update/delete/moderation)", () => {
     expect(sql!).toMatch(/AFTER INSERT ON public\.social_comments/);
-    expect(sql!).not.toMatch(/AFTER\s+(UPDATE|DELETE)\s+ON public\.social_comments/);
-    expect(sql!).not.toContain("BEFORE INSERT ON public.social_comments");
+    expect(code).not.toMatch(/AFTER\s+(UPDATE|DELETE)\s+ON public\.social_comments/);
+    expect(code).not.toContain("BEFORE INSERT ON public.social_comments");
     // Never touches the editorial contribution model.
-    expect(sql!).not.toContain("social_comment_contributions");
+    expect(code).not.toContain("social_comment_contributions");
   });
 
   it("2. recipients resolve server-side from canonical user_roles owner|admin", () => {
     expect(sql!).toMatch(/FROM public\.user_roles r WHERE r\.role IN \('owner','admin'\)/);
-    expect(sql!).not.toMatch(/@[a-z0-9.-]+\.[a-z]{2,}/i); // no hardcoded emails
-    expect(sql!).not.toContain("auth.users");
+    expect(code).not.toMatch(/@[a-z0-9.-]+\.[a-z]{2,}/i); // no hardcoded emails
+    expect(code).not.toContain("auth.users");
     const ids = plan({ id: "c1", authorId: "p1" }, ROLES).map((r) => r.target_user_id).sort();
     expect(ids).toEqual(["a1", "a2"]);
   });
@@ -89,8 +92,8 @@ describe("V16 new-comment admin push", () => {
       const scope = resolveTokenScope({ target_type: "user", target_user_id: "00000000-0000-4000-8000-000000000001" });
       expect(scope.ok && scope.scope).toBe("user");
     }
-    expect(sql!).not.toContain("'target_type',    'all'");
-    expect(sql!).not.toContain("broadcast");
+    expect(code).not.toContain("'target_type',    'all'");
+    expect(code).not.toContain("broadcast");
   });
 
   it("6. privacy: no comment body, author identity or email reaches the payload", () => {
@@ -98,9 +101,9 @@ describe("V16 new-comment admin push", () => {
     expect(JSON.stringify(req)).not.toContain("p1");
     expect(req.title).toBe(TITLE);
     expect(req.body).toBe(BODY);
-    expect(sql!).not.toContain("NEW.body_text");
+    expect(code).not.toContain("NEW.body_text");
     expect(sql!).not.toContain("NEW.author_id::text");
-    expect(sql!).not.toContain("email");
+    expect(code).not.toContain("email");
   });
 
   it("7. the tap destination is a fixed trusted admin route", () => {
@@ -117,9 +120,9 @@ describe("V16 new-comment admin push", () => {
 
   it("9. reuses the one secured send path — never FCM, never a direct row insert", () => {
     expect(sql!).toContain("/functions/v1/send-notification");
-    expect(sql!).not.toContain("INSERT INTO public.notifications");
-    expect(sql!).not.toContain("fcm.googleapis.com");
-    expect(sql!).not.toContain("device_tokens");
+    expect(code).not.toContain("INSERT INTO public.notifications");
+    expect(code).not.toContain("fcm.googleapis.com");
+    expect(code).not.toContain("device_tokens");
   });
 
   it("10. system authorization only — the commenting client supplies nothing", () => {
@@ -135,9 +138,9 @@ describe("V16 new-comment admin push", () => {
   });
 
   it("11. add_story_comment_v2 and existing rows are untouched (V15-safe)", () => {
-    expect(sql!).not.toContain("add_story_comment_v2");
-    expect(sql!).not.toMatch(/ALTER TABLE public\.social_comments/);
-    expect(sql!).not.toMatch(/UPDATE public\.social_comments/);
-    expect(sql!).not.toContain("DROP FUNCTION public.");
+    expect(code).not.toContain("add_story_comment_v2");
+    expect(code).not.toMatch(/ALTER TABLE public\.social_comments/);
+    expect(code).not.toMatch(/UPDATE public\.social_comments/);
+    expect(code).not.toContain("DROP FUNCTION public.");
   });
 });
