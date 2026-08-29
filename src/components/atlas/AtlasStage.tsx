@@ -6,13 +6,14 @@
 // • Pinch zoom keeps the world point under the finger midpoint stable
 //   (Google-Maps-style). Clamp is RELAXED during the active pinch and
 //   reapplied on release to prevent horizontal drift snapping.
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AtlasEntityPinsLayer } from "./AtlasEntityPins";
 import { ATLAS_BASE_URL } from "@/lib/atlas/atlas-source";
 import { ATLAS_VIEWBOX, ATLAS_ASPECT } from "@/lib/atlas/aps";
 import type { AtlasEntityRow } from "@/lib/atlas-entities";
 import { androidMark, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 import { atlasTrace, beginAtlasTrace } from "@/lib/atlas/render-trace";
+import { tierForScale, type AtlasTier } from "@/lib/atlas/atlas-tiers";
 
 
 const MIN_SCALE = 1;
@@ -441,7 +442,7 @@ export function AtlasStage({
             entities={entities}
             selectedId={selectedId}
             inv={inv}
-            labelTier={labelTier}
+            tier={tier}
             onSelect={onSelect}
             cullBounds={cullBounds}
             disableGlow={androidStable}
