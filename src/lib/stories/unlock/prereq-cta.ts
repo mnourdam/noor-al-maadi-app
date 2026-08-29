@@ -93,15 +93,13 @@ export function resolveCanonicalCtaTarget(
   lookup: EntityLookup,
 ): CanonicalCtaResult {
   const ref = String(rawRef ?? "").trim();
-  if (!ref) return { targetId: null, title: null, reason: "missing" };
+  if (!ref) return NO_TARGET("missing");
 
   let row: CtaEntityRow | null | undefined;
   try { row = lookup(ref); } catch { row = null; }
-  if (!row) return { targetId: null, title: null, reason: "missing" };
+  if (!row) return NO_TARGET("missing");
 
-  if (row.enabled !== false) {
-    return { targetId: row.id ?? ref, title: row.title ?? null, reason: "canonical" };
-  }
+  if (row.enabled !== false) return buildResult(row, ref, "canonical");
 
   // Disabled row — follow the merge chain to an enabled canonical replacement.
   const seen = new Set<string>([row.id ?? ref]);
@@ -113,10 +111,8 @@ export function resolveCanonicalCtaTarget(
     let next: CtaEntityRow | null | undefined;
     try { next = lookup(nextId); } catch { next = null; }
     if (!next) break;
-    if (next.enabled !== false) {
-      return { targetId: next.id ?? nextId, title: next.title ?? null, reason: "redirected" };
-    }
+    if (next.enabled !== false) return buildResult(next, nextId, "redirected");
     cur = next;
   }
-  return { targetId: null, title: null, reason: "disabled" };
+  return NO_TARGET("disabled");
 }
