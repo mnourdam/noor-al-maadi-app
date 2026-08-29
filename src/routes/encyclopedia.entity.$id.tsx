@@ -170,12 +170,21 @@ function EntityPage() {
   const { user } = useAccount();
   const userKey = user?.id ?? "guest";
   const relNetworkRef = useRef<HTMLElement | null>(null);
+  // V16 — discovery readiness: the canonical entity must be fetched,
+  // displayable and carry real content before any engagement signal counts.
+  const contentReady =
+    query.isSuccess &&
+    !!entity &&
+    isDisplayableEntity(entity) &&
+    (!!entity.summary?.trim() ||
+      (!!entity.body && Object.keys(entity.body as object).length > 0));
   useEntityReadCompletion({
     entityId: entity?.id ?? null,
     entitySlug: entity?.slug ?? null,
     entityType: entity?.entity_type ?? null,
     userKey,
     relationshipSectionRef: relNetworkRef,
+    contentReady,
   });
 
 
