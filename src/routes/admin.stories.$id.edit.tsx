@@ -38,6 +38,13 @@ import { SceneStage } from "@/components/stories/player/sceneLayouts";
 import { StoryMediaImage } from "@/components/stories/StoryMediaImage";
 
 import { toUnlockSpecV2 } from "@/lib/stories/unlock";
+import {
+  collectUnlockEntityRefs,
+  checkUnlockEntityReferences,
+  describeUnlockRefFinding,
+  type EntityRefIndex,
+} from "@/lib/stories/unlock/reference-integrity";
+import { supabase } from "@/integrations/supabase/client";
 import type {
   StoryRow, StorySceneRow, StorySceneType, StoryStatus,
 } from "@/lib/stories/types";
@@ -93,6 +100,35 @@ function StoryEditorRoute() {
   };
   useEffect(() => { void refresh(); }, [id]);
 
+  // ── V16 publish guard: unlock spec → encyclopedia reference integrity ──
+  // An `entity_discovered` requirement pointing at a missing or DISABLED
+  // encyclopedia row produces an unreachable prerequisite for players.
+  const [entityRefIndex, setEntityRefIndex] = useState<EntityRefIndex>({});
+  const unlockRefIds = useMemo(
+    () => collectUnlockEntityRefs(bundle?.story?.unlock_spec ?? null),
+    [bundle?.story?.unlock_spec],
+  );
+  useEffect(() => {
+    let cancelled = false;
+    if (unlockRefIds.length === 0) { setEntityRefIndex({}); return; }
+    void (async () => {
+      try {
+        const { data } = await supabase
+          .from("encyclopedia_entities")
+          .select("id, enabled, metadata")
+          .in("id", unlockRefIds);
+        if (cancelled) return;
+        const next: EntityRefIndex = {};
+        for (const row of (data ?? []) as Array<{ id: string; enabled: boolean; metadata: unknown }>) {
+          const meta = (row.metadata ?? {}) as { canonical_id?: string };
+          next[row.id] = { enabled: !!row.enabled, canonicalId: meta.canonical_id ?? null };
+        }
+        setEntityRefIndex(next);
+      } catch { /* validation is advisory; never blocks the editor */ }
+    })();
+    return () => { cancelled = true; };
+  }, [unlockRefIds.join(",")]);
+
   const runValidation = async () => {
     try { setValidation(await validateStoryPublish(id)); }
     catch (e) { notify("err", e instanceof Error ? e.message : String(e)); }
@@ -122,7 +158,18 @@ function StoryEditorRoute() {
     return <div dir="rtl" className="mx-auto max-w-3xl p-6 text-sm text-muted-foreground">جاري التحميل...</div>;
   }
 
-  const health = computeStoryHealth(bundle.story, bundle.scenes, bundle.media);
+  const unlockRefFindings: HealthFinding[] = checkUnlockEntityReferences(
+    bundle.story.unlock_spec ?? null,
+    entityRefIndex,
+  ).map((f) => ({
+    severity: "error" as const,
+    code: f.problem === "missing" ? "unlock_entity_missing" : "unlock_entity_disabled",
+    message: describeUnlockRefFinding(f, bundle.story.title_ar || bundle.story.id),
+  }));
+  const health = [
+    ...computeStoryHealth(bundle.story, bundle.scenes, bundle.media),
+    ...unlockRefFindings,
+  ];
   const healthSummary = summarizeHealth(health);
 
   return (
