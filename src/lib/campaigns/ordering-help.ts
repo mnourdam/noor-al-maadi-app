@@ -12,9 +12,17 @@ export interface OrderingHelpState {
     itemId: string;
     txId: string;
     at: string;
+    /**
+     * V16: set (and persisted) the moment the debit is confirmed, BEFORE the
+     * pin is committed. Recovery only restores a pin when this marker exists,
+     * so a crash before payment can never grant a free hint and a crash after
+     * payment never loses a paid hint. Legacy entries without it are unpaid.
+     */
+    paidAt?: string;
   };
   fingerprint: string;
 }
+
 
 interface Store {
   [logicalKey: string]: OrderingHelpState;
