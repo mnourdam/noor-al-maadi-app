@@ -41,16 +41,17 @@ d("stories P1 — server contract", () => {
 
   it("get_story_access refuses unpublished stories to anon", () => {
     const draftId = "draft_probe_" + randomUUID().slice(0, 8);
-    sql(`INSERT INTO public.stories
-           (id, slug, title_ar, status, content_version, xp_reward, dinar_reward, production_status)
-         VALUES
-           ('${draftId}', '${draftId}', 'مسودة', 'draft', 1, 10, 5, 'imported')`);
+    // V16: fixtures live and die inside one rolled-back transaction.
     const res = sql(
       `BEGIN;
+       INSERT INTO public.stories
+           (id, slug, title_ar, status, content_version, xp_reward, dinar_reward, production_status)
+         VALUES
+           ('${draftId}', '${draftId}', 'مسودة', 'draft', 1, 10, 5, 'imported');
        SELECT set_config('request.jwt.claims',
          json_build_object('role','anon')::text, true);
        SELECT (public.get_story_access('${draftId}')->>'ok');
-       COMMIT;`,
+       ROLLBACK;`,
     );
     expect(res).toContain("false");
     expect(res).not.toContain("true");
@@ -59,16 +60,15 @@ d("stories P1 — server contract", () => {
   it("player story feeds and bundles never expose drafts", () => {
     const draftId = "draft_gate_probe_" + randomUUID().slice(0, 8);
     const pubId = "pub_gate_probe_" + randomUUID().slice(0, 8);
-    sql(`INSERT INTO public.stories
+    const res = sql(
+      `BEGIN;
+       INSERT INTO public.stories
            (id, slug, title_ar, status, content_version, xp_reward, dinar_reward, unlock_spec, production_status)
          VALUES
            ('${draftId}', '${draftId}', 'مسودة محجوبة', 'draft', 1, 0, 0,
               '{"version":2,"expr":{"type":"always"}}'::jsonb, 'testing'),
            ('${pubId}', '${pubId}', 'قصة منشورة', 'published', 1, 0, 0,
-              '{"version":2,"expr":{"type":"always"}}'::jsonb, 'completed')`);
-
-    const res = sql(
-      `BEGIN;
+              '{"version":2,"expr":{"type":"always"}}'::jsonb, 'completed');
        SELECT set_config('request.jwt.claims', json_build_object('role','anon')::text, true);
        SELECT jsonb_build_object(
          'list_v2_has_pub', public.list_stories_v2(NULL)::text LIKE '%${pubId}%',
@@ -79,7 +79,7 @@ d("stories P1 — server contract", () => {
          'guest_bundle_draft_reason', public.get_story_bundle_guest_v2('${draftId}', '{}'::jsonb)->>'reason',
          'snapshot_has_draft', public.stories_snapshot_manifest_v2(false)::text LIKE '%${draftId}%'
        )::text;
-       COMMIT;`,
+       ROLLBACK;`,
     );
     expect(res).toContain('"list_v2_has_pub": true');
     expect(res).toContain('"list_v2_has_draft": false');
@@ -92,21 +92,21 @@ d("stories P1 — server contract", () => {
 
   it("get_story_access returns a bundle for a published story", () => {
     const pubId = "pub_probe_" + randomUUID().slice(0, 8);
-    sql(`INSERT INTO public.stories
+    const bundle = sql(
+      `BEGIN;
+       INSERT INTO public.stories
            (id, slug, title_ar, status, content_version, xp_reward, dinar_reward, production_status)
          VALUES
-           ('${pubId}', '${pubId}', 'قصة عامة', 'published', 1, 40, 15, 'completed')`);
-    sql(`INSERT INTO public.story_scenes
+           ('${pubId}', '${pubId}', 'قصة عامة', 'published', 1, 40, 15, 'completed');
+       INSERT INTO public.story_scenes
            (id, story_id, scene_index, scene_type, title_ar, payload)
          VALUES
            (gen_random_uuid(), '${pubId}', 0, 'reading', 'المقدمة', '{}'::jsonb),
-           (gen_random_uuid(), '${pubId}', 1, 'reflection', 'تأمل', '{"prompt":"..."}'::jsonb)`);
-    const bundle = sql(
-      `BEGIN;
+           (gen_random_uuid(), '${pubId}', 1, 'reflection', 'تأمل', '{"prompt":"..."}'::jsonb);
        SELECT set_config('request.jwt.claims',
          json_build_object('role','anon')::text, true);
        SELECT public.get_story_access('${pubId}');
-       COMMIT;`,
+       ROLLBACK;`,
     );
     expect(bundle).toContain('"ok": true');
     expect(bundle).toContain('"scene_index": 0');
@@ -120,7 +120,7 @@ d("stories P1 — server contract", () => {
       `BEGIN;
        SELECT set_config('request.jwt.claims', ${claims}, true);
        SELECT (public.record_story_progress_v2('does_not_exist_' || gen_random_uuid()::text, 0)->>'reason');
-       COMMIT;`,
+       ROLLBACK;`,
     );
     expect(res).toContain("story_not_found");
   });
@@ -130,7 +130,7 @@ d("stories P1 — server contract", () => {
       `BEGIN;
        SELECT set_config('request.jwt.claims', json_build_object('role','anon')::text, true);
        SELECT (public.complete_story_v2('any')->>'reason');
-       COMMIT;`,
+       ROLLBACK;`,
     );
     expect(res).toContain("unauthenticated");
   });
