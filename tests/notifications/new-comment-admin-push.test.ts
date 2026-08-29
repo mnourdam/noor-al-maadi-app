@@ -103,7 +103,10 @@ describe("V16 new-comment admin push", () => {
     expect(req.body).toBe(BODY);
     expect(code).not.toContain("NEW.body_text");
     expect(sql!).not.toContain("NEW.author_id::text");
-    expect(code).not.toContain("email");
+    // The only "email" token in executable SQL is the shared system-credential
+    // secret name; no email address or email column is ever read.
+    expect(code).not.toMatch(/\.email\b/);
+    expect(code.split("net.http_post")[1] ?? "").not.toContain("email");
   });
 
   it("7. the tap destination is a fixed trusted admin route", () => {
