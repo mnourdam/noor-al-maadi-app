@@ -568,7 +568,7 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone, campaignId, c
           <button
             type="button"
             onClick={useHint}
-            disabled={pinnedIds.length >= order.length - 1}
+            disabled={hintDisabled}
             className="inline-flex items-center gap-1 rounded-lg border border-amber-300/30 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-200 disabled:opacity-40"
           >
             <Lightbulb className="size-3" />
