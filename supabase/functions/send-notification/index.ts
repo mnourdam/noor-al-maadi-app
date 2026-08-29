@@ -111,6 +111,7 @@ async function sendFcm(
     title: string;
     body: string;
     deep_link?: string | null;
+    external_url?: string | null;
     image_url?: string | null;
     type?: string | null;
     notification_id?: string | null;
