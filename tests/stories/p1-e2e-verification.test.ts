@@ -99,16 +99,19 @@ ${scenesPub
   .join(",\n")};
 `;
 
+const withFixtures = (body: string) =>
+  `BEGIN; ${FIXTURE_SQL} ${body.trim().replace(/;?$/, ";")} ROLLBACK;`;
+
 /** Run `body` with the fixtures present, then always roll back. */
 function sqlFixtureTx(body: string): string {
-  return sql(`BEGIN; ${FIXTURE_SQL} ${body} ROLLBACK;`);
+  return sql(withFixtures(body));
 }
 
 /** Same, but the body is expected to fail with `needle`. */
 function sqlFixtureFails(body: string, needle: string) {
   // ON_ERROR_STOP aborts the script, so the open transaction is
   // discarded by psql on exit — nothing is ever committed.
-  sqlFails(`BEGIN; ${FIXTURE_SQL} ${body} ROLLBACK;`, needle);
+  sqlFails(withFixtures(body), needle);
 }
 
 d("Stories P1 — E2E backend contract verification", () => {
