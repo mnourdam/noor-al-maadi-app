@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Activity, BookOpen, Boxes, Compass, Database, Download,
+  Activity, BookOpen, Boxes, Database,
   HardDrive, Map as MapIcon, ShieldCheck, Users, Zap,
 } from "lucide-react";
 import {
