@@ -1097,7 +1097,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     grantTitle: (title) => update((p) => p.titlesEarned.includes(title) ? p : { ...p, titlesEarned: [...p.titlesEarned, title] }),
     grantArtifact: (id) => update((p) => p.artifactsFound.includes(id) ? p : { ...p, artifactsFound: [...p.artifactsFound, id] }),
     // `markAchievementEarned` removed - Achievement Engine v2 owns unlocks.
-  }), [profile, hydrated, update, awardBadge]);
+  }), [profile, hydrated, update, awardBadge, trySpendDinars]);
 
   return <ProfileContext.Provider value={ctx}>{children}</ProfileContext.Provider>;
 }
