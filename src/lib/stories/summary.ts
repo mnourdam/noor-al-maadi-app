@@ -9,7 +9,9 @@ import { recordTrace } from "@/lib/diag-trace";
 import { supabase } from "@/integrations/supabase/client";
 
 import { evaluateStoryRowUnlock, isStoryRowAlwaysUnlocked } from "./unlock/story-row";
+import type { PlayerUnlockState } from "./unlock/local";
 import { buildGuestEvidence, guestUnlockState } from "./unlock/guest-evidence";
+
 import { isCampaignIntroRow } from "./library-filter";
 import { getActiveUserId } from "../identity/owner";
 
@@ -210,6 +212,42 @@ export async function buildLocalStorySummaries(
   }
 }
 
+/**
+ * Local evidence for a SIGNED-IN player, used only to mark derived
+ * prerequisites as satisfied/unsatisfied. Missing evidence stays
+ * unsatisfied — never guessed.
+ */
+async function authedEvidenceState(
+  uid: string,
+  mirror: { entries?: Record<string, { completed: boolean }> } | null,
+): Promise<PlayerUnlockState> {
+  const completedStories = new Set<string>();
+  for (const [id, e] of Object.entries(mirror?.entries ?? {})) {
+    if (e?.completed) completedStories.add(id);
+  }
+  const discovered = new Set<string>();
+  try {
+    const { getLocalDiscoveries } = await import("@/lib/entityDiscoveries");
+    for (const d of Object.values(getLocalDiscoveries(uid) ?? {})) {
+      if ((d as any)?.id) discovered.add(String((d as any).id));
+    }
+  } catch { /* no local discoveries */ }
+  const campaigns = new Set<string>();
+  try {
+    const { localCompletedIds } = await import("@/lib/campaigns/completions");
+    for (const id of localCompletedIds()) campaigns.add(id);
+  } catch { /* ignore */ }
+
+  return {
+    completed_story_ids: completedStories,
+    completed_campaign_ids: campaigns,
+    discovered_entity_ids: discovered,
+    visited_atlas_location_ids: discovered,
+    owned_artifact_ids: discovered,
+  };
+}
+
+
 export async function listStoriesSummary(
   worldSlug?: string | null,
 ): Promise<StorySummary[]> {
@@ -287,6 +325,15 @@ export async function listStoriesSummary(
         })();
       }
       if (uid) {
+        // V16 — hydrate the READ-ONLY local mirror from the authoritative
+        // response. Never uploaded, never a write path.
+        try {
+          const { mergeAuthoritativeRows } = await import("./progress-mirror");
+          mergeAuthoritativeRows(uid, rows as never);
+        } catch { /* cache only */ }
+      }
+      if (uid) {
+
         void (async () => {
           try {
             const { loadUnlockedIds, persistUnlockedIds } = await import("./unlock-cache");
