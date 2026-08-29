@@ -219,6 +219,13 @@ export async function completeStory(
         if (payload.ok) {
           try { await removeFromOutbox(outboxId); } catch { /* ignore */ }
           try {
+            const { markCompleted } = await import("./progress-mirror");
+            markCompleted(uid, storyId, {
+              contentVersion: (payload as { content_version?: number | null }).content_version ?? null,
+            });
+          } catch { /* cache only */ }
+
+          try {
             if (typeof window !== "undefined") {
               window.dispatchEvent(new CustomEvent("irth:story-completions:changed"));
             }
