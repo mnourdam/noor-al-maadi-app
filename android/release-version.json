@@ -2,13 +2,11 @@
   "$comment": [
     "Authoritative Android release-versioning baseline for IRTH.",
     "playProductionVersionCode: the versionCode of the artifact CURRENTLY serving",
-    "  production on Google Play (read it in Play Console → Release → Production →",
-    "  the active release → App bundles/APKs → 'Version code').",
-    "  It is null because the repository contains no authoritative evidence of it.",
-    "  Release builds intentionally FAIL until it is filled in.",
+    "  production on Google Play (highest shipped: 15, versionName 1.0.14,",
+    "  confirmed by the project owner from Play Console).",
     "Never lower these values. Never auto-increment them from a build script.",
     "Only the numeric versionCode is used for update enforcement; versionName is display-only."
   ],
-  "playProductionVersionCode": null,
-  "releaseVersionNamePrefix": "16."
+  "playProductionVersionCode": 15,
+  "releaseVersionNamePrefix": "1.0."
 }
