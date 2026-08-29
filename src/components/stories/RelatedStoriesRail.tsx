@@ -16,6 +16,7 @@ import { listStoriesSummary, type StorySummary } from "@/lib/stories/summary";
 import { StoryCard } from "@/components/stories/StoryCard";
 import { useRelatedStories } from "@/lib/stories/related/useRelatedStories";
 import { REASON_BADGE } from "@/lib/stories/related/scorer";
+import { storySummaryQueryKey, useStoryIdentityKey } from "@/lib/stories/query-keys";
 
 type EntityLike = Pick<
   SupabaseEncyclopediaEntity,
@@ -103,8 +104,9 @@ function WorldRail({
   limit: number;
   heading: string;
 }) {
+  const storyIdentity = useStoryIdentityKey();
   const { data, isLoading } = useQuery({
-    queryKey: ["stories-summary", worldSlug ?? null, "related"],
+    queryKey: storySummaryQueryKey(storyIdentity, worldSlug ?? null, "related"),
     queryFn: () => listStoriesSummary(worldSlug ?? null),
     staleTime: 60_000,
   });

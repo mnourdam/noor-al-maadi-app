@@ -299,8 +299,9 @@ function HomeFull() {
 
   // ===== Story recommendation =====
   const { collections: storyCols } = useStoryCollections();
+  const storyIdentity = useStoryIdentityKey();
   const { data: stories = [] } = useQuery({
-    queryKey: ["home-stories-summary", user?.id],
+    queryKey: storySummaryQueryKey(storyIdentity, null, "home"),
     queryFn: () => listStoriesSummary(),
     staleTime: 1000 * 60, // 1 min
   });
@@ -1073,6 +1074,7 @@ function SectionHeader({ icon, eyebrow, title }: { icon: React.ReactNode; eyebro
 
 /** Re-export of the shared motion Reveal so existing call sites stay intact. */
 import { Reveal as _Reveal, Stagger as _Stagger } from "@/components/motion/MotionPrimitives";
+import { storySummaryQueryKey, useStoryIdentityKey } from "@/lib/stories/query-keys";
 function Reveal({ children }: { children: ReactNode }) {
   return <_Reveal>{children}</_Reveal>;
 }

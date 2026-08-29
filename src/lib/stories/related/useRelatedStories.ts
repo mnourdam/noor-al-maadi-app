@@ -20,6 +20,7 @@ import {
   useStoryRelationsIndex,
   type StoryRelationsIndex,
 } from "./relations-index";
+import { storySummaryQueryKey, useStoryIdentityKey } from "@/lib/stories/query-keys";
 import {
   MIN_RELATED_SCORE,
   scoreRelatedStoryForEntity,
@@ -143,8 +144,9 @@ export function useRelatedStories(
 ) {
   const relations = useStoryRelationsIndex();
 
+  const storyIdentity = useStoryIdentityKey();
   const storiesQuery = useQuery({
-    queryKey: ["stories-summary", null, "related-engine"],
+    queryKey: storySummaryQueryKey(storyIdentity, null, "related-engine"),
     queryFn: () => listStoriesSummary(null),
     staleTime: 60_000,
   });

@@ -18,6 +18,7 @@ import { fetchStoryAccess } from "@/lib/stories/progress";
 import { fetchStoryMediaForRuntime } from "@/lib/stories/media/fetch-for-story";
 import { listStoriesSummary } from "@/lib/stories/summary";
 import type { StoryRow, StorySceneRow, StoryProgressRow } from "@/lib/stories/types";
+import { storySummaryQueryKey, useStoryIdentityKey } from "@/lib/stories/query-keys";
 
 interface Bundle {
   ok: boolean;
@@ -60,8 +61,9 @@ function StoryRoute() {
     queryFn: () => loadStory(id),
   });
 
+  const storyIdentity = useStoryIdentityKey();
   const summariesQ = useQuery({
-    queryKey: ["stories-summary", null, "single", id],
+    queryKey: storySummaryQueryKey(storyIdentity, null, "single", id),
     queryFn: () => listStoriesSummary(null),
     staleTime: 60_000,
   });
