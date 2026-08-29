@@ -381,6 +381,7 @@ function RootComponent() {
               <LevelUpWatcher />
               <StoryUnlockCelebration />
               <ContentUpdateBanner />
+              <AnnouncementHost />
               <Toaster position="top-center" richColors closeButton />
               <SplashSequence />
               {/* Hardware Back + exit dialog now owned by <NavigationProvider>. */}
