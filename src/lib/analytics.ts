@@ -150,6 +150,7 @@ export interface EngagementData {
   events: Record<string, number>;
   state: Record<string, number>;
   top_stories: RankedItem[];
+  top_stories_progress?: RankedItem[];
   top_campaigns: RankedItem[];
   top_entities: RankedItem[];
 }
