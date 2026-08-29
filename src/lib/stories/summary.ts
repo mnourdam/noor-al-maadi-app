@@ -7,7 +7,7 @@ import { recordTrace } from "@/lib/diag-trace";
 // ============================================================
 
 import { supabase } from "@/integrations/supabase/client";
-import { evaluateStoryUnlock, isAlwaysUnlockSpec } from "./unlock/local";
+
 import { evaluateStoryRowUnlock, isStoryRowAlwaysUnlocked } from "./unlock/story-row";
 import { buildGuestEvidence, guestUnlockState } from "./unlock/guest-evidence";
 import { isCampaignIntroRow } from "./library-filter";
