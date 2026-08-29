@@ -40,6 +40,7 @@ import { Route as TimelineRouteImport } from './routes/timeline'
 import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
+import { Route as AdminAnnouncementsRouteImport } from './routes/admin.announcements'
 import { Route as AdminArtifactsRouteImport } from './routes/admin.artifacts'
 import { Route as AdminAtlasCalibrationRouteImport } from './routes/admin.atlas-calibration'
 import { Route as AdminAtlasEntitiesRouteImport } from './routes/admin.atlas-entities'
@@ -306,6 +307,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
 const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
   id: '/admin/analytics',
   path: '/admin/analytics',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminAnnouncementsRoute = AdminAnnouncementsRouteImport.update({
+  id: '/admin/announcements',
+  path: '/admin/announcements',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminArtifactsRoute = AdminArtifactsRouteImport.update({
@@ -929,6 +935,7 @@ export interface FileRoutesByFullPath {
   '/timeline': typeof TimelineRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
+  '/admin/announcements': typeof AdminAnnouncementsRoute
   '/admin/artifacts': typeof AdminArtifactsRoute
   '/admin/atlas-calibration': typeof AdminAtlasCalibrationRoute
   '/admin/atlas-entities': typeof AdminAtlasEntitiesRoute
@@ -1072,6 +1079,7 @@ export interface FileRoutesByTo {
   '/timeline': typeof TimelineRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
+  '/admin/announcements': typeof AdminAnnouncementsRoute
   '/admin/artifacts': typeof AdminArtifactsRoute
   '/admin/atlas-calibration': typeof AdminAtlasCalibrationRoute
   '/admin/atlas-entities': typeof AdminAtlasEntitiesRoute
@@ -1214,6 +1222,7 @@ export interface FileRoutesById {
   '/timeline': typeof TimelineRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
+  '/admin/announcements': typeof AdminAnnouncementsRoute
   '/admin/artifacts': typeof AdminArtifactsRoute
   '/admin/atlas-calibration': typeof AdminAtlasCalibrationRoute
   '/admin/atlas-entities': typeof AdminAtlasEntitiesRoute
@@ -1361,6 +1370,7 @@ export interface FileRouteTypes {
     | '/timeline'
     | '/unsubscribe'
     | '/admin/analytics'
+    | '/admin/announcements'
     | '/admin/artifacts'
     | '/admin/atlas-calibration'
     | '/admin/atlas-entities'
@@ -1504,6 +1514,7 @@ export interface FileRouteTypes {
     | '/timeline'
     | '/unsubscribe'
     | '/admin/analytics'
+    | '/admin/announcements'
     | '/admin/artifacts'
     | '/admin/atlas-calibration'
     | '/admin/atlas-entities'
@@ -1645,6 +1656,7 @@ export interface FileRouteTypes {
     | '/timeline'
     | '/unsubscribe'
     | '/admin/analytics'
+    | '/admin/announcements'
     | '/admin/artifacts'
     | '/admin/atlas-calibration'
     | '/admin/atlas-entities'
@@ -1791,6 +1803,7 @@ export interface RootRouteChildren {
   TimelineRoute: typeof TimelineRoute
   UnsubscribeRoute: typeof UnsubscribeRoute
   AdminAnalyticsRoute: typeof AdminAnalyticsRoute
+  AdminAnnouncementsRoute: typeof AdminAnnouncementsRoute
   AdminArtifactsRoute: typeof AdminArtifactsRoute
   AdminAtlasCalibrationRoute: typeof AdminAtlasCalibrationRoute
   AdminAtlasEntitiesRoute: typeof AdminAtlasEntitiesRoute
@@ -2099,6 +2112,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/analytics'
       fullPath: '/admin/analytics'
       preLoaderRoute: typeof AdminAnalyticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/announcements': {
+      id: '/admin/announcements'
+      path: '/admin/announcements'
+      fullPath: '/admin/announcements'
+      preLoaderRoute: typeof AdminAnnouncementsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/artifacts': {
@@ -3049,6 +3069,7 @@ const rootRouteChildren: RootRouteChildren = {
   TimelineRoute: TimelineRoute,
   UnsubscribeRoute: UnsubscribeRoute,
   AdminAnalyticsRoute: AdminAnalyticsRoute,
+  AdminAnnouncementsRoute: AdminAnnouncementsRoute,
   AdminArtifactsRoute: AdminArtifactsRoute,
   AdminAtlasCalibrationRoute: AdminAtlasCalibrationRoute,
   AdminAtlasEntitiesRoute: AdminAtlasEntitiesRoute,
