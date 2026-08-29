@@ -104,7 +104,7 @@ describe("V16 new-comment admin push", () => {
   });
 
   it("7. the tap destination is a fixed trusted admin route", () => {
-    expect(plan({ id: "c1", authorId: "p1" })[0]?.deep_link ?? ROUTE).toBe(ROUTE);
+    expect(plan({ id: "c1", authorId: "p1" }, ROLES)[0].deep_link).toBe(ROUTE);
     expect(sql!).toContain("'deep_link',      '/admin/moderation'");
   });
 
@@ -141,8 +141,3 @@ describe("V16 new-comment admin push", () => {
     expect(sql!).not.toContain("DROP FUNCTION public.");
   });
 });
-
-function planOne(id: string) {
-  return plan({ id, authorId: "p1" }, ROLES);
-}
-void planOne;
