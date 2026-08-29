@@ -200,26 +200,37 @@ export async function initPushNotifications(): Promise<void> {
       "pushNotificationActionPerformed",
       (action) => {
         console.log("[push] 👆 action performed:", action);
-        // Background tap: deep-link into the right screen.
+        // Background tap: resolve the canonical action (internal route or
+        // validated external https link). Never auto-opens on receipt —
+        // this handler only runs after an explicit user tap.
         try {
           const data = (action.notification?.data ?? {}) as Record<string, string>;
           const notifId = data.notification_id || data.id;
           import("@/lib/notifications/server").then(({ markNotificationRead }) => {
             if (notifId) void markNotificationRead(notifId);
           });
-          import("@/lib/notifications/deepLink").then(({ resolveDeepLink }) => {
-            const to = resolveDeepLink({
+          const payload = safeParse(data.payload);
+          if (typeof data.external_url === "string" && data.external_url) {
+            (payload as Record<string, unknown>).external_url = data.external_url;
+          }
+          import("@/lib/notifications/action").then(({ resolveNotificationAction, openExternalUrl }) => {
+            const resolved = resolveNotificationAction({
               type: data.type ?? null,
               category: data.category ?? data.type ?? null,
               deep_link: data.deep_link ?? null,
-              payload: safeParse(data.payload),
+              payload,
             });
+            if (resolved.kind === "external") {
+              void openExternalUrl(resolved.url);
+              return;
+            }
+            if (resolved.kind === "none") return;
             if (typeof window !== "undefined") {
-              window.location.href = to;
+              window.location.href = resolved.path;
             }
           });
         } catch (err) {
-          console.warn("[push] deep-link failed", err);
+          console.warn("[push] action resolution failed", err);
         }
       },
     );
