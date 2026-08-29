@@ -22,6 +22,8 @@ import {
   type FeedbackMessage,
   type FeedbackStatus,
 } from "@/lib/feedback/types";
+import { isStaffMessage } from "@/lib/feedback/sender";
+
 import {
   Search,
   RefreshCw,
