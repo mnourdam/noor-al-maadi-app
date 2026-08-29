@@ -60,7 +60,20 @@ function writeMap(key: string, value: Record<string, boolean>): void {
  * Diff the freshest `stories-summary` results against the persisted lock
  * state for this player scope and return stories that just unlocked.
  */
-function detectTransitions(rows: StorySummary[]): Unlocked[] {
+export const MAX_CELEBRATIONS_PER_SCAN = 3;
+
+/**
+ * Only AUTHORITATIVE rows may drive celebrations. Local/bundled fallback
+ * rows (`source !== "server"`) reflect device metadata, not server unlock
+ * truth: baseline seeding, catalog hydration, content sync and login
+ * hydration all flip them and would otherwise fire popup storms (V16).
+ */
+export function authoritativeRows(rows: StorySummary[]): StorySummary[] {
+  return rows.filter((r) => (r as { source?: string })?.source === "server");
+}
+
+export function detectTransitions(rowsIn: StorySummary[]): Unlocked[] {
+  const rows = authoritativeRows(rowsIn);
   if (rows.length === 0) return [];
   const prev = readMap(STATE_KEY);
   const seen = readMap(SEEN_KEY);
@@ -80,6 +93,16 @@ function detectTransitions(rows: StorySummary[]): Unlocked[] {
   }
 
   writeMap(STATE_KEY, prev);
+
+  // Mass-transition guard: a legitimate session unlocks a handful of
+  // stories. Anything larger is a data/hydration anomaly, so the new
+  // state is recorded (above) but nothing is celebrated.
+  if (out.length > MAX_CELEBRATIONS_PER_SCAN) {
+    console.warn(
+      `[stories] suppressed ${out.length} simultaneous unlock celebrations (mass-transition guard)`,
+    );
+    return [];
+  }
   return out;
 }
 
