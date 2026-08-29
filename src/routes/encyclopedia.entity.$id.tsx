@@ -273,7 +273,7 @@ function EntityPage({ entity }: { entity: SupabaseEncyclopediaEntity }) {
   // NOTE: state forwarding and loading/not-found gating happen in
   // `EntityRoute` BEFORE this component (and its discovery / atlas /
   // relationship hooks) ever mounts. Never re-introduce a render-time
-  // <Navigate> here: combined with the hooks above it produced the V16
+  // navigation redirect here: combined with the hooks above it produced the V16
   // "Maximum update depth exceeded" loop that froze Android.
 
 

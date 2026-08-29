@@ -26,7 +26,7 @@ const granada = {
   title: "مملكة غرناطة",
   entity_type: "state",
   enabled: true,
-  summary: "آخر معاقل الإسلام في الأندلس",
+  summary: "آخر معاقل الإسلام في الأندلس، دولة بني نصر التي صمدت قرابة ثلاثة قرون حتى سقوطها سنة 1492م.",
   metadata: { canonical: true },
 } as any;
 
@@ -36,7 +36,7 @@ const nasridEmirate = {
   title: "إمارة بني نصر بغرناطة",
   entity_type: "state",
   enabled: true,
-  summary: "إمارة",
+  summary: "إمارة بني نصر بغرناطة، صفحة منفصلة عن مملكة غرناطة في الموسوعة التاريخية لإرث.",
   metadata: {},
 } as any;
 
@@ -46,7 +46,7 @@ const granadaCity = {
   title: "غرناطة",
   entity_type: "city",
   enabled: true,
-  summary: "مدينة",
+  summary: "مدينة غرناطة الأندلسية، حاضرة قصر الحمراء ومركز الحياة العلمية والعمرانية في جنوب الأندلس.",
   metadata: {},
 } as any;
 
