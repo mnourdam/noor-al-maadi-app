@@ -95,8 +95,20 @@ describe("FIX 1 — local prerequisite derivation", () => {
 });
 
 function ls(): Storage {
-  return globalThis.localStorage;
+  if (!(globalThis as any).localStorage) {
+    const map = new Map<string, string>();
+    (globalThis as any).localStorage = {
+      get length() { return map.size; },
+      key: (i: number) => [...map.keys()][i] ?? null,
+      getItem: (k: string) => (map.has(k) ? map.get(k)! : null),
+      setItem: (k: string, v: string) => { map.set(k, String(v)); },
+      removeItem: (k: string) => { map.delete(k); },
+      clear: () => { map.clear(); },
+    } as Storage;
+  }
+  return (globalThis as any).localStorage as Storage;
 }
+
 
 describe("FIX 2 — authenticated progress mirror", () => {
   beforeEach(() => {
