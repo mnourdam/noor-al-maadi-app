@@ -553,6 +553,26 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   const latestProfileRef = useRef(profile);
   latestProfileRef.current = profile;
 
+  // V16 — REACT-SAFE SPEND.
+  // `spendDinars` decides affordability *inside* a `setProfile` updater, so its
+  // boolean is only truthful when React happens to run the updater eagerly.
+  // Under batching it can report failure while the debit still lands later
+  // (paid no-op). `trySpendDinars` decides synchronously against the last
+  // committed profile plus the amount already reserved in this tick, then
+  // schedules the mutation. The existing `spendDinars` contract is untouched
+  // for its other callers (games / crossword help).
+  const reservedDinarsRef = useRef(0);
+  useEffect(() => { reservedDinarsRef.current = 0; }, [profile.dinars]);
+  const trySpendDinars = useCallback((n: number): boolean => {
+    if (!Number.isFinite(n) || n <= 0) return false;
+    const available = (latestProfileRef.current.dinars ?? 0) - reservedDinarsRef.current;
+    if (available < n) return false;
+    reservedDinarsRef.current += n;
+    update((p) => ({ ...p, dinars: Math.max(0, (p.dinars ?? 0) - n) }));
+    return true;
+  }, [update]);
+
+
   // Premium Emblem — DURABLE, REVERTIBLE write.
   // Local state flips instantly for responsiveness, but the promise resolves
   // only once the pick is durable. On a hard failure the previous emblem is
