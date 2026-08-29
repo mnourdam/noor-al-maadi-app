@@ -142,6 +142,23 @@ export function StoryComments({ anchorType = "story", anchorId, storyId, classNa
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, editorsNotes, items]);
 
+  // Deep link `?comment=<id>` (admin "new comment" push) — scroll the exact
+  // comment into view once the list has rendered. Purely cosmetic; a missing
+  // or unknown id simply does nothing.
+  useEffect(() => {
+    if (loading || typeof window === "undefined") return;
+    const target = new URLSearchParams(window.location.search).get("comment");
+    if (!target) return;
+    const el = document.getElementById(`comment-${target}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.classList.add("ring-2", "ring-gold");
+    const t = window.setTimeout(() => el.classList.remove("ring-2", "ring-gold"), 4000);
+    return () => window.clearTimeout(t);
+  }, [loading, items, editorsNotes]);
+
+
+
 
 
   const onPosted = useCallback((row: SocialCommentRow) => {

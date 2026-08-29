@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { getIssueThread, markIssueRead, rateIssue, replyToIssue } from "@/lib/feedback/api";
 import { CATEGORY_MAP, STATUS_LABELS, type FeedbackIssue, type FeedbackMessage } from "@/lib/feedback/types";
+import { isStaffMessage } from "@/lib/feedback/sender";
+
 import { supabase } from "@/integrations/supabase/client";
 import { useFeedbackPresence } from "@/lib/feedback/usePresence";
 import { FeedbackPresenceBadge } from "@/components/feedback/FeedbackPresenceBadge";
@@ -142,8 +144,9 @@ function FeedbackThread() {
 
             <ul className="my-4 space-y-3">
               {messages.map((m) => (
-                <MessageBubble key={m.id} message={m} />
+                <MessageBubble key={m.id} message={m} reporterId={issue.reporter_id ?? null} />
               ))}
+
             </ul>
 
             {issue.status === "closed" ? (
@@ -240,8 +243,11 @@ function RatingPanel({ issueId, initialRating, onRated }: { issueId: string; ini
   );
 }
 
-function MessageBubble({ message }: { message: FeedbackMessage }) {
-  const isAdmin = message.author_role === "admin";
+function MessageBubble({ message, reporterId }: { message: FeedbackMessage; reporterId: string | null }) {
+  // Canonical classifier — legacy rows mislabelled `admin` but authored by
+  // the contribution owner still render as the player.
+  const isAdmin = isStaffMessage(message, reporterId);
+
   return (
     <li className={`flex ${isAdmin ? "justify-start" : "justify-end"}`}>
       <div

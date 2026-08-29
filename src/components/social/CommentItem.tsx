@@ -88,7 +88,9 @@ export function CommentItem({ row, onChange, onDelete, currentUserId = null, con
 
   return (
     <article
+      id={`comment-${row.id}`}
       className={cn(
+
         "rounded-lg border p-3",
         row.editors_note
           ? "border-gold/40 bg-gold/5"

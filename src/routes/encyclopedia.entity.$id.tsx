@@ -183,8 +183,17 @@ function EntityRoute() {
   const entity = query.data ?? null;
 
   if (shouldForwardToStateRoute(entity)) {
-    return <Navigate to="/encyclopedia/state/$id" params={{ id: entity!.slug }} replace />;
+    // Preserve deep-link search params (e.g. `?comment=<id>`) across the hop.
+    return (
+      <Navigate
+        to="/encyclopedia/state/$id"
+        params={{ id: entity!.slug }}
+        search={(prev) => prev}
+        replace
+      />
+    );
   }
+
 
   if (query.isLoading && !stalled) {
     return (
