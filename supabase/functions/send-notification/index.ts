@@ -327,6 +327,17 @@ Deno.serve(async (req) => {
         target_user_ids: Array.isArray(body.target_user_ids) ? body.target_user_ids : null,
         target_segment_id: typeof body.target_segment_id === "string" ? body.target_segment_id : null,
         deep_link: body.deep_link ?? null,
+        // V16: the validated external action MUST be persisted so the
+        // Notification Center resolves the SAME action later. Every other
+        // send keeps the legacy behavior (payload untouched by this fn).
+        ...(action.kind === "external"
+          ? {
+            payload: {
+              ...(body.payload && typeof body.payload === "object" ? body.payload : {}),
+              external_url: action.url,
+            },
+          }
+          : {}),
         image_url: body.image_url ?? null,
         dedupe_key: dedupeKey,
 
