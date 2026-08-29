@@ -9,7 +9,9 @@ import { recordTrace } from "@/lib/diag-trace";
 import { supabase } from "@/integrations/supabase/client";
 
 import { evaluateStoryRowUnlock, isStoryRowAlwaysUnlocked } from "./unlock/story-row";
+import type { PlayerUnlockState } from "./unlock/local";
 import { buildGuestEvidence, guestUnlockState } from "./unlock/guest-evidence";
+
 import { isCampaignIntroRow } from "./library-filter";
 import { getActiveUserId } from "../identity/owner";
 
@@ -19,16 +21,24 @@ const inflightSummary = new Map<string, Promise<StorySummary[]>>();
 
 export type StoryPrereqKind =
   | "campaign_completed"
+  | "campaign_chapter_complete"
   | "investigation_completed"
   | "story_completed"
-  | "entity_discovered";
+  | "entity_discovered"
+  | "entities_discovered"
+  | "artifact_owned"
+  | "atlas_location_visited"
+  | "achievement_unlocked"
+  | "player_level"
+  | "date_window";
 
 export interface StoryPrereq {
-  kind: StoryPrereqKind;
+  kind: StoryPrereqKind | (string & {});
   ref: string;
   title: string | null;
   satisfied: boolean;
 }
+
 
 export type StoryCategory =
   | "event" | "character" | "city" | "landmark" | "battle"
@@ -126,6 +136,18 @@ export async function buildLocalStorySummaries(
     // locally against the same evidence the online guest RPC receives.
     const guestState = uid ? null : guestUnlockState();
 
+    // V16 — signed-in local fallback: read the READ-ONLY progress mirror of
+    // the last authoritative response so previously read/completed stories
+    // never flash as "جديدة" during a cold start. Never a write path.
+    const { readMirror } = await import("./progress-mirror");
+    const mirror = uid ? readMirror(uid) : null;
+
+    // Evidence used ONLY to explain lock requirements (never to unlock).
+    const evidenceState = guestState ?? (uid ? await authedEvidenceState(uid, mirror) : {});
+    const { deriveStoryPrereqs } = await import("./unlock/derive-prereqs");
+    const { defaultLocalTitleResolver } = await import("./unlock/local-titles");
+    const resolveTitle = await defaultLocalTitleResolver();
+
     const all = rows
       .filter((s: any) => !worldSlug || s.world_slug === worldSlug)
       .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0));
@@ -137,6 +159,9 @@ export async function buildLocalStorySummaries(
       const guestUnlocked = guestState
         ? evaluateStoryRowUnlock(s, guestState)
         : false;
+      const unlocked = alwaysOn || guestUnlocked || unlockedIds.has(s.id);
+
+      const cached = mirror?.entries?.[String(s.id)] ?? null;
 
       return ({
         id: s.id,
@@ -159,22 +184,69 @@ export async function buildLocalStorySummaries(
         length_class: s.length_class ?? null,
         historical_confidence: s.historical_confidence ?? null,
         tags: Array.isArray(s.tags) ? s.tags.filter((t: unknown) => typeof t === "string") : [],
-        prereqs: [],
+        // Real requirements derived from the packaged `unlock_spec` — only
+        // meaningful while the story is still locked.
+        prereqs: unlocked ? [] : deriveStoryPrereqs(s, evidenceState, resolveTitle),
         story_collection_id: s.story_collection_id ?? null,
         collection_order: s.collection_order ?? null,
         lock_explanation: s.lock_explanation ?? null,
-        unlocked: alwaysOn || guestUnlocked || unlockedIds.has(s.id),
-        completed: guestState ? guestState.completed_story_ids?.has(s.id) ?? false : false,
-        progress: null,
+        unlocked,
+        completed: guestState
+          ? guestState.completed_story_ids?.has(s.id) ?? false
+          : cached?.completed ?? false,
+        progress:
+          cached && (cached.lastSceneIndex != null || cached.maxSceneIndexReached != null)
+            ? {
+                last_scene_index: cached.lastSceneIndex ?? 0,
+                max_scene_index_reached: cached.maxSceneIndexReached ?? cached.lastSceneIndex ?? 0,
+              }
+            : null,
         // Local fallback rows are NOT authoritative: unlock celebrations
         // must never be derived from them.
         source: "local",
       } as StorySummary);
     });
+
   } catch {
     return [];
   }
 }
+
+/**
+ * Local evidence for a SIGNED-IN player, used only to mark derived
+ * prerequisites as satisfied/unsatisfied. Missing evidence stays
+ * unsatisfied — never guessed.
+ */
+async function authedEvidenceState(
+  uid: string,
+  mirror: { entries?: Record<string, { completed: boolean }> } | null,
+): Promise<PlayerUnlockState> {
+  const completedStories = new Set<string>();
+  for (const [id, e] of Object.entries(mirror?.entries ?? {})) {
+    if (e?.completed) completedStories.add(id);
+  }
+  const discovered = new Set<string>();
+  try {
+    const { getLocalDiscoveries } = await import("@/lib/entityDiscoveries");
+    for (const d of Object.values(getLocalDiscoveries(uid) ?? {})) {
+      if ((d as any)?.id) discovered.add(String((d as any).id));
+    }
+  } catch { /* no local discoveries */ }
+  const campaigns = new Set<string>();
+  try {
+    const { localCompletedIds } = await import("@/lib/campaigns/completions");
+    for (const id of localCompletedIds()) campaigns.add(id);
+  } catch { /* ignore */ }
+
+  return {
+    completed_story_ids: completedStories,
+    completed_campaign_ids: campaigns,
+    discovered_entity_ids: discovered,
+    visited_atlas_location_ids: discovered,
+    owned_artifact_ids: discovered,
+  };
+}
+
 
 export async function listStoriesSummary(
   worldSlug?: string | null,
@@ -253,6 +325,15 @@ export async function listStoriesSummary(
         })();
       }
       if (uid) {
+        // V16 — hydrate the READ-ONLY local mirror from the authoritative
+        // response. Never uploaded, never a write path.
+        try {
+          const { mergeAuthoritativeRows } = await import("./progress-mirror");
+          mergeAuthoritativeRows(uid, rows as never);
+        } catch { /* cache only */ }
+      }
+      if (uid) {
+
         void (async () => {
           try {
             const { loadUnlockedIds, persistUnlockedIds } = await import("./unlock-cache");
@@ -331,11 +412,20 @@ export function pickNextStory(
   return pool[0];
 }
 
-export function labelPrereqKind(k: StoryPrereqKind): string {
+export function labelPrereqKind(k: StoryPrereqKind | (string & {})): string {
   switch (k) {
-    case "campaign_completed":      return "إتمام حملة";
-    case "investigation_completed": return "إتمام تحقيق";
-    case "story_completed":         return "إتمام قصة";
-    case "entity_discovered":       return "اكتشاف في الموسوعة";
+    case "campaign_completed":         return "إتمام حملة";
+    case "campaign_chapter_complete":  return "إتمام فصل حملة";
+    case "investigation_completed":    return "إتمام تحقيق";
+    case "story_completed":            return "إتمام قصة";
+    case "entity_discovered":          return "اكتشاف في الموسوعة";
+    case "entities_discovered":        return "اكتشافات في الموسوعة";
+    case "artifact_owned":             return "امتلاك مقتنى";
+    case "atlas_location_visited":     return "زيارة موقع في الأطلس";
+    case "achievement_unlocked":       return "فتح إنجاز";
+    case "player_level":               return "بلوغ المستوى";
+    case "date_window":                return "متاح في فترة محددة";
+    default:                           return "متطلب";
   }
 }
+

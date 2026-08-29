@@ -172,12 +172,20 @@ export async function recordStoryProgress(
         if (payload.ok) {
           try { await removeFromOutbox(outboxId); } catch { /* ignore */ }
           try {
+            const { upsertProgress } = await import("./progress-mirror");
+            upsertProgress(uid, storyId, {
+              lastSceneIndex: sceneIndex,
+              maxSceneIndexReached: sceneIndex,
+            });
+          } catch { /* cache only */ }
+          try {
             if (typeof window !== "undefined") {
               window.dispatchEvent(new CustomEvent("irth:story-progress:changed"));
             }
           } catch { /* ignore */ }
           return { acknowledged: true };
         }
+
         void flushOutbox(uid);
         return { acknowledged: false, reason: payload.reason ?? "rpc-not-ok" };
       }
@@ -210,6 +218,13 @@ export async function completeStory(
         const payload = (data ?? {}) as StoryCompletionResult;
         if (payload.ok) {
           try { await removeFromOutbox(outboxId); } catch { /* ignore */ }
+          try {
+            const { markCompleted } = await import("./progress-mirror");
+            markCompleted(uid, storyId, {
+              contentVersion: (payload as { content_version?: number | null }).content_version ?? null,
+            });
+          } catch { /* cache only */ }
+
           try {
             if (typeof window !== "undefined") {
               window.dispatchEvent(new CustomEvent("irth:story-completions:changed"));
