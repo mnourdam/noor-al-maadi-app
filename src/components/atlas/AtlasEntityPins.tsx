@@ -3,10 +3,27 @@
 // Pin coordinates live in APS (= viewBox), eliminating any aspect-ratio
 // drift between raster and markers. Pin color encodes kind for at-a-glance
 // scanning; the panel/legend share this palette.
-import { memo } from "react";
+//
+// V16 — visibility is no longer decided here. `src/lib/atlas/atlas-tiers.ts`
+// is the single canonical contract (replacement-oriented tiers + hysteresis);
+// this file only renders what that contract allows. Coincident markers are
+// separated by the deterministic micro-offset from `atlas-coincidence.ts`.
+import { memo, useMemo } from "react";
 import type { AtlasEntityRow } from "@/lib/atlas-entities";
 import { apsToViewBox, ATLAS_VIEWBOX, APS_UNIT_SCALE } from "@/lib/atlas/aps";
 import { KIND_COLOR } from "@/lib/atlas/atlas-visual";
+import {
+  type AtlasTier,
+  shouldShowAtlasPin,
+  shouldShowAtlasLabel,
+  pinOpacityForTier,
+  pinScaleForTier,
+} from "@/lib/atlas/atlas-tiers";
+import {
+  computeCoincidenceOffsets,
+  applyCoincidenceOffset,
+  type CoincidenceOffset,
+} from "@/lib/atlas/atlas-coincidence";
 import { AtlasGlyphDefs, AtlasKindGlyph } from "./AtlasGlyphs";
 
 const VB_W = ATLAS_VIEWBOX.width;
@@ -15,51 +32,12 @@ const VB_H = ATLAS_VIEWBOX.height;
 // uniformly so they read at identical apparent size on the native APS grid.
 const S = APS_UNIT_SCALE;
 
-// Zoom-tier visibility (quantized in AtlasStage; passed as labelTier 0..3).
-//
-//  tier 0 (far)    → states / regions only
-//  tier 1 (medium) → + major cities (place)
-//  tier 2 (close)  → + battles and events
-//  tier 3 (deep)   → + landmarks / artifacts / figures / route points
-//
-// Pins follow the same tier so the map stays scannable at low zoom; labels
-// are stricter than pins (label requires same tier or higher than the pin).
-// Major worlds/states are NEVER hidden at far zoom.
-const PIN_TIER: Record<string, number> = {
-  region:         0,
-  place:          1,
-  battle:         2,
-  event:          2,
-  figure_marker:  3,
-  artifact_site:  3,
-  route_point:    3,
-};
-const LABEL_TIER: Record<string, number> = {
-  region:         0,
-  place:          1,
-  battle:         2,
-  event:          2,
-  figure_marker:  3,
-  artifact_site:  3,
-  route_point:    3,
-};
-
-function shouldShowPin(kind: string, tier: number, active: boolean): boolean {
-  if (active) return true;
-  return tier >= (PIN_TIER[kind] ?? 0);
-}
-function shouldShowLabel(kind: string, tier: number, active: boolean): boolean {
-  if (active) return true;
-  return tier >= (LABEL_TIER[kind] ?? 99);
-}
-
-
 /** Inner SVG layer — rendered inside the AtlasStage transform group. */
 export function AtlasEntityPinsLayer({
   entities,
   selectedId,
   inv,
-  labelTier,
+  tier,
   onSelect,
   cullBounds,
   disableGlow,
@@ -67,40 +45,61 @@ export function AtlasEntityPinsLayer({
   entities: AtlasEntityRow[];
   selectedId: string | null;
   inv: number;
-  labelTier: number;
+  /** Canonical zoom tier from `tierForScale` (0 FAR / 1 MEDIUM / 2 CLOSE). */
+  tier: AtlasTier;
   onSelect: (entity: AtlasEntityRow) => void;
   /** Visible world rect in viewBox units; pins outside are skipped. */
   cullBounds?: { minX: number; maxX: number; minY: number; maxY: number } | null;
   /** Drop golden glow halos (Android perf). */
   disableGlow?: boolean;
 }) {
-  if (entities.length === 0) return null;
+  // Deterministic micro-offsets — recomputed only when the marker set changes.
+  const offsets = useMemo(
+    () =>
+      computeCoincidenceOffsets(
+        entities
+          .filter((e) => e.aps_x != null && e.aps_y != null)
+          .map((e) => ({ id: e.id, x: e.aps_x as number, y: e.aps_y as number })),
+      ),
+    [entities],
+  );
+
   // Label clutter cap: if too many pins are eligible for labels at this
-  // tier, demote everything below region/place so the map stays readable.
-  let labelEligible = 0;
-  for (const e of entities) {
-    if (e.aps_x == null || e.aps_y == null) continue;
-    if (labelTier >= (LABEL_TIER[e.kind] ?? 99)) labelEligible++;
-  }
-  const labelCap = labelEligible > 28;
+  // tier, demote everything below place so the map stays readable.
+  const labelCap = useMemo(() => {
+    let labelEligible = 0;
+    for (const e of entities) {
+      if (e.aps_x == null || e.aps_y == null) continue;
+      if (shouldShowAtlasLabel(e.kind, tier, false)) labelEligible++;
+    }
+    return labelEligible > 28;
+  }, [entities, tier]);
+
   // ── Focus mode ──────────────────────────────────────────────
   // With a selection active, every other marker fades to ~20% so the
   // chosen city / region / battle — and its label — own the surface.
   // The selected marker is rendered last so it always sits on top.
   const focused = selectedId != null;
   const selected = focused ? entities.find((e) => e.id === selectedId) ?? null : null;
-  const rest = focused ? entities.filter((e) => e.id !== selectedId) : entities;
+  const rest = useMemo(
+    () => (selectedId != null ? entities.filter((e) => e.id !== selectedId) : entities),
+    [entities, selectedId],
+  );
+
+  if (entities.length === 0) return null;
+
   const pin = (e: AtlasEntityRow, active: boolean) => (
     <AtlasPin
       key={e.id}
       entity={e}
       inv={inv}
-      labelTier={labelTier}
+      tier={tier}
       active={active}
       onSelect={onSelect}
       cullBounds={cullBounds}
       disableGlow={disableGlow}
       labelCap={labelCap}
+      offsets={offsets}
     />
   );
   return (
@@ -120,19 +119,21 @@ export function AtlasEntityPinsLayer({
 
 
 const AtlasPin = memo(function AtlasPin({
-  entity, inv, labelTier, active, onSelect, cullBounds, disableGlow, labelCap,
+  entity, inv, tier, active, onSelect, cullBounds, disableGlow, labelCap, offsets,
 }: {
   entity: AtlasEntityRow;
   inv: number;
-  labelTier: number;
+  tier: AtlasTier;
   active: boolean;
   onSelect: (entity: AtlasEntityRow) => void;
   cullBounds?: { minX: number; maxX: number; minY: number; maxY: number } | null;
   disableGlow?: boolean;
   labelCap?: boolean;
+  offsets?: Map<string, CoincidenceOffset> | null;
 }) {
   if (entity.aps_x == null || entity.aps_y == null) return null;
-  const { x, y } = apsToViewBox({ x: entity.aps_x, y: entity.aps_y });
+  const base = apsToViewBox({ x: entity.aps_x, y: entity.aps_y });
+  const { x, y } = applyCoincidenceOffset(entity.id, base.x, base.y, offsets);
 
   if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
   if (x < 0 || x > VB_W || y < 0 || y > VB_H) return null;
@@ -142,23 +143,25 @@ const AtlasPin = memo(function AtlasPin({
       return null;
     }
   }
-  const showPin = shouldShowPin(entity.kind, labelTier, active);
-  if (!showPin) return null;
+  if (!shouldShowAtlasPin(entity.kind, tier, active)) return null;
 
+  const emphasis = pinScaleForTier(entity.kind, tier, active);
+  const opacity = pinOpacityForTier(entity.kind, tier, active);
   // Glyph half-extent (in user units). Smaller, refined — atlas is the hero.
-  const size = (active ? 1.15 : 0.85) * inv * S;
+  const size = (active ? 1.15 : 0.85) * emphasis * inv * S;
   const color = KIND_COLOR[entity.kind] ?? "oklch(0.55 0.18 25)";
   // Darker shade of the fill for an engraved rim — never harsh black.
   const rim = color.replace(
     /oklch\(\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*\)/,
     (_m, l, c, h) => `oklch(${Math.max(0.18, Number(l) - 0.22).toFixed(2)} ${c} ${h})`,
   );
-  const labelAllowedByCap = !labelCap || active || entity.kind === "region" || entity.kind === "place";
-  const showLabel = shouldShowLabel(entity.kind, labelTier, active) && labelAllowedByCap;
+  const labelAllowedByCap = !labelCap || active || entity.kind === "place";
+  const showLabel = shouldShowAtlasLabel(entity.kind, tier, active) && labelAllowedByCap;
   return (
     <g
       transform={`translate(${x} ${y})`}
       className="cursor-pointer"
+      opacity={opacity}
       onClick={(e) => {
         // Drag-vs-tap: AtlasStage cancels this click via capture phase when
         // the pointer moved more than the tap threshold.
