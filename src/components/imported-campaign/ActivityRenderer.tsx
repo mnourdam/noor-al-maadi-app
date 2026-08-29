@@ -432,18 +432,11 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone, campaignId, c
 
   const labelById = (id: string) => items.find((it) => it.id === id)?.label ?? "";
 
-  /** Keeps revealed items glued to their correct slots after any move. */
-  const pin = (next: string[]): string[] => {
-    let current = [...next];
-    // Sort pins by target index to ensure stable insertion
-    const sortedPins = [...pinnedIds].sort((a, b) => correctIndexOf(a) - correctIndexOf(b));
-    for (const pid of sortedPins) {
-      const target = correctIndexOf(pid);
-      current = current.filter((id) => id !== pid);
-      current.splice(Math.min(target, current.length), 0, pid);
-    }
-    return current;
-  };
+  /**
+   * Keeps revealed items glued to their correct slots after any move.
+   * Delegates to the ONE canonical seating helper — no local pin algorithm.
+   */
+  const pin = (next: string[]): string[] => seatPinnedItems(next, pinnedIds, correctIndexOf);
 
   const move = (idx: number, dir: -1 | 1) => {
     if (resolved) return;
@@ -466,50 +459,71 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone, campaignId, c
     setFeedback(null);
   };
 
+  const eligibleHintCount = order.filter((id) => (
+    !pinnedIds.includes(id) && correctIndexOf(id) !== order.indexOf(id)
+  )).length;
+  const canAffordHint = (profile?.dinars ?? 0) >= ARRANGE_HINT_COST;
+  const hintDisabled =
+    resolved ||
+    hintBusy ||
+    pinnedIds.length >= order.length - 1 ||
+    eligibleHintCount === 0 ||
+    !canAffordHint;
+
   const useHint = () => {
     if (resolved) return;
-
-    const result = purchaseOrderingHelp(
-      logicalKey,
-      fingerprint,
-      order,
-      correctIndexOf,
-      { pay: (txId) => spendDinars(ARRANGE_HINT_COST) }
-    );
-
-    if (!result) {
-      // Check if it was a balance issue or just no eligible items
-      const state = getOrderingState(logicalKey, fingerprint);
-      const eligibleCount = order.filter(id => {
-        const isPinned = state?.pinnedIds.includes(id) ?? false;
-        const isCorrect = correctIndexOf(id) === order.indexOf(id);
-        return !isPinned && !isCorrect;
-      }).length;
-
-      if (eligibleCount === 0 || (state?.pinnedIds.length ?? 0) >= order.length - 1) {
-        setHintError("لم يبقَ عناصر مفيدة للكشف عنها.");
-      } else {
-        setHintError(`تحتاج ${ARRANGE_HINT_COST} دينارًا لاستخدام التلميح.`);
-      }
+    if (hintInFlight.current) return; // rapid double-click guard
+    if (!canAffordHint) {
+      setHintError(`تحتاج ${ARRANGE_HINT_COST} دينارًا لاستخدام التلميح.`);
       return;
     }
+    hintInFlight.current = true;
+    setHintBusy(true);
+    try {
+      const result = purchaseOrderingHelp(
+        logicalKey,
+        fingerprint,
+        order,
+        correctIndexOf,
+        { pay: () => trySpendDinars(ARRANGE_HINT_COST) }
+      );
 
-    setHintError(null);
-    const newPinnedId = result.itemId;
-    setPinnedIds((prev) => [...prev, newPinnedId]);
-    
-    // Update order immediately
-    const target = correctIndexOf(newPinnedId);
-    const without = order.filter((id) => id !== newPinnedId);
-    without.splice(Math.min(target, without.length), 0, newPinnedId);
-    setOrder(without);
-    setFeedback(null);
+      if (!result) {
+        // Distinguish "nothing useful left" from a balance failure.
+        const state = getOrderingState(logicalKey, fingerprint);
+        const eligibleCount = order.filter(id => {
+          const isPinned = state?.pinnedIds.includes(id) ?? false;
+          const isCorrect = correctIndexOf(id) === order.indexOf(id);
+          return !isPinned && !isCorrect;
+        }).length;
+
+        if (eligibleCount === 0 || (state?.pinnedIds.length ?? 0) >= order.length - 1) {
+          setHintError("لم يبقَ عناصر مفيدة للكشف عنها.");
+        } else {
+          setHintError(`تحتاج ${ARRANGE_HINT_COST} دينارًا لاستخدام التلميح.`);
+        }
+        return;
+      }
+
+      setHintError(null);
+      const nextPins = [...pinnedIds, result.itemId];
+      setPinnedIds(nextPins);
+      // Re-seat the WHOLE board with ALL pins — never just the new one.
+      setOrder(seatPinnedItems(order, nextPins, correctIndexOf));
+      setFeedback(null);
+    } finally {
+      hintInFlight.current = false;
+      setHintBusy(false);
+    }
   };
 
   const submit = () => {
     if (resolved) return;
-    const current = order.map(labelById);
+    // Evaluate the canonical (already-seated) board — idempotent by design.
+    const evaluated = seatPinnedItems(order, pinnedIds, correctIndexOf);
+    const current = evaluated.map(labelById);
     const isCorrect = current.every((v, i) => v === correctOrder[i]);
+
     if (isCorrect) {
       setResolved(true);
       setFeedback("ok");
