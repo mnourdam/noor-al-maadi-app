@@ -427,7 +427,9 @@ function AdminIssueDrawer({ id, onClose }: { id: string; onClose: () => void }) 
 
             <ul className="flex-1 space-y-3 overflow-y-auto bg-slate-950 p-4">
               {data!.messages.map((m) => {
-                const isAdmin = m.author_role === "admin";
+                // Canonical classifier — never infer authorship from order.
+                const isAdmin = isStaffMessage(m, data!.issue.reporter_id ?? null);
+
                 return (
                   <li key={m.id} className={`flex ${isAdmin ? "justify-start" : "justify-end"}`}>
                     <div
