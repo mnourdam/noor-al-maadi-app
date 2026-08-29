@@ -442,6 +442,113 @@ export type Database = {
         }
         Relationships: []
       }
+      app_announcement_acks: {
+        Row: {
+          acked_at: string
+          action: string
+          announcement_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          acked_at?: string
+          action?: string
+          announcement_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          acked_at?: string
+          action?: string
+          announcement_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_announcement_acks_announcement_id_fkey"
+            columns: ["announcement_id"]
+            isOneToOne: false
+            referencedRelation: "app_announcements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      app_announcements: {
+        Row: {
+          body: string
+          created_at: string
+          created_by: string | null
+          cta_label: string | null
+          dismissible: boolean
+          effective_at: string | null
+          expires_at: string | null
+          external_url: string | null
+          id: string
+          internal_path: string | null
+          is_active: boolean
+          kind: string
+          min_version_code: number | null
+          once_per_user: boolean
+          platform: string
+          priority: number
+          recommended_version_code: number | null
+          segment_filters: Json | null
+          segment_id: string | null
+          starts_at: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          cta_label?: string | null
+          dismissible?: boolean
+          effective_at?: string | null
+          expires_at?: string | null
+          external_url?: string | null
+          id?: string
+          internal_path?: string | null
+          is_active?: boolean
+          kind: string
+          min_version_code?: number | null
+          once_per_user?: boolean
+          platform?: string
+          priority?: number
+          recommended_version_code?: number | null
+          segment_filters?: Json | null
+          segment_id?: string | null
+          starts_at?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          cta_label?: string | null
+          dismissible?: boolean
+          effective_at?: string | null
+          expires_at?: string | null
+          external_url?: string | null
+          id?: string
+          internal_path?: string | null
+          is_active?: boolean
+          kind?: string
+          min_version_code?: number | null
+          once_per_user?: boolean
+          platform?: string
+          priority?: number
+          recommended_version_code?: number | null
+          segment_filters?: Json | null
+          segment_id?: string | null
+          starts_at?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       applied_profile_deltas: {
         Row: {
           applied_at: string
@@ -3398,6 +3505,10 @@ export type Database = {
         Returns: Json
       }
       _story_validate_v2_one: { Args: { p_in: Json }; Returns: Json }
+      ack_announcement_v16: {
+        Args: { p_action?: string; p_announcement_id: string }
+        Returns: boolean
+      }
       add_story_comment_v2: {
         Args: {
           p_anchor_id: string
@@ -3837,6 +3948,10 @@ export type Database = {
         Args: { p_reason: string; p_status: string; p_user_id: string }
         Returns: Json
       }
+      admin_set_announcement_active_v16: {
+        Args: { p_active: boolean; p_confirm?: string; p_id: string }
+        Returns: boolean
+      }
       admin_set_artifact_rarity: {
         Args: { _ids: string[]; _rarity: string }
         Returns: Json
@@ -3892,6 +4007,10 @@ export type Database = {
         Args: { p_id: string; p_reason?: string }
         Returns: Json
       }
+      admin_upsert_announcement_v16: {
+        Args: { p_payload: Json }
+        Returns: string
+      }
       admin_upsert_story: { Args: { p_payload: Json }; Returns: Json }
       admin_upsert_story_scene: { Args: { p_payload: Json }; Returns: Json }
       admin_user_detail: { Args: { p_user_id: string }; Returns: Json }
@@ -3931,6 +4050,10 @@ export type Database = {
           p_to: string
         }
         Returns: Json
+      }
+      announcement_segment_matches_v16: {
+        Args: { p_filter: Json; p_segment_id: string; p_uid: string }
+        Returns: boolean
       }
       apply_contribution_v2: {
         Args: {
@@ -4050,6 +4173,26 @@ export type Database = {
         Returns: boolean
       }
       gen_referral_code: { Args: never; Returns: string }
+      get_active_announcements_v16: {
+        Args: { p_platform?: string }
+        Returns: {
+          body: string
+          cta_label: string
+          dismissible: boolean
+          effective_at: string
+          external_url: string
+          id: string
+          internal_path: string
+          kind: string
+          min_version_code: number
+          once_per_user: boolean
+          platform: string
+          priority: number
+          recommended_version_code: number
+          server_time: string
+          title: string
+        }[]
+      }
       get_content_manifest: {
         Args: never
         Returns: {
