@@ -365,10 +365,14 @@ function TrueFalseRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
 // progress — the player still has to order everything else.
 const ARRANGE_HINT_COST = 20;
 
-function ArrangeEventsRenderer({ activity, onResolve, alreadyDone, campaignId }: RendererProps & { campaignId?: string }) {
+function ArrangeEventsRenderer({ activity, onResolve, alreadyDone, campaignId, chapterId }: RendererProps & { campaignId?: string; chapterId?: string }) {
   const correctOrder = activity.correctOrder ?? activity.options ?? [];
-  const chapterId = (activity as any).chapterId ?? "default";
-  const logicalKey = campaignId ? activityKey(campaignId, chapterId, activity.id) : `activity:${activity.id}`;
+  // V16: the chapter id MUST come from the route (never from activity JSON —
+  // activities carry no `chapterId`), otherwise this key can never match the
+  // `activityKey(...)` the route uses to clear help after a correct answer.
+  const logicalKey = campaignId && chapterId
+    ? activityKey(campaignId, chapterId, activity.id)
+    : `activity:${activity.id}`;
   const fingerprint = useMemo(() => getOrderingFingerprint(activity), [activity]);
 
   // Stable item ids so dnd-kit can track items even when labels repeat.
@@ -378,7 +382,7 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone, campaignId }:
   );
 
   /** `evt-<i>` — i is the item's correct final position. */
-  const correctIndexOf = (id: string) => Number(id.replace("evt-", ""));
+  const correctIndexOf = correctIndexOfOrderingId;
 
   const [pinnedIds, setPinnedIds] = useState<string[]>(() => {
     const saved = getOrderingState(logicalKey, fingerprint);
@@ -387,35 +391,36 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone, campaignId }:
 
   const [order, setOrder] = useState<string[]>(() => {
     const initial = utilsShuffle(items.map((it) => it.id));
-    // Apply pins to initial shuffle immediately to prevent flash
+    // Apply pins to the initial shuffle immediately (prevents flash) through
+    // the ONE canonical seating helper — same code path as move/hint/reload.
     const saved = getOrderingState(logicalKey, fingerprint);
     if (!saved || saved.pinnedIds.length === 0) return initial;
-
-    let current = [...initial];
-    for (const pid of saved.pinnedIds) {
-      const target = correctIndexOf(pid);
-      current = current.filter((id) => id !== pid);
-      current.splice(Math.min(target, current.length), 0, pid);
-    }
-    return current;
+    return seatPinnedItems(initial, saved.pinnedIds, correctIndexOfOrderingId);
   });
 
   const [resolved, setResolved] = useState(alreadyDone ?? false);
   const [feedback, setFeedback] = useState<"ok" | "err" | null>(alreadyDone ? "ok" : null);
   const [hintError, setHintError] = useState<string | null>(null);
-  const { profile, spendDinars } = useProfile();
+  const [hintBusy, setHintBusy] = useState(false);
+  const hintInFlight = useRef(false);
+  const { profile, trySpendDinars } = useProfile();
 
-  // Recovery flow for crashes between debit and commit
+  // Recovery flow for crashes between debit and commit. Only transactions with
+  // a persisted PAID marker are restored (no free hints, no paid no-ops).
   useEffect(() => {
     recoverPendingOrderingHelp(
       logicalKey,
       fingerprint,
-      () => true, // Best-effort: assume if we have a pending tx, it was intended/paid
       (itemId) => {
-        setPinnedIds((prev) => [...new Set([...prev, itemId])]);
+        setPinnedIds((prev) => {
+          const next = [...new Set([...prev, itemId])];
+          setOrder((current) => seatPinnedItems(current, next, correctIndexOfOrderingId));
+          return next;
+        });
       }
     );
   }, [logicalKey, fingerprint]);
+
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
