@@ -219,6 +219,10 @@ export async function applyContentUpdate(): Promise<boolean> {
     const { applyLocalSnapshot } = await import("./local-first-store");
     applyLocalSnapshot(stored);
 
+    // Convergence (D): persist fingerprint + counts + editorial timestamps +
+    // the observed reaction-polluted `stories.last_updated` together.
+    await persistAppliedStoryIdentity(stored);
+
     setState({ applying: false, available: false, collections: [], error: null, checkedAt: Date.now() });
     return true;
   } catch (e) {
