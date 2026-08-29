@@ -145,12 +145,20 @@ function StatePage() {
   const { user } = useAccount();
   const userKey = user?.id ?? "guest";
   const relNetworkRef = useRef<HTMLElement | null>(null);
+  // V16 — discovery readiness (see entity route): mount/loading/failed
+  // fetch/empty body never count as a discovery.
+  const contentReady =
+    stateQuery.isSuccess &&
+    !!state &&
+    (!!state.summary?.trim() ||
+      (!!state.body && Object.keys(state.body as object).length > 0));
   useEntityReadCompletion({
     entityId: state?.id ?? null,
     entitySlug: state?.slug ?? null,
     entityType: state?.entity_type ?? "state",
     userKey,
     relationshipSectionRef: relNetworkRef,
+    contentReady,
   });
 
 

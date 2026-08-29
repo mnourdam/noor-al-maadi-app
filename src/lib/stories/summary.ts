@@ -110,6 +110,38 @@ export { CAMPAIGN_INTRO_TAG } from "./library-filter";
  */
 export const STORY_SUMMARY_RPC_TIMEOUT_MS = 2500;
 
+/**
+ * V16 — ONE LOCAL UNLOCK SEMANTIC.
+ *
+ * The ONLY place local/offline story-card unlock state is decided:
+ *
+ *   unlocked = alwaysOn
+ *            || canonicalLocalEvaluation(unlock_spec, evidenceState)
+ *            || serverConfirmedFloor
+ *
+ * The SAME `unlock_spec`, the SAME evaluator and the SAME `evidenceState`
+ * also drive `deriveStoryPrereqs`, so the card and the locked dialog can
+ * never contradict each other.
+ *
+ * Invariants:
+ *   • fail closed — a row without an `unlock_spec` KEY is NEVER unlocked;
+ *   • progress / the progress mirror / resume state are NOT evidence;
+ *   • the signed unlock cache is a last-known SERVER-CONFIRMED display
+ *     floor only — player access still goes through `get_story_bundle_v2`.
+ */
+export function resolveLocalUnlocked(
+  row: unknown,
+  evidenceState: PlayerUnlockState,
+  serverConfirmedIds?: ReadonlySet<string> | null,
+): boolean {
+  if (isStoryRowAlwaysUnlocked(row)) return true;
+  if (evaluateStoryRowUnlock(row, evidenceState)) return true;
+  const id = (row as { id?: unknown } | null)?.id;
+  return !!serverConfirmedIds && typeof id !== "undefined" && serverConfirmedIds.has(String(id));
+}
+
+
+
 export async function buildLocalStorySummaries(
   worldSlug?: string | null,
   uid?: string | null,
@@ -153,15 +185,11 @@ export async function buildLocalStorySummaries(
       .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0));
 
     return all.map((s: any) => {
-      // FAIL CLOSED: a row whose `unlock_spec` KEY was stripped by a
-      // redacting server projection must never read as "always open".
-      const alwaysOn = isStoryRowAlwaysUnlocked(s);
-      const guestUnlocked = guestState
-        ? evaluateStoryRowUnlock(s, guestState)
-        : false;
-      const unlocked = alwaysOn || guestUnlocked || unlockedIds.has(s.id);
+      const unlocked = resolveLocalUnlocked(s, evidenceState, unlockedIds);
 
       const cached = mirror?.entries?.[String(s.id)] ?? null;
+
+
 
       return ({
         id: s.id,
@@ -194,13 +222,17 @@ export async function buildLocalStorySummaries(
         completed: guestState
           ? guestState.completed_story_ids?.has(s.id) ?? false
           : cached?.completed ?? false,
+        // PROGRESS NEVER GRANTS ACCESS. Stale progress for a story whose
+        // requirements are no longer met is preserved in the mirror but must
+        // not surface as "استئناف".
         progress:
-          cached && (cached.lastSceneIndex != null || cached.maxSceneIndexReached != null)
+          unlocked && cached && (cached.lastSceneIndex != null || cached.maxSceneIndexReached != null)
             ? {
                 last_scene_index: cached.lastSceneIndex ?? 0,
                 max_scene_index_reached: cached.maxSceneIndexReached ?? cached.lastSceneIndex ?? 0,
               }
             : null,
+
         // Local fallback rows are NOT authoritative: unlock celebrations
         // must never be derived from them.
         source: "local",
