@@ -170,18 +170,27 @@ export function DeepLinkPicker({
               <label className="mb-1 block text-xs font-medium">
                 {p.label}{p.required && <span className="text-destructive"> *</span>}
               </label>
-              <input
-                value={params[p.key] ?? ""}
-                onChange={(e) => setParam(p.key, e.target.value)}
-                className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
-                placeholder={p.placeholder}
-                dir="ltr"
-              />
+              {p.source ? (
+                <ContentParamPicker
+                  source={p.source}
+                  value={params[p.key] ?? ""}
+                  onPick={(v) => setParam(p.key, v)}
+                />
+              ) : (
+                <input
+                  value={params[p.key] ?? ""}
+                  onChange={(e) => setParam(p.key, e.target.value)}
+                  className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+                  placeholder={p.placeholder}
+                  dir="ltr"
+                />
+              )}
               {p.hint && <p className="mt-0.5 text-[11px] text-muted-foreground">{p.hint}</p>}
             </div>
           ))}
         </div>
       )}
+
 
       {destinationId === "advanced" && (
         <input
