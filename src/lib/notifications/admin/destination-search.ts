@@ -57,11 +57,11 @@ export async function searchDestinationOptions(
       }
       case "story": {
         let sel = supabase.from("stories")
-          .select("id,slug,title,status").eq("status", "published").limit(LIMIT);
-        if (q) sel = sel.or(`title.ilike.${like(q)},slug.ilike.${like(q)}`);
+          .select("id,slug,title_ar,title_en,status").eq("status", "published").limit(LIMIT);
+        if (q) sel = sel.or(`title_ar.ilike.${like(q)},title_en.ilike.${like(q)},slug.ilike.${like(q)}`);
         const { data } = await sel;
         return (data ?? []).map((r) => ({
-          value: String(r.id), label: String(r.title ?? r.slug), hint: String(r.slug ?? r.id),
+          value: String(r.id), label: String(r.title_ar ?? r.title_en ?? r.slug), hint: String(r.slug ?? r.id),
         }));
       }
       case "encyclopedia_entity": {
