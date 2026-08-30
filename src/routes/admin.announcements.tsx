@@ -131,7 +131,15 @@ function AdminAnnouncementsPage() {
       once_per_user: form.once_per_user,
       starts_at: form.starts_at,
       expires_at: form.expires_at,
-      effective_at: form.effective_at,
+      // A mandatory update is only returned by `get_active_announcements_v16`
+      // when `effective_at IS NOT NULL AND <= now()`. Saving it blank silently
+      // produced an "active" policy the Android client could never see, so a
+      // blank value defaults to "effective immediately".
+      effective_at:
+        form.kind === "mandatory_update" && !form.effective_at
+          ? new Date().toISOString()
+          : form.effective_at,
+
     };
     const { error } = await rpc("admin_upsert_announcement_v16", { p_payload: payload });
     setBusy(false);
