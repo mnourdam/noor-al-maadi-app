@@ -11,8 +11,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Link as LinkIcon, Search, X } from "lucide-react";
 import {
   DEEP_LINKS, DEEP_LINK_GROUPS, findDeepLink, searchDeepLinks,
-  type DeepLinkDef,
+  type DeepLinkDef, type DeepLinkParamSource,
 } from "@/lib/notifications/admin/deep-links";
+import {
+  searchDestinationOptions, type DestinationOption,
+} from "@/lib/notifications/admin/destination-search";
 
 export interface DeepLinkPickerProps {
   /** Currently selected destination id (or empty for free-text mode). */
@@ -170,18 +173,27 @@ export function DeepLinkPicker({
               <label className="mb-1 block text-xs font-medium">
                 {p.label}{p.required && <span className="text-destructive"> *</span>}
               </label>
-              <input
-                value={params[p.key] ?? ""}
-                onChange={(e) => setParam(p.key, e.target.value)}
-                className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
-                placeholder={p.placeholder}
-                dir="ltr"
-              />
+              {p.source ? (
+                <ContentParamPicker
+                  source={p.source}
+                  value={params[p.key] ?? ""}
+                  onPick={(v) => setParam(p.key, v)}
+                />
+              ) : (
+                <input
+                  value={params[p.key] ?? ""}
+                  onChange={(e) => setParam(p.key, e.target.value)}
+                  className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+                  placeholder={p.placeholder}
+                  dir="ltr"
+                />
+              )}
               {p.hint && <p className="mt-0.5 text-[11px] text-muted-foreground">{p.hint}</p>}
             </div>
           ))}
         </div>
       )}
+
 
       {destinationId === "advanced" && (
         <input
@@ -221,3 +233,68 @@ export function buildOutput(
 }
 
 export { DEEP_LINKS };
+
+/**
+ * Searchable content selector for destinations that need a real
+ * campaign / story / entity / atlas location / investigation.
+ * The manual value stays editable so an admin can always paste an id.
+ */
+function ContentParamPicker({
+  source, value, onPick,
+}: {
+  source: DeepLinkParamSource;
+  value: string;
+  onPick: (value: string) => void;
+}) {
+  const [q, setQ] = useState("");
+  const [options, setOptions] = useState<DestinationOption[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    const t = setTimeout(() => {
+      void searchDestinationOptions(source, q).then((res) => {
+        if (!cancelled) { setOptions(res); setLoading(false); }
+      });
+    }, 250);
+    return () => { cancelled = true; clearTimeout(t); setLoading(false); };
+  }, [source, q]);
+
+  return (
+    <div className="space-y-1.5">
+      <input
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="ابحث في المحتوى…"
+        className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+      />
+      <div className="max-h-44 overflow-y-auto rounded-md border border-border">
+        {loading && <p className="px-2 py-1.5 text-[11px] text-muted-foreground">جارٍ البحث…</p>}
+        {!loading && options.length === 0 && (
+          <p className="px-2 py-1.5 text-[11px] text-muted-foreground">لا نتائج — يمكنك لصق المعرّف يدويًا.</p>
+        )}
+        {options.map((o) => (
+          <button
+            key={o.value}
+            type="button"
+            onClick={() => onPick(o.value)}
+            className={`block w-full px-2 py-1.5 text-right text-sm hover:bg-accent ${
+              o.value === value ? "bg-primary/10 text-primary" : ""
+            }`}
+          >
+            <span className="font-medium">{o.label}</span>
+            {o.hint && <span className="block text-[11px] text-muted-foreground" dir="ltr">{o.hint}</span>}
+          </button>
+        ))}
+      </div>
+      <input
+        value={value}
+        onChange={(e) => onPick(e.target.value)}
+        className="w-full rounded-md border border-input bg-background px-3 py-1.5 font-mono text-xs"
+        placeholder="القيمة المختارة"
+        dir="ltr"
+      />
+    </div>
+  );
+}

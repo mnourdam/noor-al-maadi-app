@@ -4307,6 +4307,10 @@ export type Database = {
       is_content_editor: { Args: never; Returns: boolean }
       is_feedback_staff: { Args: { _uid?: string }; Returns: boolean }
       is_newsletter_admin: { Args: never; Returns: boolean }
+      is_notification_audience_staff: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
       is_user_manager: { Args: never; Returns: boolean }
       is_username_available: { Args: { p_username: string }; Returns: boolean }
       journey_kind_counts: {
