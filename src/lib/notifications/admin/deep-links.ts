@@ -1,25 +1,46 @@
 /**
- * Deep-link destination registry for the notification composer.
+ * Deep-link destination registry for the notification composer — V16.
  *
- * Each destination knows its label, group, route builder, and the params
- * it needs from the admin. The picker uses this to render dynamic inputs
- * instead of asking admins to type raw URLs.
+ * Every destination maps to a route that ACTUALLY EXISTS under `src/routes`.
+ * Nothing here is invented: the paths below were verified one-by-one against
+ * the generated route tree (`/`, `/campaigns`, `/journey`, `/stories`,
+ * `/story/$id`, `/encyclopedia`, `/encyclopedia/entity/$id`,
+ * `/encyclopedia/type/$type`, `/map`, `/collection`, `/investigations`,
+ * `/investigation/$id`, `/achievements`, `/friends`, `/profile`,
+ * `/notifications`, `/timeline`, `/campaigns/imported/$id`).
  *
- * The `build()` output writes both `deep_link` (URL string) and a
- * structured `payload` so the existing notifications/deepLink.ts resolver
- * keeps working without changes.
+ * CANONICAL SERIALIZATION (V16 fix)
+ * ---------------------------------
+ * `build()` returns ONE canonical path and mirrors it into `payload.url`.
+ * `resolveDeepLink()` checks `payload.url` first, so the Android
+ * notification-open handler always navigates to exactly the URL the admin
+ * previewed. Previously builders emitted structured payload keys
+ * (`campaignSlug`, `entitySlug`, …) that the resolver rewrote into
+ * non-existent routes such as `/campaigns/<slug>`.
  */
 
 export type DeepLinkGroup =
+  | "Home"
   | "Campaigns"
+  | "Stories"
   | "Encyclopedia"
   | "Atlas"
   | "Museum"
+  | "Investigations"
   | "Timeline"
   | "Community"
   | "Profile"
   | "Notifications"
   | "Admin";
+
+/** Content source used to power a searchable admin selector for a param. */
+export type DeepLinkParamSource =
+  | "campaign"
+  | "story"
+  | "encyclopedia_entity"
+  | "encyclopedia_type"
+  | "atlas_entity"
+  | "investigation";
 
 export interface DeepLinkParam {
   key: string;
@@ -28,6 +49,8 @@ export interface DeepLinkParam {
   placeholder?: string;
   /** Optional helper hint for the admin (e.g. "campaign slug"). */
   hint?: string;
+  /** When set, the picker renders a searchable content selector. */
+  source?: DeepLinkParamSource;
 }
 
 export interface DeepLinkDef {
@@ -41,83 +64,106 @@ export interface DeepLinkDef {
 
 const NO_PARAMS: DeepLinkParam[] = [];
 
+/** Canonical output helper: one URL, mirrored into `payload.url`. */
+function canonical(url: string): { deep_link: string; payload: Record<string, unknown> } {
+  return { deep_link: url, payload: { url } };
+}
+
+const enc = encodeURIComponent;
+
 export const DEEP_LINKS: DeepLinkDef[] = [
-  // Campaigns
-  { id: "campaigns.home", group: "Campaigns", label: "Campaigns Home",
-    params: NO_PARAMS,
-    build: () => ({ deep_link: "/campaigns", payload: {} }) },
-  { id: "campaigns.continue", group: "Campaigns", label: "Continue Journey",
-    description: "Opens the player's last in-progress campaign.",
-    params: NO_PARAMS,
-    build: () => ({ deep_link: "/campaigns", payload: { url: "/campaigns" } }) },
-  { id: "campaigns.specific", group: "Campaigns", label: "Specific Campaign",
-    params: [{ key: "slug", label: "Campaign slug", required: true, placeholder: "prophetic-mission", hint: "From /campaigns/imported/{slug}" }],
-    build: (p) => ({
-      deep_link: `/campaigns/imported/${p.slug}`,
-      payload: { campaignSlug: p.slug },
-    }) },
+  // ── Home ───────────────────────────────────────────────────────────────
+  { id: "home", group: "Home", label: "الرئيسية",
+    params: NO_PARAMS, build: () => canonical("/") },
+  { id: "home.today", group: "Home", label: "في مثل هذا اليوم",
+    params: NO_PARAMS, build: () => canonical("/#today-in-history") },
 
-  // Encyclopedia
-  { id: "encyclopedia.home", group: "Encyclopedia", label: "Encyclopedia Home",
-    params: NO_PARAMS, build: () => ({ deep_link: "/encyclopedia", payload: {} }) },
-  { id: "encyclopedia.entity", group: "Encyclopedia", label: "Entity (figure/city/battle…)",
-    params: [{ key: "slug", label: "Entity slug", required: true, placeholder: "ibn-khaldun" }],
-    build: (p) => ({
-      deep_link: `/encyclopedia/entity/${p.slug}`,
-      payload: { entitySlug: p.slug },
-    }) },
-  { id: "encyclopedia.type", group: "Encyclopedia", label: "Entity Type",
-    params: [{ key: "type", label: "Type", required: true, placeholder: "figure", hint: "figure | city | battle | state | artifact | event" }],
-    build: (p) => ({ deep_link: `/encyclopedia/type/${p.type}`, payload: {} }) },
+  // ── Campaigns ──────────────────────────────────────────────────────────
+  { id: "campaigns.home", group: "Campaigns", label: "الحملات",
+    params: NO_PARAMS, build: () => canonical("/campaigns") },
+  { id: "campaigns.continue", group: "Campaigns", label: "أكمل رحلتك",
+    description: "يفتح صفحة الرحلة الحالية للاعب.",
+    params: NO_PARAMS, build: () => canonical("/journey") },
+  { id: "campaigns.specific", group: "Campaigns", label: "حملة محدّدة",
+    params: [{ key: "slug", label: "الحملة", required: true, source: "campaign", placeholder: "prophetic-mission" }],
+    build: (p) => canonical(`/campaigns/imported/${enc(p.slug)}`) },
 
-  // Atlas
-  { id: "atlas.home", group: "Atlas", label: "Atlas",
-    params: NO_PARAMS, build: () => ({ deep_link: "/map", payload: {} }) },
-  { id: "atlas.entity", group: "Atlas", label: "Atlas Entity",
-    params: [{ key: "slug", label: "Atlas entity slug", required: true }],
-    build: (p) => ({ deep_link: `/map?focus=${encodeURIComponent(p.slug)}`, payload: { entitySlug: p.slug } }) },
+  // ── Stories ────────────────────────────────────────────────────────────
+  { id: "stories.home", group: "Stories", label: "مكتبة القصص",
+    params: NO_PARAMS, build: () => canonical("/stories") },
+  { id: "stories.specific", group: "Stories", label: "قصة محدّدة",
+    params: [{ key: "id", label: "القصة", required: true, source: "story" }],
+    build: (p) => canonical(`/story/${enc(p.id)}`) },
 
-  // Museum
-  { id: "museum.home", group: "Museum", label: "Museum Home",
-    params: NO_PARAMS, build: () => ({ deep_link: "/collection", payload: {} }) },
-  { id: "museum.artifact", group: "Museum", label: "Artifact",
-    params: [{ key: "id", label: "Artifact ID", required: true, placeholder: "artifact:scroll-of-aleppo" }],
-    build: (p) => ({ deep_link: `/collection?artifact=${encodeURIComponent(p.id)}`, payload: { artifactId: p.id } }) },
-  { id: "museum.latest", group: "Museum", label: "Latest Discoveries",
-    params: NO_PARAMS, build: () => ({ deep_link: "/collection?tab=latest", payload: {} }) },
+  // ── Encyclopedia ───────────────────────────────────────────────────────
+  { id: "encyclopedia.home", group: "Encyclopedia", label: "الموسوعة",
+    params: NO_PARAMS, build: () => canonical("/encyclopedia") },
+  { id: "encyclopedia.entity", group: "Encyclopedia", label: "مدخل موسوعي محدّد",
+    params: [{ key: "slug", label: "المدخل", required: true, source: "encyclopedia_entity" }],
+    build: (p) => canonical(`/encyclopedia/entity/${enc(p.slug)}`) },
+  { id: "encyclopedia.type", group: "Encyclopedia", label: "تصنيف موسوعي",
+    params: [{ key: "type", label: "التصنيف", required: true, source: "encyclopedia_type" }],
+    build: (p) => canonical(`/encyclopedia/type/${enc(p.type)}`) },
 
-  // Timeline
-  { id: "timeline.great", group: "Timeline", label: "Great Timeline",
-    params: NO_PARAMS, build: () => ({ deep_link: "/timeline", payload: {} }) },
-  { id: "timeline.today", group: "Timeline", label: "Today in History",
-    params: NO_PARAMS, build: () => ({ deep_link: "/#today-in-history", payload: {} }) },
+  // ── Atlas ──────────────────────────────────────────────────────────────
+  { id: "atlas.home", group: "Atlas", label: "الأطلس",
+    params: NO_PARAMS, build: () => canonical("/map") },
+  { id: "atlas.entity", group: "Atlas", label: "موقع محدّد في الأطلس",
+    description: "يفتح الأطلس ويقرّب على الموقع المحدّد.",
+    // `/map?focus=` is matched against `atlas_entities.id` in AtlasShell —
+    // a slug never matched anything, which is why this destination looked
+    // broken/disabled on device.
+    params: [{ key: "id", label: "الموقع", required: true, source: "atlas_entity", hint: "معرّف كيان الأطلس (UUID)" }],
+    build: (p) => canonical(`/map?focus=${enc(p.id)}&zoom=6`) },
 
-  // Community
-  { id: "community.friends", group: "Community", label: "Friends",
-    params: NO_PARAMS, build: () => ({ deep_link: "/friends", payload: {} }) },
-  { id: "community.leaderboard", group: "Community", label: "Leaderboard",
-    params: NO_PARAMS, build: () => ({ deep_link: "/friends?tab=leaderboard", payload: {} }) },
+  // ── Museum ─────────────────────────────────────────────────────────────
+  { id: "museum.home", group: "Museum", label: "المتحف",
+    params: NO_PARAMS, build: () => canonical("/collection") },
+  { id: "museum.artifact", group: "Museum", label: "مقتنى محدّد",
+    params: [{ key: "id", label: "معرّف المقتنى", required: true, placeholder: "artifact:scroll-of-aleppo" }],
+    build: (p) => canonical(`/collection?artifact=${enc(p.id)}`) },
+  { id: "museum.latest", group: "Museum", label: "أحدث الاكتشافات",
+    params: NO_PARAMS, build: () => canonical("/collection?tab=latest") },
 
-  // Profile
-  { id: "profile.account", group: "Profile", label: "Account",
-    params: NO_PARAMS, build: () => ({ deep_link: "/profile", payload: {} }) },
-  { id: "profile.achievements", group: "Profile", label: "Achievements",
-    params: NO_PARAMS, build: () => ({ deep_link: "/profile?tab=achievements", payload: {} }) },
-  { id: "profile.settings", group: "Profile", label: "Settings",
-    params: NO_PARAMS, build: () => ({ deep_link: "/profile?tab=settings", payload: {} }) },
+  // ── Investigations ─────────────────────────────────────────────────────
+  { id: "investigations.home", group: "Investigations", label: "التحقيقات",
+    params: NO_PARAMS, build: () => canonical("/investigations") },
+  { id: "investigations.specific", group: "Investigations", label: "تحقيق محدّد",
+    params: [{ key: "slug", label: "التحقيق", required: true, source: "investigation" }],
+    build: (p) => canonical(`/investigation/${enc(p.slug)}`) },
 
-  // Notifications
-  { id: "notifications.center", group: "Notifications", label: "Notification Center",
-    params: NO_PARAMS, build: () => ({ deep_link: "/notifications", payload: {} }) },
+  // ── Timeline ───────────────────────────────────────────────────────────
+  { id: "timeline.great", group: "Timeline", label: "الخط الزمني",
+    params: NO_PARAMS, build: () => canonical("/timeline") },
+  { id: "timeline.today", group: "Timeline", label: "في مثل هذا اليوم",
+    params: NO_PARAMS, build: () => canonical("/#today-in-history") },
 
-  // Admin
-  { id: "admin.home", group: "Admin", label: "Admin Dashboard",
-    params: NO_PARAMS, build: () => ({ deep_link: "/admin", payload: {} }) },
+  // ── Community ──────────────────────────────────────────────────────────
+  { id: "community.friends", group: "Community", label: "الأصدقاء",
+    params: NO_PARAMS, build: () => canonical("/friends") },
+  { id: "community.leaderboard", group: "Community", label: "لوحة الترتيب",
+    params: NO_PARAMS, build: () => canonical("/friends?tab=leaderboard") },
+
+  // ── Profile ────────────────────────────────────────────────────────────
+  { id: "profile.account", group: "Profile", label: "الحساب",
+    params: NO_PARAMS, build: () => canonical("/profile") },
+  { id: "profile.achievements", group: "Profile", label: "الإنجازات",
+    params: NO_PARAMS, build: () => canonical("/achievements") },
+  { id: "profile.settings", group: "Profile", label: "الإعدادات",
+    params: NO_PARAMS, build: () => canonical("/profile?tab=settings") },
+
+  // ── Notifications ──────────────────────────────────────────────────────
+  { id: "notifications.center", group: "Notifications", label: "مركز الإشعارات",
+    params: NO_PARAMS, build: () => canonical("/notifications") },
+
+  // ── Admin ──────────────────────────────────────────────────────────────
+  { id: "admin.home", group: "Admin", label: "لوحة الإدارة",
+    params: NO_PARAMS, build: () => canonical("/admin") },
 ];
 
 export const DEEP_LINK_GROUPS: DeepLinkGroup[] = [
-  "Campaigns", "Encyclopedia", "Atlas", "Museum", "Timeline",
-  "Community", "Profile", "Notifications", "Admin",
+  "Home", "Campaigns", "Stories", "Encyclopedia", "Atlas", "Museum",
+  "Investigations", "Timeline", "Community", "Profile", "Notifications", "Admin",
 ];
 
 export function findDeepLink(id: string): DeepLinkDef | undefined {
@@ -128,6 +174,10 @@ export function searchDeepLinks(query: string): DeepLinkDef[] {
   const q = query.trim().toLowerCase();
   if (!q) return DEEP_LINKS;
   return DEEP_LINKS.filter(
-    (d) => d.id.includes(q) || d.label.toLowerCase().includes(q) || d.group.toLowerCase().includes(q),
+    (d) =>
+      d.id.includes(q) ||
+      d.label.toLowerCase().includes(q) ||
+      d.group.toLowerCase().includes(q) ||
+      (d.description ?? "").toLowerCase().includes(q),
   );
 }
