@@ -214,9 +214,12 @@ export function AnnouncementHost() {
               <button
                 type="button"
                 onClick={() => {
-                  snoozeOptional(row.id, row.recommended_version_code ?? 0);
-                  setTick((n) => n + 1);
+                  try {
+                    snoozeOptional(row.id, row.recommended_version_code ?? 0);
+                  } catch { /* non-fatal — session dismissal still applies */ }
+                  setSnoozedOptional((prev) => (prev.includes(row.id) ? prev : [...prev, row.id]));
                 }}
+
                 className="motion-tap flex-1 rounded-full border border-border px-4 py-2.5 text-sm font-semibold text-muted-foreground"
               >
                 لاحقًا
