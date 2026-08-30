@@ -148,6 +148,16 @@ const STORY_MANIFEST_KEYS: ReadonlySet<OfflineCollectionKey> = new Set<OfflineCo
 ]);
 
 /**
+ * V16 — collections that must ALWAYS take the authoritative full fetch when a
+ * sync is needed, because their manifest count is not comparable (see
+ * `offline-manifest.ts`) and an upsert-only delta merge could never drop a
+ * row that was unpublished upstream.
+ */
+export const FULL_REFRESH_KEYS: ReadonlySet<OfflineCollectionKey> = new Set<OfflineCollectionKey>([
+  "admin_campaigns",
+]);
+
+/**
  * Per-invocation cache of the manifest RPC result. A snapshot generation
  * pass calls the RPC exactly once, then routes each of the three story
  * collection keys to the corresponding slice of the payload.
@@ -707,7 +717,11 @@ export async function refreshSnapshotIncremental(): Promise<OfflineSnapshot> {
           // RPC — merge, never replace (V16 regression fix #2).
           const fetched = await fetchCollection(def);
           merged = mergeStoryCollection(def.key, prevRows, fetched);
-        } else if (countMismatch) {
+        } else if (countMismatch || FULL_REFRESH_KEYS.has(def.key)) {
+          // V16: campaigns always take the authoritative full fetch of
+          // `campaigns_public`. An upsert-only delta merge cannot drop a
+          // campaign that was unpublished/retired upstream, and the manifest
+          // count is not comparable for this collection (it counts drafts).
           merged = await fetchCollection(def);
         } else if (since && !NO_UPDATED_AT.has(def.key)) {
           const deltas = await fetchCollectionSince(def, since);

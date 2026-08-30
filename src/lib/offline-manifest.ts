@@ -24,8 +24,20 @@ export function manifestKeyToLocalKey(collection: string): string {
  * table count (visibility-filtered story scenes/media returned by
  * `stories_snapshot_manifest_v2`). Count equality is meaningless for them —
  * change detection uses `last_updated` only.
+ *
+ * V16 — `admin_campaigns` joins this set: `get_content_manifest()` counts
+ * EVERY campaign row while the offline snapshot only carries the
+ * `campaigns_public` view (`status = 'published'`). The moment an editor
+ * saves any draft campaign the two counts diverge permanently, which would
+ * pin "يتوفر تحديث للمحتوى" on forever and force a full campaign re-fetch on
+ * every apply that can never converge. Campaign removals/unpublishes still
+ * bump `admin_campaigns.updated_at`, so timestamp detection covers them, and
+ * `refreshSnapshotIncremental` does a FULL campaign fetch (never an
+ * upsert-only delta) so retired campaigns cannot become sticky.
  */
-const COUNT_NON_COMPARABLE = new Set(["story_scenes", "story_media", "story_collections"]);
+const COUNT_NON_COMPARABLE = new Set([
+  "story_scenes", "story_media", "story_collections", "admin_campaigns",
+]);
 
 export function isManifestCountComparable(localKey: string): boolean {
   return !COUNT_NON_COMPARABLE.has(localKey);
