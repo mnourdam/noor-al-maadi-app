@@ -100,10 +100,15 @@ export function AnnouncementHost() {
         installedVersionCode: installed.code,
         installedVersionValid: installed.valid,
         fetch: fetchState,
-        isSnoozed: (id, code) => isOptionalSnoozed(id, code),
+        // Session-local dismissals are checked FIRST so "لاحقًا" hides the
+        // prompt immediately even if the persisted snooze write failed
+        // (private mode / storage full). Mandatory blocking never consults
+        // this state.
+        isSnoozed: (id, code) => snoozedOptional.includes(id) || isOptionalSnoozed(id, code),
       }),
-    [native, installed, fetchState],
+    [native, installed, fetchState, snoozedOptional],
   );
+
 
   const generic = useMemo(
     () =>
