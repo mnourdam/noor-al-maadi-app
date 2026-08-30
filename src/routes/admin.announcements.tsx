@@ -131,7 +131,15 @@ function AdminAnnouncementsPage() {
       once_per_user: form.once_per_user,
       starts_at: form.starts_at,
       expires_at: form.expires_at,
-      effective_at: form.effective_at,
+      // A mandatory update is only returned by `get_active_announcements_v16`
+      // when `effective_at IS NOT NULL AND <= now()`. Saving it blank silently
+      // produced an "active" policy the Android client could never see, so a
+      // blank value defaults to "effective immediately".
+      effective_at:
+        form.kind === "mandatory_update" && !form.effective_at
+          ? new Date().toISOString()
+          : form.effective_at,
+
     };
     const { error } = await rpc("admin_upsert_announcement_v16", { p_payload: payload });
     setBusy(false);
@@ -277,16 +285,26 @@ function AdminAnnouncementsPage() {
         ) : null}
 
         <div className="grid grid-cols-3 gap-2">
-          <input type="datetime-local" value={form.starts_at}
-            onChange={(e) => setForm({ ...form, starts_at: e.target.value })}
-            className="rounded-xl border border-border bg-background px-2 py-2 text-xs" />
-          <input type="datetime-local" value={form.expires_at}
-            onChange={(e) => setForm({ ...form, expires_at: e.target.value })}
-            className="rounded-xl border border-border bg-background px-2 py-2 text-xs" />
-          <input type="datetime-local" value={form.effective_at}
-            onChange={(e) => setForm({ ...form, effective_at: e.target.value })}
-            className="rounded-xl border border-border bg-background px-2 py-2 text-xs" />
+          <label className="flex flex-col gap-1 text-[10px] text-muted-foreground">
+            يبدأ في
+            <input type="datetime-local" value={form.starts_at}
+              onChange={(e) => setForm({ ...form, starts_at: e.target.value })}
+              className="rounded-xl border border-border bg-background px-2 py-2 text-xs" />
+          </label>
+          <label className="flex flex-col gap-1 text-[10px] text-muted-foreground">
+            ينتهي في
+            <input type="datetime-local" value={form.expires_at}
+              onChange={(e) => setForm({ ...form, expires_at: e.target.value })}
+              className="rounded-xl border border-border bg-background px-2 py-2 text-xs" />
+          </label>
+          <label className="flex flex-col gap-1 text-[10px] text-muted-foreground">
+            {form.kind === "mandatory_update" ? "سريان الإلزام (فارغ = فورًا)" : "سريان"}
+            <input type="datetime-local" value={form.effective_at}
+              onChange={(e) => setForm({ ...form, effective_at: e.target.value })}
+              className="rounded-xl border border-border bg-background px-2 py-2 text-xs" />
+          </label>
         </div>
+
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
           <label className="flex items-center gap-2">
             <input type="checkbox" checked={form.dismissible}

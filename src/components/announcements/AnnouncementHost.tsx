@@ -47,6 +47,8 @@ export function AnnouncementHost() {
   const [ready, setReady] = useState(false);
   const [tick, setTick] = useState(0);
   const [dismissedGeneric, setDismissedGeneric] = useState<string[]>([]);
+  const [snoozedOptional, setSnoozedOptional] = useState<string[]>([]);
+
   const [storeError, setStoreError] = useState<string | null>(null);
   const [signedIn, setSignedIn] = useState(false);
   const refreshing = useRef(false);
@@ -100,10 +102,15 @@ export function AnnouncementHost() {
         installedVersionCode: installed.code,
         installedVersionValid: installed.valid,
         fetch: fetchState,
-        isSnoozed: (id, code) => isOptionalSnoozed(id, code),
+        // Session-local dismissals are checked FIRST so "لاحقًا" hides the
+        // prompt immediately even if the persisted snooze write failed
+        // (private mode / storage full). Mandatory blocking never consults
+        // this state.
+        isSnoozed: (id, code) => snoozedOptional.includes(id) || isOptionalSnoozed(id, code),
       }),
-    [native, installed, fetchState],
+    [native, installed, fetchState, snoozedOptional],
   );
+
 
   const generic = useMemo(
     () =>
@@ -207,9 +214,12 @@ export function AnnouncementHost() {
               <button
                 type="button"
                 onClick={() => {
-                  snoozeOptional(row.id, row.recommended_version_code ?? 0);
-                  setTick((n) => n + 1);
+                  try {
+                    snoozeOptional(row.id, row.recommended_version_code ?? 0);
+                  } catch { /* non-fatal — session dismissal still applies */ }
+                  setSnoozedOptional((prev) => (prev.includes(row.id) ? prev : [...prev, row.id]));
                 }}
+
                 className="motion-tap flex-1 rounded-full border border-border px-4 py-2.5 text-sm font-semibold text-muted-foreground"
               >
                 لاحقًا
