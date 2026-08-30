@@ -47,6 +47,8 @@ export function AnnouncementHost() {
   const [ready, setReady] = useState(false);
   const [tick, setTick] = useState(0);
   const [dismissedGeneric, setDismissedGeneric] = useState<string[]>([]);
+  const [snoozedOptional, setSnoozedOptional] = useState<string[]>([]);
+
   const [storeError, setStoreError] = useState<string | null>(null);
   const [signedIn, setSignedIn] = useState(false);
   const refreshing = useRef(false);
