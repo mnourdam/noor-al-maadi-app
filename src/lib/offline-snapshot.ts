@@ -148,6 +148,16 @@ const STORY_MANIFEST_KEYS: ReadonlySet<OfflineCollectionKey> = new Set<OfflineCo
 ]);
 
 /**
+ * V16 — collections that must ALWAYS take the authoritative full fetch when a
+ * sync is needed, because their manifest count is not comparable (see
+ * `offline-manifest.ts`) and an upsert-only delta merge could never drop a
+ * row that was unpublished upstream.
+ */
+export const FULL_REFRESH_KEYS: ReadonlySet<OfflineCollectionKey> = new Set<OfflineCollectionKey>([
+  "admin_campaigns",
+]);
+
+/**
  * Per-invocation cache of the manifest RPC result. A snapshot generation
  * pass calls the RPC exactly once, then routes each of the three story
  * collection keys to the corresponding slice of the payload.
