@@ -61,6 +61,10 @@ export interface InvestigationRecommendation {
   kind: RecommendationKind;
   slug: string | null;
   row: InvestigationRow | null;
+  /** Published (enabled) investigations in the current catalogue. */
+  total: number;
+  /** How many of those the player has already completed. */
+  completed: number;
 }
 
 function difficultyRank(row: InvestigationRow): number {
@@ -80,20 +84,25 @@ export function useRecommendedInvestigation(): InvestigationRecommendation {
 
   return useMemo(() => {
     const ready = rows !== null && progress.ready;
-    if (!ready) return { ready: false, kind: "none", slug: null, row: null };
+    if (!ready) return { ready: false, kind: "none", slug: null, row: null, total: 0, completed: 0 };
 
     const list = (rows ?? []).filter((r) => r.enabled !== false);
-    if (list.length === 0) return { ready: true, kind: "none", slug: null, row: null };
 
     const isCompleted = (row: InvestigationRow): boolean =>
       progress.completedKeys.has(row.slug) || progress.completedKeys.has(row.id);
+
+    const total = list.length;
+    const completed = list.filter(isCompleted).length;
+    if (list.length === 0) {
+      return { ready: true, kind: "none", slug: null, row: null, total: 0, completed: 0 };
+    }
 
     // 1. Continue an unfinished investigation.
     const lastSlug = readLastOpen();
     if (lastSlug) {
       const found = list.find((r) => r.slug === lastSlug);
       if (found && !isCompleted(found)) {
-        return { ready: true, kind: "continue", slug: found.slug, row: found };
+        return { ready: true, kind: "continue", slug: found.slug, row: found, total, completed };
       }
     }
 
@@ -111,10 +120,10 @@ export function useRecommendedInvestigation(): InvestigationRecommendation {
 
     if (remaining.length > 0) {
       const pick = remaining[0];
-      return { ready: true, kind: "new", slug: pick.slug, row: pick };
+      return { ready: true, kind: "new", slug: pick.slug, row: pick, total, completed };
     }
 
     // 3. Nothing left to play.
-    return { ready: true, kind: "none", slug: null, row: null };
+    return { ready: true, kind: "none", slug: null, row: null, total, completed };
   }, [rows, progress]);
 }
