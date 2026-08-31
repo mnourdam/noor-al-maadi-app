@@ -91,8 +91,14 @@ export async function recordChapterProgress(p: {
   );
   const uid = await currentUserId();
   if (!uid) {
+    // V16: never drop the write. Buffer it locally (durable, sticky) and
+    // promote it through this same verified path once a session exists.
+    try {
+      const { bufferChapterProgress } = await import("@/lib/campaigns/guest-progress-buffer");
+      bufferChapterProgress(p);
+    } catch { /* buffer is best-effort */ }
     recordTrace("campaign-persistence", "recordChapterProgress-no-session", `${p.campaignId}/${p.chapterId}`);
-    return { acknowledged: false, reason: "unauthenticated" };
+    return { acknowledged: false, reason: "buffered_no_session" };
   }
   const outboxId = `chapter_progress:${uid}:${p.campaignId}:${p.chapterId}`;
   recordTrace(

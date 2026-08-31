@@ -114,6 +114,18 @@ export async function recordCampaignCompletion(p: {
   campaignId: string;
   campaignVersion?: number | null;
   source?: string;
+  /**
+   * V16 DEPRECATION: the unverified server write (`record_campaign_completion`)
+   * trusts a client-declared completion and produced ledger rows with
+   * `campaign_version = NULL` even when authored chapters were incomplete.
+   * Normal gameplay MUST complete a campaign through
+   * `record_campaign_progress_v2` (see `recordChapterProgress`), which
+   * verifies authored chapter coverage and stamps the ledger atomically.
+   *
+   * The RPC itself is preserved for the shared V15 backend; only the client
+   * default changed. Opt in explicitly when a verified caller needs it.
+   */
+  allowUnverifiedServerWrite?: boolean;
 }): Promise<void> {
   const cid = String(p.campaignId ?? "").trim();
   if (!cid) return;
@@ -137,7 +149,12 @@ export async function recordCampaignCompletion(p: {
     } catch { /* ignore */ }
   }
 
-  // 2) Server ledger — durable write contract (Priority-Zero).
+  // 2) Server ledger — DEPRECATED unverified path (V16).
+  //    Normal gameplay stops here: the local sticky fact is enough for
+  //    display, and `record_campaign_progress_v2` stamps the authoritative
+  //    ledger when the last authored chapter is verified complete.
+  if (!p.allowUnverifiedServerWrite) return;
+
   //    Enqueue FIRST so a crash or offline state cannot lose the fact,
   //    then attempt the awaited RPC. On success drop the queued item;
   //    on failure leave it queued for later flush attempts.
