@@ -123,7 +123,7 @@ export function AvatarPicker({
                   }`}
                   title={unlocked ? a.name : UNLOCK_HINT[a.unlock_method]}
                 >
-                  <Avatar avatarId={a.id} size="lg" locked={!unlocked} />
+                  <Avatar avatarId={a.id} size="lg" artSize="md" locked={!unlocked} />
                   <span className="line-clamp-1 text-center text-[11px] font-medium text-foreground">{a.name}</span>
                   <span className={`rounded-full px-1.5 py-0.5 text-[9px] tracking-wider ${RARITY_BADGE[a.rarity]}`}>
                     {RARITY_LABEL[a.rarity]}

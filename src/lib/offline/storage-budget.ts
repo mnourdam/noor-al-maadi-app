@@ -12,8 +12,9 @@
  *   - Never let the origin exceed an absolute web cache budget.
  *   - Degrade safely when `navigator.storage.estimate()` is unavailable.
  *
- * Native (Capacitor Android) is intentionally UNBOUNDED — the APK owns its
- * WebView storage and the audit found no quota pressure there.
+ * Native (Capacitor Android) gets a conservative fixed ceiling for the
+ * DISPOSABLE warmed image cache only (400 MB). Bundled offline assets, the
+ * snapshot, auth and progress are never touched by this budget.
  */
 
 /** Absolute ceiling for total origin usage on web while warming images. */
@@ -24,6 +25,13 @@ export const WEB_MIN_HEADROOM_BYTES = 300 * 1024 * 1024; // 300 MB
 
 /** Fraction of the reported quota that must stay free, whichever is larger. */
 export const WEB_MIN_HEADROOM_RATIO = 0.2;
+
+/**
+ * Absolute ceiling for the disposable warmed image cache on native Android.
+ * Self-accounted (WebView `storage.estimate()` is unreliable on Android),
+ * counts only bytes this warming pass writes.
+ */
+export const NATIVE_WARM_CACHE_BUDGET_BYTES = 400 * 1024 * 1024; // 400 MB
 
 /** Re-measure real usage every N warmed images (estimate() is not free). */
 const REESTIMATE_EVERY = 20;
@@ -77,40 +85,40 @@ export interface WarmingBudget {
   describe(): string;
 }
 
-const UNBOUNDED: WarmingBudget = {
-  exhausted: () => false,
-  note: async () => false,
-  describe: () => "unbounded (native)",
-};
+/** Fixed, self-accounted allowance used for native runtimes. */
+function createFixedBudget(allowance: number, label: string): WarmingBudget {
+  let written = 0;
+  return {
+    exhausted: () => written >= allowance,
+    note: async (bytes?: number) => {
+      written += Number.isFinite(bytes as number) && (bytes as number) > 0
+        ? (bytes as number)
+        : ASSUMED_IMAGE_BYTES;
+      return written >= allowance;
+    },
+    describe: () => `${label} ${written}/${allowance} bytes`,
+  };
+}
 
 /**
  * Create a warming budget for the current runtime.
  *
  * Degradation ladder:
- *   native                         → unbounded
+ *   native                         → fixed 400 MB warmed-image allowance
  *   estimate() available           → stop when usage >= usageCeiling(quota)
  *   estimate() unavailable on web  → conservative fixed byte allowance
  */
 export async function createWarmingBudget(): Promise<WarmingBudget> {
-  if (isNativeRuntime()) return UNBOUNDED;
+  if (isNativeRuntime()) {
+    return createFixedBudget(NATIVE_WARM_CACHE_BUDGET_BYTES, "native warm cache");
+  }
 
   const est = await estimateStorage();
 
   if (!est) {
     // No measurement possible (Safari private mode, old WebViews).
     // Allow a small, conservative, self-accounted allowance only.
-    let written = 0;
-    const allowance = 150 * 1024 * 1024; // 150 MB
-    return {
-      exhausted: () => written >= allowance,
-      note: async (bytes?: number) => {
-        written += Number.isFinite(bytes as number) && (bytes as number) > 0
-          ? (bytes as number)
-          : ASSUMED_IMAGE_BYTES;
-        return written >= allowance;
-      },
-      describe: () => `blind allowance ${written}/${allowance} bytes`,
-    };
+    return createFixedBudget(150 * 1024 * 1024, "blind allowance");
   }
 
   const ceiling = usageCeiling(est.quota);
