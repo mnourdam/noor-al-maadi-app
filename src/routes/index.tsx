@@ -39,6 +39,7 @@ import { useCampaignRecommendation } from "@/lib/campaignRecommendationService";
 import { useCampaignArtworkUrl, sanitizedCoverImage } from "@/lib/campaignArtwork";
 import { KeyArtDissolve } from "@/components/KeyArtDissolve";
 import { useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
+import { InvestigationsSpotlight } from "@/components/home/InvestigationsSpotlight";
 import { getCampaignProgress } from "@/lib/importedCampaignProgress";
 import type { Campaign as ImportedCampaign, CampaignActivity, CampaignChapter } from "@/types/campaign";
 import heroCitySunrise from "@/assets/hero-city-sunrise.jpg";
@@ -872,6 +873,11 @@ function HomeFull() {
       {/* ============ 3. DAILY QUEST — one mission per local day ============ */}
       <DailyQuestCard />
 
+      {/* ============ 3a. HISTORICAL INVESTIGATIONS — primary gameplay entry ============ */}
+      <Reveal>
+        <InvestigationsSpotlight />
+      </Reveal>
+
       {/* ============ 3b. DAILY CHALLENGES (games) ============ */}
       <Reveal>
         <DailyChallengesSection />
@@ -1013,7 +1019,7 @@ function HomeFull() {
             <div className="relative -mx-1 flex items-stretch gap-1 overflow-x-auto no-scrollbar">
               <Stat icon={<Package className="size-3.5" />} label="المتحف" value={homeSummary.loading ? "—" : homeSummary.museumCount} tone="emerald" />
               <Stat icon={<Trophy className="size-3.5" />} label="الحملات المكتملة" value={homeSummary.loading ? "—" : homeSummary.campaignsCompleted} tone="gold" />
-              <Stat icon={<Search className="size-3.5" />} label="التحقيقات المنجزة" value={homeSummary.loading ? "—" : homeSummary.investigationsCompleted} tone="indigo" />
+              <Stat icon={<Search className="size-3.5" />} label="التحقيقات المنجزة" value={homeSummary.loading ? "—" : homeSummary.investigationsCompleted} tone="indigo" to="/investigations" />
               <Stat icon={<BookOpen className="size-3.5" />} label="القصص المقروءة" value={homeSummary.loading ? "—" : homeSummary.storiesCompleted} tone="ruby" />
             </div>
           </div>
@@ -1081,7 +1087,7 @@ function Reveal({ children }: { children: ReactNode }) {
 // Re-export Stagger so it can be imported elsewhere if needed.
 export { _Stagger as HomeStagger };
 
-function Stat({ icon, label, value, tone }: { icon: React.ReactNode; label: string; value: string | number; tone: "gold" | "rose" | "emerald" | "indigo" | "ruby" }) {
+function Stat({ icon, label, value, tone, to }: { icon: React.ReactNode; label: string; value: string | number; tone: "gold" | "rose" | "emerald" | "indigo" | "ruby"; to?: "/investigations" }) {
   const toneClass: Record<string, string> = {
     gold: "text-gold bg-gold/10",
     rose: "text-rose-300 bg-rose-500/10",
@@ -1089,13 +1095,22 @@ function Stat({ icon, label, value, tone }: { icon: React.ReactNode; label: stri
     indigo: "text-indigo-300 bg-indigo-500/10",
     ruby: "text-red-300 bg-red-500/10",
   };
-  return (
-    <div className="flex min-w-[78px] flex-1 flex-col items-center justify-center gap-1 rounded-xl px-2 py-2">
+  const inner = (
+    <>
       <span className={`grid size-8 place-items-center rounded-full ${toneClass[tone]}`}>{icon}</span>
       <span className="font-display text-sm font-bold leading-none text-white">{value}</span>
       <span className="text-[9px] tracking-[0.15em] text-white/55">{label}</span>
-    </div>
+    </>
   );
+  const cls = "flex min-w-[78px] flex-1 flex-col items-center justify-center gap-1 rounded-xl px-2 py-2";
+  if (to) {
+    return (
+      <Link to={to} data-testid="home-stat-investigations" className={`${cls} motion-tap transition hover:bg-white/5`}>
+        {inner}
+      </Link>
+    );
+  }
+  return <div className={cls}>{inner}</div>;
 }
 
 // Emoji + Arabic kind used by RecentCard / Hero — mirrors museum labeling.
