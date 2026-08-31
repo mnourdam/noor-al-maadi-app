@@ -171,6 +171,8 @@ describe("legacy record_campaign_completion deprecation", () => {
     vi.doMock("@/lib/offline/flush", () => ({ flushOutbox: async () => ({ flushed: 0, failed: 0 }) }));
     vi.doMock("@/lib/identity/owner", () => ({ getActiveOwner: () => "user-a", getActiveUserId: () => "user-a" }));
 
+    const prevNav = (globalThis as any).navigator;
+    Object.defineProperty(globalThis, "navigator", { value: { onLine: true }, configurable: true, writable: true });
     const mod = await import("@/lib/campaigns/completions");
     await mod.recordCampaignCompletion({ campaignId: "c1", source: "gameplay" });
     expect(rpc).not.toHaveBeenCalled();
@@ -181,5 +183,6 @@ describe("legacy record_campaign_completion deprecation", () => {
     // Explicit opt-in still works for the shared V15 backend path.
     await mod.recordCampaignCompletion({ campaignId: "c2", source: "legacy", allowUnverifiedServerWrite: true });
     expect(rpc).toHaveBeenCalledTimes(1);
+    Object.defineProperty(globalThis, "navigator", { value: prevNav, configurable: true, writable: true });
   });
 });
