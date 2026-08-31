@@ -191,6 +191,18 @@ function RootComponent() {
 
 
     import("../lib/orphanUnlocksMigration").then((m) => m.migrateOrphanUnlocks()).catch(() => {});
+    // V16: promote any guest / pre-auth buffered chapter progress through the
+    // canonical verified path. No-ops when signed out or when the buffer is
+    // bound to a different identity.
+    import("../integrations/supabase/client")
+      .then(async ({ supabase }) => {
+        const { data } = await supabase.auth.getSession();
+        const uid = data.session?.user?.id ?? null;
+        if (!uid) return;
+        const m = await import("../lib/campaigns/guest-progress-buffer");
+        await m.promoteGuestProgressForCurrentUser(uid);
+      })
+      .catch(() => {});
     import("../lib/campaignLedger").then((m) => m.bootstrapLedgerFlush()).catch(() => {});
     import("../lib/importedCampaignProgress")
       .then((m) => m.hydrateLegacyProgressFromCloud())
@@ -273,6 +285,13 @@ function RootComponent() {
               if (event === "SIGNED_IN") void l.hydrateLedgerFromCloud();
             }).catch(() => {});
             if (event === "SIGNED_IN") {
+              import("../lib/campaigns/guest-progress-buffer")
+                .then(async (g) => {
+                  const { supabase } = await import("../integrations/supabase/client");
+                  const { data: sess } = await supabase.auth.getSession();
+                  await g.promoteGuestProgressForCurrentUser(sess.session?.user?.id ?? null);
+                })
+                .catch(() => {});
               // Campaign intro history: restore-only mirror. Never gates
               // playback — the local record stays the display authority.
               import("../lib/campaigns/intro/sync")
