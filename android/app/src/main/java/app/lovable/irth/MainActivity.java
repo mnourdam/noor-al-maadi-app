@@ -4,6 +4,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.view.WindowManager;
+import android.webkit.WebView;
 
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -23,6 +24,12 @@ public class MainActivity extends BridgeActivity {
     SplashScreen.installSplashScreen(this);
     registerPlugin(RingerModePlugin.class);
     super.onCreate(savedInstanceState);
+    // WebView remote debugging: enabled for debug builds only. Capacitor's
+    // `webContentsDebuggingEnabled` config cannot see the Gradle build type,
+    // so we authoritatively re-apply it here from BuildConfig.DEBUG.
+    try {
+      WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG);
+    } catch (Throwable ignored) { }
     applyImmersive();
 
     final View decor = getWindow().getDecorView();
