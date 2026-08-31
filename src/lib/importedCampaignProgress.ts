@@ -322,6 +322,22 @@ export async function hydrateLegacyProgressFromCloud(): Promise<{ chaptersAdded:
       }
     }
 
+    // Pass 2b (V16) — ledger-authoritative completion. A campaign present in
+    // `user_campaign_completions` is complete regardless of chapter-row
+    // coverage: mark every CURRENTLY AUTHORED chapter completed locally.
+    // Additive only — nothing is written back to the server.
+    for (const cid of ledgerCompleted) {
+      const campaign = campaignById.get(cid);
+      if (!campaign || !campaign.chapters.length) continue;
+      let map = cloudChapters.get(cid);
+      if (!map) { map = new Map(); cloudChapters.set(cid, map); }
+      for (const chapter of campaign.chapters) {
+        const cur = map.get(chapter.id) ?? { completed: false, xpEarned: 0, coinsEarned: 0 };
+        cur.completed = true;
+        map.set(chapter.id, cur);
+      }
+    }
+
     // Pass 3 — merge into local map (STICKY: never downgrade local state).
     for (const [cid, map] of cloudChapters) {
       const cur = all[cid] ?? blankCampaign(cid);
