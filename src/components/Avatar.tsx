@@ -1,4 +1,4 @@
-import { EmblemArt } from "./EmblemArt";
+import { EmblemArt, type EmblemVisualSize } from "./EmblemArt";
 import { resolveProfileEmblem, type EmblemRarity } from "@/lib/emblems";
 import { Lock } from "lucide-react";
 
@@ -9,6 +9,12 @@ interface AvatarProps {
   ring?: boolean;
   locked?: boolean;
   className?: string;
+  /**
+   * Override only the raster asset tier used for the emblem art, without
+   * changing the rendered box size. Used by dense grids (avatar picker) to
+   * avoid decoding 512px bitmaps into ~80-100px cells on Android.
+   */
+  artSize?: EmblemVisualSize;
 }
 
 const SIZE_MAP = {
@@ -43,6 +49,7 @@ export function Avatar({
   ring = true,
   locked = false,
   className = "",
+  artSize,
 }: AvatarProps) {
   const resolved = resolveProfileEmblem(avatarId);
   const sz = SIZE_MAP[size];
@@ -53,7 +60,7 @@ export function Avatar({
       title={resolved.record.name_ar}
       className={`relative grid place-items-center rounded-full bg-[radial-gradient(circle_at_30%_25%,#1b2a48_0%,#0a1426_70%)] overflow-hidden ${rarityRing} ${sz.box} ${className}`}
     >
-      <EmblemArt avatarId={avatarId ?? resolved.record.id} size={sz.emblem} className={`${sz.art} text-gold`} />
+      <EmblemArt avatarId={avatarId ?? resolved.record.id} size={artSize ?? sz.emblem} className={`${sz.art} text-gold`} />
       {locked && (
         <span className="absolute inset-0 grid place-items-center rounded-full bg-black/60 text-gold">
           <Lock className="size-1/3" />
