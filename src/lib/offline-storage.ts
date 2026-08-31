@@ -124,39 +124,79 @@ function snapshotPersistable(snap: OfflineSnapshot | null): snap is OfflineSnaps
   return true;
 }
 
-async function idbPut(value: OfflineSnapshot): Promise<void> {
-  const db = await openDB();
-  await new Promise<void>((resolve, reject) => {
-    const tx = db.transaction(STORE, "readwrite");
-    tx.objectStore(STORE).put(value, KEY);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
+/**
+ * V16 — transaction safety.
+ *
+ * An IndexedDB transaction that hits the origin quota fires `abort`, NOT
+ * `error`. The previous helpers only listened for `complete`/`error`, so a
+ * quota abort left the promise pending FOREVER: `saveSnapshot()` never
+ * returned, `applyContentUpdate()` stayed `applying: true`, and the content
+ * update banner reappeared on every check.
+ *
+ * `runTx` guarantees the promise settles EXACTLY ONCE on complete, error or
+ * abort, and always closes the database.
+ */
+function runTx<T>(
+  db: IDBDatabase,
+  mode: IDBTransactionMode,
+  work: (store: IDBObjectStore, resolveWith: (value: T) => void) => void,
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    let settled = false;
+    let value: T = undefined as unknown as T;
+    const done = (fn: () => void) => { if (settled) return; settled = true; fn(); };
+    let tx: IDBTransaction;
+    try {
+      tx = db.transaction(STORE, mode);
+    } catch (e) {
+      reject(e instanceof Error ? e : new Error(String(e)));
+      return;
+    }
+    tx.oncomplete = () => done(() => resolve(value));
+    tx.onerror = () =>
+      done(() => reject(tx.error ?? new Error("IndexedDB transaction failed")));
+    tx.onabort = () =>
+      done(() => reject(tx.error ?? new Error("IndexedDB transaction aborted")));
+    try {
+      work(tx.objectStore(STORE), (v) => { value = v; });
+    } catch (e) {
+      done(() => reject(e instanceof Error ? e : new Error(String(e))));
+      try { tx.abort(); } catch { /* ignore */ }
+    }
   });
-  db.close();
+}
+
+async function withDB<T>(
+  mode: IDBTransactionMode,
+  work: (store: IDBObjectStore, resolveWith: (value: T) => void) => void,
+): Promise<T> {
+  const db = await openDB();
+  try {
+    return await runTx<T>(db, mode, work);
+  } finally {
+    try { db.close(); } catch { /* ignore */ }
+  }
+}
+
+/** Exported for regression tests: aborted transactions must reject, not hang. */
+export const __idbInternals = { runTx };
+
+async function idbPut(value: OfflineSnapshot): Promise<void> {
+  await withDB<void>("readwrite", (store) => { store.put(value, KEY); });
 }
 
 async function idbGet(): Promise<OfflineSnapshot | null> {
-  const db = await openDB();
-  const result = await new Promise<OfflineSnapshot | null>((resolve, reject) => {
-    const tx = db.transaction(STORE, "readonly");
-    const req = tx.objectStore(STORE).get(KEY);
-    req.onsuccess = () => resolve((req.result as OfflineSnapshot) ?? null);
-    req.onerror = () => reject(req.error);
+  return withDB<OfflineSnapshot | null>("readonly", (store, resolveWith) => {
+    resolveWith(null);
+    const req = store.get(KEY);
+    req.onsuccess = () => resolveWith((req.result as OfflineSnapshot) ?? null);
   });
-  db.close();
-  return result;
 }
 
 async function idbDelete(): Promise<void> {
-  const db = await openDB();
-  await new Promise<void>((resolve, reject) => {
-    const tx = db.transaction(STORE, "readwrite");
-    tx.objectStore(STORE).delete(KEY);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
-  db.close();
+  await withDB<void>("readwrite", (store) => { store.delete(KEY); });
 }
+
 
 /** Sensitive keys that must never persist in offline caches (schema v3+).
  *  Older caches (v1/v2) may have leaked these; we strip them on every load. */
@@ -237,16 +277,58 @@ function normalize(raw: any): OfflineSnapshot | null {
 }
 
 
+/** True for a storage-quota failure, however the engine reports it. */
+export function isQuotaExceeded(err: unknown): boolean {
+  const e = err as any;
+  if (!e) return false;
+  if (e.name === "QuotaExceededError" || e.name === "NS_ERROR_DOM_QUOTA_REACHED") return true;
+  if (e.code === 22 || e.code === 1014) return true;
+  const msg = typeof e.message === "string" ? e.message : "";
+  return /quota|storage is full|exceeded the quota/i.test(msg);
+}
+
+/**
+ * Persist the snapshot.
+ *
+ * V16 quota recovery: on a quota failure we make ONE controlled attempt to
+ * reclaim IRTH's disposable image caches and retry the write EXACTLY ONCE.
+ * The currently active snapshot is never deleted first — it stays intact
+ * until the replacement is durably written. No other browser storage
+ * (IndexedDB databases, localStorage, auth, progress) is touched.
+ */
 export async function saveSnapshot(snap: OfflineSnapshot): Promise<void> {
   if (!snapshotPersistable(snap)) {
     throw new Error("Refusing to persist incomplete offline snapshot");
   }
+  let idbError: unknown = null;
   if (hasIDB()) {
-    try { await idbPut(snap); return; } catch { /* fall through */ }
+    try { await idbPut(snap); return; }
+    catch (e) { idbError = e; }
+
+    if (isQuotaExceeded(idbError)) {
+      try {
+        const { reclaimDisposableImageCaches } = await import("./image-cache");
+        const reclaimed = await reclaimDisposableImageCaches();
+        console.warn(`[offline-storage] quota hit; reclaimed ${reclaimed} image cache(s), retrying once`);
+      } catch { /* reclamation is best-effort */ }
+      try { await idbPut(snap); return; }
+      catch (e) { idbError = e; }
+    }
   }
-  try { localStorage.setItem(LS_KEY, JSON.stringify(snap)); }
-  catch (e) { console.warn("[offline-storage] saveSnapshot failed", e); }
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(snap));
+  } catch (e) {
+    console.warn("[offline-storage] saveSnapshot failed", idbError ?? e);
+    // Surface the failure so callers keep the previous active snapshot and
+    // can offer a retry, instead of silently reporting success.
+    throw new Error(
+      `تعذّر حفظ المحتوى محليًا (مساحة التخزين ممتلئة). ${
+        (idbError as any)?.name ?? (e as any)?.name ?? "StorageError"
+      }`,
+    );
+  }
 }
+
 
 export async function loadSnapshot(): Promise<OfflineSnapshot | null> {
   if (hasIDB()) {

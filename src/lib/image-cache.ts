@@ -66,6 +66,41 @@ async function openCache(): Promise<Cache | null> {
   try { return await caches.open(CACHE_NAME); } catch { return null; }
 }
 
+/** Best-effort byte size of a response, `undefined` for opaque responses. */
+function responseBytes(res: Response | null): number | undefined {
+  try {
+    const n = Number(res?.headers?.get("content-length"));
+    return Number.isFinite(n) && n > 0 ? n : undefined;
+  } catch { return undefined; }
+}
+
+/**
+ * Disposable, rebuildable IRTH image caches. These may be evicted to reclaim
+ * space for content persistence — they are re-warmable from the network and
+ * hold NO user data, auth state or progress.
+ */
+const DISPOSABLE_CACHE_PREFIX = "irth-images";
+
+/**
+ * V16 quota recovery: delete IRTH-owned disposable image caches only.
+ * Never touches IndexedDB, localStorage, auth, progress or any other origin
+ * storage. Returns the number of caches removed.
+ */
+export async function reclaimDisposableImageCaches(): Promise<number> {
+  if (!hasCaches()) return 0;
+  let removed = 0;
+  try {
+    const keys = await caches.keys();
+    for (const key of keys) {
+      if (!key.startsWith(DISPOSABLE_CACHE_PREFIX)) continue;
+      try { if (await caches.delete(key)) removed++; } catch { /* ignore */ }
+    }
+  } catch { /* ignore */ }
+  if (removed > 0) console.warn(`[image-cache] reclaimed ${removed} disposable image cache(s)`);
+  return removed;
+}
+
+
 async function toObjectUrl(response: Response): Promise<string | null> {
   try {
     const blob = await response.blob();
@@ -138,6 +173,10 @@ export async function prefetchKeyedImages(
   const online = typeof navigator === "undefined" || navigator.onLine !== false;
   if (!online) return;
 
+  const { createWarmingBudget } = await import("./offline/storage-budget");
+  const budget = await createWarmingBudget();
+  if (budget.exhausted()) return;
+
   const list: { key: string; getUrl: () => Promise<string | null> }[] = [];
   const seen = new Set<string>();
   for (const e of entries) {
@@ -152,16 +191,21 @@ export async function prefetchKeyedImages(
   let i = 0;
   async function worker() {
     while (i < list.length) {
+      if (budget.exhausted()) return;
       const e = list[i++];
       try {
         const url = await e.getUrl();
-        if (url) await fetchAndCache(url, cache!, e.key);
+        if (url) {
+          const res = await fetchAndCache(url, cache!, e.key);
+          if (res && await budget.note(responseBytes(res))) return;
+        }
       } catch { /* ignore */ }
     }
   }
   await Promise.all(
     Array.from({ length: Math.min(PREFETCH_CONCURRENCY, list.length) }, () => worker()),
   );
+
 }
 
 
@@ -206,6 +250,10 @@ export async function prefetchImages(urls: Iterable<string>): Promise<void> {
   const online = typeof navigator === "undefined" || navigator.onLine !== false;
   if (!online) return;
 
+  const { createWarmingBudget } = await import("./offline/storage-budget");
+  const budget = await createWarmingBudget();
+  if (budget.exhausted()) return;
+
   const list: string[] = [];
   const seen = new Set<string>();
   for (const u of urls) {
@@ -224,27 +272,31 @@ export async function prefetchImages(urls: Iterable<string>): Promise<void> {
   let i = 0;
   async function worker() {
     while (i < list.length) {
+      if (budget.exhausted()) return;
       const u = list[i++];
       if (!u || prefetchInProgress.has(u)) continue;
-      
+
       prefetchInProgress.add(u);
       let retries = 0;
+      let stop = false;
       while (retries <= PREFETCH_RETRY_LIMIT) {
         try {
           const stableKey = getStableStorageKey(u);
           const cacheKey = stableKey || u;
           const res = await fetchAndCache(u, cache!, cacheKey);
-          if (res) break;
+          if (res) { stop = await budget.note(responseBytes(res)); break; }
         } catch { /* ignore */ }
         retries++;
         if (retries <= PREFETCH_RETRY_LIMIT) await new Promise(r => setTimeout(r, 1000 * retries));
       }
       prefetchInProgress.delete(u);
+      if (stop) return;
     }
   }
   await Promise.all(
     Array.from({ length: Math.min(PREFETCH_CONCURRENCY, list.length) }, () => worker()),
   );
+
 
 }
 

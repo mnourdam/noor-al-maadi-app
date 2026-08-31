@@ -137,11 +137,30 @@ export async function seedBaselineToPersistentStore(): Promise<void> {
     newSnapshot.content_counts.story_scenes = collections.story_scenes.length;
     newSnapshot.content_counts.story_media = collections.story_media.length;
 
-    await saveSnapshot(newSnapshot);
+    // V16 lost-update guard: a user-triggered content update may have
+    // persisted a NEWER snapshot while this baseline seeding was running.
+    // Re-read immediately before writing and rebase onto the freshest copy,
+    // never downgrading `snapshot_version` / `generated_at` back to bundled.
+    const latest = await loadSnapshot();
+    const toSave: OfflineSnapshot =
+      latest && latest.snapshot_version > (existing?.snapshot_version ?? 0)
+        ? {
+            ...latest,
+            ...({
+              baseline_version: (newSnapshot as any).baseline_version,
+              baseline_generated_at: (newSnapshot as any).baseline_generated_at,
+            } as any),
+            collections: { ...latest.collections, ...newSnapshot.collections },
+            content_counts: { ...latest.content_counts, ...newSnapshot.content_counts },
+          }
+        : newSnapshot;
+
+    await saveSnapshot(toSave);
+
     
     // Notify local-first-store to re-index if it's already ready
     if (lfs.isLocalReady()) {
-      lfs.applyLocalSnapshot(newSnapshot);
+      lfs.applyLocalSnapshot(toSave);
     }
 
     _indexedDbSeedTimeMs = now() - start;
