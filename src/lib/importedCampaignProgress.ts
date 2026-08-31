@@ -241,11 +241,24 @@ export async function hydrateLegacyProgressFromCloud(): Promise<{ chaptersAdded:
     const uid = sessionData.session?.user?.id;
     if (!uid) return null;
 
-    const { data: rows, error } = await supabase
-      .from("user_campaign_progress")
-      .select("campaign_id, chapter_id, completed_at, xp_earned, coins_earned, score")
-      .eq("user_id", uid);
-    if (error || !rows || !rows.length) return null;
+    const [progressRes, ledgerRes] = await Promise.all([
+      supabase
+        .from("user_campaign_progress")
+        .select("campaign_id, chapter_id, completed_at, xp_earned, coins_earned, score")
+        .eq("user_id", uid),
+      // V16: the completion ledger is the AUTHORITATIVE completed-state.
+      // Chapter rows can be partial (interrupted writes, pre-fix regressions);
+      // the ledger must still render the campaign as completed.
+      supabase
+        .from("user_campaign_completions")
+        .select("campaign_id")
+        .eq("user_id", uid),
+    ]);
+    const rows = progressRes.data ?? [];
+    const ledgerRows = (ledgerRes.error ? [] : (ledgerRes.data ?? [])) as Array<{ campaign_id?: string | null }>;
+    const ledgerCompleted = new Set<string>();
+    for (const r of ledgerRows) { if (r?.campaign_id) ledgerCompleted.add(String(r.campaign_id)); }
+    if ((progressRes.error || !rows.length) && !ledgerCompleted.size) return null;
 
     // One-time backup of existing local progress before we touch it.
     try {
