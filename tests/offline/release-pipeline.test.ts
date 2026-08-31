@@ -407,4 +407,40 @@ describe("staged user-triggered update", () => {
     expect(ok).toBe(false);
     expect(storage.stored).toBe(previous);
   });
+
+  // V16 — the update UI must never stay "applying" forever (quota abort hang).
+  it("a hung update times out, exits applying and stays retryable", async () => {
+    const previous = candidateSnapshot(OLD_CACHED_ENCYCLOPEDIA, 444);
+    storage.stored = previous;
+    refreshSnapshotIncremental.mockImplementation(() => new Promise(() => {})); // never settles
+
+    const { applyContentUpdate, getContentUpdateState } = await import("@/lib/offline-content-update");
+    const ok = await applyContentUpdate(1000);
+
+    expect(ok).toBe(false);
+    expect(getContentUpdateState().applying).toBe(false);
+    expect(getContentUpdateState().error).toBeTruthy();
+    // Previous snapshot untouched; a later retry is possible.
+    expect(storage.stored).toBe(previous);
+    expect(applyLocalSnapshot).toHaveBeenCalledWith(previous);
+  });
+
+  it("a late completion after a timeout never activates the candidate", async () => {
+    const previous = candidateSnapshot(OLD_CACHED_ENCYCLOPEDIA, 555);
+    storage.stored = previous;
+    let release: (v: any) => void = () => {};
+    refreshSnapshotIncremental.mockImplementation(() => new Promise((r) => { release = r; }));
+
+    const { applyContentUpdate, getContentUpdateState } = await import("@/lib/offline-content-update");
+    const ok = await applyContentUpdate(1000);
+    expect(ok).toBe(false);
+
+    applyLocalSnapshot.mockClear();
+    release(candidateSnapshot(LIVE_ENCYCLOPEDIA, 556));
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(applyLocalSnapshot).not.toHaveBeenCalled();
+    expect(getContentUpdateState().applying).toBe(false);
+  });
 });
+

@@ -215,15 +215,27 @@ export async function persistAppliedStoryIdentity(
 }
 
 /**
+ * Hard ceiling for one user-triggered update. The UI must NEVER be able to
+ * stay in `applying: true` forever (the V16 web quota-abort hang).
+ */
+export const APPLY_TIMEOUT_MS = 120_000;
+
+/** Bumped on every attempt; a timed-out attempt may no longer activate. */
+let applyEpoch = 0;
+
+/**
  * User-triggered staged update:
  *   existing snapshot → candidate → validate → persist → activate.
  * Any failure leaves the currently active snapshot in place.
  */
-export async function applyContentUpdate(): Promise<boolean> {
+export async function applyContentUpdate(timeoutMs: number = APPLY_TIMEOUT_MS): Promise<boolean> {
   if (state.applying) return false;
   setState({ applying: true, error: null });
+  const epoch = ++applyEpoch;
+  const isCurrent = () => epoch === applyEpoch;
   const previous = await loadSnapshot();
-  try {
+
+  const work = async (): Promise<boolean> => {
     const { refreshSnapshotIncremental } = await import("./offline-snapshot");
     const candidate = await refreshSnapshotIncremental();
 
@@ -242,17 +254,37 @@ export async function applyContentUpdate(): Promise<boolean> {
       throw new Error("candidate did not persist; keeping previous snapshot");
     }
 
+    // A timed-out attempt must never activate a candidate behind the user's
+    // back — the durable write is harmless, partial activation is not.
+    if (!isCurrent()) return false;
+
     const { applyLocalSnapshot } = await import("./local-first-store");
     applyLocalSnapshot(stored);
 
     // Convergence (D): persist fingerprint + counts + editorial timestamps +
     // the observed reaction-polluted `stories.last_updated` together.
     await persistAppliedStoryIdentity(stored);
+    return true;
+  };
 
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error("انتهت مهلة تحديث المحتوى. حاول مرة أخرى لاحقًا.")),
+      Math.max(1000, timeoutMs),
+    );
+  });
+
+  try {
+    const ok = await Promise.race([work(), timeout]);
+    if (!isCurrent()) return false;
+    if (!ok) throw new Error("تعذّر تفعيل المحتوى الجديد.");
     setState({ applying: false, available: false, collections: [], error: null, checkedAt: Date.now() });
     return true;
   } catch (e) {
     console.warn("[content-update] update failed, keeping previous snapshot:", e);
+    // Invalidate this attempt so a late background completion cannot activate.
+    applyEpoch++;
     // Best-effort re-activation of the previous, still-valid snapshot.
     try {
       if (previous) {
@@ -260,13 +292,18 @@ export async function applyContentUpdate(): Promise<boolean> {
         applyLocalSnapshot(previous);
       }
     } catch { /* ignore */ }
+    // Retryable: `available` stays true so the banner can be tapped again.
     setState({ applying: false, error: formatError(e) });
     return false;
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }
 
+
 /** Test/diagnostics helper — resets the in-memory controller state. */
 export function __resetContentUpdateState(): void {
+  applyEpoch++;
   state = { available: false, applying: false, error: null, collections: [], checkedAt: null };
 }
 
