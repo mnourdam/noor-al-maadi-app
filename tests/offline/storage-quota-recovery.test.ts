@@ -140,12 +140,15 @@ describe("web image warming budget", () => {
     expect(stopped).toBe(true);
   });
 
-  it("is unbounded on native Android", async () => {
+  it("uses a fixed 400 MB ceiling on native Android (ignores web quota)", async () => {
     mockEstimate(2_096_000_000);
     (globalThis as any).Capacitor = { isNativePlatform: () => true };
     const budget = await createWarmingBudget();
+    // Native ignores the saturated web quota estimate entirely.
     expect(budget.exhausted()).toBe(false);
-    expect(await budget.note(999_999_999)).toBe(false);
+    expect(await budget.note(100 * 1024 * 1024)).toBe(false);
+    // ...but stops once its own 400 MB disposable allowance is spent.
+    expect(await budget.note(400 * 1024 * 1024)).toBe(true);
     (globalThis as any).Capacitor = undefined;
   });
 });
