@@ -149,7 +149,12 @@ export async function recordCampaignCompletion(p: {
     } catch { /* ignore */ }
   }
 
-  // 2) Server ledger — durable write contract (Priority-Zero).
+  // 2) Server ledger — DEPRECATED unverified path (V16).
+  //    Normal gameplay stops here: the local sticky fact is enough for
+  //    display, and `record_campaign_progress_v2` stamps the authoritative
+  //    ledger when the last authored chapter is verified complete.
+  if (!p.allowUnverifiedServerWrite) return;
+
   //    Enqueue FIRST so a crash or offline state cannot lose the fact,
   //    then attempt the awaited RPC. On success drop the queued item;
   //    on failure leave it queued for later flush attempts.
