@@ -113,7 +113,9 @@ export function resolveDeepLink(n: NotificationLike): string {
   if (payload.entitySlug)   return `/encyclopedia/${payload.entitySlug}`;
   if (payload.artifactId)   return `/collection?artifact=${payload.artifactId}`;
   if (payload.achievementId) return `/profile?tab=achievements&achievement=${payload.achievementId}`;
-  if (payload.investigationId) return `/investigations/${payload.investigationId}`;
+  // Route id is `/investigation/$id` (singular). The plural path is the
+  // library route and has no `$id` child — using it 404s the notification.
+  if (payload.investigationId) return `/investigation/${payload.investigationId}`;
   if (payload.todayEventId) return `/#today-in-history`;
 
   // 3. Raw deep_link from the legacy schema.
