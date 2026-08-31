@@ -25,28 +25,28 @@ import { Link } from "@tanstack/react-router";
 import { Search, ChevronLeft, Heart, Zap, ScrollText } from "lucide-react";
 import { useRecommendedInvestigation } from "@/lib/investigations/recommend";
 import { displayDifficulty } from "@/lib/investigations-source";
+import { selectHomeInvestigationSpotlight } from "@/lib/investigations/home-spotlight";
 import { useStashCurrentAsOrigin } from "@/lib/navigation";
 
 export function InvestigationsSpotlight() {
   const rec = useRecommendedInvestigation();
   const stashOrigin = useStashCurrentAsOrigin();
+  const view = selectHomeInvestigationSpotlight(rec);
 
   // Nothing published (or catalogue not resolved yet) → render nothing.
   // Offline with a warm snapshot still resolves, so this is not a
   // "hidden while offline" state.
-  if (!rec.ready || rec.total === 0) return null;
+  if (view.state === "hidden") return null;
 
-  const isContinue = rec.kind === "continue" && !!rec.row;
-  const row = rec.row;
+  const isContinue = view.state === "continue";
+  const row = view.row;
 
   return (
     <section className="mt-12 px-5" data-testid="home-investigations-spotlight">
       <Link
-        to={isContinue ? "/investigation/$id" : "/investigations"}
-        {...(isContinue ? { params: { id: row!.slug } } : {})}
-        onClick={() =>
-          stashOrigin(isContinue ? `/investigation/${row!.slug}` : "/investigations")
-        }
+        to={view.to!}
+        {...(view.params ? { params: view.params } : {})}
+        onClick={() => stashOrigin(view.href!)}
         data-testid={isContinue ? "home-investigations-continue" : "home-investigations-discover"}
         className="motion-tap group relative block overflow-hidden rounded-2xl border border-gold/30 bg-gradient-to-bl from-gold/12 via-surface to-surface px-4 py-4 shadow-elegant transition hover:border-gold/60"
       >
@@ -59,14 +59,14 @@ export function InvestigationsSpotlight() {
 
           <div className="min-w-0 flex-1">
             <p className="text-[10px] tracking-[0.2em] text-gold/85">
-              {isContinue ? "واصل التحقيق" : "طور من أطوار اللعب"}
+              {view.eyebrow}
             </p>
             <h3 className="font-display mt-0.5 truncate text-[15px] font-bold leading-tight text-foreground">
-              {isContinue ? row!.title : "التحقيقات التاريخية"}
+              {view.title}
             </h3>
             <p className="mt-0.5 line-clamp-1 text-[11px] leading-5 text-muted-foreground">
               {isContinue
-                ? [displayDifficulty(row!.difficulty), row!.subtitle?.trim() || null]
+                ? [displayDifficulty(row?.difficulty), row?.subtitle?.trim() || null]
                     .filter(Boolean)
                     .join(" · ")
                 : "اكشف الخيوط، وازن الروايات، واحكم على الأدلة كمؤرخ."}
@@ -80,19 +80,19 @@ export function InvestigationsSpotlight() {
           {isContinue ? (
             <>
               <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-gold px-3.5 py-1.5 text-[11px] font-bold text-primary-foreground">
-                <Search className="size-3.5" /> متابعة القضية
+                <Search className="size-3.5" /> {view.cta}
               </span>
               <span className="rounded-full border border-gold/25 bg-gold/10 px-2 py-0.5 text-[10px] text-gold">
-                {rec.completed.toLocaleString("en-US")}/{rec.total.toLocaleString("en-US")} قضية
+                {view.completed.toLocaleString("en-US")}/{view.total.toLocaleString("en-US")} قضية
               </span>
             </>
           ) : (
             <>
               <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-gold px-3.5 py-1.5 text-[11px] font-bold text-primary-foreground">
-                <ScrollText className="size-3.5" /> افتح ملفات التحقيق
+                <ScrollText className="size-3.5" /> {view.cta}
               </span>
               <span className="rounded-full border border-gold/25 bg-gold/10 px-2 py-0.5 text-[10px] text-gold">
-                {rec.completed.toLocaleString("en-US")}/{rec.total.toLocaleString("en-US")} قضية
+                {view.completed.toLocaleString("en-US")}/{view.total.toLocaleString("en-US")} قضية
               </span>
               <span className="inline-flex items-center gap-1 rounded-full border border-red-500/25 bg-red-500/10 px-2 py-0.5 text-[10px] text-red-300">
                 <Heart className="size-3" /> قلوب
