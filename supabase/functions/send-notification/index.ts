@@ -463,7 +463,17 @@ Deno.serve(async (req) => {
 
     let sent = 0;
     let failed = 0;
-    for (const row of tokens ?? []) {
+    // Bounded-concurrency send: a small worker pool instead of a fully
+    // serial loop (too slow for large audiences) or unbounded Promise.all
+    // (would fan out hundreds of simultaneous FCM/DB calls).
+    const SEND_CONCURRENCY = 10;
+    const tokenRows = tokens ?? [];
+    let nextIndex = 0;
+    const workers = Array.from(
+      { length: Math.min(SEND_CONCURRENCY, Math.max(tokenRows.length, 1)) },
+      async () => {
+        while (nextIndex < tokenRows.length) {
+          const row = tokenRows[nextIndex++];
       const result = await sendFcm(projectId, accessToken, row.token, {
         title: notif.title,
         body: notif.body,
