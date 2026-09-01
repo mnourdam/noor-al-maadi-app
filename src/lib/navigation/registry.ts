@@ -173,6 +173,7 @@ const ADMIN_SUBPAGES: RouteId[] = [
   "/admin/campaigns",
   "/admin/campaigns/$id/edit",
   "/admin/canonical-duplicates",
+  "/admin/comments",
   "/admin/community",
   "/admin/content",
   "/admin/content-auto-heal",
