@@ -63,3 +63,42 @@ export function commentAnchorHref(row: AdminCommentRow): string | null {
     default: return null;
   }
 }
+
+// ------------------------------------------------------------
+// Rankings (read-only, server-aggregated over ALL rows)
+// ------------------------------------------------------------
+
+export interface AdminCommentRankRow {
+  user_id: string;
+  name: string | null;
+  username: string | null;
+  avatar_id: string | null;
+  total: number;
+  campaigns: number;
+  stories: number;
+  encyclopedia: number;
+  kinds: number;
+}
+
+export interface AdminCommentRankings {
+  ok: boolean;
+  reason?: string;
+  stats: { total: number; participants: number; campaigns: number; stories_encyclopedia: number };
+  overall: AdminCommentRankRow[];
+  campaigns: AdminCommentRankRow[];
+  stories: AdminCommentRankRow[];
+  encyclopedia: AdminCommentRankRow[];
+  diverse: AdminCommentRankRow[];
+}
+
+const EMPTY_RANKINGS: AdminCommentRankings = {
+  ok: false,
+  stats: { total: 0, participants: 0, campaigns: 0, stories_encyclopedia: 0 },
+  overall: [], campaigns: [], stories: [], encyclopedia: [], diverse: [],
+};
+
+export async function adminContentCommentRankings(): Promise<AdminCommentRankings> {
+  const { data, error } = await supabase.rpc("admin_content_comment_rankings_v1" as never);
+  if (error) return { ...EMPTY_RANKINGS, reason: error.message };
+  return { ...EMPTY_RANKINGS, ...(data as unknown as AdminCommentRankings) };
+}
