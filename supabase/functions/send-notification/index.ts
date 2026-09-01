@@ -419,18 +419,41 @@ Deno.serve(async (req) => {
       });
     }
 
-    let tokensQuery = admin
-      .from("device_tokens")
-      .select("token, user_id")
-      .eq("enabled", true);
+    // Fetch device tokens. For large audiences, a single .in() with hundreds of
+    // UUIDs builds a request URL that exceeds PostgREST/Kong limits, so batch
+    // the user IDs (100 per batch) and merge results. Same filter/dedup logic.
+    const TOKEN_ID_BATCH = 100;
+    let tokens: Array<{ token: string; user_id: string }> | null;
     if (scope.scope === "user" || scope.scope === "list") {
-      tokensQuery = tokensQuery.in("user_id", scope.userIds);
-    }
-
-    const { data: tokens, error: tokensErr } = await tokensQuery;
-    if (tokensErr) {
-      await admin.from("notifications").update({ status: "failed" }).eq("id", notif.id);
-      return jsonResponse({ error: tokensErr.message }, { status: 500 });
+      const merged: Array<{ token: string; user_id: string }> = [];
+      const ids = scope.userIds;
+      for (let b = 0; b * TOKEN_ID_BATCH < ids.length; b++) {
+        const slice = ids.slice(b * TOKEN_ID_BATCH, (b + 1) * TOKEN_ID_BATCH);
+        const { data, error } = await admin
+          .from("device_tokens")
+          .select("token, user_id")
+          .eq("enabled", true)
+          .in("user_id", slice);
+        if (error) {
+          console.error(
+            `[send-notification] token fetch batch ${b} failed (${slice.length} user ids): ${error.message}`
+          );
+          await admin.from("notifications").update({ status: "failed" }).eq("id", notif.id);
+          return jsonResponse({ error: error.message }, { status: 500 });
+        }
+        if (data) merged.push(...data);
+      }
+      tokens = merged;
+    } else {
+      const { data, error: tokensErr } = await admin
+        .from("device_tokens")
+        .select("token, user_id")
+        .eq("enabled", true);
+      if (tokensErr) {
+        await admin.from("notifications").update({ status: "failed" }).eq("id", notif.id);
+        return jsonResponse({ error: tokensErr.message }, { status: 500 });
+      }
+      tokens = data;
     }
 
     console.log(`[send-notification] scope=${scope.scope} sending to ${tokens?.length ?? 0} tokens (notif=${notif.id})`);
@@ -440,7 +463,17 @@ Deno.serve(async (req) => {
 
     let sent = 0;
     let failed = 0;
-    for (const row of tokens ?? []) {
+    // Bounded-concurrency send: a small worker pool instead of a fully
+    // serial loop (too slow for large audiences) or unbounded Promise.all
+    // (would fan out hundreds of simultaneous FCM/DB calls).
+    const SEND_CONCURRENCY = 10;
+    const tokenRows = tokens ?? [];
+    let nextIndex = 0;
+    const workers = Array.from(
+      { length: Math.min(SEND_CONCURRENCY, Math.max(tokenRows.length, 1)) },
+      async () => {
+        while (nextIndex < tokenRows.length) {
+          const row = tokenRows[nextIndex++];
       const result = await sendFcm(projectId, accessToken, row.token, {
         title: notif.title,
         body: notif.body,
@@ -485,7 +518,10 @@ Deno.serve(async (req) => {
           await admin.from("device_tokens").update({ enabled: false }).eq("token", row.token);
         }
       }
-    }
+        }
+      }
+    );
+    await Promise.all(workers);
 
     // notification.status was already set to 'sent' on insert — push is
     // best-effort and must not flip the row back to 'failed', otherwise the
