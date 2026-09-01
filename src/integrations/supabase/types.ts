@@ -80,6 +80,39 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_balance_grants: {
+        Row: {
+          consumed_at: string | null
+          created_at: string
+          delta: number
+          expected_value: number
+          field: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          consumed_at?: string | null
+          created_at?: string
+          delta: number
+          expected_value: number
+          field: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          consumed_at?: string | null
+          created_at?: string
+          delta?: number
+          expected_value?: number
+          field?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       admin_campaign_versions: {
         Row: {
           campaign_id: string
