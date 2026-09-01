@@ -3727,6 +3727,15 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      admin_list_content_comments_v1: {
+        Args: {
+          p_limit?: number
+          p_offset?: number
+          p_search?: string
+          p_source?: string
+        }
+        Returns: Json
+      }
       admin_list_feedback_issues: {
         Args: {
           p_category?: string
