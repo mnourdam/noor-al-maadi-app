@@ -111,7 +111,14 @@ function AdminComments() {
           </div>
 
           <p className="text-xs text-slate-500">
-            {loading ? "جارٍ التحميل…" : `${total.toLocaleString("ar")} نتيجة`}
+            {loading
+              ? "جارٍ التحميل…"
+              : total === 0
+                ? "لا نتائج"
+                : `${total.toLocaleString("ar")} نتيجة · عرض ${(
+                    (page - 1) * PAGE_SIZE +
+                    1
+                  ).toLocaleString("ar")}–${Math.min(page * PAGE_SIZE, total).toLocaleString("ar")}`}
           </p>
 
           {error && (
