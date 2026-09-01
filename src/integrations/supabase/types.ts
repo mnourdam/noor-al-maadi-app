@@ -3590,6 +3590,7 @@ export type Database = {
         Returns: Json
       }
       admin_campaign_progress_stats: { Args: { p_id: string }; Returns: Json }
+      admin_content_comment_rankings_v1: { Args: never; Returns: Json }
       admin_delete_story: {
         Args: { p_force?: boolean; p_mode?: string; p_story_id: string }
         Returns: Json
