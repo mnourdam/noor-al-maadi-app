@@ -23,9 +23,12 @@ const FILTERS: { key: CommentSourceFilter; label: string }[] = [
   { key: "campaign", label: "الحملات" },
 ];
 
+const PAGE_SIZE = 25;
+
 function AdminComments() {
   const [source, setSource] = useState<CommentSourceFilter>("all");
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const [rows, setRows] = useState<AdminCommentRow[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -35,7 +38,12 @@ function AdminComments() {
     setLoading(true);
     setError(null);
     try {
-      const res = await adminListContentComments({ source, search });
+      const res = await adminListContentComments({
+        source,
+        search,
+        limit: PAGE_SIZE,
+        offset: (page - 1) * PAGE_SIZE,
+      });
       if (!res.ok) {
         setError(res.reason ?? "unknown");
         setRows([]);
@@ -47,11 +55,19 @@ function AdminComments() {
     } finally {
       setLoading(false);
     }
-  }, [source, search]);
+  }, [source, search, page]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Reset to first page whenever filters/search change.
+  useEffect(() => {
+    setPage(1);
+  }, [source, search]);
+
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const pageNumbers = buildPageNumbers(page, pageCount);
 
   return (
     <AdminGate>
@@ -95,7 +111,14 @@ function AdminComments() {
           </div>
 
           <p className="text-xs text-slate-500">
-            {loading ? "جارٍ التحميل…" : `${total.toLocaleString("ar")} نتيجة`}
+            {loading
+              ? "جارٍ التحميل…"
+              : total === 0
+                ? "لا نتائج"
+                : `${total.toLocaleString("ar")} نتيجة · عرض ${(
+                    (page - 1) * PAGE_SIZE +
+                    1
+                  ).toLocaleString("ar")}–${Math.min(page * PAGE_SIZE, total).toLocaleString("ar")}`}
           </p>
 
           {error && (
@@ -167,8 +190,61 @@ function AdminComments() {
               );
             })}
           </div>
+
+          {/* Pagination */}
+          {pageCount > 1 && (
+            <nav className="flex flex-wrap items-center justify-center gap-1.5 pt-2" aria-label="ترقيم الصفحات">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1 text-xs text-slate-300 disabled:opacity-40 hover:border-slate-500"
+              >
+                السابق
+              </button>
+              {pageNumbers.map((n, i) =>
+                n === "…" ? (
+                  <span key={`gap-${i}`} className="px-1 text-xs text-slate-600">
+                    …
+                  </span>
+                ) : (
+                  <button
+                    key={n}
+                    onClick={() => setPage(n)}
+                    aria-current={n === page ? "page" : undefined}
+                    className={`min-w-8 rounded-lg border px-2.5 py-1 text-xs font-medium transition ${
+                      n === page
+                        ? "border-amber-400 bg-amber-500/15 text-amber-200"
+                        : "border-slate-700 bg-slate-900 text-slate-400 hover:border-slate-500"
+                    }`}
+                  >
+                    {n.toLocaleString("ar")}
+                  </button>
+                ),
+              )}
+              <button
+                onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+                disabled={page >= pageCount}
+                className="rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1 text-xs text-slate-300 disabled:opacity-40 hover:border-slate-500"
+              >
+                التالي
+              </button>
+            </nav>
+          )}
         </div>
       </AdminLayout>
     </AdminGate>
   );
+}
+
+/** Compact page list: 1 … n-1 n n+1 … last */
+function buildPageNumbers(current: number, count: number): (number | "…")[] {
+  if (count <= 7) return Array.from({ length: count }, (_, i) => i + 1);
+  const out: (number | "…")[] = [1];
+  const start = Math.max(2, current - 1);
+  const end = Math.min(count - 1, current + 1);
+  if (start > 2) out.push("…");
+  for (let i = start; i <= end; i++) out.push(i);
+  if (end < count - 1) out.push("…");
+  out.push(count);
+  return out;
 }
