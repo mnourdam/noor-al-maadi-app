@@ -419,18 +419,41 @@ Deno.serve(async (req) => {
       });
     }
 
-    let tokensQuery = admin
-      .from("device_tokens")
-      .select("token, user_id")
-      .eq("enabled", true);
+    // Fetch device tokens. For large audiences, a single .in() with hundreds of
+    // UUIDs builds a request URL that exceeds PostgREST/Kong limits, so batch
+    // the user IDs (100 per batch) and merge results. Same filter/dedup logic.
+    const TOKEN_ID_BATCH = 100;
+    let tokens: Array<{ token: string; user_id: string }> | null;
     if (scope.scope === "user" || scope.scope === "list") {
-      tokensQuery = tokensQuery.in("user_id", scope.userIds);
-    }
-
-    const { data: tokens, error: tokensErr } = await tokensQuery;
-    if (tokensErr) {
-      await admin.from("notifications").update({ status: "failed" }).eq("id", notif.id);
-      return jsonResponse({ error: tokensErr.message }, { status: 500 });
+      const merged: Array<{ token: string; user_id: string }> = [];
+      const ids = scope.userIds;
+      for (let b = 0; b * TOKEN_ID_BATCH < ids.length; b++) {
+        const slice = ids.slice(b * TOKEN_ID_BATCH, (b + 1) * TOKEN_ID_BATCH);
+        const { data, error } = await admin
+          .from("device_tokens")
+          .select("token, user_id")
+          .eq("enabled", true)
+          .in("user_id", slice);
+        if (error) {
+          console.error(
+            `[send-notification] token fetch batch ${b} failed (${slice.length} user ids): ${error.message}`
+          );
+          await admin.from("notifications").update({ status: "failed" }).eq("id", notif.id);
+          return jsonResponse({ error: error.message }, { status: 500 });
+        }
+        if (data) merged.push(...data);
+      }
+      tokens = merged;
+    } else {
+      const { data, error: tokensErr } = await admin
+        .from("device_tokens")
+        .select("token, user_id")
+        .eq("enabled", true);
+      if (tokensErr) {
+        await admin.from("notifications").update({ status: "failed" }).eq("id", notif.id);
+        return jsonResponse({ error: tokensErr.message }, { status: 500 });
+      }
+      tokens = data;
     }
 
     console.log(`[send-notification] scope=${scope.scope} sending to ${tokens?.length ?? 0} tokens (notif=${notif.id})`);
