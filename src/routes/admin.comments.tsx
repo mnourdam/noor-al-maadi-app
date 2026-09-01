@@ -23,9 +23,12 @@ const FILTERS: { key: CommentSourceFilter; label: string }[] = [
   { key: "campaign", label: "الحملات" },
 ];
 
+const PAGE_SIZE = 25;
+
 function AdminComments() {
   const [source, setSource] = useState<CommentSourceFilter>("all");
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const [rows, setRows] = useState<AdminCommentRow[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -35,7 +38,12 @@ function AdminComments() {
     setLoading(true);
     setError(null);
     try {
-      const res = await adminListContentComments({ source, search });
+      const res = await adminListContentComments({
+        source,
+        search,
+        limit: PAGE_SIZE,
+        offset: (page - 1) * PAGE_SIZE,
+      });
       if (!res.ok) {
         setError(res.reason ?? "unknown");
         setRows([]);
@@ -47,11 +55,19 @@ function AdminComments() {
     } finally {
       setLoading(false);
     }
-  }, [source, search]);
+  }, [source, search, page]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Reset to first page whenever filters/search change.
+  useEffect(() => {
+    setPage(1);
+  }, [source, search]);
+
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const pageNumbers = buildPageNumbers(page, pageCount);
 
   return (
     <AdminGate>
