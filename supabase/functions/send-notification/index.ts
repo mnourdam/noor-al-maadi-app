@@ -518,7 +518,10 @@ Deno.serve(async (req) => {
           await admin.from("device_tokens").update({ enabled: false }).eq("token", row.token);
         }
       }
-    }
+        }
+      }
+    );
+    await Promise.all(workers);
 
     // notification.status was already set to 'sent' on insert — push is
     // best-effort and must not flip the row back to 'failed', otherwise the
