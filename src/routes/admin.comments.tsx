@@ -9,6 +9,7 @@ import {
   type AdminCommentRow,
   type CommentSourceFilter,
 } from "@/lib/adminComments";
+import { CommentRankings } from "@/components/admin/CommentRankings";
 import { MessageSquareQuote, RefreshCw, Search, ExternalLink } from "lucide-react";
 
 export const Route = createFileRoute("/admin/comments")({
@@ -77,6 +78,8 @@ function AdminComments() {
         breadcrumbs={[{ label: "التعليقات والتأملات" }]}
       >
         <div className="space-y-4" dir="rtl">
+          <CommentRankings />
+
           {/* Filters */}
           <div className="flex flex-wrap items-center gap-2">
             {FILTERS.map((f) => (
