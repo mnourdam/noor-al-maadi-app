@@ -177,3 +177,114 @@ Notes on comparability:
 ## 8. Downgrade gate (unchanged from the plan)
 
 Downgrade only when, over 14 consecutive days: top-20 mean stays under ~50 ms per statement, no statement exceeds ~5% of total CPU on its own, seq-tuple counts on the hot tables drop by an order of magnitude, cache hit stays ≥99%, and connection peak stays well under the smaller instance's `max_connections`. Then step Large → Medium, observe 7 days, then consider Small.
+
+---
+
+# Post-Phase-2 re-capture — 2026-09-03 07:17–07:26 UTC
+
+Same six-query set, verbatim. **Read-only.** No code, schema, index, view, job, schedule, or client behavior changed.
+Instance still **Large**, Postgres boot unchanged (`2026-08-24 17:39 UTC`), `stats_reset` still `NULL` → **counters are still cumulative since boot and therefore still ~99.9% pre-Phase-2 history.** Every "after" number below is either a *windowed delta* or a *controlled burst*, never a raw cumulative read. This distinction is the whole point; raw totals cannot move meaningfully 20 minutes after a fix.
+
+## Q1/Q2 — config and health (unchanged)
+
+| Metric | Phase 0 (06:42) | Now (07:16) |
+| --- | --- | --- |
+| shared_buffers / eff_cache / max_conns / work_mem | 2 GB / 6 GB / 160 / 12 MB | identical |
+| Database size | 189 MB | 189 MB |
+| Total / active connections | 34 (21.3%) / 2 | 31 (19.4%) / 2 |
+| Idle in transaction | 0 | 0 |
+| Cache hit | 100.00% | 100.00% |
+| Deadlocks | 0 | 0 |
+| Rolled-back transactions | 495,933 | 496,014 (+81 in 34 min) |
+| WAL position | 422 GB | 422 GB |
+
+`supabase--db_health` still returns `metrics_unavailable: metrics payload exceeded size cap`. SQL proxies remain the fallback.
+
+**Caveat that applies to every delta below:** 07:00–07:30 UTC is a low-traffic window for this app. Windowed production deltas are thin; the controlled bursts are the reliable measurement.
+
+## Q3 — top 20 by total execution time (cumulative, since boot)
+
+Ordering is unchanged from Phase 0 because 9.5 days of pre-fix time dominates. Movement in the 34-minute window:
+
+| # | Statement | Calls (Δ) | Total ms (Δ) | Mean ms |
+| --- | --- | ---: | ---: | ---: |
+| 1 | `list_stories_v2` | 23,377 (+19) | 40,617,592 (+22,948) | 1,737.50 (max 7,139.9) |
+| 2 | `list_stories_guest_v3` | 8,264 (+34) | 13,910,676 (+35,178) | 1,683.29 (max 2,992.6) |
+| 3 | `realtime.list_changes` | 1,608,664 (+4,127) | 10,492,931 (+23,125) | 6.52 (max 13,784.1) |
+| 4 | `campaigns_public` (+data JSONB) | 22,605 (+1) | 1,113,059 | 49.24 |
+| 5–20 | unchanged within noise | | | |
+
+The +19 / +22,948 ms on row 1 averages 1,208 ms/call — a *blend* of pre-fix calls (06:42→07:07, ~1.74 s) and post-fix ones. It is not an "after" number.
+
+**The clean "after" evidence is a separate `pg_stat_statements` entry** (same `queryid`, different role) created after deployment, so every call in it is post-fix. Isolated bursts against it:
+
+| Burst | Rows returned | Calls | Server-side mean |
+| --- | ---: | ---: | ---: |
+| full list, `p_world_slug=null` | 116 | 20 | **229.5 ms** |
+| `prophetic` (avg spec 246 B) | 30 | 20 | **74.2 ms** |
+| `ottoman` (avg spec 122 B) | 30 | 20 | **72.8 ms** |
+| `rashidun` (avg spec 42 B) | 0 | 20 | **1.4 ms** |
+
+`list_stories_v2` full list: **1,737.5 ms → 229.5 ms server-side (7.6×)**. Wall-clock from the sandbox is ~394 ms; the ~165 ms difference is network RTT, not database time.
+
+## Q4 — story RPC detail (calls / mean / total / max)
+
+| RPC | Window | Calls | Mean | Max | Total |
+| --- | --- | ---: | ---: | ---: | ---: |
+| `list_stories_v2` | pre-fix cumulative | 23,377 | 1,737.5 ms | 7,139.9 ms | 40,617,592 ms |
+| `list_stories_v2` | post-fix (full-list burst) | 20 | **229.5 ms** | — | 4,590 ms |
+| `list_stories_v2` | post-fix (all shapes, n=184) | 184 | 87.9 ms | 1,601.9 ms | 16,168 ms |
+| `list_stories_guest_v3` | pre-fix cumulative | 8,264 | 1,683.3 ms | 2,992.6 ms | 13,910,676 ms |
+| `list_stories_guest_v3` | post-fix | 4 | 575.8 ms (min 76.6) | 1,535.2 ms | 2,303 ms |
+| `realtime.list_changes` | cumulative | 1,608,664 | 6.52 ms | 13,784.1 ms | 10,492,931 ms |
+
+The post-fix `max_ms` of 1,601.9 and the guest RPC's 575.8 mean are **cold-cache first calls** (min 76.6 ms on the same entry, n=4). They are not steady state.
+
+## Q5 — table access (cumulative + controlled per-call delta)
+
+Cumulative counters barely move against billions of pre-fix tuples, so the meaningful figure is the measured per-call delta over exactly 10 anonymous full-list calls:
+
+| Table | Cumulative seq_tup_read | Before (seq scans/call) | After (seq scans/call) | After (seq tuples/call) |
+| --- | ---: | ---: | ---: | ---: |
+| `encyclopedia_entities` | 14.118 B | ~210 | **0.0** | **0** (83 index scans instead) |
+| `investigations` | 1.560 B | ~211 | **0.0** | **0** |
+| `stories` | 1.260 B | ~214 | **0.5** | 93 |
+| `admin_campaigns` | 0.812 B | ~330 | **0.5** | 39 |
+
+## Q6 — statistics window
+
+`stats_reset` = `NULL`. Counters remain cumulative since the 2026-08-24 boot. **Recommendation for the next phase: no reset** — resetting would destroy the pre-fix reference. Keep using windowed deltas and controlled bursts.
+
+## Projected shares once the fleet runs at post-fix cost
+
+Applying the measured post-fix cost (~0.30 s blended across anon/guest/authenticated) to the same call volumes:
+
+| Statement | Phase 0 share | Projected share |
+| --- | ---: | ---: |
+| `list_stories_v2` | 56.5% | ~26% |
+| `list_stories_guest_v3` | 19.3% | ~9% |
+| **story RPCs combined** | **75.8%** | **~35%** |
+| **`realtime.list_changes`** | **14.6%** | **~39% ← new #1** |
+| content reads (campaigns/encyclopedia/games) | 6.5% | ~17% |
+
+Top-20 total drops from ~71.9 M ms to ~26.9 M ms per 9.5 days — **about 63% of all database CPU removed by Phase 2 alone.**
+
+## Attribution of the remaining ~230 ms
+
+Direct attribution was **not possible**: `pg_stat_statements.track = top` (nested statements inside PL/pgSQL are not recorded), `track_functions = none`, and both audit roles get `permission denied for function normalize_unlock_spec_v2 / validate_unlock_spec_v2`, so neither `EXPLAIN ANALYZE` nor per-function stats are available. The figures below are therefore a **bounded estimate from a controlled scaling experiment**, not a direct measurement.
+
+Fitting the four bursts (0, 30, 30, 116 returned rows):
+
+- Fixed per-call cost: **~1.4 ms**
+- Marginal cost: **~1.9–2.4 ms per returned row**
+- Full list = 116 × ~1.97 ms ≈ **228 ms of the 229.5 ms** — the cost is ~99% per-returned-row, ~0% fixed.
+
+Two further observations pin down what that per-row cost is:
+
+1. **It is not table access.** Post-rewrite the entire call does ~250 buffer hits and zero sequential tuples on the content tables — under 1 ms of the 230 ms.
+2. **It is not JSONB payload size.** `ottoman` (avg spec 122 B) and `prophetic` (avg spec 246 B) both cost ~73 ms for 30 rows. Doubling the spec bytes changed nothing measurable, so the cost is **per-invocation PL/pgSQL overhead**, not tree-walking volume.
+
+Per returned row the RPC performs roughly five nested PL/pgSQL invocations: `normalize_unlock_spec_v2` (once in the evaluator, once again in the prerequisite builder), `validate_unlock_spec_v2`, the leaf evaluation, and the redaction/`jsonb_build_object` assembly. Three of those five are the normalize/validate walks.
+
+**Estimate: ~55–70% of the ~228 ms — i.e. ~125–160 ms per full-list call — is repeated `normalize_unlock_spec_v2` / `validate_unlock_spec_v2` work**, of which roughly a third is pure duplication (the spec is normalized twice per story, and validated on every call even though specs only change when an admin edits a story). Confidence: **medium**. The invocation-count reasoning is solid and the "not I/O, not payload size" bounds are measured, but the split between the three walks and the other two operations is inferred, not observed.
+
