@@ -3548,6 +3548,7 @@ export type Database = {
         Returns: Json
       }
       _story_validate_v2_one: { Args: { p_in: Json }; Returns: Json }
+      _uuid_or_null_v2: { Args: { p_text: string }; Returns: string }
       ack_announcement_v16: {
         Args: { p_action?: string; p_announcement_id: string }
         Returns: boolean
