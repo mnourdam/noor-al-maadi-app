@@ -130,7 +130,7 @@ Regression risk: **Medium** (a client notices new content later than before, bou
 
 ## Phase 6 — Prove it, then downgrade
 
-Gate, over **14 consecutive days** after Phase 2 and 3 are live: no statement above ~50 ms mean, no single statement above ~5% of total CPU, hot-table sequential tuple reads down by an order of magnitude, cache hit ≥99%, connection peak well under the target instance's `max_connections`. Then Large → Medium, observe 7 days, then evaluate Small. Rollback is a resize up — minutes, no data loss.
+Gate, over **14 consecutive days** after Phase 2 and 3 are live: no statement above ~50 ms mean, no single statement above ~5% of total CPU, hot-table sequential tuple reads down by an order of magnitude, cache hit ≥99%, connection peak well under the target instance's `max_connections`. Then Large → Medium and observe 7 days. Medium is the final target; Small is excluded permanently. Rollback is a resize up — minutes, no data loss.
 
 ---
 

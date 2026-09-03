@@ -176,7 +176,7 @@ Notes on comparability:
 
 ## 8. Downgrade gate (unchanged from the plan)
 
-Downgrade only when, over 14 consecutive days: top-20 mean stays under ~50 ms per statement, no statement exceeds ~5% of total CPU on its own, seq-tuple counts on the hot tables drop by an order of magnitude, cache hit stays ≥99%, and connection peak stays well under the smaller instance's `max_connections`. Then step Large → Medium, observe 7 days, then consider Small.
+Downgrade only when, over 14 consecutive days: top-20 mean stays under ~50 ms per statement, no statement exceeds ~5% of total CPU on its own, seq-tuple counts on the hot tables drop by an order of magnitude, cache hit stays ≥99%, and connection peak stays well under the smaller instance's `max_connections`. Then step Large → Medium and observe 7 days. Medium is the only downgrade target; Small was tested previously, left the app constrained, and is excluded permanently.
 
 ---
 
