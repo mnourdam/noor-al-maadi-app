@@ -44,10 +44,70 @@ full before the change is declared final.
 
 ## 2. Resize execution
 
-Pending — see the scheduling note in chat. The approved window is
-**03:00–05:00 UTC**, i.e. 2026-09-04 03:00–05:00 UTC (18.5 h after approval).
+Executed **2026-09-03**, at the user's explicit instruction to proceed
+immediately rather than wait for the 03:00–05:00 UTC window (the measured
+hour carried 1–5 visitors; the approved window was ~18.5 h away).
 
-## 3. Post-resize acceptance checks
+- Resize approved and applied: **Large → Medium**.
+- Postgres restarted **08:41:33 UTC**; back and reachable by 08:49
+  (auth 103 ms, database 106 ms, auth→database 198 ms).
+- Confirmed new sizing: `shared_buffers` **1 GB** (was 2 GB),
+  `effective_cache_size` **3 GB** (was 6 GB), `work_mem` **7 MB** (was 12 MB),
+  `max_connections` **120** (was 160). DB size unchanged at 190 MB.
+- Statistics counters were reset by the restart, so all post-resize figures
+  below are fresh, Medium-only measurements.
 
-Pending resize. Checklist and thresholds are those defined in
-`docs/audits/phase3c-peak-remeasure.md`.
+## 3. Post-resize acceptance checks — PASS
+
+Warm-up allowed ~18 min before measurement. Delta window
+**08:58:52 → 09:08:44 UTC (592 s)**; connection sampler 40 samples @14 s.
+
+### Functional
+
+| Check | Result |
+| --- | --- |
+| Connectivity / app startup | PASS — all routes render; 0 REST/RPC errors ≥400; 0 console errors |
+| Authentication | PASS — signed-in session restored, `get_my_profile`, `get_my_email`, `touch_my_last_active` all 200; header shows the player's own profile |
+| Campaign loading & progress | PASS — `/campaigns` renders the campaign grid; `campaigns_public` reads 200 (~40–50 ms) |
+| Encyclopedia | PASS — `/encyclopedia` renders; index pages 200 (561–779 ms for the 1000-row index pages, same shape as before) |
+| Games | PASS — `/games` → `/adventure` renders; `games` catalogue reads 200 (364–863 ms cold, 11.8 ms mean server-side) |
+| Stories — guest | PASS — `/stories` renders for an anonymous context; `list_stories_guest_v3` served |
+| Stories — authenticated | PASS — `list_stories_v2` served for the signed-in player; story rail populated on `/` |
+| Notifications / realtime | PASS — `/notifications` renders, `list_my_notifications` + `unread_notification_count` 200, 12 live realtime subscriptions established |
+| Offline / local-first | PASS — unaffected by design and in practice: bundled packs (`public/campaign-key-art/`, `public/story-covers/`, emblems, offline snapshot) are app assets with no database involvement; no snapshot/manifest error appeared in any run |
+
+### Measured thresholds
+
+| Check | Threshold | Measured | Verdict |
+| --- | --- | --- | --- |
+| Cache hit after warm-up | ≥ 99 % | **99.9269 %** since restart, **99.990 %** in-window (+2,718,150 hits / +275 reads) | PASS |
+| `list_stories_v2` mean | < 150 ms | **64.5 ms** (17 calls, +1,097 ms) | PASS |
+| `list_stories_guest_v3` mean | (same class) | **64.6 ms** (7 calls, +452 ms) | PASS |
+| `realtime.list_changes` mean | < 15 ms | **6.18 ms** (1,195 calls, +7,389 ms) | PASS |
+| Connections | < 70 % of 120 | avg 35.5 / **max 37 = 30.8 %** | PASS |
+| Idle-in-transaction / lock waits | 0 | **0 / 0** across all 40 samples | PASS |
+| OOM / restarts / deadlocks / temp files | none | none (uptime clean since the resize restart), 0 deadlocks, 0 temp bytes | PASS |
+| Errors / timeouts | none | 0 HTTP ≥400, 0 console errors, 0 failed RPCs | PASS |
+
+### Other post-resize measurements (592 s window)
+
+| Metric | Value |
+| --- | --- |
+| Total DB exec time | 14,095 ms / 592 s = **2.38 % of one core** (Large baseline: 3.11 %) |
+| Statement rate | 33.7 /s |
+| Commits | 13.0 /s |
+| `campaigns_public` | 22 calls, 36.3 ms mean |
+| Games catalogue | 77 calls, 11.8 ms mean |
+| Encyclopedia reads | 97 calls, 9.7 ms mean |
+| `realtime.subscription` writes | +154 → 0.26 /s (Large: 0.187–0.405 /s) |
+| Seq-tuple deltas | `encyclopedia_entities` **0**, `stories` +13,020, `games` +53,428 |
+| Max exec seen | `list_stories_v2` 176.9 ms and `list_changes` 168.2 ms — both single cold-cache outliers recorded in the minutes right after restart, not repeated in the warm window |
+
+**No rollback threshold was reached. Medium is stable; no revert to Large was
+performed.** Phase 4 was not started.
+
+### Recommended follow-up (not performed)
+
+Re-run this same 592 s delta during the 13:00–14:00 UTC peak hour to confirm
+the thresholds hold at ~8–10× this window's traffic.
+
