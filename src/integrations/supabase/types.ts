@@ -2685,6 +2685,44 @@ export type Database = {
           },
         ]
       }
+      story_unlock_norm_v2: {
+        Row: {
+          created_at: string
+          is_valid: boolean
+          leaves: Json
+          norm_expr: Json | null
+          spec: Json | null
+          story_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          is_valid?: boolean
+          leaves?: Json
+          norm_expr?: Json | null
+          spec?: Json | null
+          story_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          is_valid?: boolean
+          leaves?: Json
+          norm_expr?: Json | null
+          spec?: Json | null
+          story_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "story_unlock_norm_v2_story_id_fkey"
+            columns: ["story_id"]
+            isOneToOne: true
+            referencedRelation: "stories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppressed_emails: {
         Row: {
           created_at: string
@@ -3503,6 +3541,14 @@ export type Database = {
         Args: { p_depth: number; p_node: Json; p_user_id: string }
         Returns: boolean
       }
+      _eval_unlock_prepared_guest_v2: {
+        Args: { p_ev: Json; p_expr: Json; p_valid: boolean }
+        Returns: boolean
+      }
+      _eval_unlock_prepared_v2: {
+        Args: { p_expr: Json; p_user_id: string; p_valid: boolean }
+        Returns: boolean
+      }
       _feedback_dispatch_push: {
         Args: {
           p_body: string
@@ -3547,6 +3593,7 @@ export type Database = {
         }
         Returns: Json
       }
+      _story_unlock_leaves_v2: { Args: { p_expr: Json }; Returns: Json }
       _story_validate_v2_one: { Args: { p_in: Json }; Returns: Json }
       _uuid_or_null_v2: { Args: { p_text: string }; Returns: string }
       ack_announcement_v16: {
