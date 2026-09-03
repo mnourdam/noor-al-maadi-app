@@ -1554,18 +1554,24 @@ function NewsletterSetting() {
 
 function FeedbackInboxLink() {
   const [unread, setUnread] = useState(0);
+  const { user } = useAccount();
+  const uid = user?.id ?? null;
   useEffect(() => {
     let mounted = true;
     const refresh = () => {
       countMyUnreadFeedback().then((n) => { if (mounted) setUnread(n); }).catch(() => {});
     };
     refresh();
+    if (!uid) return () => { mounted = false; };
+    // Phase 3B (R5): scope the channel to this player's own issues instead of
+    // receiving every feedback_issues change app-wide.
     const channel = supabase
-      .channel("profile-feedback-unread")
-      .on("postgres_changes", { event: "*", schema: "public", table: "feedback_issues" }, refresh)
+      .channel(`profile-feedback-unread-${uid}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "feedback_issues", filter: `reporter_id=eq.${uid}` }, refresh)
       .subscribe();
     return () => { mounted = false; supabase.removeChannel(channel); };
-  }, []);
+  }, [uid]);
+
   return (
     <Link to="/inbox" search={{ tab: "contributions" as const }} className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-background/40 p-3 hover:border-gold/30">
       <div className="grid size-9 place-items-center rounded-xl bg-gold/15 text-gold"><Inbox className="size-4" /></div>
