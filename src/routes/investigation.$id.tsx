@@ -159,19 +159,34 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
   // Investigations are the recovery path when hearts are empty — they
   // never gate on hearts and never consume hearts.
 
+  // V17-05 — ONE presentation mapping per active step. Both the rendered
+  // options and the verification path read this single memo; nothing
+  // recomputes the shuffle on submit. Identity is structural
+  // (investigation slug + step index), never the free-text prompt, so two
+  // steps with identical prompts get independent orders.
+  const stepShuffle = useMemo(() => {
+    if (!step) return null;
+    if (step.type !== "question" && step.type !== "decision") return null;
+    if (!step.options?.length) return null;
+    return shuffleOptions(
+      `${row.slug}:${idx}`,
+      step.options,
+      step.correctAnswer ?? -1,
+      row.slug,
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [row.slug, idx, step?.type, step?.options, step?.correctAnswer]);
+
   const onConfirm = () => {
     if (!step) return;
     if (step.type === "question" || step.type === "decision") {
       if (picked == null || answerState === "correct") return;
 
-      const shuffled = shuffleOptions(
-        step.prompt,
-        step.options,
-        step.correctAnswer ?? -1,
-        row.slug
-      );
-
-      const isCorrect = typeof step.correctAnswer === "number" ? picked === shuffled.correctIndex : true;
+      // Display selection → original authored identity → authored answer.
+      const originalIndex = stepShuffle ? stepShuffle.toOriginal[picked] : picked;
+      const isCorrect = typeof step.correctAnswer === "number"
+        ? originalIndex === step.correctAnswer
+        : true;
 
       if (isCorrect) {
         // Record this index exactly once. Set semantics guarantee that
