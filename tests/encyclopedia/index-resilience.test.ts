@@ -39,9 +39,9 @@ const { encyclopediaIndexQueryOptions, AUTHORITY_TIMEOUT_MS } = await import(
 );
 
 const ROWS = [
-  { id: "1", entity_type: "figure", title: "صلاح الدين", slug: "saladin", enabled: true, summary: "قائد أيوبي." },
-  { id: "2", entity_type: "figure", title: "طارق بن زياد", slug: "tariq", enabled: true, summary: "فاتح الأندلس." },
-  { id: "3", entity_type: "city", title: "قرطبة", slug: "cordoba", enabled: true, summary: "حاضرة الأندلس." },
+  { id: "1", entity_type: "figure", title: "صلاح الدين", slug: "saladin", enabled: true, summary: "قائد أيوبي استعاد بيت المقدس بعد معركة حطين الفاصلة." },
+  { id: "2", entity_type: "figure", title: "طارق بن زياد", slug: "tariq", enabled: true, summary: "قائد فتح الأندلس وعبر المضيق الذي يحمل اسمه اليوم." },
+  { id: "3", entity_type: "city", title: "قرطبة", slug: "cordoba", enabled: true, summary: "حاضرة الأندلس ومركز العلم في القرن الرابع الهجري." },
 ] as never[];
 
 function run() {
