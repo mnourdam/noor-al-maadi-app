@@ -95,6 +95,19 @@ export function renderNotification(row: PersonalNotificationRow): RenderedNotifi
         emoji: "🔒",
       };
     }
+    case "comment_reply": {
+      // One notification per reply, batched by parent comment. The deep link
+      // targets the PARENT so the thread opens around the player's own words.
+      const n = row.count;
+      const parentId = (row.payload as { comment_id?: string }).comment_id;
+      const base = commentHref(row);
+      return {
+        title: n <= 1 ? "ردّ أحد القرّاء على تأمّلك." : `ردّ ${n} قرّاء على تأمّلك.`,
+        body: preview ? `«${preview}»` : on,
+        href: parentId && base !== "/inbox" ? `${base}?comment=${parentId}` : base,
+        emoji: "💬",
+      };
+    }
     case "comment_restored":
       return {
         title: "أُعيد إظهار مساهمتك.",
