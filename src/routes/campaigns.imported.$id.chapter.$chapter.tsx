@@ -489,19 +489,41 @@ function ImportedChapterPlayer() {
         </div>
 
         <div className="mx-auto max-w-2xl px-5 pt-4">
-          <div className="flex items-center gap-2 text-[10px] tracking-widest text-gold/80">
-            <Scroll className="size-3.5" /> {reviewMode ? "مراجعة الفصل" : "فصل من الحملة"}
-          </div>
-          <h1 className="font-display mt-1 text-2xl font-bold shimmer-text">{chapter.title}</h1>
-          {chapter.subtitle && <p className="mt-1 text-sm text-gold/80">{chapter.subtitle}</p>}
-
-          {chapter.imageUrl && (
-            <CachedImage
-              src={chapter.imageUrl}
-              alt=""
-              loading="lazy"
-              className="mt-4 w-full rounded-2xl border border-gold/20 object-cover"
-            />
+          {chapter.imageUrl ? (
+            // Hero composition — title overlays the artwork like campaign key art.
+            <div className="relative overflow-hidden rounded-2xl border border-gold/15">
+              <CachedImage
+                src={chapter.imageUrl}
+                alt=""
+                loading="lazy"
+                className="aspect-[16/9] w-full object-cover"
+              />
+              {/* Cinematic navy dissolve: artwork pristine up top, resolves to
+                  the page background behind the typography. */}
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  background:
+                    "linear-gradient(to bottom, oklch(0.14 0.03 260 / 0.18) 0%, transparent 30%, transparent 52%, oklch(0.14 0.03 260 / 0.72) 76%, var(--background) 100%)",
+                }}
+              />
+              <div className="absolute inset-x-0 bottom-0 p-4 pt-10">
+                <div className="flex items-center gap-2 text-[10px] tracking-widest text-gold/80">
+                  <Scroll className="size-3.5" /> {reviewMode ? "مراجعة الفصل" : "فصل من الحملة"}
+                </div>
+                <h1 className="font-display mt-1 text-2xl font-bold shimmer-text">{chapter.title}</h1>
+                {chapter.subtitle && <p className="mt-1 text-sm text-gold/80">{chapter.subtitle}</p>}
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 text-[10px] tracking-widest text-gold/80">
+                <Scroll className="size-3.5" /> {reviewMode ? "مراجعة الفصل" : "فصل من الحملة"}
+              </div>
+              <h1 className="font-display mt-1 text-2xl font-bold shimmer-text">{chapter.title}</h1>
+              {chapter.subtitle && <p className="mt-1 text-sm text-gold/80">{chapter.subtitle}</p>}
+            </>
           )}
 
           {chapter.introText && (
