@@ -37,6 +37,22 @@ export function deriveStreak(
 }
 
 
+/**
+ * V17-04A — explicit day precedence. IRTH day keys are `YYYY-MM-DD`, so a
+ * lexical comparison is a chronological comparison. Used wherever a streak
+ * value and its day must stay coherent (never "new streak + stale day").
+ */
+export function laterDayKey(
+  a: string | null | undefined,
+  b: string | null | undefined,
+): string | null {
+  const x = a || null;
+  const y = b || null;
+  if (!x) return y;
+  if (!y) return x;
+  return y > x ? y : x;
+}
+
 function dailyMissionsForDate(_d: Date = new Date()): { id: string }[] {
   return [];
 }
@@ -270,7 +286,19 @@ interface Ctx {
    * into the local profile WITHOUT discarding local-only fields. Mirrors
    * server `profiles` columns onto the local snapshot.
    */
-  applyServerStats: (stats: { xp?: number | null; dinars?: number | null; hearts?: number | null; streak?: number | null }) => void;
+  applyServerStats: (stats: {
+    xp?: number | null;
+    dinars?: number | null;
+    hearts?: number | null;
+    streak?: number | null;
+    /**
+     * V17-04A — the server-owned day that the streak mirror belongs to
+     * (`profiles.last_streak_day`). A server streak MUST arrive together
+     * with its day so the HUD's `deriveStreak` cannot report a false 0
+     * from stale local date metadata.
+     */
+    lastStreakDay?: string | null;
+  }) => void;
   // Social v1
   grantTitle: (title: string) => void;
   grantArtifact: (id: string) => void;
@@ -983,6 +1011,11 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       // expiry is display-only. This stops a stale local `lastActiveDay`
       // from wiping a valid server streak during hydration.
       const nextStreak = numMax(p.streak, cloud.streak);
+      // V17-04A — the `...cloud` spread below used to let an OLDER cloud
+      // `lastActiveDay` overwrite a newer local one, producing the
+      // "correct streak + stale day" pair that makes the HUD show 0.
+      // Precedence is now explicit: keep the later of the two days.
+      const nextLastActiveDay = laterDayKey(p.lastActiveDay, cloud.lastActiveDay);
 
 
       // Hearts: cloud value wins ONLY when it differs from the local
@@ -1030,6 +1063,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         // seasonPoints removed in Phase 3B
         dinars: numMax(p.dinars, cloud.dinars, STARTING_DINARS),
         streak: nextStreak,
+        lastActiveDay: nextLastActiveDay,
         hearts: heartsPatch.hearts,
         heartsAt: heartsPatch.heartsAt,
         // Union all progression arrays. Include the server sticky
@@ -1086,8 +1120,17 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         // zeroed from a client-side day derivation.
         const nextStreak = Math.max(0, Math.floor(stats.streak));
 
-        if (nextStreak !== p.streak) {
+        if (nextStreak !== next.streak) {
           next = { ...next, streak: nextStreak };
+          changed = true;
+        }
+        // V17-04A — the streak mirror and its day travel together. Without
+        // this, a server streak of N could sit next to a stale
+        // `lastActiveDay`, and `deriveStreak` would render 0 in the HUD
+        // while /profile rendered N.
+        const day = laterDayKey(next.lastActiveDay, stats.lastStreakDay ?? null);
+        if (day !== next.lastActiveDay) {
+          next = { ...next, lastActiveDay: day };
           changed = true;
         }
       }

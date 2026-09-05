@@ -183,7 +183,13 @@ export function derivePublicStats(p: ProfileState, canonicalCompletionsCount?: n
     xp: p.points,
     dinars: p.dinars ?? 0,
     hearts,
-    streak: p.streak,
+    // V17-04A: `streak` is DELIBERATELY ABSENT.
+    // `public.user_streak_days` is the authoritative streak ledger and
+    // `profiles.streak` / `longest_streak` / `last_streak_day` are
+    // server-maintained mirrors written only by `record_streak_activity_v16`.
+    // The client must never push an authoritative streak value; doing so
+    // previously let stale/guest/fresh-hydrate local state overwrite the
+    // server mirror with 0. Local optimism stays local.
     campaigns_completed: completedCount,
     artifacts_collected: p.artifactsFound.length,
     discovery_pct: discovery,

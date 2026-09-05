@@ -496,12 +496,14 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         if (cancelled || getActiveUserId() !== uid || error || !data) return;
         // Skip if local has unpushed gameplay changes that just happened.
         if (Date.now() - lastLocalChangeRef.current < REALTIME_GUARD_MS) return;
-        const row = data as { xp?: number; dinars?: number; hearts?: number; streak?: number };
+        const row = data as { xp?: number; dinars?: number; hearts?: number; streak?: number; last_streak_day?: string | null };
         applyServerStatsRef.current({
           xp: row.xp ?? null,
           dinars: row.dinars ?? null,
           hearts: row.hearts ?? null,
           streak: row.streak ?? null,
+          // V17-04A — the mirror's own day travels with the mirror.
+          lastStreakDay: row.last_streak_day ?? null,
         });
       } catch { /* ignore */ }
     })();
@@ -518,12 +520,13 @@ export function AccountProvider({ children }: { children: ReactNode }) {
             // Local has unpushed changes — the broadcast row is stale.
             return;
           }
-          const row = (payload.new ?? {}) as { xp?: number; dinars?: number; hearts?: number; streak?: number };
+          const row = (payload.new ?? {}) as { xp?: number; dinars?: number; hearts?: number; streak?: number; last_streak_day?: string | null };
           applyServerStatsRef.current({
             xp: row.xp ?? null,
             dinars: row.dinars ?? null,
             hearts: row.hearts ?? null,
             streak: row.streak ?? null,
+            lastStreakDay: row.last_streak_day ?? null,
           });
         },
       )
