@@ -16,7 +16,7 @@
 // ============================================================
 
 import type { HistoricalAvatar } from "@/lib/avatars";
-import { emblemUnlockRule, type EmblemUnlockKind } from "./unlock-rules";
+import { emblemUnlockRule, type EmblemUnlockRuleKind } from "./unlock-rules";
 
 export interface EmblemUnlockContext {
   /** Distinct completed campaigns. */
@@ -29,7 +29,7 @@ export interface EmblemUnlockContext {
 
 export interface EmblemUnlockState {
   unlocked: boolean;
-  kind: EmblemUnlockKind;
+  kind: EmblemUnlockRuleKind;
   comingSoon: boolean;
   /** Exact Arabic requirement — matches what the server enforces. */
   requirementText: string;

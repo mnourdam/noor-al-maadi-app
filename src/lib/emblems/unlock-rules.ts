@@ -19,14 +19,14 @@
 
 import { AVATARS, type HistoricalAvatar } from "@/lib/avatars";
 
-export type EmblemUnlockKind =
+export type EmblemUnlockRuleKind =
   | "default"
   | "campaign_count"
   | "museum_count"
   | "coming_soon";
 
 export interface EmblemUnlockRule {
-  kind: EmblemUnlockKind;
+  kind: EmblemUnlockRuleKind;
   /** Only present for the count-based kinds. */
   threshold?: number;
 }
