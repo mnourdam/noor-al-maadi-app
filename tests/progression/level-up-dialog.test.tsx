@@ -295,3 +295,180 @@ describe("ModalPortal reference-counted body lock", () => {
     expect(document.documentElement.style.overflow).toBe("");
   });
 });
+
+// ---------------------------------------------------------------
+// 4. Live close-path behaviour (real component, mocked profile)
+// ---------------------------------------------------------------
+
+let mockPoints = 0;
+const backDismissers: Array<() => void> = [];
+
+vi.mock("@/lib/profile", () => ({
+  useProfile: () => ({ profile: { points: mockPoints } }),
+}));
+
+vi.mock("@/lib/navigation/overlay-registration", () => ({
+  OverlayDismissRegistration: ({ onClose }: { onClose: () => void }) => {
+    backDismissers.length = 0;
+    backDismissers.push(onClose);
+    return null;
+  },
+}));
+
+describe("level-up dialog — live behaviour", () => {
+  let host: HTMLElement;
+  let root: Root;
+  let LevelUpWatcher: (props: Record<string, never>) => JSX.Element | null;
+  let LEVELS: Array<{ level: number; min: number }>;
+
+  beforeEach(async () => {
+    __resetModalPortalLock();
+    localStorage.clear();
+    backDismissers.length = 0;
+    mockPoints = 0;
+    window.scrollTo = vi.fn() as unknown as typeof window.scrollTo;
+    ({ LEVELS } = await import("@/lib/progression"));
+    ({ LevelUpWatcher } = (await import("@/components/LevelUpWatcher")) as never);
+    host = document.createElement("div");
+    document.body.appendChild(host);
+    root = createRoot(host);
+  });
+
+  afterEach(() => {
+    try { act(() => root.unmount()); } catch { /* already gone */ }
+    host.remove();
+    __resetModalPortalLock();
+    document.body.style.position = "";
+    document.documentElement.style.overflow = "";
+  });
+
+  const render = () => act(() => { root.render(<LevelUpWatcher />); });
+  const setPoints = (p: number) => {
+    mockPoints = p;
+    act(() => { root.render(<LevelUpWatcher />); });
+  };
+  const pointsForLevel = (n: number) => LEVELS.find((l) => l.level === n)!.min;
+  const dialog = () => document.querySelector('[role="dialog"][data-state="open"]');
+  const buttons = () =>
+    Array.from(document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button'));
+  const click = (el: HTMLElement) => {
+    act(() => { el.dispatchEvent(new MouseEvent("click", { bubbles: true })); });
+  };
+
+  const levelUpOnce = () => {
+    render();                                  // baseline at level 1
+    setPoints(pointsForLevel(2));              // genuine +1
+    expect(dialog()).not.toBeNull();
+  };
+
+  it("shows the dialog on a genuine +1 level-up", () => {
+    levelUpOnce();
+    expect(document.body.textContent).toContain("وصلت إلى المستوى");
+  });
+
+  it("Continue Journey closes it", () => {
+    levelUpOnce();
+    const cont = buttons().find((b) => b.textContent?.includes("واصل الرحلة"))!;
+    click(cont);
+    expect(dialog()).toBeNull();
+  });
+
+  it("the X control closes it", () => {
+    levelUpOnce();
+    // last button labelled إغلاق is the X (first is the backdrop)
+    const x = buttons().filter((b) => b.getAttribute("aria-label") === "إغلاق")[1];
+    click(x);
+    expect(dialog()).toBeNull();
+  });
+
+  it("the backdrop closes it", () => {
+    levelUpOnce();
+    const backdrop = buttons().filter((b) => b.getAttribute("aria-label") === "إغلاق")[0];
+    click(backdrop);
+    expect(dialog()).toBeNull();
+  });
+
+  it("hardware Back uses the same close path", () => {
+    levelUpOnce();
+    expect(backDismissers).toHaveLength(1);
+    act(() => backDismissers[0]());
+    expect(dialog()).toBeNull();
+  });
+
+  it("rapid repeated taps are harmless and never latch the dialog open", () => {
+    levelUpOnce();
+    const cont = buttons().find((b) => b.textContent?.includes("واصل الرحلة"))!;
+    // Fire several clicks on the same node before React can remove it.
+    act(() => {
+      for (let i = 0; i < 5; i++) {
+        cont.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      }
+    });
+    expect(dialog()).toBeNull();
+  });
+
+  it("a second close call before unmount is not blocked by any latch", () => {
+    levelUpOnce();
+    expect(backDismissers).toHaveLength(1);
+    const close = backDismissers[0];
+    act(() => { close(); close(); close(); });
+    expect(dialog()).toBeNull();
+  });
+
+  it("the same profile update delivered twice does not recreate the level", () => {
+    levelUpOnce();
+    const cont = buttons().find((b) => b.textContent?.includes("واصل الرحلة"))!;
+    click(cont);
+    setPoints(pointsForLevel(2)); // replayed identical update
+    expect(dialog()).toBeNull();
+  });
+
+  it("a realtime/hydration update while the dialog is open does not duplicate it", () => {
+    levelUpOnce();
+    setPoints(pointsForLevel(2) + 1); // same level, more XP
+    expect(document.querySelectorAll('[role="dialog"][data-state="open"]').length).toBe(1);
+  });
+
+  it("closing never re-opens an acknowledged level after further updates", () => {
+    levelUpOnce();
+    act(() => backDismissers[0]());
+    setPoints(pointsForLevel(2) + 5);
+    expect(dialog()).toBeNull();
+  });
+
+  it("a second genuine +1 while the first is open queues and stays closable", () => {
+    levelUpOnce();
+    setPoints(pointsForLevel(3));          // queued behind the open dialog
+    expect(document.body.textContent).toContain("وصلت إلى المستوى 2");
+    act(() => backDismissers[0]());        // close the first
+    expect(dialog()).not.toBeNull();       // second appears
+    expect(document.body.textContent).toContain("وصلت إلى المستوى 3");
+    act(() => backDismissers[0]());        // and is closable
+    expect(dialog()).toBeNull();
+  });
+
+  it("releases the body lock once the dialog closes", () => {
+    levelUpOnce();
+    expect(document.body.style.position).toBe("fixed");
+    act(() => backDismissers[0]());
+    expect(document.body.style.position).toBe("");
+    expect(document.documentElement.style.overflow).toBe("");
+    expect(__getModalPortalLockCount()).toBe(0);
+  });
+
+  it("persists the seen level so a remount cannot replay it", () => {
+    levelUpOnce();
+    act(() => backDismissers[0]());
+    expect(localStorage.getItem("irth.levelup.seen")).toBe("2");
+    act(() => root.unmount());
+    root = createRoot(host);
+    render();
+    expect(dialog()).toBeNull();
+  });
+
+  it("a multi-level jump stays silent (unchanged pre-existing behaviour)", () => {
+    render();
+    setPoints(pointsForLevel(4));
+    expect(dialog()).toBeNull();
+  });
+});
