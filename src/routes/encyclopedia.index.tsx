@@ -155,7 +155,12 @@ function EncyclopediaHubFull() {
   // One shared, pre-built index (see src/lib/encyclopedia/index-store.ts).
   // Keyed by the offline-snapshot data version, so counts can never come from
   // a partial snapshot and never linger in cache after a sync.
-  const { index, isPending: isLoading } = useEncyclopediaIndex();
+  const { index, isPending: isLoading, isError, isFetching, refetch } = useEncyclopediaIndex();
+  // Fail-safe: a healthy load never takes this long, so past it we swap the
+  // spinner for a recoverable state instead of freezing on "جارٍ فتح المكتبة…".
+  const stalled = useStalled(isLoading, 15_000);
+  const unavailable = isError || stalled;
+
 
   const all = index.rows;
   const counts = index.counts;
@@ -442,7 +447,9 @@ function EncyclopediaHubFull() {
         </section>
 
 
-        {isLoading ? (
+        {unavailable ? (
+          <EncyclopediaUnavailable onRetry={refetch} retrying={isFetching} />
+        ) : isLoading ? (
           <p className="mt-10 text-center text-xs text-muted-foreground">جارٍ فتح المكتبة…</p>
         ) : total === 0 ? (
           <p className="mt-8 rounded-2xl border border-white/10 bg-surface/70 p-6 text-center text-xs text-muted-foreground">
