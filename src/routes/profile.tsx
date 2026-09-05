@@ -100,6 +100,20 @@ function ProfilePage() {
   } = useProfile();
 
   const { user, account, displayName: accountDisplayName, updateDisplayName, updateUsername, isUsernameAvailable, signOut } = useAccount();
+
+  // V17-08 — emblem unlock context. Signed-in counts come from the same
+  // server ledgers the equip guard reads; guests evaluate local evidence.
+  const emblemGuestFallback = useMemo(
+    () => ({ campaignsCompleted: profile.campaignsCompleted.length, museumItems: 0 }),
+    [profile.campaignsCompleted.length],
+  );
+  const emblemUnlockContext = useEmblemUnlockContext(
+    user?.id ?? null,
+    profile.avatarId ?? DEFAULT_AVATAR_ID,
+    emblemGuestFallback,
+  );
+
+
   
 
   const displayName = user ? (accountDisplayName || "مستخدم إرث") : (profile.name || "ضيف");
@@ -561,6 +575,7 @@ function ProfilePage() {
             }
           }}
           onClose={() => setPickingAvatar(false)}
+          unlockContext={emblemUnlockContext}
         />
       )}
       {/* <AccountDiagPanel /> rendered inside tabs */}
