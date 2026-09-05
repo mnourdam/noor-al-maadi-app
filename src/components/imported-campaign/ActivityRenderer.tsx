@@ -462,16 +462,17 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone, campaignId, c
     setFeedback(null);
   };
 
-  const eligibleHintCount = order.filter((id) => (
-    !pinnedIds.includes(id) && correctIndexOf(id) !== order.indexOf(id)
-  )).length;
+  // V17-01: hint availability MUST NOT depend on the live arrangement being
+  // correct — that leaked the answer before Verify. Only correctness-neutral
+  // state may gate the button.
   const canAffordHint = (profile?.dinars ?? 0) >= ARRANGE_HINT_COST;
+  const hintCapReached = pinnedIds.length >= order.length - 1;
   const hintDisabled =
     resolved ||
     hintBusy ||
-    pinnedIds.length >= order.length - 1 ||
-    eligibleHintCount === 0 ||
+    hintCapReached ||
     !canAffordHint;
+
 
   const useHint = () => {
     if (resolved) return;
