@@ -226,13 +226,42 @@ export function CommentItem({ row, onChange, onDelete, currentUserId = null, con
         </p>
       )}
 
-      <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
-        <span>
-          {formatDateAr(row.created_at)}
-          {row.edited_at && <span className="mr-1"> · معدّل</span>}
-        </span>
+      <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+        <div className="flex min-w-0 items-center gap-2">
+          {!editing && (
+            <button
+              type="button"
+              onClick={() => void toggleHeart()}
+              disabled={heartPending}
+              aria-pressed={heartActive}
+              aria-label={
+                heartActive
+                  ? `إلغاء الاستزادة من هذه المساهمة (${heartCount})`
+                  : `استزدتُ من هذه المساهمة (${heartCount})`
+              }
+              className={cn(
+                "inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5",
+                "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold",
+                "disabled:opacity-60",
+                heartActive
+                  ? "border-gold/50 bg-gold/15 text-gold"
+                  : "border-white/10 text-muted-foreground hover:border-white/20 hover:text-foreground",
+              )}
+            >
+              <Heart
+                className={cn("size-3", heartActive && "fill-current")}
+                aria-hidden="true"
+              />
+              <span className="tabular-nums">{heartCount}</span>
+            </button>
+          )}
+          <span className="truncate">
+            {formatDateAr(row.created_at)}
+            {row.edited_at && <span className="mr-1"> · معدّل</span>}
+          </span>
+        </div>
         {!editing && (
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             {row.is_mine && canEdit && (
               <button
                 type="button"
