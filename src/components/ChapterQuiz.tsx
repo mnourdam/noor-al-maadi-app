@@ -6,6 +6,7 @@ import {
 } from "@/lib/quiz-engine";
 import { useProfile } from "@/lib/profile";
 import { sfx } from "@/components/games/sfx";
+import { shuffleOptions } from "@/lib/campaigns/optionShuffle";
 
 interface Props {
   campaignId: string;
@@ -38,6 +39,16 @@ export function ChapterQuiz({ campaignId, chapterId, quiz, onPassed }: Props) {
   const [revealed, setRevealed] = useState(false);
 
   const q: QuizQuestion = quiz.questions[index];
+
+  // V17-05 — presentation-time shuffle. `q.choices` / `q.correctIndex` are
+  // never mutated; one mapping per active question, stable across
+  // re-render, selection and reveal.
+  const shuffled = useMemo(
+    () => shuffleOptions(`${campaignId}:${chapterId}:${quiz.id}:${q.id}`, q.choices, q.correctIndex),
+    [campaignId, chapterId, quiz.id, q.id, q.choices, q.correctIndex],
+  );
+  const displayChoices = shuffled.options;
+  const displayCorrectIndex = shuffled.correctIndex;
   const totalAnswered = quiz.questions.filter(qq =>
     isQuestionAnsweredCorrectly(profile.missionsCompleted, campaignId, chapterId, quiz, qq.id),
   ).length;
@@ -49,7 +60,7 @@ export function ChapterQuiz({ campaignId, chapterId, quiz, onPassed }: Props) {
     if (revealed) return;
     if (!hasHearts()) return;
     setRevealed(true);
-    if (picked === q.correctIndex) {
+    if (picked === displayCorrectIndex) {
       sfx("correct", `quiz:${campaignId}:${chapterId}:${quiz.id}:${q.id}`);
       completeMission(quizQuestionKey(campaignId, chapterId, quiz.id, q.id), q.xp);
       if (q.badgeId) awardBadge(q.badgeId);
@@ -92,8 +103,8 @@ export function ChapterQuiz({ campaignId, chapterId, quiz, onPassed }: Props) {
     );
   }
 
-  const correct = revealed && picked === q.correctIndex;
-  const wrong = revealed && picked !== q.correctIndex;
+  const correct = revealed && picked === displayCorrectIndex;
+  const wrong = revealed && picked !== displayCorrectIndex;
 
   return (
     <div className="rounded-2xl border border-gold/30 bg-gradient-to-b from-amber-900/15 via-surface to-stone-900/20 p-5">
@@ -110,9 +121,9 @@ export function ChapterQuiz({ campaignId, chapterId, quiz, onPassed }: Props) {
         {q.question}
       </p>
       <div className="mt-4 space-y-2">
-        {q.choices.map((c, i) => {
+        {displayChoices.map((c, i) => {
           const isPicked = picked === i;
-          const isCorrect = i === q.correctIndex;
+          const isCorrect = i === displayCorrectIndex;
           let style = "border-white/10 bg-surface/60";
           if (revealed) {
             if (isCorrect) style = "border-emerald-500/60 bg-emerald-500/10";
