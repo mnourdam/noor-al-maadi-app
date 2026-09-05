@@ -74,7 +74,9 @@ export function purchaseOrderingHelp(
   logicalKey: string,
   fingerprint: string,
   currentOrder: string[],
-  correctIndexOf: (id: string) => number,
+  /** Kept for call-site compatibility; V17-01 no longer consults live positions. */
+  _correctIndexOf: (id: string) => number,
+
   helpers: { pay: (txId: string) => boolean }
 ): { itemId: string } | null {
   const store = getHelpStore();
