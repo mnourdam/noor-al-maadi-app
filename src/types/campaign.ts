@@ -82,6 +82,8 @@ export interface CampaignChapter {
   subtitle?: string;
   introText?: string;
   historicalReadingText?: string;
+  /** Optional single illustration shown with this chapter (https URL). */
+  imageUrl?: string;
   order: number;
   unlockRequirement?: string;        // chapter id that must be completed first
   rewards?: CampaignReward;
