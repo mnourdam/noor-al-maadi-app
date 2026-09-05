@@ -184,11 +184,26 @@ export async function setMyPreferences(prefs: NotificationPreferences): Promise<
  * Subscribe to realtime delivery updates for the current user.
  * Returns an unsubscribe function. Re-fetches the list on any change so
  * the Bell badge and Notification Center stay in sync.
+ *
+ * Phase 3B (R3): a single shared, ref-counted pair of channels is opened for
+ * the whole session no matter how many components subscribe (InAppBanner,
+ * HUD, home, /notifications). Every listener still gets every event, filters
+ * are unchanged, and the channels are removed once the last listener leaves.
  */
-export function subscribeToMyNotifications(onChange: () => void): () => void {
-  if (typeof navigator !== "undefined" && navigator.onLine === false) return () => {};
+type NotifListener = () => void;
+
+let sharedListeners = new Set<NotifListener>();
+let sharedChannels: Array<ReturnType<typeof supabase.channel>> = [];
+let sharedTeardown: (() => void) | null = null;
+
+function notifyShared() {
+  for (const fn of Array.from(sharedListeners)) {
+    try { fn(); } catch { /* listener errors are non-fatal */ }
+  }
+}
+
+function openSharedChannels() {
   let alive = true;
-  const channels: Array<ReturnType<typeof supabase.channel>> = [];
 
   (async () => {
     const { data } = await supabase.auth.getUser();
@@ -196,13 +211,13 @@ export function subscribeToMyNotifications(onChange: () => void): () => void {
     if (!alive || !uid) return;
 
     // Per-user deliveries (read/dismissed/deleted state).
-    channels.push(
+    sharedChannels.push(
       supabase
         .channel(`notif-deliveries-${uid}`)
         .on(
           "postgres_changes",
           { event: "*", schema: "public", table: "notification_deliveries", filter: `user_id=eq.${uid}` },
-          () => onChange(),
+          () => notifyShared(),
         )
         .subscribe(),
     );
@@ -210,21 +225,38 @@ export function subscribeToMyNotifications(onChange: () => void): () => void {
     // Notifications inserts: catches both direct (target_user_id=uid) and
     // broadcast/all rows that have no per-user delivery row yet. RLS
     // ensures the user only sees rows they are allowed to read.
-    channels.push(
+    sharedChannels.push(
       supabase
         .channel(`notif-inserts-${uid}`)
         .on(
           "postgres_changes",
           { event: "INSERT", schema: "public", table: "notifications" },
-          () => onChange(),
+          () => notifyShared(),
         )
         .subscribe(),
     );
   })();
 
-  return () => {
+  sharedTeardown = () => {
     alive = false;
-    for (const c of channels) supabase.removeChannel(c);
+    for (const c of sharedChannels) supabase.removeChannel(c);
+    sharedChannels = [];
+    sharedTeardown = null;
+  };
+}
+
+export function subscribeToMyNotifications(onChange: () => void): () => void {
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return () => {};
+
+  sharedListeners.add(onChange);
+  if (sharedListeners.size === 1) openSharedChannels();
+
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    sharedListeners.delete(onChange);
+    if (sharedListeners.size === 0) sharedTeardown?.();
   };
 }
 

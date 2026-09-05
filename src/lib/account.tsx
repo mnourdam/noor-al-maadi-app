@@ -533,7 +533,8 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       cancelled = true;
       supabase.removeChannel(channel);
     };
-  }, [user?.id, applyServerStats]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
 
 
