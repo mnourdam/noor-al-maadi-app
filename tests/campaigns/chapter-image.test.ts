@@ -1,6 +1,6 @@
 // V17-09 — optional chapter image: normalization, serialization, offline discovery.
 import { describe, it, expect } from "vitest";
-import { normalizeCampaign } from "@/lib/campaignStorage";
+import { validateCampaign } from "@/lib/campaignStorage";
 import { collectImageUrls } from "@/lib/image-cache";
 import { storagePathFromChapterImageUrl } from "@/lib/campaign-chapter-image";
 
@@ -18,28 +18,28 @@ function doc(chapterExtra: Record<string, unknown>) {
 
 describe("chapter imageUrl", () => {
   it("survives normalization", () => {
-    const { campaign } = normalizeCampaign(doc({ imageUrl: URL_A }));
+    const { campaign } = validateCampaign(doc({ imageUrl: URL_A }));
     expect(campaign.chapters[0].imageUrl).toBe(URL_A);
   });
 
   it("round-trips through JSON export/import unchanged", () => {
-    const first = normalizeCampaign(doc({ imageUrl: URL_A })).campaign;
-    const again = normalizeCampaign(JSON.parse(JSON.stringify(first))).campaign;
+    const first = validateCampaign(doc({ imageUrl: URL_A })).campaign;
+    const again = validateCampaign(JSON.parse(JSON.stringify(first))).campaign;
     expect(again.chapters[0].imageUrl).toBe(URL_A);
   });
 
   it("stays undefined for chapters without an image", () => {
-    const { campaign } = normalizeCampaign(doc({}));
+    const { campaign } = validateCampaign(doc({}));
     expect(campaign.chapters[0].imageUrl).toBeUndefined();
   });
 
   it("ignores blank values", () => {
-    const { campaign } = normalizeCampaign(doc({ imageUrl: "   " }));
+    const { campaign } = validateCampaign(doc({ imageUrl: "   " }));
     expect(campaign.chapters[0].imageUrl).toBeUndefined();
   });
 
   it("is discovered by the existing offline image collector", () => {
-    const { campaign } = normalizeCampaign(doc({ imageUrl: URL_A }));
+    const { campaign } = validateCampaign(doc({ imageUrl: URL_A }));
     expect(collectImageUrls(campaign).has(URL_A)).toBe(true);
   });
 
