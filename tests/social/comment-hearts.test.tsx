@@ -320,10 +320,14 @@ describe("offline and guests", () => {
     expect(toastError).toHaveBeenCalled();
   });
 
-  it("does not queue the heart for later — no outbox exists", () => {
+  it("does not queue the heart for later — no outbox machinery exists", () => {
     const src = read("src/components/social/CommentItem.tsx");
-    expect(src).not.toMatch(/outbox|enqueue|queueHeart|pendingSync/i);
+    // Prose in the header comment may say "no outbox"; what must not exist is
+    // any persistence or queue mechanism behind the heart action.
+    const code = src.replace(/\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(code).not.toMatch(/localStorage|idb|indexedDB|enqueue|outbox|retryQueue/i);
   });
+
 
   it("prompts a guest to sign in instead of calling the RPC", async () => {
     render(makeRow(), null);
