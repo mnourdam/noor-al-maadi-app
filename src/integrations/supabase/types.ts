@@ -80,6 +80,39 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_balance_grants: {
+        Row: {
+          consumed_at: string | null
+          created_at: string
+          delta: number
+          expected_value: number
+          field: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          consumed_at?: string | null
+          created_at?: string
+          delta: number
+          expected_value: number
+          field: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          consumed_at?: string | null
+          created_at?: string
+          delta?: number
+          expected_value?: number
+          field?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       admin_campaign_versions: {
         Row: {
           campaign_id: string
@@ -2652,6 +2685,44 @@ export type Database = {
           },
         ]
       }
+      story_unlock_norm_v2: {
+        Row: {
+          created_at: string
+          is_valid: boolean
+          leaves: Json
+          norm_expr: Json | null
+          spec: Json | null
+          story_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          is_valid?: boolean
+          leaves?: Json
+          norm_expr?: Json | null
+          spec?: Json | null
+          story_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          is_valid?: boolean
+          leaves?: Json
+          norm_expr?: Json | null
+          spec?: Json | null
+          story_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "story_unlock_norm_v2_story_id_fkey"
+            columns: ["story_id"]
+            isOneToOne: true
+            referencedRelation: "stories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppressed_emails: {
         Row: {
           created_at: string
@@ -3470,6 +3541,14 @@ export type Database = {
         Args: { p_depth: number; p_node: Json; p_user_id: string }
         Returns: boolean
       }
+      _eval_unlock_prepared_guest_v2: {
+        Args: { p_ev: Json; p_expr: Json; p_valid: boolean }
+        Returns: boolean
+      }
+      _eval_unlock_prepared_v2: {
+        Args: { p_expr: Json; p_user_id: string; p_valid: boolean }
+        Returns: boolean
+      }
       _feedback_dispatch_push: {
         Args: {
           p_body: string
@@ -3514,7 +3593,9 @@ export type Database = {
         }
         Returns: Json
       }
+      _story_unlock_leaves_v2: { Args: { p_expr: Json }; Returns: Json }
       _story_validate_v2_one: { Args: { p_in: Json }; Returns: Json }
+      _uuid_or_null_v2: { Args: { p_text: string }; Returns: string }
       ack_announcement_v16: {
         Args: { p_action?: string; p_announcement_id: string }
         Returns: boolean
@@ -3557,6 +3638,7 @@ export type Database = {
         Returns: Json
       }
       admin_campaign_progress_stats: { Args: { p_id: string }; Returns: Json }
+      admin_content_comment_rankings_v1: { Args: never; Returns: Json }
       admin_delete_story: {
         Args: { p_force?: boolean; p_mode?: string; p_story_id: string }
         Returns: Json
@@ -3693,6 +3775,15 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      admin_list_content_comments_v1: {
+        Args: {
+          p_limit?: number
+          p_offset?: number
+          p_search?: string
+          p_source?: string
+        }
+        Returns: Json
       }
       admin_list_feedback_issues: {
         Args: {
@@ -4905,12 +4996,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4934,11 +5025,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4959,11 +5050,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4984,11 +5075,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -5001,11 +5092,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
