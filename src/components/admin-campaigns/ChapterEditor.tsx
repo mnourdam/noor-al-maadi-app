@@ -8,6 +8,7 @@ import type { CampaignChapter, CampaignActivity, CampaignQuestionType } from "@/
 import { ACTIVITY_DEFAULTS } from "@/types/campaign";
 import { ActivityEditor } from "./ActivityEditor";
 import { uid } from "@/lib/campaignStorage";
+import { uploadChapterImage, removeChapterImageObject } from "@/lib/campaign-chapter-image";
 
 interface Props {
   chapter: CampaignChapter;
@@ -25,6 +26,36 @@ const labelCls = "block text-[11px] font-semibold text-amber-300/80 mb-1";
 
 export function ChapterEditor({ chapter, index, total, progressCount, onChange, onDelete, onDuplicate, onMove }: Props) {
   const [expanded, setExpanded] = useState(false);
+  const [imgBusy, setImgBusy] = useState(false);
+  const [imgError, setImgError] = useState<string | null>(null);
+
+  const pickChapterImage = async (file: File | null) => {
+    if (!file) return;
+    setImgBusy(true);
+    setImgError(null);
+    try {
+      const url = await uploadChapterImage(chapter.id, file, chapter.imageUrl ?? null);
+      onChange({ imageUrl: url });
+    } catch (err) {
+      setImgError(err instanceof Error ? err.message : "فشل رفع صورة الفصل.");
+    } finally {
+      setImgBusy(false);
+    }
+  };
+
+  const removeChapterImage = async () => {
+    if (!chapter.imageUrl) return;
+    if (!confirm("حذف صورة هذا الفصل؟")) return;
+    setImgBusy(true);
+    setImgError(null);
+    const prev = chapter.imageUrl;
+    onChange({ imageUrl: undefined });
+    try {
+      await removeChapterImageObject(prev);
+    } catch { /* ignore — the field is already cleared */ }
+    setImgBusy(false);
+  };
+
 
   const setActivity = (i: number, patch: Partial<CampaignActivity>) => {
     const list = [...chapter.activities];
