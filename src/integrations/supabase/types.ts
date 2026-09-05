@@ -1011,6 +1011,30 @@ export type Database = {
         }
         Relationships: []
       }
+      emblem_catalog: {
+        Row: {
+          created_at: string
+          emblem_id: string
+          threshold: number | null
+          unlock_kind: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          emblem_id: string
+          threshold?: number | null
+          unlock_kind: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          emblem_id?: string
+          threshold?: number | null
+          unlock_kind?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       encyclopedia_entities: {
         Row: {
           aliases: string[]
@@ -4300,6 +4324,10 @@ export type Database = {
         Returns: Json
       }
       email_queue_dispatch: { Args: never; Returns: undefined }
+      emblem_is_equippable_v1: {
+        Args: { p_emblem: string; p_uid: string }
+        Returns: boolean
+      }
       emit_story_unlock_notification: {
         Args: { p_story_id: string; p_user_id: string }
         Returns: Json
@@ -4365,6 +4393,13 @@ export type Database = {
         Returns: Json
       }
       get_my_email: { Args: never; Returns: string }
+      get_my_emblem_state_v1: {
+        Args: never
+        Returns: {
+          campaigns_completed: number
+          museum_items: number
+        }[]
+      }
       get_my_newsletter_subscription: { Args: never; Returns: Json }
       get_my_notification_preferences: { Args: never; Returns: Json }
       get_my_profile: {
