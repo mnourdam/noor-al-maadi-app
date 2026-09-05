@@ -796,6 +796,27 @@ export type Database = {
         }
         Relationships: []
       }
+      comment_heart_notices: {
+        Row: {
+          actor_id: string
+          comment_id: string
+          created_at: string
+          recipient_id: string
+        }
+        Insert: {
+          actor_id: string
+          comment_id: string
+          created_at?: string
+          recipient_id: string
+        }
+        Update: {
+          actor_id?: string
+          comment_id?: string
+          created_at?: string
+          recipient_id?: string
+        }
+        Relationships: []
+      }
       content_registry: {
         Row: {
           created_at: string

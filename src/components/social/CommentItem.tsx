@@ -7,10 +7,11 @@
 // - Body renders as escaped plain text preserving line breaks.
 // ============================================================
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Pencil, Trash2, BookMarked } from "lucide-react";
+import { Pencil, Trash2, BookMarked, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useOnline } from "@/hooks/useOnline";
 import {
   deleteOwnComment,
   editComment,
@@ -18,6 +19,7 @@ import {
   commentErrorCopyAr,
 } from "@/lib/social/comments";
 import type { SocialCommentRow } from "@/lib/social/comments";
+import { toggleReaction } from "@/lib/social/reactions";
 import { ReportCommentButton } from "./ReportCommentButton";
 import { ContributionBadge } from "./ContributionBadge";
 import { EmblemArt } from "@/components/EmblemArt";
@@ -56,6 +58,60 @@ export function CommentItem({ row, onChange, onDelete, currentUserId = null, con
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(row.body_text);
   const [pending, setPending] = useState(false);
+  const online = useOnline();
+
+  // ── Heart ("استزدتُ") — V17-07A ──────────────────────────
+  // Local presentation state only; the `row` object is never mutated.
+  // Server truth arrives via `my_heart` / `helpful_count` on load, and via
+  // the RPC's authoritative { active, count } after every toggle.
+  const [heartActive, setHeartActive] = useState<boolean>(!!row.my_heart);
+  const [heartCount, setHeartCount] = useState<number>(
+    Math.max(0, row.helpful_count ?? 0),
+  );
+  const [heartPending, setHeartPending] = useState(false);
+
+  // Re-sync when the server sends a different row for this comment.
+  useEffect(() => {
+    setHeartActive(!!row.my_heart);
+    setHeartCount(Math.max(0, row.helpful_count ?? 0));
+  }, [row.id, row.my_heart, row.helpful_count]);
+
+  async function toggleHeart() {
+    // Rapid-fire protection: one request in flight per card.
+    if (heartPending) return;
+    if (!currentUserId) {
+      toast.error("سجّل الدخول لتستزيد من المساهمات.");
+      return;
+    }
+    if (!online) {
+      // Online-only by contract: no outbox, no queued heart.
+      toast.error("يتطلب هذا الإجراء اتصالًا بالإنترنت.");
+      return;
+    }
+
+    const prevActive = heartActive;
+    const prevCount = heartCount;
+
+    // Optimistic — count can never render negative.
+    setHeartActive(!prevActive);
+    setHeartCount(Math.max(0, prevCount + (prevActive ? -1 : 1)));
+    setHeartPending(true);
+
+    const res = await toggleReaction("comment", row.id);
+    setHeartPending(false);
+
+    if (!res.ok) {
+      // Rollback to the exact pre-toggle state.
+      setHeartActive(prevActive);
+      setHeartCount(prevCount);
+      toast.error(commentErrorCopyAr(res.reason));
+      return;
+    }
+
+    // Adopt authoritative server state.
+    setHeartActive(!!res.active);
+    setHeartCount(Math.max(0, res.count ?? 0));
+  }
 
   const canEdit = row.is_mine && isWithinEditWindow(row);
   const canDelete = row.is_mine === true;
@@ -170,13 +226,42 @@ export function CommentItem({ row, onChange, onDelete, currentUserId = null, con
         </p>
       )}
 
-      <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
-        <span>
-          {formatDateAr(row.created_at)}
-          {row.edited_at && <span className="mr-1"> · معدّل</span>}
-        </span>
+      <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+        <div className="flex min-w-0 items-center gap-2">
+          {!editing && (
+            <button
+              type="button"
+              onClick={() => void toggleHeart()}
+              disabled={heartPending}
+              aria-pressed={heartActive}
+              aria-label={
+                heartActive
+                  ? `إلغاء الاستزادة من هذه المساهمة (${heartCount})`
+                  : `استزدتُ من هذه المساهمة (${heartCount})`
+              }
+              className={cn(
+                "inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5",
+                "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold",
+                "disabled:opacity-60",
+                heartActive
+                  ? "border-gold/50 bg-gold/15 text-gold"
+                  : "border-white/10 text-muted-foreground hover:border-white/20 hover:text-foreground",
+              )}
+            >
+              <Heart
+                className={cn("size-3", heartActive && "fill-current")}
+                aria-hidden="true"
+              />
+              <span className="tabular-nums">{heartCount}</span>
+            </button>
+          )}
+          <span className="truncate">
+            {formatDateAr(row.created_at)}
+            {row.edited_at && <span className="mr-1"> · معدّل</span>}
+          </span>
+        </div>
         {!editing && (
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             {row.is_mine && canEdit && (
               <button
                 type="button"
