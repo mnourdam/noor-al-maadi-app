@@ -26,6 +26,7 @@ import {
 import { ActivityRenderer } from "@/components/imported-campaign/ActivityRenderer";
 import { ActivityReviewCard } from "@/components/imported-campaign/ActivityReviewCard";
 import { RichReadingText } from "@/components/imported-campaign/RichReadingText";
+import { CachedImage } from "@/components/CachedImage";
 import { OutOfHeartsModal } from "@/components/imported-campaign/OutOfHeartsModal";
 import { CampaignCompleteModal } from "@/components/imported-campaign/CampaignCompleteModal";
 import { UnlockList } from "@/components/imported-campaign/UnlockList";
