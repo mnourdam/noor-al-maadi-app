@@ -519,7 +519,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
             return;
           }
           const row = (payload.new ?? {}) as { xp?: number; dinars?: number; hearts?: number; streak?: number };
-          applyServerStats({
+          applyServerStatsRef.current({
             xp: row.xp ?? null,
             dinars: row.dinars ?? null,
             hearts: row.hearts ?? null,
