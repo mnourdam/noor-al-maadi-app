@@ -1011,6 +1011,11 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       // expiry is display-only. This stops a stale local `lastActiveDay`
       // from wiping a valid server streak during hydration.
       const nextStreak = numMax(p.streak, cloud.streak);
+      // V17-04A — the `...cloud` spread below used to let an OLDER cloud
+      // `lastActiveDay` overwrite a newer local one, producing the
+      // "correct streak + stale day" pair that makes the HUD show 0.
+      // Precedence is now explicit: keep the later of the two days.
+      const nextLastActiveDay = laterDayKey(p.lastActiveDay, cloud.lastActiveDay);
 
 
       // Hearts: cloud value wins ONLY when it differs from the local
