@@ -27,7 +27,7 @@ import { recordInvestigationCompletion, useCanonicalInvestigationProgress } from
 import { markInvestigationOpened, clearInvestigationOpened } from "@/lib/investigations/recommend";
 import { useStashCurrentAsOrigin } from "@/lib/navigation";
 import { audioManager } from "@/lib/audioManager";
-import { shuffleOptions } from "@/lib/campaigns/optionShuffle";
+import { shuffleOptions, type ShuffledOptions } from "@/lib/campaigns/optionShuffle";
 
 
 
@@ -406,7 +406,7 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
               }}
               revealed={answerState !== "unanswered"}
               heartsOut={false}
-              attemptKey={row.slug}
+              shuffled={stepShuffle}
             />
 
             </div>
