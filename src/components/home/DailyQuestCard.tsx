@@ -209,6 +209,7 @@ export function DailyQuestCard() {
               dinars: result.serverStats.dinars,
               hearts: result.serverStats.hearts,
               streak: result.serverStats.streak,
+              lastStreakDay: result.serverStats.lastStreakDay ?? null,
             });
           } else {
             addPoints(q.xp);
@@ -228,6 +229,7 @@ export function DailyQuestCard() {
             dinars: result.serverStats.dinars,
             hearts: result.serverStats.hearts,
             streak: result.serverStats.streak,
+            lastStreakDay: result.serverStats.lastStreakDay ?? null,
           });
           markQuestRewarded(userKey);
           // No celebration on already_granted — it's a silent reconcile.
