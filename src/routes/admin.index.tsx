@@ -92,6 +92,8 @@ function AdminHub() {
         <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <AdminCard to="/admin/users" icon={<Users className="h-5 w-5" />} title="إدارة المستخدمين"
             desc="قائمة اللاعبين، البحث والتصفية، إجراءات إدارية موثّقة، وتصدير CSV." />
+          <AdminCard to="/admin/comments" icon={<MessagesSquare className="h-5 w-5" />} title="تعليقات وتأملات اللاعبين"
+            desc="كل التعليقات على محتوى الموسوعة والقصص وتأملات الحملات — للقراءة فقط." />
           <AdminCard to="/admin/community" icon={<MessagesSquare className="h-5 w-5" />} title="مساهمات المجتمع"
             desc="إدارة البلاغات والاقتراحات وتصحيحات المعلومات والرد على المستخدمين." />
           <AdminCard to="/admin/moderation" icon={<Flag className="h-5 w-5" />} title="طابور الإشراف"
