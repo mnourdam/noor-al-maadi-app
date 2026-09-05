@@ -494,6 +494,15 @@ function ImportedChapterPlayer() {
           <h1 className="font-display mt-1 text-2xl font-bold shimmer-text">{chapter.title}</h1>
           {chapter.subtitle && <p className="mt-1 text-sm text-gold/80">{chapter.subtitle}</p>}
 
+          {chapter.imageUrl && (
+            <CachedImage
+              src={chapter.imageUrl}
+              alt=""
+              loading="lazy"
+              className="mt-4 w-full rounded-2xl border border-gold/20 object-cover"
+            />
+          )}
+
           {chapter.introText && (
             <div className="mt-4">
               <RichReadingText text={chapter.introText} size="base" />
