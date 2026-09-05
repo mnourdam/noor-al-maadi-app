@@ -589,9 +589,12 @@ function LegacyInvestigationGame({ inv }: { inv: NonNullable<ReturnType<typeof g
   const [finished, setFinished] = useState(alreadyDone);
 
   const q = inv.questions[qIndex];
+  // V17-05 — structural identity (investigation id + question index), not
+  // the free-text question, so duplicate wording cannot share an order.
   const shuffled = useMemo(() => {
-    return shuffleOptions(q.question, q.choices, q.correctIndex, attemptKey);
-  }, [q, attemptKey]);
+    return shuffleOptions(`${inv.id}:${qIndex}`, q.choices, q.correctIndex, attemptKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inv.id, qIndex, q.choices, q.correctIndex, attemptKey]);
 
   const isLastQuestion = qIndex >= inv.questions.length - 1;
   // Investigations never gate on hearts and never consume hearts.
