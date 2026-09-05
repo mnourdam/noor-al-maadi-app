@@ -197,8 +197,13 @@ export async function fetchCampaignByIdOrSlug(
   }
 
   await ensureLocalSnapshotLoaded();
+  // A locally cached row can lag a fresh publish (e.g. newly authored chapter
+  // media). The refresh is manifest-guarded, memoized per session, and returns
+  // instantly when offline or already current — so local-first is preserved.
+  await refreshCampaignRows();
 
   const hit = localCampaignByIdOrSlug(idOrSlug);
+
   if (hit && !isDividerRow(hit as any)) {
     const c = (hit.data ?? null) as Campaign | null;
     if (c && c.status === "published") {
