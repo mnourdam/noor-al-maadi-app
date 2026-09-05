@@ -50,6 +50,7 @@ import { Route as AdminAtlasReviewRouteImport } from './routes/admin.atlas-revie
 import { Route as AdminCampaignOrderRouteImport } from './routes/admin.campaign-order'
 import { Route as AdminCampaignRelationshipsRouteImport } from './routes/admin.campaign-relationships'
 import { Route as AdminCanonicalDuplicatesRouteImport } from './routes/admin.canonical-duplicates'
+import { Route as AdminCommentsRouteImport } from './routes/admin.comments'
 import { Route as AdminCommunityRouteImport } from './routes/admin.community'
 import { Route as AdminContentRouteImport } from './routes/admin.content'
 import { Route as AdminContentAutoHealRouteImport } from './routes/admin.content-auto-heal'
@@ -361,6 +362,11 @@ const AdminCanonicalDuplicatesRoute =
     path: '/admin/canonical-duplicates',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AdminCommentsRoute = AdminCommentsRouteImport.update({
+  id: '/admin/comments',
+  path: '/admin/comments',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminCommunityRoute = AdminCommunityRouteImport.update({
   id: '/admin/community',
   path: '/admin/community',
@@ -945,6 +951,7 @@ export interface FileRoutesByFullPath {
   '/admin/campaign-order': typeof AdminCampaignOrderRoute
   '/admin/campaign-relationships': typeof AdminCampaignRelationshipsRoute
   '/admin/canonical-duplicates': typeof AdminCanonicalDuplicatesRoute
+  '/admin/comments': typeof AdminCommentsRoute
   '/admin/community': typeof AdminCommunityRoute
   '/admin/content': typeof AdminContentRoute
   '/admin/content-auto-heal': typeof AdminContentAutoHealRoute
@@ -1089,6 +1096,7 @@ export interface FileRoutesByTo {
   '/admin/campaign-order': typeof AdminCampaignOrderRoute
   '/admin/campaign-relationships': typeof AdminCampaignRelationshipsRoute
   '/admin/canonical-duplicates': typeof AdminCanonicalDuplicatesRoute
+  '/admin/comments': typeof AdminCommentsRoute
   '/admin/community': typeof AdminCommunityRoute
   '/admin/content': typeof AdminContentRoute
   '/admin/content-auto-heal': typeof AdminContentAutoHealRoute
@@ -1232,6 +1240,7 @@ export interface FileRoutesById {
   '/admin/campaign-order': typeof AdminCampaignOrderRoute
   '/admin/campaign-relationships': typeof AdminCampaignRelationshipsRoute
   '/admin/canonical-duplicates': typeof AdminCanonicalDuplicatesRoute
+  '/admin/comments': typeof AdminCommentsRoute
   '/admin/community': typeof AdminCommunityRoute
   '/admin/content': typeof AdminContentRoute
   '/admin/content-auto-heal': typeof AdminContentAutoHealRoute
@@ -1380,6 +1389,7 @@ export interface FileRouteTypes {
     | '/admin/campaign-order'
     | '/admin/campaign-relationships'
     | '/admin/canonical-duplicates'
+    | '/admin/comments'
     | '/admin/community'
     | '/admin/content'
     | '/admin/content-auto-heal'
@@ -1524,6 +1534,7 @@ export interface FileRouteTypes {
     | '/admin/campaign-order'
     | '/admin/campaign-relationships'
     | '/admin/canonical-duplicates'
+    | '/admin/comments'
     | '/admin/community'
     | '/admin/content'
     | '/admin/content-auto-heal'
@@ -1666,6 +1677,7 @@ export interface FileRouteTypes {
     | '/admin/campaign-order'
     | '/admin/campaign-relationships'
     | '/admin/canonical-duplicates'
+    | '/admin/comments'
     | '/admin/community'
     | '/admin/content'
     | '/admin/content-auto-heal'
@@ -1813,6 +1825,7 @@ export interface RootRouteChildren {
   AdminCampaignOrderRoute: typeof AdminCampaignOrderRoute
   AdminCampaignRelationshipsRoute: typeof AdminCampaignRelationshipsRoute
   AdminCanonicalDuplicatesRoute: typeof AdminCanonicalDuplicatesRoute
+  AdminCommentsRoute: typeof AdminCommentsRoute
   AdminCommunityRoute: typeof AdminCommunityRoute
   AdminContentRoute: typeof AdminContentRoute
   AdminContentAutoHealRoute: typeof AdminContentAutoHealRoute
@@ -2182,6 +2195,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/canonical-duplicates'
       fullPath: '/admin/canonical-duplicates'
       preLoaderRoute: typeof AdminCanonicalDuplicatesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/comments': {
+      id: '/admin/comments'
+      path: '/admin/comments'
+      fullPath: '/admin/comments'
+      preLoaderRoute: typeof AdminCommentsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/community': {
@@ -3079,6 +3099,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminCampaignOrderRoute: AdminCampaignOrderRoute,
   AdminCampaignRelationshipsRoute: AdminCampaignRelationshipsRoute,
   AdminCanonicalDuplicatesRoute: AdminCanonicalDuplicatesRoute,
+  AdminCommentsRoute: AdminCommentsRoute,
   AdminCommunityRoute: AdminCommunityRoute,
   AdminContentRoute: AdminContentRoute,
   AdminContentAutoHealRoute: AdminContentAutoHealRoute,
