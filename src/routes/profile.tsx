@@ -1571,6 +1571,7 @@ function FeedbackInboxLink() {
       .subscribe();
     return () => { mounted = false; supabase.removeChannel(channel); };
   }, [uid]);
+
   return (
     <Link to="/inbox" search={{ tab: "contributions" as const }} className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-background/40 p-3 hover:border-gold/30">
       <div className="grid size-9 place-items-center rounded-xl bg-gold/15 text-gold"><Inbox className="size-4" /></div>
