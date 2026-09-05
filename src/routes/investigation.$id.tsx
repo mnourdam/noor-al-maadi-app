@@ -473,26 +473,17 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
 }
 
 function StepCard({
-  step, picked, setPicked, revealed, heartsOut, attemptKey,
+  step, picked, setPicked, revealed, heartsOut, shuffled,
 }: {
   step: InvestigationStep;
   picked: number | null;
   setPicked: (n: number) => void;
   revealed: boolean;
   heartsOut: boolean;
-  attemptKey: string | number;
+  /** The single presentation mapping owned by the page (V17-05). */
+  shuffled: ShuffledOptions | null;
 }) {
-  const shuffled = useMemo(() => {
-    if ((step.type === "question" || step.type === "decision") && step.options?.length > 0) {
-      return shuffleOptions(
-        step.prompt,
-        step.options,
-        step.correctAnswer ?? -1,
-        attemptKey
-      );
-    }
-    return null;
-  }, [step, attemptKey]);
+
 
   const displayOptions = shuffled ? shuffled.options : (step.type === "question" || step.type === "decision" ? step.options : []);
   const displayCorrectIndex = shuffled ? shuffled.correctIndex : (step.type === "question" || step.type === "decision" ? step.correctAnswer : undefined);
