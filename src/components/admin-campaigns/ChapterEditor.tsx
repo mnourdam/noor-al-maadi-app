@@ -131,6 +131,48 @@ export function ChapterEditor({ chapter, index, total, progressCount, onChange, 
                 className={`${inputCls} min-h-[100px]`} />
             </div>
             <div>
+            <div className="md:col-span-2">
+              <label className={labelCls}>صورة الفصل (اختيارية — صورة واحدة)</label>
+              <div className="flex flex-wrap items-center gap-2">
+                {chapter.imageUrl ? (
+                  <img
+                    src={chapter.imageUrl}
+                    alt=""
+                    className="h-20 w-32 rounded-md border border-slate-700 object-cover"
+                  />
+                ) : (
+                  <div className="grid h-20 w-32 place-items-center rounded-md border border-dashed border-slate-700 text-[10px] text-slate-500">
+                    لا توجد صورة
+                  </div>
+                )}
+                <label className={`inline-flex cursor-pointer items-center gap-1 rounded-md border px-3 py-1.5 text-xs font-bold ${imgBusy ? "cursor-not-allowed border-slate-700 text-slate-400 opacity-50" : "border-amber-400/40 bg-amber-500/15 text-amber-100 hover:bg-amber-500/25"}`}>
+                  {imgBusy ? "جارٍ الرفع…" : chapter.imageUrl ? "استبدال الصورة" : "رفع صورة"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={imgBusy}
+                    onChange={e => {
+                      const f = e.target.files?.[0] ?? null;
+                      e.currentTarget.value = "";
+                      void pickChapterImage(f);
+                    }}
+                  />
+                </label>
+                {chapter.imageUrl && (
+                  <button
+                    type="button"
+                    disabled={imgBusy}
+                    onClick={() => void removeChapterImage()}
+                    className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-200 hover:bg-red-500/20 disabled:opacity-50"
+                  >
+                    حذف الصورة
+                  </button>
+                )}
+              </div>
+              {imgError && <p className="mt-1 text-[11px] text-red-300">{imgError}</p>}
+            </div>
+            <div>
               <label className={labelCls}>الترتيب (order)</label>
               <input type="number" value={chapter.order}
                 onChange={e => onChange({ order: Number(e.target.value) || 0 })} className={inputCls} />
