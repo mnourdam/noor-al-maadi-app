@@ -38,6 +38,9 @@ import {
 } from "@/lib/encyclopedia/index-store";
 import { ProgressiveEntityGrid } from "@/components/encyclopedia/ProgressiveEntityGrid";
 import { VirtualizedEntityGrid } from "@/components/encyclopedia/VirtualizedEntityGrid";
+import { EncyclopediaUnavailable } from "@/components/encyclopedia/EncyclopediaUnavailable";
+import { useStalled } from "@/hooks/useStalled";
+
 
 import { iconForType } from "@/lib/encyclopedia-icons";
 import { HighlightedText } from "@/components/HighlightedText";
