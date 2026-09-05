@@ -1,6 +1,8 @@
 // ============================================================
-// <CommentItem /> — a single flat comment. No reply UI, ever.
+// <CommentItem /> — a single comment card, depth 0 or depth 1.
 // ------------------------------------------------------------
+// - Top-level cards may open a reply composer ("رد").
+// - Reply cards (`isReply`) never show a reply button: one level only.
 // - Editor's Note gets a subtle gold "ملاحظة المحرّر" ribbon.
 // - The author sees Edit (inside the window) and Delete controls.
 // - Edited comments show a discreet "معدّل" marker (no diff).
@@ -9,7 +11,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Pencil, Trash2, BookMarked, Heart } from "lucide-react";
+import { Pencil, Trash2, BookMarked, Heart, CornerDownLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useOnline } from "@/hooks/useOnline";
 import {
@@ -40,6 +42,14 @@ interface Props {
   currentUserId?: string | null;
   contributionFlag?: MyContributionFlag | null;
   author?: CommentAuthor | null;
+  /** Depth 1 card: nested visually, and never offers "رد". */
+  isReply?: boolean;
+  /** Visible replies under this top-level card. */
+  replyCount?: number;
+  /** Present on top-level cards only; opens the reply composer. */
+  onReply?: () => void;
+  /** Whether this card's reply composer is currently open. */
+  replyOpen?: boolean;
 }
 
 function formatDateAr(iso: string) {
@@ -54,7 +64,18 @@ function formatDateAr(iso: string) {
   }
 }
 
-export function CommentItem({ row, onChange, onDelete, currentUserId = null, contributionFlag = null, author = null }: Props) {
+export function CommentItem({
+  row,
+  onChange,
+  onDelete,
+  currentUserId = null,
+  contributionFlag = null,
+  author = null,
+  isReply = false,
+  replyCount = 0,
+  onReply,
+  replyOpen = false,
+}: Props) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(row.body_text);
   const [pending, setPending] = useState(false);
@@ -151,8 +172,12 @@ export function CommentItem({ row, onChange, onDelete, currentUserId = null, con
         row.editors_note
           ? "border-gold/40 bg-gold/5"
           : "border-white/10 bg-black/20",
+        // Depth 1: lighter, slightly smaller, logically indented (RTL-safe).
+        isReply && "border-white/[0.07] bg-black/10 p-2.5",
       )}
-      aria-label={row.editors_note ? "ملاحظة المحرّر" : "مساهمة قارئ"}
+      aria-label={
+        isReply ? "ردّ قارئ" : row.editors_note ? "ملاحظة المحرّر" : "مساهمة قارئ"
+      }
     >
       {(row.editors_note || (row.is_mine && contributionFlag)) && (
         <div className="mb-2 flex flex-wrap items-center gap-1.5">
@@ -253,6 +278,26 @@ export function CommentItem({ row, onChange, onDelete, currentUserId = null, con
                 aria-hidden="true"
               />
               <span className="tabular-nums">{heartCount}</span>
+            </button>
+          )}
+          {/* One level only: a reply card never offers "رد". */}
+          {!editing && !isReply && onReply && (
+            <button
+              type="button"
+              onClick={onReply}
+              aria-expanded={replyOpen}
+              aria-label={
+                author?.display_name?.trim() || row.author_name?.trim()
+                  ? `الرد على مساهمة ${author?.display_name?.trim() || row.author_name?.trim()}`
+                  : "الرد على هذه المساهمة"
+              }
+              className="inline-flex shrink-0 items-center gap-1 rounded-full border border-white/10 px-2 py-0.5 transition-colors hover:border-white/20 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
+            >
+              <CornerDownLeft className="size-3" aria-hidden="true" />
+              <span>رد</span>
+              {replyCount > 0 && (
+                <span className="tabular-nums opacity-80">{replyCount}</span>
+              )}
             </button>
           )}
           <span className="truncate">

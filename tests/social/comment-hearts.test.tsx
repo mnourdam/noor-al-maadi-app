@@ -346,6 +346,7 @@ describe("V17-07A source guards", () => {
   const reactions = read("src/lib/social/reactions.ts");
   const comments = read("src/lib/social/comments.ts");
   const storyComments = read("src/components/social/StoryComments.tsx");
+  const replies = read("src/components/social/CommentReplies.tsx");
 
   it("mutates reactions only through the validated toggle RPC", () => {
     expect(item).toContain("toggleReaction");
@@ -365,10 +366,13 @@ describe("V17-07A source guards", () => {
     expect(comments).toMatch(/my_heart\?:\s*boolean/);
   });
 
-  it("does not introduce reply UI (V17-07B is out of scope)", () => {
-    expect(item).not.toMatch(/parent_comment_id|addReply|ReplyComposer|onReply/);
-    expect(comments).not.toMatch(/parent_comment_id|addReply|listCommentReplies/);
-    expect(storyComments).not.toMatch(/parent_comment_id|addReply|ReplyComposer/);
+  // V17-07B shipped ONE level of replies. The guard now protects the depth
+  // limit instead of the absence of replies.
+  it("keeps replies to a single level in the UI", () => {
+    // A reply card must never render its own reply affordance.
+    expect(item).toMatch(/!isReply && onReply/);
+    // The replies block never nests another replies block.
+    expect(replies.replace(/\/\/.*$/gm, "")).not.toMatch(/<CommentReplies/);
   });
 
   it("keeps comment pagination and ordering untouched", () => {

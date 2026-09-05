@@ -9,7 +9,10 @@
 //   * ONLINE-ONLY. No outbox, no optimistic fake success.
 //     Callers gate on `useOnline()`.
 //   * Max 300 chars, plain text, max 3 per player per anchor.
-//   * No threads, no replies. `list_comments_v2` is flat.
+//   * ONE level of replies only (V17-07B). A reply carries its
+//     parent's anchor; the client never chooses a reply's anchor.
+//     Replies never enter the top-level feed, its cursor, or
+//     `total_visible`.
 //   * Default order: Editor's Notes → Most Helpful → Newest.
 //     "Most Popular" does not exist and must never be added.
 //   * Editing is only allowed inside the server-decided window
@@ -46,7 +49,23 @@ export interface SocialCommentRow {
    */
   my_heart?: boolean;
 
+  // ── One-level replies (V17-07B) ───────────────────────────
+  /** NULL on a top-level reflection; the parent's id on a reply. */
+  parent_comment_id?: string | null;
+  /** Total VISIBLE replies under this top-level comment. */
+  reply_count?: number;
+  /** First 3 visible replies, oldest → newest. Server-supplied. */
+  replies?: SocialCommentRow[];
+}
 
+export interface CommentThread {
+  ok: true;
+  anchor_type: SocialAnchorType;
+  anchor_id: string;
+  anchor_title: string;
+  /** True when the parent was soft-deleted by its author (tombstone). */
+  removed: boolean;
+  parent: SocialCommentRow;
 }
 
 export interface CommentsPage {
@@ -71,6 +90,12 @@ export type AddCommentReason =
   | "anchor_not_found"
   | "anchor_limit_reached"
   | "rate_limited"
+  // Reply-only reasons (V17-07B).
+  | "parent_not_found"
+  | "parent_not_available"
+  | "nested_reply_not_allowed"
+  | "reply_limit_reached"
+  | "unsupported_anchor"
   | "unknown";
 
 export interface AddCommentResult {
@@ -145,6 +170,45 @@ export async function deleteOwnComment(commentId: string): Promise<{ ok: boolean
   }
 }
 
+/**
+ * Post a ONE-LEVEL reply under a visible top-level comment.
+ * The server derives the anchor from the parent — the caller never sends it.
+ * Online-only, exactly like every other social write: no outbox, no queue.
+ */
+export async function addCommentReply(
+  parentCommentId: string,
+  body: string,
+): Promise<AddCommentResult> {
+  try {
+    const { data, error } = await supabase.rpc("add_comment_reply_v1" as never, {
+      p_parent_comment_id: parentCommentId,
+      p_body: body,
+    } as never);
+    if (error) return { ok: false, reason: "unknown" };
+    return (data ?? { ok: false, reason: "unknown" }) as AddCommentResult;
+  } catch {
+    return { ok: false, reason: "unknown" };
+  }
+}
+
+/**
+ * Direct thread lookup for `?comment=<parentId>` deep links, so a link never
+ * depends on the parent landing inside page 1 of the keyset feed.
+ */
+export async function getCommentThread(
+  parentCommentId: string,
+): Promise<CommentThread | CommentsError> {
+  try {
+    const { data, error } = await supabase.rpc("get_comment_thread_v1" as never, {
+      p_parent_comment_id: parentCommentId,
+    } as never);
+    if (error) return { ok: false, reason: error.message };
+    return (data ?? { ok: false, reason: "unavailable" }) as CommentThread | CommentsError;
+  } catch (e) {
+    return { ok: false, reason: (e as Error).message };
+  }
+}
+
 /** True if `edit_deadline_at` is still in the future. */
 export function isWithinEditWindow(row: Pick<SocialCommentRow, "edit_deadline_at">) {
   const t = Date.parse(row.edit_deadline_at);
@@ -176,6 +240,17 @@ export function commentErrorCopyAr(reason?: string): string {
       return "لا يمكن تثبيت أكثر من ثلاث ملاحظات محرّر لهذه المرساة.";
     case "not_visible":
       return "لا يمكن تثبيت مساهمة غير ظاهرة.";
+    case "parent_not_found":
+    case "parent_not_available":
+      return "لم تعد هذه المساهمة متاحة.";
+    case "nested_reply_not_allowed":
+      return "لا يمكن الرد على ردّ.";
+    case "reply_limit_reached":
+      return "لك ثلاثة ردود كحدٍّ أقصى على هذه المساهمة.";
+    case "unsupported_anchor":
+      return "الردود متاحة على مواد الموسوعة فقط.";
+    case "cannot_pin_reply":
+      return "لا يمكن تثبيت ردّ كملاحظة محرّر.";
     case "anchor_not_found":
       return "القصة غير متاحة الآن.";
     default:

@@ -24,6 +24,7 @@ export type PersonalNotificationKind =
   | "comment_contribution_applied"
   | "comment_hidden"
   | "comment_restored"
+  | "comment_reply"
   | "story_unlocked";
 
 export interface PersonalNotificationRow {
