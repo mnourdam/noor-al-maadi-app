@@ -20,10 +20,12 @@ const fetchIds = vi.fn();
 const fetchAll = vi.fn();
 const snapshotRows = vi.fn();
 
-vi.mock("@/lib/encyclopedia-source", () => ({
+vi.mock("@/lib/encyclopedia-source", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   fetchEncyclopediaLivePublicIds: (...a: unknown[]) => fetchIds(...a),
   fetchEncyclopediaLivePublicAll: (...a: unknown[]) => fetchAll(...a),
 }));
+
 
 vi.mock("@/lib/local-first-store", () => ({
   ensureLocalSnapshotLoaded: async () => {},
