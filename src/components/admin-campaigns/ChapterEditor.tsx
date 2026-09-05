@@ -8,6 +8,7 @@ import type { CampaignChapter, CampaignActivity, CampaignQuestionType } from "@/
 import { ACTIVITY_DEFAULTS } from "@/types/campaign";
 import { ActivityEditor } from "./ActivityEditor";
 import { uid } from "@/lib/campaignStorage";
+import { uploadChapterImage, removeChapterImageObject } from "@/lib/campaign-chapter-image";
 
 interface Props {
   chapter: CampaignChapter;
@@ -25,6 +26,36 @@ const labelCls = "block text-[11px] font-semibold text-amber-300/80 mb-1";
 
 export function ChapterEditor({ chapter, index, total, progressCount, onChange, onDelete, onDuplicate, onMove }: Props) {
   const [expanded, setExpanded] = useState(false);
+  const [imgBusy, setImgBusy] = useState(false);
+  const [imgError, setImgError] = useState<string | null>(null);
+
+  const pickChapterImage = async (file: File | null) => {
+    if (!file) return;
+    setImgBusy(true);
+    setImgError(null);
+    try {
+      const url = await uploadChapterImage(chapter.id, file, chapter.imageUrl ?? null);
+      onChange({ imageUrl: url });
+    } catch (err) {
+      setImgError(err instanceof Error ? err.message : "فشل رفع صورة الفصل.");
+    } finally {
+      setImgBusy(false);
+    }
+  };
+
+  const removeChapterImage = async () => {
+    if (!chapter.imageUrl) return;
+    if (!confirm("حذف صورة هذا الفصل؟")) return;
+    setImgBusy(true);
+    setImgError(null);
+    const prev = chapter.imageUrl;
+    onChange({ imageUrl: undefined });
+    try {
+      await removeChapterImageObject(prev);
+    } catch { /* ignore — the field is already cleared */ }
+    setImgBusy(false);
+  };
+
 
   const setActivity = (i: number, patch: Partial<CampaignActivity>) => {
     const list = [...chapter.activities];
@@ -129,6 +160,47 @@ export function ChapterEditor({ chapter, index, total, progressCount, onChange, 
               <label className={labelCls}>نص القراءة التاريخية (historicalReadingText)</label>
               <textarea value={chapter.historicalReadingText ?? ""} onChange={e => onChange({ historicalReadingText: e.target.value })}
                 className={`${inputCls} min-h-[100px]`} />
+            </div>
+            <div className="md:col-span-2">
+              <label className={labelCls}>صورة الفصل (اختيارية — صورة واحدة)</label>
+              <div className="flex flex-wrap items-center gap-2">
+                {chapter.imageUrl ? (
+                  <img
+                    src={chapter.imageUrl}
+                    alt=""
+                    className="h-20 w-32 rounded-md border border-slate-700 object-cover"
+                  />
+                ) : (
+                  <div className="grid h-20 w-32 place-items-center rounded-md border border-dashed border-slate-700 text-[10px] text-slate-500">
+                    لا توجد صورة
+                  </div>
+                )}
+                <label className={`inline-flex cursor-pointer items-center gap-1 rounded-md border px-3 py-1.5 text-xs font-bold ${imgBusy ? "cursor-not-allowed border-slate-700 text-slate-400 opacity-50" : "border-amber-400/40 bg-amber-500/15 text-amber-100 hover:bg-amber-500/25"}`}>
+                  {imgBusy ? "جارٍ الرفع…" : chapter.imageUrl ? "استبدال الصورة" : "رفع صورة"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={imgBusy}
+                    onChange={e => {
+                      const f = e.target.files?.[0] ?? null;
+                      e.currentTarget.value = "";
+                      void pickChapterImage(f);
+                    }}
+                  />
+                </label>
+                {chapter.imageUrl && (
+                  <button
+                    type="button"
+                    disabled={imgBusy}
+                    onClick={() => void removeChapterImage()}
+                    className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-200 hover:bg-red-500/20 disabled:opacity-50"
+                  >
+                    حذف الصورة
+                  </button>
+                )}
+              </div>
+              {imgError && <p className="mt-1 text-[11px] text-red-300">{imgError}</p>}
             </div>
             <div>
               <label className={labelCls}>الترتيب (order)</label>

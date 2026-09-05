@@ -1,0 +1,55 @@
+// V17-09 — optional chapter image: normalization, serialization, offline discovery.
+import { describe, it, expect } from "vitest";
+import { validateCampaign } from "@/lib/campaignStorage";
+import { collectImageUrls } from "@/lib/image-cache";
+import { storagePathFromChapterImageUrl } from "@/lib/campaign-chapter-image";
+
+const URL_A = "https://example.supabase.co/storage/v1/object/sign/campaign-key-art/chapters/ch1/20260905-1-abc.webp?token=xyz";
+
+function doc(chapterExtra: Record<string, unknown>) {
+  return {
+    id: "camp-1",
+    title: "حملة",
+    chapters: [
+      { id: "ch1", title: "الفصل الأول", historicalReadingText: "نص", activities: [], ...chapterExtra },
+    ],
+  };
+}
+
+describe("chapter imageUrl", () => {
+  it("survives normalization", () => {
+    const campaign = validateCampaign(doc({ imageUrl: URL_A })).normalized!;
+    expect(campaign.chapters[0].imageUrl).toBe(URL_A);
+  });
+
+  it("round-trips through JSON export/import unchanged", () => {
+    const first = validateCampaign(doc({ imageUrl: URL_A })).normalized!;
+    const again = validateCampaign(JSON.parse(JSON.stringify(first))).normalized!;
+    expect(again.chapters[0].imageUrl).toBe(URL_A);
+  });
+
+  it("stays undefined for chapters without an image", () => {
+    const campaign = validateCampaign(doc({})).normalized!;
+    expect(campaign.chapters[0].imageUrl).toBeUndefined();
+  });
+
+  it("ignores blank values", () => {
+    const campaign = validateCampaign(doc({ imageUrl: "   " })).normalized!;
+    expect(campaign.chapters[0].imageUrl).toBeUndefined();
+  });
+
+  it("is discovered by the existing offline image collector", () => {
+    const campaign = validateCampaign(doc({ imageUrl: URL_A })).normalized!;
+    expect(collectImageUrls(campaign).has(URL_A)).toBe(true);
+  });
+
+  it("maps a chapter image URL back to its storage path (remove/replace)", () => {
+    expect(storagePathFromChapterImageUrl(URL_A)).toBe("chapters/ch1/20260905-1-abc.webp");
+    expect(storagePathFromChapterImageUrl(null)).toBeNull();
+    expect(
+      storagePathFromChapterImageUrl(
+        "https://x/storage/v1/object/sign/campaign-key-art/camp-1/hero.webp?token=1",
+      ),
+    ).toBeNull();
+  });
+});
