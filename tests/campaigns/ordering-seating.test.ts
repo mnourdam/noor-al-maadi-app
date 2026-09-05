@@ -107,9 +107,9 @@ describe("hint sequences", () => {
     let pins: string[] = [];
     const max = opts.maxHints ?? n - 1;
     while (pins.length < max) {
-      const eligible = order.filter(
-        (id) => !pins.includes(id) && correctIndexOfOrderingId(id) !== order.indexOf(id),
-      );
+      // V17-01: eligibility is unpinned-only — never live slot correctness.
+      const eligible = order.filter((id) => !pins.includes(id));
+
       if (eligible.length === 0 || pins.length >= n - 1) break;
       const pick = eligible[rand() % eligible.length]!;
       pins = [...pins, pick];

@@ -462,16 +462,17 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone, campaignId, c
     setFeedback(null);
   };
 
-  const eligibleHintCount = order.filter((id) => (
-    !pinnedIds.includes(id) && correctIndexOf(id) !== order.indexOf(id)
-  )).length;
+  // V17-01: hint availability MUST NOT depend on the live arrangement being
+  // correct — that leaked the answer before Verify. Only correctness-neutral
+  // state may gate the button.
   const canAffordHint = (profile?.dinars ?? 0) >= ARRANGE_HINT_COST;
+  const hintCapReached = pinnedIds.length >= order.length - 1;
   const hintDisabled =
     resolved ||
     hintBusy ||
-    pinnedIds.length >= order.length - 1 ||
-    eligibleHintCount === 0 ||
+    hintCapReached ||
     !canAffordHint;
+
 
   const useHint = () => {
     if (resolved) return;
@@ -492,21 +493,17 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone, campaignId, c
       );
 
       if (!result) {
-        // Distinguish "nothing useful left" from a balance failure.
+        // Correctness-neutral causes only: cap reached, or the debit failed.
         const state = getOrderingState(logicalKey, fingerprint);
-        const eligibleCount = order.filter(id => {
-          const isPinned = state?.pinnedIds.includes(id) ?? false;
-          const isCorrect = correctIndexOf(id) === order.indexOf(id);
-          return !isPinned && !isCorrect;
-        }).length;
-
-        if (eligibleCount === 0 || (state?.pinnedIds.length ?? 0) >= order.length - 1) {
-          setHintError("لم يبقَ عناصر مفيدة للكشف عنها.");
-        } else {
-          setHintError(`تحتاج ${ARRANGE_HINT_COST} دينارًا لاستخدام التلميح.`);
-        }
+        const capReached = (state?.pinnedIds.length ?? 0) >= order.length - 1;
+        setHintError(
+          capReached
+            ? "لا يمكن كشف عناصر إضافية في هذا السؤال."
+            : `تحتاج ${ARRANGE_HINT_COST} دينارًا لاستخدام التلميح.`,
+        );
         return;
       }
+
 
       setHintError(null);
       const nextPins = [...pinnedIds, result.itemId];
