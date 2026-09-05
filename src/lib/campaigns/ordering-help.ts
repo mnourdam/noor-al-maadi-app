@@ -84,12 +84,11 @@ export function purchaseOrderingHelp(
     state = { pinnedIds: [], fingerprint };
   }
 
-  // Eligible = all items MINUS previously help-revealed MINUS currently correct items
-  const eligibleIds = currentOrder.filter(id => {
-    const isAlreadyPinned = state!.pinnedIds.includes(id);
-    const isCurrentlyCorrect = correctIndexOf(id) === currentOrder.indexOf(id);
-    return !isAlreadyPinned && !isCurrentlyCorrect;
-  });
+  // Eligible = all items MINUS previously help-revealed ones.
+  // V17-01: eligibility MUST NOT consider whether an item currently sits in its
+  // correct slot — that made hint availability leak live answer correctness.
+  const eligibleIds = currentOrder.filter(id => !state!.pinnedIds.includes(id));
+
 
   // Security: always leave at least one item for the player to solve manually
   const totalItems = currentOrder.length;
