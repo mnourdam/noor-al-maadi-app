@@ -257,13 +257,22 @@ export function useEncyclopediaIndexQueryOptions() {
 export function useEncyclopediaIndex() {
   const options = useEncyclopediaIndexQueryOptions();
   const q = useQuery(options);
+  const hasData = Boolean(q.data);
   return {
     index: q.data ?? EMPTY_ENCYCLOPEDIA_INDEX,
-    /** True until a snapshot-backed index exists. Never shows wrong counts. */
-    isPending: !q.data,
-    isError: q.isError,
+    /**
+     * True only while the query is genuinely in flight without data. A settled
+     * failure reports `isError`, never eternal loading.
+     */
+    isPending: !hasData && !q.isError,
+    isError: q.isError && !hasData,
+    error: q.error ?? null,
+    isFetching: q.isFetching,
+    /** Genuinely re-runs the query (cancels a wedged fetch first). */
+    refetch: () => { void q.refetch({ cancelRefetch: true }); },
   };
 }
+
 
 let prefetchStarted = false;
 let versionWatcherAttached = false;
