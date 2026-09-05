@@ -7,10 +7,11 @@
 // - Body renders as escaped plain text preserving line breaks.
 // ============================================================
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Pencil, Trash2, BookMarked } from "lucide-react";
+import { Pencil, Trash2, BookMarked, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useOnline } from "@/hooks/useOnline";
 import {
   deleteOwnComment,
   editComment,
@@ -18,6 +19,7 @@ import {
   commentErrorCopyAr,
 } from "@/lib/social/comments";
 import type { SocialCommentRow } from "@/lib/social/comments";
+import { toggleReaction } from "@/lib/social/reactions";
 import { ReportCommentButton } from "./ReportCommentButton";
 import { ContributionBadge } from "./ContributionBadge";
 import { EmblemArt } from "@/components/EmblemArt";
