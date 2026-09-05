@@ -493,21 +493,17 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone, campaignId, c
       );
 
       if (!result) {
-        // Distinguish "nothing useful left" from a balance failure.
+        // Correctness-neutral causes only: cap reached, or the debit failed.
         const state = getOrderingState(logicalKey, fingerprint);
-        const eligibleCount = order.filter(id => {
-          const isPinned = state?.pinnedIds.includes(id) ?? false;
-          const isCorrect = correctIndexOf(id) === order.indexOf(id);
-          return !isPinned && !isCorrect;
-        }).length;
-
-        if (eligibleCount === 0 || (state?.pinnedIds.length ?? 0) >= order.length - 1) {
-          setHintError("لم يبقَ عناصر مفيدة للكشف عنها.");
-        } else {
-          setHintError(`تحتاج ${ARRANGE_HINT_COST} دينارًا لاستخدام التلميح.`);
-        }
+        const capReached = (state?.pinnedIds.length ?? 0) >= order.length - 1;
+        setHintError(
+          capReached
+            ? "لا يمكن كشف عناصر إضافية في هذا السؤال."
+            : `تحتاج ${ARRANGE_HINT_COST} دينارًا لاستخدام التلميح.`,
+        );
         return;
       }
+
 
       setHintError(null);
       const nextPins = [...pinnedIds, result.itemId];
