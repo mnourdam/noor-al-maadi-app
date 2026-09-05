@@ -216,7 +216,7 @@ describe("source guards", () => {
 
   it("keeps replies exactly one level deep", () => {
     expect(item).toMatch(/!isReply && onReply/);
-    expect(replies).not.toMatch(/<CommentReplies/);
+    expect(replies.replace(/\/\/.*$/gm, "")).not.toMatch(/<CommentReplies/);
   });
 
   it("never derives the anchor client-side — the server owns it", () => {

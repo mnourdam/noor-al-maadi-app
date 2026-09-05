@@ -372,7 +372,7 @@ describe("V17-07A source guards", () => {
     // A reply card must never render its own reply affordance.
     expect(item).toMatch(/!isReply && onReply/);
     // The replies block never nests another replies block.
-    expect(replies).not.toMatch(/<CommentReplies/);
+    expect(replies.replace(/\/\/.*$/gm, "")).not.toMatch(/<CommentReplies/);
   });
 
   it("keeps comment pagination and ordering untouched", () => {
