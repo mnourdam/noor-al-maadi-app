@@ -2,6 +2,22 @@ import { Sparkles, RefreshCcw, Loader2, X } from "lucide-react";
 import { useContentUpdate } from "@/lib/offline-content-update";
 
 /**
+ * RC02: the staged content-update prompt only makes sense inside the
+ * installed native app (Capacitor WebView), where the bundled snapshot is
+ * the player's content authority. On plain web the app always serves the
+ * latest content by itself, so the banner is noise and must never render.
+ * Detection uses the Capacitor bridge the native shell injects — the same
+ * pattern used by the announcements store — never hostname sniffing.
+ */
+function isNativeApp(): boolean {
+  if (typeof window === "undefined") return false;
+  const cap = (window as typeof window & {
+    Capacitor?: { isNativePlatform?: () => boolean };
+  }).Capacitor;
+  return Boolean(cap?.isNativePlatform?.());
+}
+
+/**
  * Global "content update available" banner.
  *
  * Canonical content is never replaced silently: the app only DETECTS that
@@ -12,6 +28,8 @@ import { useContentUpdate } from "@/lib/offline-content-update";
 export function ContentUpdateBanner() {
   const { available, applying, error, apply, dismiss } = useContentUpdate();
 
+  // RC02: web renders latest content automatically — never prompt there.
+  if (!isNativeApp()) return null;
   if (!available) return null;
 
   return (

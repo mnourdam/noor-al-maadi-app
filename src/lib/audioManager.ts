@@ -171,6 +171,14 @@ const tracks: Record<AmbienceLayer, AmbienceTrack> = {
 };
 
 let activeLayer: AmbienceLayer = "global";
+
+/**
+ * RC03: route-scoped ambience mute (used by `/admin/*`). Independent of the
+ * player's own sound/ambience settings — while muted, ambience must not
+ * play even if every other condition allows it, and unmuting restores
+ * exactly whatever the normal rules would play.
+ */
+let routeMuted = false;
 /**
  * Active campaign section theme (see `audio/campaignThemes.ts`).
  * `null` = the default campaign ambience, i.e. today's behaviour exactly.
@@ -251,7 +259,7 @@ function ambienceShouldPlay(): boolean {
   if (!hasInteracted && typeof navigator !== "undefined" && navigator.userActivation?.hasBeenActive) {
     hasInteracted = true;
   }
-  return settings.soundEnabled && settings.ambienceEnabled && hasInteracted && deviceAllowsAudio();
+  return settings.soundEnabled && settings.ambienceEnabled && hasInteracted && deviceAllowsAudio() && !routeMuted;
 }
 
 function baseAmbienceVolume() {
@@ -571,6 +579,33 @@ export const audioManager = {
 
   getAmbienceLayer(): AmbienceLayer {
     return activeLayer;
+  },
+
+  /**
+   * RC03: silence all background ambience while on routes that must stay
+   * quiet (e.g. `/admin/*`). One centralized guard — no per-page checks.
+   * Muting pauses every track promptly and blocks any future play (including
+   * visibility-resume); unmuting re-applies the normal rules, so the layer
+   * the route selected resumes exactly as if nothing happened. Player
+   * settings and SFX are untouched.
+   */
+  setAmbienceRouteMuted(muted: boolean) {
+    if (typeof window === "undefined") return;
+    if (muted === routeMuted) return;
+    routeMuted = muted;
+    if (muted) {
+      // Stop the crossfade scheduler so it cannot keep ramping a muted layer.
+      if (fadeTimer !== null) { try { window.clearInterval(fadeTimer); } catch {/*ignore*/} fadeTimer = null; }
+      (Object.keys(tracks) as AmbienceLayer[]).forEach((layer) => {
+        const t = tracks[layer];
+        if (t.el) { try { t.el.pause(); } catch {/*ignore*/} }
+      });
+    }
+    applyAmbienceState();
+  },
+
+  isAmbienceRouteMuted(): boolean {
+    return routeMuted;
   },
 
   /**

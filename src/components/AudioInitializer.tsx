@@ -37,6 +37,11 @@ function layerForRoute(pathname: string): AmbienceLayer {
   return "global";
 }
 
+/** RC03: every admin surface stays silent — no background ambience there. */
+function isAdminRoute(pathname: string): boolean {
+  return pathname === "/admin" || pathname.startsWith("/admin/");
+}
+
 
 /** Mount once at the app root so ambience can start after first interaction. */
 /**
@@ -76,6 +81,13 @@ export function AudioInitializer() {
   useEffect(() => {
     if (!enabled) return;
     audioManager.setAmbienceLayer(layerForRoute(pathname));
+  }, [pathname, enabled]);
+
+  // RC03: entering any /admin route silences ambience promptly; leaving
+  // restores the normal rules (and the layer selected above) unchanged.
+  useEffect(() => {
+    if (!enabled) return;
+    audioManager.setAmbienceRouteMuted(isAdminRoute(pathname));
   }, [pathname, enabled]);
 
   useEffect(() => {
