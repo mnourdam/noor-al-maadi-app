@@ -175,7 +175,7 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
       row.slug,
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [row.slug, idx, step?.type, step?.options, step?.correctAnswer]);
+  }, [row.slug, idx, step]);
 
   const onConfirm = () => {
     if (!step) return;
