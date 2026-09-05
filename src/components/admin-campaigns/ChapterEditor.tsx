@@ -161,7 +161,6 @@ export function ChapterEditor({ chapter, index, total, progressCount, onChange, 
               <textarea value={chapter.historicalReadingText ?? ""} onChange={e => onChange({ historicalReadingText: e.target.value })}
                 className={`${inputCls} min-h-[100px]`} />
             </div>
-            <div>
             <div className="md:col-span-2">
               <label className={labelCls}>صورة الفصل (اختيارية — صورة واحدة)</label>
               <div className="flex flex-wrap items-center gap-2">
