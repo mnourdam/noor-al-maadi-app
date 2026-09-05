@@ -27,7 +27,7 @@ import { recordInvestigationCompletion, useCanonicalInvestigationProgress } from
 import { markInvestigationOpened, clearInvestigationOpened } from "@/lib/investigations/recommend";
 import { useStashCurrentAsOrigin } from "@/lib/navigation";
 import { audioManager } from "@/lib/audioManager";
-import { shuffleOptions } from "@/lib/campaigns/optionShuffle";
+import { shuffleOptions, type ShuffledOptions } from "@/lib/campaigns/optionShuffle";
 
 
 
@@ -159,19 +159,34 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
   // Investigations are the recovery path when hearts are empty — they
   // never gate on hearts and never consume hearts.
 
+  // V17-05 — ONE presentation mapping per active step. Both the rendered
+  // options and the verification path read this single memo; nothing
+  // recomputes the shuffle on submit. Identity is structural
+  // (investigation slug + step index), never the free-text prompt, so two
+  // steps with identical prompts get independent orders.
+  const stepShuffle = useMemo(() => {
+    if (!step) return null;
+    if (step.type !== "question" && step.type !== "decision") return null;
+    if (!step.options?.length) return null;
+    return shuffleOptions(
+      `${row.slug}:${idx}`,
+      step.options,
+      step.correctAnswer ?? -1,
+      row.slug,
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [row.slug, idx, step]);
+
   const onConfirm = () => {
     if (!step) return;
     if (step.type === "question" || step.type === "decision") {
       if (picked == null || answerState === "correct") return;
 
-      const shuffled = shuffleOptions(
-        step.prompt,
-        step.options,
-        step.correctAnswer ?? -1,
-        row.slug
-      );
-
-      const isCorrect = typeof step.correctAnswer === "number" ? picked === shuffled.correctIndex : true;
+      // Display selection → original authored identity → authored answer.
+      const originalIndex = stepShuffle ? stepShuffle.toOriginal[picked] : picked;
+      const isCorrect = typeof step.correctAnswer === "number"
+        ? originalIndex === step.correctAnswer
+        : true;
 
       if (isCorrect) {
         // Record this index exactly once. Set semantics guarantee that
@@ -391,7 +406,7 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
               }}
               revealed={answerState !== "unanswered"}
               heartsOut={false}
-              attemptKey={row.slug}
+              shuffled={stepShuffle}
             />
 
             </div>
@@ -458,26 +473,17 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
 }
 
 function StepCard({
-  step, picked, setPicked, revealed, heartsOut, attemptKey,
+  step, picked, setPicked, revealed, heartsOut, shuffled,
 }: {
   step: InvestigationStep;
   picked: number | null;
   setPicked: (n: number) => void;
   revealed: boolean;
   heartsOut: boolean;
-  attemptKey: string | number;
+  /** The single presentation mapping owned by the page (V17-05). */
+  shuffled: ShuffledOptions | null;
 }) {
-  const shuffled = useMemo(() => {
-    if ((step.type === "question" || step.type === "decision") && step.options?.length > 0) {
-      return shuffleOptions(
-        step.prompt,
-        step.options,
-        step.correctAnswer ?? -1,
-        attemptKey
-      );
-    }
-    return null;
-  }, [step, attemptKey]);
+
 
   const displayOptions = shuffled ? shuffled.options : (step.type === "question" || step.type === "decision" ? step.options : []);
   const displayCorrectIndex = shuffled ? shuffled.correctIndex : (step.type === "question" || step.type === "decision" ? step.correctAnswer : undefined);
@@ -583,9 +589,12 @@ function LegacyInvestigationGame({ inv }: { inv: NonNullable<ReturnType<typeof g
   const [finished, setFinished] = useState(alreadyDone);
 
   const q = inv.questions[qIndex];
+  // V17-05 — structural identity (investigation id + question index), not
+  // the free-text question, so duplicate wording cannot share an order.
   const shuffled = useMemo(() => {
-    return shuffleOptions(q.question, q.choices, q.correctIndex, attemptKey);
-  }, [q, attemptKey]);
+    return shuffleOptions(`${inv.id}:${qIndex}`, q.choices, q.correctIndex, attemptKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inv.id, qIndex, q.choices, q.correctIndex, attemptKey]);
 
   const isLastQuestion = qIndex >= inv.questions.length - 1;
   // Investigations never gate on hearts and never consume hearts.

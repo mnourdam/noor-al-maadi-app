@@ -161,7 +161,10 @@ function MultipleChoiceRenderer({ activity, onResolve, alreadyDone }: RendererPr
   const shuffled = useMemo(
     () => shuffleOptions(activity.id, authoredOptions, authoredCorrectIndex),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [activity.id, authoredOptions.join("\u241E"), authoredCorrectIndex],
+    // V17-05: keyed on stable identity only. A mid-attempt content text
+    // rewrite must NOT reshuffle; only a different activity, option count
+    // or authored answer produces a new mapping.
+    [activity.id, authoredOptions.length, authoredCorrectIndex],
   );
 
   if (!authoredOptions.length) return <FallbackRenderer activity={activity} onResolve={onResolve} alreadyDone={alreadyDone} />;
