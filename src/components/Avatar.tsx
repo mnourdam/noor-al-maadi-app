@@ -31,6 +31,7 @@ const SIZE_MAP = {
  */
 const RARITY_RING: Record<EmblemRarity, string> = {
   common:    "ring-1 ring-gold/30",
+  uncommon:  "ring-1 ring-gold/30",
   rare:      "ring-2 ring-sky-400/60",
   epic:      "ring-2 ring-violet-400/70",
   legendary: "ring-2 ring-gold/90 shadow-[0_0_18px_rgba(212,175,55,0.45)]",

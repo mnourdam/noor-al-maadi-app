@@ -5,3 +5,5 @@ export * from "./resolver";
 export * from "./asset-manifest";
 export * from "./offline-pack";
 export * from "./unlock-spec";
+export * from "./unlock-rules";
+export * from "./unlock-eval";

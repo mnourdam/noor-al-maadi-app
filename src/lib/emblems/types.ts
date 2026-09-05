@@ -21,7 +21,7 @@ export type EmblemCategory =
   | "place"
   | "tool";
 
-export type EmblemRarity = "common" | "rare" | "epic" | "legendary";
+export type EmblemRarity = "common" | "uncommon" | "rare" | "epic" | "legendary";
 
 export type EmblemStatus = "draft" | "published" | "retired";
 
