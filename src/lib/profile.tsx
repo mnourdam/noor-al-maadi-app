@@ -1098,8 +1098,17 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         // zeroed from a client-side day derivation.
         const nextStreak = Math.max(0, Math.floor(stats.streak));
 
-        if (nextStreak !== p.streak) {
+        if (nextStreak !== next.streak) {
           next = { ...next, streak: nextStreak };
+          changed = true;
+        }
+        // V17-04A — the streak mirror and its day travel together. Without
+        // this, a server streak of N could sit next to a stale
+        // `lastActiveDay`, and `deriveStreak` would render 0 in the HUD
+        // while /profile rendered N.
+        const day = laterDayKey(next.lastActiveDay, stats.lastStreakDay ?? null);
+        if (day !== next.lastActiveDay) {
+          next = { ...next, lastActiveDay: day };
           changed = true;
         }
       }
