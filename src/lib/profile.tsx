@@ -270,7 +270,19 @@ interface Ctx {
    * into the local profile WITHOUT discarding local-only fields. Mirrors
    * server `profiles` columns onto the local snapshot.
    */
-  applyServerStats: (stats: { xp?: number | null; dinars?: number | null; hearts?: number | null; streak?: number | null }) => void;
+  applyServerStats: (stats: {
+    xp?: number | null;
+    dinars?: number | null;
+    hearts?: number | null;
+    streak?: number | null;
+    /**
+     * V17-04A — the server-owned day that the streak mirror belongs to
+     * (`profiles.last_streak_day`). A server streak MUST arrive together
+     * with its day so the HUD's `deriveStreak` cannot report a false 0
+     * from stale local date metadata.
+     */
+    lastStreakDay?: string | null;
+  }) => void;
   // Social v1
   grantTitle: (title: string) => void;
   grantArtifact: (id: string) => void;
