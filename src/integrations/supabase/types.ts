@@ -815,7 +815,15 @@ export type Database = {
           created_at?: string
           recipient_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "comment_heart_notices_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "social_comments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       content_registry: {
         Row: {
@@ -2191,6 +2199,7 @@ export type Database = {
           moderated_at: string | null
           moderated_by: string | null
           moderation_reason: string | null
+          parent_comment_id: string | null
           status: string
           updated_at: string
         }
@@ -2209,6 +2218,7 @@ export type Database = {
           moderated_at?: string | null
           moderated_by?: string | null
           moderation_reason?: string | null
+          parent_comment_id?: string | null
           status?: string
           updated_at?: string
         }
@@ -2227,10 +2237,19 @@ export type Database = {
           moderated_at?: string | null
           moderated_by?: string | null
           moderation_reason?: string | null
+          parent_comment_id?: string | null
           status?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "social_comments_parent_comment_id_fkey"
+            columns: ["parent_comment_id"]
+            isOneToOne: false
+            referencedRelation: "social_comments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       social_reactions: {
         Row: {
@@ -3537,6 +3556,10 @@ export type Database = {
         Args: { p_options?: Json; p_payload: Json }
         Returns: Json
       }
+      _comment_replies_json_v1: {
+        Args: { p_limit?: number; p_parent: string; p_uid: string }
+        Returns: Json
+      }
       _emit_personal_notification: {
         Args: {
           p_actor: string
@@ -3620,6 +3643,10 @@ export type Database = {
       ack_announcement_v16: {
         Args: { p_action?: string; p_announcement_id: string }
         Returns: boolean
+      }
+      add_comment_reply_v1: {
+        Args: { p_body: string; p_parent_comment_id: string }
+        Returns: Json
       }
       add_story_comment_v2: {
         Args: {
@@ -4318,6 +4345,10 @@ export type Database = {
           server_time: string
           title: string
         }[]
+      }
+      get_comment_thread_v1: {
+        Args: { p_parent_comment_id: string }
+        Returns: Json
       }
       get_content_manifest: {
         Args: never
