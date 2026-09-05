@@ -2,17 +2,16 @@ import { useMemo, useState } from "react";
 import { Check, X, Lock, Sparkles } from "lucide-react";
 import {
   AVATARS,
-  isAvatarUnlocked,
   CATEGORY_LABEL,
   RARITY_LABEL,
   type AvatarCategory,
   type AvatarRarity,
-  type HistoricalAvatar,
 } from "@/lib/avatars";
 import { Avatar } from "./Avatar";
 import { ModalPortal } from "@/components/ModalPortal";
 import { OverlayDismissRegistration } from "@/lib/navigation/overlay-registration";
 import { resolveProfileEmblem } from "@/lib/emblems";
+import { evaluateEmblemUnlock, type EmblemUnlockContext } from "@/lib/emblems/unlock-eval";
 
 const RARITY_BADGE: Record<AvatarRarity, string> = {
   common:    "bg-white/10 text-muted-foreground",
@@ -22,30 +21,25 @@ const RARITY_BADGE: Record<AvatarRarity, string> = {
   legendary: "bg-gold/20 text-gold",
 };
 
-const UNLOCK_HINT: Record<HistoricalAvatar["unlock_method"], string> = {
-  default: "متاح",
-  achievement: "يُفتح بإنجاز",
-  campaign: "يُفتح بإكمال حملة",
-  museum: "يُفتح بتقدّم المتحف",
-  event: "حدث خاص",
-  level: "يُفتح بمستوى أعلى",
-  referral: "يُفتح بالإحالات",
-};
-
 /**
- * Identity-emblem picker. Closes on pick. Filters by category and shows
- * rarity tier + lock state for future premium emblems.
+ * Identity-emblem picker.
+ *
+ * V17-08: every locked emblem states its REAL requirement — the same rule
+ * `public.emblem_is_equippable_v1` enforces — with live progress where the
+ * requirement is a countable threshold. Emblems whose authored requirement
+ * references content that does not exist are shown as «قريبًا» and never
+ * advertise a condition the game cannot grant.
  */
 export function AvatarPicker({
   currentId,
   onPick,
   onClose,
-  unlockedAvatarIds,
+  unlockContext,
 }: {
   currentId: string;
   onPick: (id: string) => void;
   onClose: () => void;
-  unlockedAvatarIds?: string[];
+  unlockContext: EmblemUnlockContext;
 }) {
   const [cat, setCat] = useState<AvatarCategory | "all">("all");
   const list = useMemo(
@@ -108,7 +102,13 @@ export function AvatarPicker({
           <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
             {list.map((a) => {
               const active = a.id === currentId;
-              const unlocked = isAvatarUnlocked(a, { unlockedAvatarIds });
+              const state = evaluateEmblemUnlock(a, unlockContext);
+              const unlocked = state.unlocked;
+              const lockLine = state.comingSoon
+                ? state.requirementText
+                : state.progress
+                  ? `${state.requirementText} — ${state.progress.text}`
+                  : state.requirementText;
               return (
                 <button
                   key={a.id}
@@ -121,13 +121,26 @@ export function AvatarPicker({
                         ? "border-white/10 bg-background/40 hover:border-gold/40 hover:bg-gold/5"
                         : "cursor-not-allowed border-white/5 bg-background/20 opacity-60"
                   }`}
-                  title={unlocked ? a.name : UNLOCK_HINT[a.unlock_method]}
+                  title={unlocked ? a.name : lockLine}
+                  aria-label={unlocked ? a.name : `${a.name} — ${lockLine}`}
+                  data-emblem-id={a.id}
+                  data-locked={unlocked ? "false" : "true"}
                 >
                   <Avatar avatarId={a.id} size="lg" artSize="md" locked={!unlocked} />
                   <span className="line-clamp-1 text-center text-[11px] font-medium text-foreground">{a.name}</span>
                   <span className={`rounded-full px-1.5 py-0.5 text-[9px] tracking-wider ${RARITY_BADGE[a.rarity]}`}>
                     {RARITY_LABEL[a.rarity]}
                   </span>
+                  {!unlocked && (
+                    <span
+                      data-testid="emblem-lock-line"
+                      className={`line-clamp-2 text-center text-[9px] leading-tight ${
+                        state.comingSoon ? "text-muted-foreground" : "text-gold/80"
+                      }`}
+                    >
+                      {lockLine}
+                    </span>
+                  )}
                   {active && (
                     <span className="absolute top-1.5 right-1.5 grid size-5 place-items-center rounded-full bg-gradient-gold text-primary-foreground shadow-gold">
                       <Check className="size-3" strokeWidth={3} />
@@ -145,7 +158,7 @@ export function AvatarPicker({
 
           <p className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-gold/20 bg-gold/5 px-3 py-1 text-[10px] text-gold">
             <Sparkles className="size-3" />
-            شعارات إضافية تُفتح قريبًا عبر الحملات والإنجازات والمتحف
+            تُفتح الشعارات بإكمال الحملات وجمع قطع المتحف، وشعارات «قريبًا» قيد الإعداد
           </p>
         </div>
       </div>
@@ -153,4 +166,3 @@ export function AvatarPicker({
     </ModalPortal>
   );
 }
-
