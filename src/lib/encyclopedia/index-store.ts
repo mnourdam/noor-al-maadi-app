@@ -160,6 +160,37 @@ export function buildEncyclopediaIndex(
 export const EMPTY_ENCYCLOPEDIA_INDEX: EncyclopediaIndex = buildEncyclopediaIndex([], null);
 
 /**
+ * How long the authoritative id request may gate an index that already has a
+ * complete local snapshot behind it. Past this, the snapshot wins.
+ */
+export const AUTHORITY_TIMEOUT_MS = 4_000;
+
+/**
+ * Ask the network for the authoritative id set, but never let it block the
+ * index for more than {@link AUTHORITY_TIMEOUT_MS}.
+ *
+ * `null` means "no authority available" — the already-supported fallback that
+ * builds the index from the local snapshot as-is. A late settlement of the
+ * original promise is swallowed, so a slow/hung request can never surface as
+ * an unhandled rejection.
+ */
+async function authoritativeIdsBounded(): Promise<Set<string> | null> {
+  const request = fetchEncyclopediaLivePublicIds();
+  request.catch(() => null); // late failures must not go unhandled
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      request.catch(() => null),
+      new Promise<null>((resolve) => {
+        timer = setTimeout(() => resolve(null), AUTHORITY_TIMEOUT_MS);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+/**
  * Build the index ONLY from a fully applied offline snapshot.
  *
  * Hard rule: the index is never built from a partial/absent snapshot. If the
@@ -173,8 +204,10 @@ async function loadEncyclopediaIndex(): Promise<EncyclopediaIndex> {
   if (local.length > 0) {
     // Network is consulted for the id authority only (49 KB). It never gates
     // the first paint: rows come from the snapshot and the authority simply
-    // prunes rows that no longer exist server-side.
-    const ids = await fetchEncyclopediaLivePublicIds();
+    // prunes rows that no longer exist server-side. If that request fails or
+    // hangs, the complete local snapshot is used unpruned rather than leaving
+    // the player on an endless spinner.
+    const ids = await authoritativeIdsBounded();
     return buildEncyclopediaIndex(local, ids, "local");
   }
   // No usable snapshot yet (fresh web visit before the background sync
@@ -187,6 +220,7 @@ async function loadEncyclopediaIndex(): Promise<EncyclopediaIndex> {
   // caching an empty/incorrect one.
   throw new Error("encyclopedia-index: snapshot not ready");
 }
+
 
 export function encyclopediaIndexQueryOptions(dataVersion = localDataVersion()) {
   return queryOptions({
