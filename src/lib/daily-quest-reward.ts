@@ -50,6 +50,8 @@ export interface RewardServerStats {
   dinars: number | null;
   hearts: number | null;
   streak: number | null;
+  /** V17-04A — server-owned day for the streak mirror. */
+  lastStreakDay?: string | null;
 }
 
 export interface CanonicalGrantResult {
@@ -117,12 +119,13 @@ async function fetchAuthoritativeProfileStats(): Promise<RewardServerStats | und
     if (error) console.warn("[daily-quest-reward] profile rehydrate failed", error.message);
     return undefined;
   }
-  const row = data as { xp?: number | null; dinars?: number | null; hearts?: number | null; streak?: number | null };
+  const row = data as { xp?: number | null; dinars?: number | null; hearts?: number | null; streak?: number | null; last_streak_day?: string | null };
   return {
     xp: row.xp ?? null,
     dinars: row.dinars ?? null,
     hearts: row.hearts ?? null,
     streak: row.streak ?? null,
+    lastStreakDay: row.last_streak_day ?? null,
   };
 }
 

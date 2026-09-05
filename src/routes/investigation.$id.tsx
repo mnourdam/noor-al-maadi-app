@@ -265,7 +265,7 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
       try {
         const { data } = await supabase.rpc("get_my_profile");
         const srv = (data ?? null) as
-          | { xp?: number; dinars?: number; hearts?: number; streak?: number }
+          | { xp?: number; dinars?: number; hearts?: number; streak?: number; last_streak_day?: string | null }
           | null;
         if (srv) {
           applyServerStats({
@@ -273,6 +273,7 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
             dinars: srv.dinars ?? null,
             hearts: srv.hearts ?? null,
             streak: srv.streak ?? null,
+            lastStreakDay: srv.last_streak_day ?? null,
           });
         }
       } catch { /* offline — outbox flush + cold-start sync reconcile later */ }
