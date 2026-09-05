@@ -27,6 +27,9 @@ import {
 
 const read = (p: string) => readFileSync(resolve(process.cwd(), p), "utf8");
 
+// React 19 act() support flag — keeps the console clean in this suite.
+(globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
 // ---------------------------------------------------------------
 // 1. Close path — source-level guarantees
 // ---------------------------------------------------------------
