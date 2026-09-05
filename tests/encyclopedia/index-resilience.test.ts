@@ -163,7 +163,9 @@ describe("hub and category fail-safe UI", () => {
     it(`${name}: keeps the normal loading experience first`, () => {
       // The unavailable branch precedes the spinner branch, and the spinner
       // branch itself is untouched.
-      expect(SRC.indexOf("unavailable ?")).toBeLessThan(SRC.indexOf("isPending ?") === -1 ? SRC.indexOf("isLoading ?") : SRC.indexOf("isPending ?"));
+      const spinner = Math.max(SRC.indexOf("isPending ? ("), SRC.indexOf("isLoading ? ("));
+      expect(SRC.indexOf("unavailable ? (")).toBeGreaterThan(-1);
+      expect(SRC.indexOf("unavailable ? (")).toBeLessThan(spinner);
       expect(SRC).toContain("AppShell");
     });
   }
