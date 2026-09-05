@@ -224,6 +224,7 @@ export function validateCampaign(raw: unknown, knownRegistryIds?: Set<string>): 
       subtitle: ch?.subtitle,
       introText: ch?.introText,
       historicalReadingText: ch?.historicalReadingText,
+      imageUrl: typeof ch?.imageUrl === "string" && ch.imageUrl.trim() ? ch.imageUrl.trim() : undefined,
       order: typeof ch?.order === "number" ? ch.order : ci + 1,
       unlockRequirement: ch?.unlockRequirement,
       rewards: Object.keys(chRewards).length ? chRewards : undefined,
