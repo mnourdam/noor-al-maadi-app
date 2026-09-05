@@ -365,10 +365,13 @@ describe("V17-07A source guards", () => {
     expect(comments).toMatch(/my_heart\?:\s*boolean/);
   });
 
-  it("does not introduce reply UI (V17-07B is out of scope)", () => {
-    expect(item).not.toMatch(/parent_comment_id|addReply|ReplyComposer|onReply/);
-    expect(comments).not.toMatch(/parent_comment_id|addReply|listCommentReplies/);
-    expect(storyComments).not.toMatch(/parent_comment_id|addReply|ReplyComposer/);
+  // V17-07B shipped ONE level of replies. The guard now protects the depth
+  // limit instead of the absence of replies.
+  it("keeps replies to a single level in the UI", () => {
+    // A reply card must never render its own reply affordance.
+    expect(item).toMatch(/!isReply && onReply/);
+    // The replies block never nests another replies block.
+    expect(replies).not.toMatch(/<CommentReplies/);
   });
 
   it("keeps comment pagination and ordering untouched", () => {
