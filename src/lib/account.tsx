@@ -539,6 +539,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
 
 
 
+
   const signUp = useCallback<AccountCtx["signUp"]>(async ({ email, password, username, displayName }) => {
     const u = username.trim();
     if (u.length < 3) return { ok: false, error: "اسم المستخدم قصير جداً" };
