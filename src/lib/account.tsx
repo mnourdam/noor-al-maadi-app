@@ -476,6 +476,14 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   // incoming row is older than local state and would clobber a freshly
   // earned reward or a just-lost heart.
   const REALTIME_GUARD_MS = 4000;
+  // Phase 3B (R1): keep the latest `applyServerStats` in a ref so the effect
+  // below depends ONLY on the user id. Previously `applyServerStats` changed
+  // identity on every profile mutation, which tore down and rebuilt the
+  // realtime channel (and re-ran the cold-start RPC) dozens of times a
+  // session — the dominant source of `realtime.subscription` write churn.
+  const applyServerStatsRef = useRef(applyServerStats);
+  useEffect(() => { applyServerStatsRef.current = applyServerStats; }, [applyServerStats]);
+
   useEffect(() => {
     if (!user) return;
     const uid = user.id;
