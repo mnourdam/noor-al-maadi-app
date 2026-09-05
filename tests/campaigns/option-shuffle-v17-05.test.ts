@@ -101,8 +101,8 @@ describe("campaign MCQ renderer", () => {
   });
 
   it("never writes back to the authored activity", () => {
-    expect(block).not.toMatch(/activity\.options\s*=/);
-    expect(block).not.toMatch(/activity\.correctAnswer\s*=/);
+    expect(block).not.toMatch(/activity\.options\s*=[^=]/);
+    expect(block).not.toMatch(/activity\.correctAnswer\s*=[^=]/);
     expect(block).not.toContain("authoredOptions.sort");
   });
 });
@@ -167,8 +167,8 @@ describe("chapter quiz", () => {
   });
 
   it("never mutates the authored question", () => {
-    expect(src).not.toMatch(/q\.choices\s*=/);
-    expect(src).not.toMatch(/q\.correctIndex\s*=/);
+    expect(src).not.toMatch(/q\.choices\s*=[^=]/);
+    expect(src).not.toMatch(/q\.correctIndex\s*=[^=]/);
     expect(src).not.toContain("q.choices.sort");
   });
 
