@@ -1063,6 +1063,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         // seasonPoints removed in Phase 3B
         dinars: numMax(p.dinars, cloud.dinars, STARTING_DINARS),
         streak: nextStreak,
+        lastActiveDay: nextLastActiveDay,
         hearts: heartsPatch.hearts,
         heartsAt: heartsPatch.heartsAt,
         // Union all progression arrays. Include the server sticky
