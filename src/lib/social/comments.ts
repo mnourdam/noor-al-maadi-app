@@ -39,6 +39,13 @@ export interface SocialCommentRow {
   /** Display name of the author (attribution only — never a profile link). */
   author_name?: string | null;
   is_mine?: boolean;
+  /**
+   * Whether the CURRENT viewer has hearted ("استزدتُ") this comment.
+   * Server-computed by `list_comments_v2` — never inferred client-side.
+   * Absent (undefined) for guests and for rows returned by add/edit.
+   */
+  my_heart?: boolean;
+
 
 }
 
