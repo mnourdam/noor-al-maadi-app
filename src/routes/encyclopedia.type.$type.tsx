@@ -231,7 +231,9 @@ function TypeBrowsePage() {
         )}
 
         <div className="mt-5 pb-4">
-          {isPending ? (
+          {unavailable ? (
+            <EncyclopediaUnavailable onRetry={refetch} retrying={isFetching} />
+          ) : isPending ? (
             <div className="grid grid-cols-2 gap-2.5">
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} className="h-[104px] animate-pulse rounded-2xl border border-white/5 bg-surface/60" />
