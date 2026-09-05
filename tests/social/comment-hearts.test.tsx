@@ -346,6 +346,7 @@ describe("V17-07A source guards", () => {
   const reactions = read("src/lib/social/reactions.ts");
   const comments = read("src/lib/social/comments.ts");
   const storyComments = read("src/components/social/StoryComments.tsx");
+  const replies = read("src/components/social/CommentReplies.tsx");
 
   it("mutates reactions only through the validated toggle RPC", () => {
     expect(item).toContain("toggleReaction");
