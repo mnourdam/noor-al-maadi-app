@@ -37,6 +37,22 @@ export function deriveStreak(
 }
 
 
+/**
+ * V17-04A — explicit day precedence. IRTH day keys are `YYYY-MM-DD`, so a
+ * lexical comparison is a chronological comparison. Used wherever a streak
+ * value and its day must stay coherent (never "new streak + stale day").
+ */
+export function laterDayKey(
+  a: string | null | undefined,
+  b: string | null | undefined,
+): string | null {
+  const x = a || null;
+  const y = b || null;
+  if (!x) return y;
+  if (!y) return x;
+  return y > x ? y : x;
+}
+
 function dailyMissionsForDate(_d: Date = new Date()): { id: string }[] {
   return [];
 }
