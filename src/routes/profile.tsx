@@ -48,6 +48,7 @@ import { AccountSection } from "@/components/AccountSection";
 import { CommunityHubSection } from "@/components/CommunityHubSection";
 import { Avatar } from "@/components/Avatar";
 import { AvatarPicker } from "@/components/AvatarPicker";
+import { useEmblemUnlockContext } from "@/lib/emblems/useEmblemUnlockContext";
 import { DEFAULT_NOTIFICATION_PREFS, ensurePermission } from "@/lib/notifications";
 import { DEFAULT_AVATAR_ID } from "@/lib/avatars";
 import { useAccount } from "@/lib/account";
