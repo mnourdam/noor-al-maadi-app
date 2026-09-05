@@ -101,7 +101,7 @@ export const AVATARS: HistoricalAvatar[] = [
   { id: "reed_pen",           name: "القلم القصبي",          category: "knowledge", rarity: "common",    unlock_method: "default",     glyph: "✒" },
   { id: "parchment_stack",    name: "رقوق الرقّ",            category: "knowledge", rarity: "common",    unlock_method: "default",     glyph: "📜" },
   { id: "wax_seal",           name: "الختم الشمعي",          category: "knowledge", rarity: "uncommon",  unlock_method: "default",     glyph: "🔏" },
-  { id: "bound_folio",        name: "المجلد المُجلَّد",      category: "knowledge", rarity: "uncommon",  unlock_method: "campaign",    unlock_requirement: { label: "أكمل حملتك الأولى" }, glyph: "📕" },
+  { id: "bound_folio",        name: "المجلد المُجلَّد",      category: "knowledge", rarity: "uncommon",  unlock_method: "campaign",    unlock_requirement: { label: "أكمل حملتك الأولى", threshold: 1 }, glyph: "📕" },
   { id: "illuminated_page",   name: "الصفحة المُذهَّبة",     category: "knowledge", rarity: "rare",      unlock_method: "achievement", unlock_requirement: { label: "إنجاز: قارئ الحكمة" }, glyph: "✨" },
   { id: "writing_desk_kit",   name: "طقم الكاتب",            category: "knowledge", rarity: "uncommon",  unlock_method: "default",     glyph: "🪶" },
   { id: "paper_maker_screen", name: "منخل صانع الورق",        category: "knowledge", rarity: "uncommon",  unlock_method: "default",     glyph: "🧻" },
