@@ -18,28 +18,28 @@ function doc(chapterExtra: Record<string, unknown>) {
 
 describe("chapter imageUrl", () => {
   it("survives normalization", () => {
-    const { campaign } = validateCampaign(doc({ imageUrl: URL_A }));
+    const campaign = validateCampaign(doc({ imageUrl: URL_A })).normalized!;
     expect(campaign.chapters[0].imageUrl).toBe(URL_A);
   });
 
   it("round-trips through JSON export/import unchanged", () => {
-    const first = validateCampaign(doc({ imageUrl: URL_A })).campaign;
-    const again = validateCampaign(JSON.parse(JSON.stringify(first))).campaign;
+    const first = validateCampaign(doc({ imageUrl: URL_A })).normalized!;
+    const again = validateCampaign(JSON.parse(JSON.stringify(first))).normalized!;
     expect(again.chapters[0].imageUrl).toBe(URL_A);
   });
 
   it("stays undefined for chapters without an image", () => {
-    const { campaign } = validateCampaign(doc({}));
+    const campaign = validateCampaign(doc({})).normalized!;
     expect(campaign.chapters[0].imageUrl).toBeUndefined();
   });
 
   it("ignores blank values", () => {
-    const { campaign } = validateCampaign(doc({ imageUrl: "   " }));
+    const campaign = validateCampaign(doc({ imageUrl: "   " })).normalized!;
     expect(campaign.chapters[0].imageUrl).toBeUndefined();
   });
 
   it("is discovered by the existing offline image collector", () => {
-    const { campaign } = validateCampaign(doc({ imageUrl: URL_A }));
+    const campaign = validateCampaign(doc({ imageUrl: URL_A })).normalized!;
     expect(collectImageUrls(campaign).has(URL_A)).toBe(true);
   });
 
