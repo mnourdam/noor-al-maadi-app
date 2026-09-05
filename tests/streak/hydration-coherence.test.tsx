@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
 import { render, act } from "@testing-library/react";
 import { ProfileProvider, useProfile, deriveStreak, type ProfileState } from "@/lib/profile";
