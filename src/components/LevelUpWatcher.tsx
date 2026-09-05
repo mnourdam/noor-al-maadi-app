@@ -74,21 +74,25 @@ export function LevelUpWatcher() {
 
 function LevelUpModal({ info, onClose }: { info: LevelInfo; onClose: () => void }) {
   const reward = info.reward;
-  const closedRef = useRef(false);
 
-  // Both X and "واصل الرحلة" execute the identical close action. Guarded
-  // against double-invocation but never disabled — buttons must always
-  // respond visually and functionally to a tap.
+  // X, backdrop, "واصل الرحلة" and hardware Back all converge on this ONE
+  // close path, and it stays callable until React actually unmounts the
+  // dialog. There is deliberately NO one-shot latch here: the previous
+  // `closedRef` guard made the very first tap the only tap that could ever
+  // work, so a single dropped render left the player permanently trapped
+  // behind the celebration. `setCurrent(null)` in the watcher is already
+  // idempotent, so repeated calls are harmless.
   const handleClose = useCallback(() => {
-    if (closedRef.current) return;
-    closedRef.current = true;
     onClose();
   }, [onClose]);
 
   return (
     <ModalPortal>
       <OverlayDismissRegistration open onClose={handleClose} label="level-up" />
-      <div className="fixed inset-0 z-[120] grid place-items-center px-4 animate-fade-in" role="dialog" aria-modal>
+      {/* `data-state="open"` makes this dialog visible to hasVisibleModalLayer()
+          so navigation-time lock reconciliation treats it as a legitimate
+          open modal instead of an ownerless leftover. */}
+      <div className="fixed inset-0 z-[120] grid place-items-center px-4 animate-fade-in" role="dialog" data-state="open" aria-modal>
         <button
           type="button"
           aria-label="إغلاق"
