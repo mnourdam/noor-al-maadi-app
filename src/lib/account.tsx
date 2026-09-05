@@ -497,7 +497,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         // Skip if local has unpushed gameplay changes that just happened.
         if (Date.now() - lastLocalChangeRef.current < REALTIME_GUARD_MS) return;
         const row = data as { xp?: number; dinars?: number; hearts?: number; streak?: number };
-        applyServerStats({
+        applyServerStatsRef.current({
           xp: row.xp ?? null,
           dinars: row.dinars ?? null,
           hearts: row.hearts ?? null,
