@@ -332,6 +332,7 @@ export function ShareCard(props: ShareCardProps) {
 
 const RARITY_ACCENT: Record<EmblemRarity, string> = {
   common:    "#d4af37",
+  uncommon:  "#d4af37",
   rare:      "#7dd3fc",
   epic:      "#a78bfa",
   legendary: "#f5d062",

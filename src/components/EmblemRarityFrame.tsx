@@ -26,6 +26,12 @@ const STYLE: Record<EmblemRarity, FrameStyle> = {
     ring: "ring-1 ring-white/20",
     aura: "",
   },
+  // V17-08: `uncommon` is a real tier now; it reuses the `common` frame so
+  // the frozen Emblems Style v1 art contract is untouched.
+  uncommon: {
+    ring: "ring-1 ring-white/20",
+    aura: "",
+  },
   rare: {
     ring: "ring-2 ring-sky-300/50",
     aura: "shadow-[0_0_24px_-8px_rgba(125,211,252,0.45)]",
