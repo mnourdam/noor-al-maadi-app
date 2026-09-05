@@ -13,6 +13,9 @@ import {
   type EncyclopediaBrowseSort,
 } from "@/lib/encyclopedia/index-store";
 import { publicEraLabel as canonicalEraLabel } from "@/lib/eras-public";
+import { EncyclopediaUnavailable } from "@/components/encyclopedia/EncyclopediaUnavailable";
+import { useStalled } from "@/hooks/useStalled";
+
 
 const SECTION_LABELS: Record<string, string> = {
   state: "الدول",
@@ -87,7 +90,11 @@ function TypeBrowsePage() {
   const [sort, setSort] = useState<EncyclopediaBrowseSort>("alpha");
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  const { index, isPending } = useEncyclopediaIndex();
+  const { index, isPending, isError, isFetching, refetch } = useEncyclopediaIndex();
+  // Same fail-safe as the hub: never sit on skeletons forever.
+  const stalled = useStalled(isPending, 15_000);
+  const unavailable = isError || stalled;
+
 
   const total = index.counts[type] ?? 0;
   const eras = index.erasByType[type] ?? [];
