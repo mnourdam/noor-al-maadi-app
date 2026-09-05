@@ -264,6 +264,14 @@ export async function applyContentUpdate(timeoutMs: number = APPLY_TIMEOUT_MS): 
     // Convergence (D): persist fingerprint + counts + editorial timestamps +
     // the observed reaction-polluted `stories.last_updated` together.
     await persistAppliedStoryIdentity(stored);
+
+    // V17-09: media referenced by the freshly applied content (campaign
+    // chapter images included) must become durable NOW, not on the next
+    // boot — otherwise the player restarts offline and sees nothing.
+    void import("./offline-snapshot-warm-bridge")
+      .then((m) => m.warmSnapshotImageCache(stored.collections as Record<string, any[]>))
+      .catch(() => { /* warming is best-effort */ });
+
     return true;
   };
 

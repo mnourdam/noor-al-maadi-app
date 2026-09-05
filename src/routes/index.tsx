@@ -1181,7 +1181,14 @@ function ContinueJourneyCard({ sel }: {
   // Legacy `coverImage` becomes the fallback when no Key Art exists;
   // final safety net is the shipped `heroFortress` asset.
   const fallbackCover = sanitizedCoverImage(campaign) ?? heroFortress;
-  const { url: cover } = useCampaignArtworkUrl(campaign, "continue-journey", fallbackCover);
+  const { url: campaignCover } = useCampaignArtworkUrl(campaign, "continue-journey", fallbackCover);
+  // V17-09: the artwork always belongs to the exact chapter this card
+  // resumes. Chapters with no image keep the campaign artwork untouched.
+  const chapterImage =
+    typeof nextChapter?.imageUrl === "string" && nextChapter.imageUrl.trim()
+      ? nextChapter.imageUrl.trim()
+      : null;
+  const cover = chapterImage ?? campaignCover;
   return (
     <section className="mt-12 px-5">
       <SectionHeader icon={<Crown className="size-3.5" />} eyebrow="حملتك النشطة" title="واصل رحلتك" />

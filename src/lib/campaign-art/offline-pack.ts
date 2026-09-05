@@ -125,3 +125,41 @@ export function localCampaignArtPathForStoragePath(
   const aspect: CampaignArtAspect = /square/i.test(rest.join("/")) ? "square" : "hero";
   return localCampaignArtPath(id, aspect);
 }
+
+// ------------------------------------------------------------
+// Chapter images (V17-09) — same bucket, same pack, same rules.
+// A chapter image is persisted as a signed https URL inside the
+// campaign document; its bucket path is always `chapters/<id>/<file>`.
+// The build pack mirrors that path under /campaign-key-art/, so a
+// fresh install resolves it with zero network. Replaced/removed
+// images simply stop being referenced by the content, and the next
+// pack no longer bundles them.
+// ------------------------------------------------------------
+import { OFFLINE_CHAPTER_IMAGE_PATHS } from "./chapter-pack.generated";
+
+const BUNDLED_CHAPTER_PATHS: ReadonlySet<string> = new Set(OFFLINE_CHAPTER_IMAGE_PATHS);
+
+/** Bucket path of a chapter image URL, or null when it is not one of ours. */
+export function chapterImageStoragePath(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const m = /\/object\/(?:sign|public)\/campaign-key-art\/([^?]+)/.exec(url);
+  if (!m) return null;
+  try {
+    const p = decodeURIComponent(m[1]);
+    return p.startsWith("chapters/") ? p : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Local, same-origin path for a bundled chapter image URL. */
+export function localChapterImagePathForUrl(url: string | null | undefined): string | null {
+  const path = chapterImageStoragePath(url);
+  if (!path || !BUNDLED_CHAPTER_PATHS.has(path)) return null;
+  return `/campaign-key-art/${path}`;
+}
+
+/** Number of chapter images bundled in this build (diagnostics/tests). */
+export function offlineChapterImageCount(): number {
+  return BUNDLED_CHAPTER_PATHS.size;
+}

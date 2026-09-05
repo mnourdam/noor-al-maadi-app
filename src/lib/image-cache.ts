@@ -25,6 +25,8 @@
  *   - `useCachedImageSrc(url)` — React hook.
  */
 
+import { localChapterImagePathForUrl } from "./campaign-art/offline-pack";
+
 const CACHE_NAME = "irth-images-v1";
 /** Cap prefetch to avoid hammering the network on a fresh install. */
 const PREFETCH_CONCURRENCY = 6;
@@ -219,6 +221,12 @@ export async function prefetchKeyedImages(
 export async function resolveImageUrl(url: string): Promise<string | null> {
   if (!url) return null;
   if (url.startsWith("data:") || url.startsWith("blob:")) return url;
+
+  // Local-first: chapter images bundled in this build resolve with zero
+  // network (same rule as campaign Key Art).
+  const bundledChapter = localChapterImagePathForUrl(url);
+  if (bundledChapter) return bundledChapter;
+  
   
   const stableKey = getStableStorageKey(url);
   const cacheKey = stableKey || url;
