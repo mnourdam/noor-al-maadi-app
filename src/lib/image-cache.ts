@@ -219,6 +219,12 @@ export async function prefetchKeyedImages(
 export async function resolveImageUrl(url: string): Promise<string | null> {
   if (!url) return null;
   if (url.startsWith("data:") || url.startsWith("blob:")) return url;
+
+  // Local-first: chapter images bundled in this build resolve with zero
+  // network (same rule as campaign Key Art).
+  const bundledChapter = localChapterImagePathForUrl(url);
+  if (bundledChapter) return bundledChapter;
+  
   
   const stableKey = getStableStorageKey(url);
   const cacheKey = stableKey || url;
