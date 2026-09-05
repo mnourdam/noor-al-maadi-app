@@ -58,6 +58,60 @@ export function CommentItem({ row, onChange, onDelete, currentUserId = null, con
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(row.body_text);
   const [pending, setPending] = useState(false);
+  const online = useOnline();
+
+  // ── Heart ("استزدتُ") — V17-07A ──────────────────────────
+  // Local presentation state only; the `row` object is never mutated.
+  // Server truth arrives via `my_heart` / `helpful_count` on load, and via
+  // the RPC's authoritative { active, count } after every toggle.
+  const [heartActive, setHeartActive] = useState<boolean>(!!row.my_heart);
+  const [heartCount, setHeartCount] = useState<number>(
+    Math.max(0, row.helpful_count ?? 0),
+  );
+  const [heartPending, setHeartPending] = useState(false);
+
+  // Re-sync when the server sends a different row for this comment.
+  useEffect(() => {
+    setHeartActive(!!row.my_heart);
+    setHeartCount(Math.max(0, row.helpful_count ?? 0));
+  }, [row.id, row.my_heart, row.helpful_count]);
+
+  async function toggleHeart() {
+    // Rapid-fire protection: one request in flight per card.
+    if (heartPending) return;
+    if (!currentUserId) {
+      toast.error("سجّل الدخول لتستزيد من المساهمات.");
+      return;
+    }
+    if (!online) {
+      // Online-only by contract: no outbox, no queued heart.
+      toast.error("يتطلب هذا الإجراء اتصالًا بالإنترنت.");
+      return;
+    }
+
+    const prevActive = heartActive;
+    const prevCount = heartCount;
+
+    // Optimistic — count can never render negative.
+    setHeartActive(!prevActive);
+    setHeartCount(Math.max(0, prevCount + (prevActive ? -1 : 1)));
+    setHeartPending(true);
+
+    const res = await toggleReaction("comment", row.id);
+    setHeartPending(false);
+
+    if (!res.ok) {
+      // Rollback to the exact pre-toggle state.
+      setHeartActive(prevActive);
+      setHeartCount(prevCount);
+      toast.error(commentErrorCopyAr(res.reason));
+      return;
+    }
+
+    // Adopt authoritative server state.
+    setHeartActive(!!res.active);
+    setHeartCount(Math.max(0, res.count ?? 0));
+  }
 
   const canEdit = row.is_mine && isWithinEditWindow(row);
   const canDelete = row.is_mine === true;
