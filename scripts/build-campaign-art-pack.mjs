@@ -126,9 +126,35 @@ async function manifest() {
   console.log(ids.map((i) => `  "${i}",`).join("\n"));
 }
 
-const rows = process.argv[2] ? JSON.parse(await readFile(process.argv[2], "utf8")) : [];
-if (rows.length) {
+/**
+ * Live discovery (release preparation). With the build secret available the
+ * pack is regenerated from the CURRENT published campaign content instead of a
+ * hand-exported rows file, so a release can never ship artwork for stale
+ * campaign documents. The service-role key is read from the environment only
+ * and never written into any artifact.
+ */
+async function fetchPublishedCampaignRows() {
+  const url = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "").replace(/\/+$/, "");
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  const endpoint =
+    `${url}/rest/v1/admin_campaigns` +
+    `?select=id,key_art_path,key_art_square_path,data,updated_at&status=eq.published`;
+  const res = await fetch(endpoint, { headers: { Authorization: `Bearer ${key}`, apikey: key } });
+  if (!res.ok) throw new Error(`admin_campaigns fetch failed: HTTP ${res.status}`);
+  return res.json();
+}
+
+const explicit = process.argv[2] ? JSON.parse(await readFile(process.argv[2], "utf8")) : null;
+const rows = explicit ?? (await fetchPublishedCampaignRows());
+
+if (rows?.length) {
   await sync(rows);
   await syncChapterImages(rows);
+} else if (!rows) {
+  console.warn(
+    "[campaign-art-pack] no rows file and no SUPABASE_SERVICE_ROLE_KEY — " +
+      "keeping the committed pack and only regenerating the manifest",
+  );
 }
 await manifest();
