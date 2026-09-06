@@ -116,7 +116,7 @@ if (LIVE) {
 // availability so a keyless run reuses the already-approved Story artifact.
 runNpm("Android web release build (dist/android)", "build:android:web", RELEASE_ENV);
 runNode("Android branding", "scripts/generate-android-branding.mjs");
-run("Capacitor sync (android)", process.platform === "win32" ? "npx.cmd" : "npx", ["cap", "sync", "android"]);
+run("Capacitor sync (android)", npxBin(), ["cap", "sync", "android"]);
 
 if (!existsSync(resolve(ROOT, "dist/android/index.html"))) {
   fail("dist/android/index.html is missing — the Android web build did not produce dist/android");
