@@ -24,8 +24,18 @@ export const MEDIA_MANIFEST_PATH = resolve(process.cwd(), "public/story-media/ma
 /** Maximum age of an approved artifact reused by a keyless release run. */
 export const FRESHNESS_DAYS = 30;
 
+/**
+ * Hash artifact content, not its on-disk line endings.
+ *
+ * Windows release machines with `core.autocrlf=true` rewrite a checked-out
+ * LF into CRLF, which changes the raw bytes of an otherwise untouched,
+ * committed artifact. Normalising CRLF -> LF (and a lone CR -> LF) before
+ * hashing keeps the gate byte-exact on content while immune to checkout
+ * EOL translation. Any real edit to the artifact still changes the hash.
+ */
 function sha256File(path) {
-  return createHash("sha256").update(readFileSync(path)).digest("hex");
+  const normalized = readFileSync(path, "utf8").replace(/\r\n?/g, "\n");
+  return createHash("sha256").update(normalized, "utf8").digest("hex");
 }
 
 export function readBaselineSummary() {

@@ -1,0 +1,8 @@
+# Release integrity: pre-generated Story artifacts and their approval stamp are
+# hash-verified byte-for-byte. They must never be EOL-converted on checkout
+# (Windows release machines with core.autocrlf=true would otherwise alter them).
+public/baseline-content.json -text
+public/story-media/manifest.json -text
+release/story-artifact-approval.json -text
+public/offline-snapshot.json -text
+public/campaign-key-art/manifest.json -text
