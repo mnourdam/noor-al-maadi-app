@@ -37,7 +37,6 @@ import {
 } from "./lib/story-artifact-approval.mjs";
 
 const ROOT = process.cwd();
-const npm = process.platform === "win32" ? "npm.cmd" : "npm";
 const LIVE = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
 
 const RELEASE_ENV = { ANDROID_BUILD_TYPE: "release", REQUIRE_LIVE_CONTENT: LIVE ? "1" : "0" };
@@ -53,16 +52,14 @@ let stepNo = 0;
 function run(label, cmd, args, env = {}) {
   stepNo += 1;
   console.log(`\n=== [${stepNo}] ${label} ===`);
-  const res = spawnSync(cmd, args, {
-    stdio: "inherit",
-    env: { ...process.env, ...env },
-    shell: process.platform === "win32",
-  });
-  if ((res.status ?? 1) !== 0) fail(`step failed — ${label}`);
+  // Executable + arguments are always passed separately (see scripts/lib/spawn.mjs);
+  // no command strings are ever concatenated, so Windows paths containing
+  // spaces (C:\Program Files\nodejs\node.exe) launch correctly.
+  if (runProcess(cmd, args, { env }) !== 0) fail(`step failed — ${label}`);
 }
 
 function runNpm(label, script, env = {}) {
-  run(label, npm, ["run", script], env);
+  run(label, npmBin(), ["run", script], env);
 }
 
 function runNode(label, script, args = [], env = {}) {
