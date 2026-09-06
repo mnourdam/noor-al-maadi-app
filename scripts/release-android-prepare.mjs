@@ -113,7 +113,10 @@ if (LIVE) {
 // ------------------------------------------------------------
 // 4-5. Android web release build + branding + Capacitor sync
 // ------------------------------------------------------------
-runNpm("Android web release build + Capacitor sync", "sync:android", RELEASE_ENV);
+// Release-specific Android Vite pipeline (never the generic `npm run build`).
+runNpm("Android web release build (dist/android)", "build:android:web:release", RELEASE_ENV);
+runNode("Android branding", "scripts/generate-android-branding.mjs");
+run("Capacitor sync (android)", process.platform === "win32" ? "npx.cmd" : "npx", ["cap", "sync", "android"]);
 
 if (!existsSync(resolve(ROOT, "dist/android/index.html"))) {
   fail("dist/android/index.html is missing — the Android web build did not produce dist/android");
