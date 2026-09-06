@@ -6,8 +6,12 @@
 // release script routes env-prefixed commands through here:
 //
 //   node scripts/with-env.mjs FOO=1 BAR=2 -- npm run build
+//
+// Launching goes through scripts/lib/spawn.mjs so an executable
+// path containing spaces (C:\Program Files\nodejs\node.exe) is
+// never concatenated into a shell command string.
 // ============================================================
-import { spawnSync } from "node:child_process";
+import { runProcess } from "./lib/spawn.mjs";
 
 const argv = process.argv.slice(2);
 const sep = argv.indexOf("--");
@@ -16,7 +20,7 @@ if (sep === -1) {
   process.exit(1);
 }
 
-const env = { ...process.env };
+const env = {};
 for (const pair of argv.slice(0, sep)) {
   const i = pair.indexOf("=");
   if (i < 1) {
@@ -32,5 +36,4 @@ if (!cmd) {
   process.exit(1);
 }
 
-const res = spawnSync(cmd, args, { stdio: "inherit", env, shell: process.platform === "win32" });
-process.exit(res.status ?? 1);
+process.exit(runProcess(cmd, args, { env }));
