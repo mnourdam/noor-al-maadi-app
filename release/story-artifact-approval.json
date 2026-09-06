@@ -1,0 +1,27 @@
+{
+  "$comment": [
+    "Approval stamp for the pre-generated Story release artifacts.",
+    "Written ONLY by a release preparation run that regenerated content from live production.",
+    "Never edit by hand — a keyless release run verifies these hashes before it is allowed to proceed."
+  ],
+  "approved_at": "2026-09-06T05:44:35.612Z",
+  "baseline": {
+    "version": 1788673438605,
+    "generated_at": "2026-09-06T05:43:58.605Z",
+    "source": "live",
+    "library_stories": 116,
+    "campaign_intro_stories": 70,
+    "stories": 186,
+    "story_scenes": 1679,
+    "story_media": 1797,
+    "story_collections": 12,
+    "games": 703,
+    "sha256": "3420399f1aea4725783eb8d9fe133c7d72416ead92897b44121622f44abb048d"
+  },
+  "story_media": {
+    "generated_at": "2026-09-06T05:44:01.884Z",
+    "assets": 1785,
+    "bytes": 75846730,
+    "sha256": "04e8d937395220eadea23aaeef57c652a36dcd899e5d0ab5aace86e49bddd4ec"
+  }
+}

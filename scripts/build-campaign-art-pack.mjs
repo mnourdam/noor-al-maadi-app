@@ -35,21 +35,53 @@ async function download(path) {
   return Buffer.from(await res.arrayBuffer());
 }
 
+/**
+ * Re-encode only what actually changed: a bundled derivative is reused when it
+ * already exists and is newer than the campaign document that references it.
+ * `FORCE_ART_PACK=1` rebuilds everything.
+ */
+async function isCurrent(file, updatedAt) {
+  if (process.env.FORCE_ART_PACK === "1") return false;
+  try {
+    const s = await stat(file);
+    const ts = updatedAt ? Date.parse(updatedAt) : NaN;
+    return Number.isNaN(ts) ? true : s.mtimeMs > ts;
+  } catch {
+    return false;
+  }
+}
+
+/** `div_*` rows are cosmetic section dividers — they never carry artwork. */
+const isDivider = (id) => typeof id === "string" && id.startsWith("div_");
+
 async function sync(rows) {
+  let packed = 0;
+  let reused = 0;
   for (const row of rows) {
+    if (isDivider(row.id) || (!row.key_art_path && !row.key_art_square_path)) continue;
     const dir = join(ROOT, row.id);
     await mkdir(dir, { recursive: true });
     if (row.key_art_path) {
-      await writeFile(join(dir, "hero.webp"), await encode(await download(row.key_art_path), { width: HERO_WIDTH }));
+      const out = join(dir, "hero.webp");
+      if (await isCurrent(out, row.updated_at)) reused++;
+      else {
+        await writeFile(out, await encode(await download(row.key_art_path), { width: HERO_WIDTH }));
+        packed++;
+      }
     }
     if (row.key_art_square_path) {
-      await writeFile(
-        join(dir, "square.webp"),
-        await encode(await download(row.key_art_square_path), { width: SQUARE_SIDE, height: SQUARE_SIDE }),
-      );
+      const out = join(dir, "square.webp");
+      if (await isCurrent(out, row.updated_at)) reused++;
+      else {
+        await writeFile(
+          out,
+          await encode(await download(row.key_art_square_path), { width: SQUARE_SIDE, height: SQUARE_SIDE }),
+        );
+        packed++;
+      }
     }
-    console.log("packed", row.id);
   }
+  console.log(`campaign artwork: ${packed} (re)encoded, ${reused} already current`);
 }
 
 /**
@@ -126,9 +158,35 @@ async function manifest() {
   console.log(ids.map((i) => `  "${i}",`).join("\n"));
 }
 
-const rows = process.argv[2] ? JSON.parse(await readFile(process.argv[2], "utf8")) : [];
-if (rows.length) {
+/**
+ * Live discovery (release preparation). With the build secret available the
+ * pack is regenerated from the CURRENT published campaign content instead of a
+ * hand-exported rows file, so a release can never ship artwork for stale
+ * campaign documents. The service-role key is read from the environment only
+ * and never written into any artifact.
+ */
+async function fetchPublishedCampaignRows() {
+  const url = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "").replace(/\/+$/, "");
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  const endpoint =
+    `${url}/rest/v1/admin_campaigns` +
+    `?select=id,key_art_path,key_art_square_path,data,updated_at&status=eq.published`;
+  const res = await fetch(endpoint, { headers: { Authorization: `Bearer ${key}`, apikey: key } });
+  if (!res.ok) throw new Error(`admin_campaigns fetch failed: HTTP ${res.status}`);
+  return res.json();
+}
+
+const explicit = process.argv[2] ? JSON.parse(await readFile(process.argv[2], "utf8")) : null;
+const rows = explicit ?? (await fetchPublishedCampaignRows());
+
+if (rows?.length) {
   await sync(rows);
   await syncChapterImages(rows);
+} else if (!rows) {
+  console.warn(
+    "[campaign-art-pack] no rows file and no SUPABASE_SERVICE_ROLE_KEY — " +
+      "keeping the committed pack and only regenerating the manifest",
+  );
 }
 await manifest();
