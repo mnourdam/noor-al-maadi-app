@@ -35,21 +35,49 @@ async function download(path) {
   return Buffer.from(await res.arrayBuffer());
 }
 
+/**
+ * Re-encode only what actually changed: a bundled derivative is reused when it
+ * already exists and is newer than the campaign document that references it.
+ * `FORCE_ART_PACK=1` rebuilds everything.
+ */
+async function isCurrent(file, updatedAt) {
+  if (process.env.FORCE_ART_PACK === "1") return false;
+  try {
+    const s = await stat(file);
+    const ts = updatedAt ? Date.parse(updatedAt) : NaN;
+    return Number.isNaN(ts) ? true : s.mtimeMs > ts;
+  } catch {
+    return false;
+  }
+}
+
 async function sync(rows) {
+  let packed = 0;
+  let reused = 0;
   for (const row of rows) {
     const dir = join(ROOT, row.id);
     await mkdir(dir, { recursive: true });
     if (row.key_art_path) {
-      await writeFile(join(dir, "hero.webp"), await encode(await download(row.key_art_path), { width: HERO_WIDTH }));
+      const out = join(dir, "hero.webp");
+      if (await isCurrent(out, row.updated_at)) reused++;
+      else {
+        await writeFile(out, await encode(await download(row.key_art_path), { width: HERO_WIDTH }));
+        packed++;
+      }
     }
     if (row.key_art_square_path) {
-      await writeFile(
-        join(dir, "square.webp"),
-        await encode(await download(row.key_art_square_path), { width: SQUARE_SIDE, height: SQUARE_SIDE }),
-      );
+      const out = join(dir, "square.webp");
+      if (await isCurrent(out, row.updated_at)) reused++;
+      else {
+        await writeFile(
+          out,
+          await encode(await download(row.key_art_square_path), { width: SQUARE_SIDE, height: SQUARE_SIDE }),
+        );
+        packed++;
+      }
     }
-    console.log("packed", row.id);
   }
+  console.log(`campaign artwork: ${packed} (re)encoded, ${reused} already current`);
 }
 
 /**
