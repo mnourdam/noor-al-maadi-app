@@ -24,7 +24,7 @@
 // flag here and forwarded to child processes by the OS. It is
 // never printed, persisted or bundled.
 // ============================================================
-import { spawnSync } from "node:child_process";
+import { runProcess, npmBin, npxBin } from "./lib/spawn.mjs";
 import { existsSync, readFileSync, statSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { validateRelease } from "./lib/android-release-version.mjs";
