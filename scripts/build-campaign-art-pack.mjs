@@ -51,10 +51,14 @@ async function isCurrent(file, updatedAt) {
   }
 }
 
+/** `div_*` rows are cosmetic section dividers — they never carry artwork. */
+const isDivider = (id) => typeof id === "string" && id.startsWith("div_");
+
 async function sync(rows) {
   let packed = 0;
   let reused = 0;
   for (const row of rows) {
+    if (isDivider(row.id) || (!row.key_art_path && !row.key_art_square_path)) continue;
     const dir = join(ROOT, row.id);
     await mkdir(dir, { recursive: true });
     if (row.key_art_path) {
