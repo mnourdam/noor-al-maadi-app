@@ -114,7 +114,10 @@ if (LIVE) {
 // 4-5. Android web release build + branding + Capacitor sync
 // ------------------------------------------------------------
 // Release-specific Android Vite pipeline (never the generic `npm run build`).
-runNpm("Android web release build (dist/android)", "build:android:web:release", RELEASE_ENV);
+// `build:android:web` under release env — the Android-specific Vite pipeline,
+// never the generic `npm run build`. REQUIRE_LIVE_CONTENT mirrors secret
+// availability so a keyless run reuses the already-approved Story artifact.
+runNpm("Android web release build (dist/android)", "build:android:web", RELEASE_ENV);
 runNode("Android branding", "scripts/generate-android-branding.mjs");
 run("Capacitor sync (android)", process.platform === "win32" ? "npx.cmd" : "npx", ["cap", "sync", "android"]);
 
