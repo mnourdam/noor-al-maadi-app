@@ -1,0 +1,29 @@
+
+ RUN  v4.1.10 /workspace/noor-al-maadi-app
+
+ ❯ tests/startup/reconciliation.test.ts (6 tests | 1 failed) 71ms
+     × classifies network rejections as offline 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/startup/reconciliation.test.ts > withBoundedTimeout > classifies network rejections as offline
+AssertionError: expected 'failed' to be 'offline' // Object.is equality
+
+Expected: "offline"
+Received: "failed"
+
+ ❯ tests/startup/reconciliation.test.ts:35:22
+     33|       1000,
+     34|     );
+     35|     expect(out.kind).toBe("offline");
+       |                      ^
+     36|   });
+     37|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  1 failed | 9 passed (10)
+   Start at  07:27:46
+   Duration  753ms (transform 68ms, setup 31ms, import 61ms, tests 83ms, environment 1.07s)

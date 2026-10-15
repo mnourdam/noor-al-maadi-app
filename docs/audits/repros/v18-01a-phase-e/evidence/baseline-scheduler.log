@@ -1,0 +1,177 @@
+A. Pure scheduling math
+  ok  determinism: same (user, now) → same fireAt & msgIdx
+  ok  fire time inside local 16:00–21:30
+  ok  cadence ≈ PERIOD_DAYS
+  ok  period advances by 1
+  ok  staggering exercises >1 offset bucket
+  ok  minute no-repeat correction
+  ok  no consecutive catalog collisions across 30 periods
+  ok  rolls forward past current-period fire
+  ok  hash32 stable
+  ok  catalog length is 10
+  ok  every catalog entry has distinct title vs body
+
+B. Suppression rules (pure)
+  ok  master disabled → master_disabled
+  ok  category muted → category_muted
+  ok  permission denied → permission_not_granted
+  ok  no published games → no_published_games
+  ok  all eligible exhausted → all_eligible_exhausted
+  ok  today's picks done → todays_picks_done
+  ok  everything ok → null (schedule)
+  ok  suppression order — master beats category
+  ok  suppression order — category beats permission
+
+C. Runtime invariants (rescheduleDailyChallenge + fake plugin)
+[daily-challenge-notif] scheduled {
+  reason: 'bootstrap',
+  fireAt: 'Fri Oct 16 2026 17:00:00 GMT+0000 (Coordinated Universal Time)',
+  minute: 60,
+  period: 10371,
+  msgIdx: 2
+}
+  ok  baseline: one pending after bootstrap
+[daily-challenge-notif] scheduled {
+  reason: 'master_off',
+  fireAt: 'Fri Oct 16 2026 17:00:00 GMT+0000 (Coordinated Universal Time)',
+  minute: 60,
+  period: 10371,
+  msgIdx: 2
+}
+  FAIL master disabled → cancelled 8801
+[daily-challenge-notif] scheduled {
+  reason: 'bootstrap',
+  fireAt: 'Fri Oct 16 2026 17:00:00 GMT+0000 (Coordinated Universal Time)',
+  minute: 60,
+  period: 10371,
+  msgIdx: 2
+}
+[daily-challenge-notif] scheduled {
+  reason: 'category_off',
+  fireAt: 'Fri Oct 16 2026 17:00:00 GMT+0000 (Coordinated Universal Time)',
+  minute: 60,
+  period: 10371,
+  msgIdx: 2
+}
+  FAIL dailyChallenge muted → cancelled
+[daily-challenge-notif] cancelled { reason: 'suppressed:permission_not_granted' }
+  ok  permission denied → not scheduled
+[daily-challenge-notif] scheduled {
+  reason: 'bootstrap',
+  fireAt: 'Fri Oct 16 2026 17:00:00 GMT+0000 (Coordinated Universal Time)',
+  minute: 60,
+  period: 10371,
+  msgIdx: 2
+}
+[daily-challenge-notif] scheduled {
+  reason: 'picks_done',
+  fireAt: 'Fri Oct 16 2026 17:00:00 GMT+0000 (Coordinated Universal Time)',
+  minute: 60,
+  period: 10371,
+  msgIdx: 2
+}
+  FAIL todaysPicksDone → cancelled
+[daily-challenge-notif] scheduled {
+  reason: 'bootstrap',
+  fireAt: 'Fri Oct 16 2026 17:00:00 GMT+0000 (Coordinated Universal Time)',
+  minute: 60,
+  period: 10371,
+  msgIdx: 2
+}
+[daily-challenge-notif] scheduled {
+  reason: 'exhausted',
+  fireAt: 'Fri Oct 16 2026 17:00:00 GMT+0000 (Coordinated Universal Time)',
+  minute: 60,
+  period: 10371,
+  msgIdx: 2
+}
+  FAIL allEligibleExhausted → cancelled
+[daily-challenge-notif] scheduled {
+  reason: 'bootstrap',
+  fireAt: 'Fri Oct 16 2026 17:00:00 GMT+0000 (Coordinated Universal Time)',
+  minute: 60,
+  period: 10371,
+  msgIdx: 2
+}
+[daily-challenge-notif] scheduled {
+  reason: 'no_games',
+  fireAt: 'Fri Oct 16 2026 17:00:00 GMT+0000 (Coordinated Universal Time)',
+  minute: 60,
+  period: 10371,
+  msgIdx: 2
+}
+  FAIL no published games → cancelled
+[daily-challenge-notif] scheduled {
+  reason: 'repeat_0',
+  fireAt: 'Fri Oct 16 2026 17:00:00 GMT+0000 (Coordinated Universal Time)',
+  minute: 60,
+  period: 10371,
+  msgIdx: 2
+}
+[daily-challenge-notif] scheduled {
+  reason: 'repeat_1',
+  fireAt: 'Fri Oct 16 2026 17:00:00 GMT+0000 (Coordinated Universal Time)',
+  minute: 60,
+  period: 10371,
+  msgIdx: 2
+}
+[daily-challenge-notif] scheduled {
+  reason: 'repeat_2',
+  fireAt: 'Fri Oct 16 2026 17:00:00 GMT+0000 (Coordinated Universal Time)',
+  minute: 60,
+  period: 10371,
+  msgIdx: 2
+}
+[daily-challenge-notif] scheduled {
+  reason: 'repeat_3',
+  fireAt: 'Fri Oct 16 2026 17:00:00 GMT+0000 (Coordinated Universal Time)',
+  minute: 60,
+  period: 10371,
+  msgIdx: 2
+}
+[daily-challenge-notif] scheduled {
+  reason: 'repeat_4',
+  fireAt: 'Fri Oct 16 2026 17:00:00 GMT+0000 (Coordinated Universal Time)',
+  minute: 60,
+  period: 10371,
+  msgIdx: 2
+}
+  ok  5 rapid reschedules → exactly one pending with id 8801
+[daily-challenge-notif] scheduled {
+  reason: 'signed_in_alice',
+  fireAt: 'Fri Oct 16 2026 17:00:00 GMT+0000 (Coordinated Universal Time)',
+  minute: 60,
+  period: 10371,
+  msgIdx: 2
+}
+  FAIL post-alice schedule: 1 pending + lastMeta persisted
+[daily-challenge-notif] cancelled { reason: 'signed_out' }
+  ok  sign-out step 1: pending cancelled + meta cleared
+[daily-challenge-notif] scheduled {
+  reason: 'guest',
+  fireAt: 'Fri Oct 16 2026 17:00:00 GMT+0000 (Coordinated Universal Time)',
+  minute: 60,
+  period: 10371,
+  msgIdx: 2
+}
+  ok  sign-out step 2: guest schedule evaluated cleanly
+[daily-challenge-notif] scheduled {
+  reason: 'deep_link_check',
+  fireAt: 'Fri Oct 16 2026 17:00:00 GMT+0000 (Coordinated Universal Time)',
+  minute: 60,
+  period: 10371,
+  msgIdx: 2
+}
+  ok  schedule payload carries canonical deep_link
+  ok  canonical deep link points at Challenges Hall
+
+D. Legacy FCM shutdown — env strictness
+  ok  missing DAILY_CHALLENGE_FCM_ENABLED → disabled
+  ok  empty string → disabled
+  ok  "1" → disabled
+  ok  "TRUE" (wrong case) → disabled
+  ok  "yes" → disabled
+  ok  literal "true" → enabled (only positive case)
+
+Total: 39   Passed: 33   Failed: 6
+6 test(s) FAILED.

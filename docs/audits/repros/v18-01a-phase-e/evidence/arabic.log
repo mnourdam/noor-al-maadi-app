@@ -1,0 +1,68 @@
+
+> test:answer-matching
+> node --experimental-strip-types scripts/test-arabic-answer-matching.mjs
+
+
+── Tolerance: accepted equivalences ──
+  ✓ أذان == اذان
+  ✓ إسلام == اسلام
+  ✓ آمنة == امنه
+  ✓ مدينة == مدينه
+  ✓ فاطمة == فاطمه
+  ✓ هدى == هدي
+  ✓ مُحَمَّد == محمد (harakat)
+  ✓ المدينــة == المدينة (tatweel)
+  ✓ ؤ folds to و
+  ✓ ئ folds to ي
+  ✓ ٱ (alif wasla) folds to ا
+  ✓ Arabic-Indic digits == Western
+  ✓ Extended Arabic digits == Western
+  ✓ punctuation ignored
+  ✓ collapsed inner spaces
+  ✓ trim surrounding whitespace
+  ✓ zero-width joiner removed
+
+── False-positive protection ──
+  ✓ علم ≠ عالم
+  ✓ عالم ≠ علم
+  ✓ عمر ≠ عمرو (unless aliased)
+  ✓ فتح ≠ فاتح
+  ✓ ملك ≠ مالك
+  ✓ دين ≠ مدين
+  ✓ empty guess rejected
+  ✓ whitespace-only guess rejected
+  ✓ substring NOT accepted (محم ⊄ محمد)
+  ✓ superstring NOT accepted (محمدا ⊄ محمد)
+  ✓ stripDefiniteArticle is opt-in, not default
+
+── Aliases ──
+  ✓ declared alias accepted
+  ✓ alias with orthographic variant accepted
+  ✓ empty alias entry does not accept empty guess
+  ✓ acceptedAnswerForms returns normalized keys
+
+── Per-cell equality (grid path) ──
+  ✓ cellsEqual('أ','ا')
+  ✓ cellsEqual('ة','ه')
+  ✓ cellsEqual('ى','ي')
+  ✓ cellsEqual('ؤ','و')
+  ✓ cellsEqual('ئ','ي')
+  ✓ cellsEqual('ا','ب') false
+  ✓ cellsEqual('','ا') false (empty guess never solves a cell)
+  ✓ cellsEqual harakat-stripped (single-codepoint contract)
+
+── Cell-count / grid integrity ──
+  ✓ harakat do not change cell count
+  ✓ tatweel does not change cell count
+  ✓ zero-width joiner does not change cell count
+
+── Reveal preserves authored spelling ──
+  ✓ normalization returns a comparison key, not the display string
+
+────────────────────────────────────────
+  44 passed, 0 failed
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice

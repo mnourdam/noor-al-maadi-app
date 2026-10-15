@@ -1,0 +1,18 @@
+{
+  "audited_head": "2c4ae3ea442a772f9a6fa2d0a6fd45828a8eeb4a",
+  "base": "fd573b8b881ab8f0e7f566d6d67ec3a5a60a38bf",
+  "original_report_sha256": "5ca0ac49602f9a7d088d78ac82ac21565e22ffc8f383a3a4682d623223198eb2",
+  "original_probes_sha256": "8465bc8c39f88a76dcda6f2c2d535e74417e2182ea10e9861c1ff064eae84f20",
+  "adaptations": [
+    "Report line links pinned to audited GitHub source; archival note added.",
+    "Diagnostic tests: portable dependency import and R1–R8 labels; assertions unchanged; formatting only.",
+    "Standalone config uses paths relative to its own file.",
+    "Browser evidence restricted to hydration exception; routine console/DOM state omitted.",
+    "Log trailing whitespace and extra EOF blank lines normalized; technical output retained."
+  ],
+  "synthetic_identities": [
+    "alice",
+    "bob"
+  ],
+  "evidence_logs": "Historical audit outputs, not newly rerun project checks."
+}

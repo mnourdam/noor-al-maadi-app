@@ -1,0 +1,16 @@
+
+ RUN  v4.1.10 /workspace/noor-al-maadi-app
+
+ ✓ docs/audits/repros/v18-01a-phase-e/probes.test.ts > audit reproductions — assertions describe observed defects, not acceptance > [R1] Dead-Letter becomes unreadable after first archive with the real identity partition 71ms
+ ✓ docs/audits/repros/v18-01a-phase-e/probes.test.ts > audit reproductions — assertions describe observed defects, not acceptance > [R2] a local accepted chapter may later be rejected permanently 46ms
+ ✓ docs/audits/repros/v18-01a-phase-e/probes.test.ts > audit reproductions — assertions describe observed defects, not acceptance > [R3] after a crash between durable game completion and UI grant, restart suppresses the ungranted reward 26ms
+ ✓ docs/audits/repros/v18-01a-phase-e/probes.test.ts > audit reproductions — assertions describe observed defects, not acceptance > [R4] a delayed older enqueue overwrites a newer durable payload after a context pause without Web Locks 8046ms
+ ✓ docs/audits/repros/v18-01a-phase-e/probes.test.ts > audit reproductions — assertions describe observed defects, not acceptance > [R5] an enqueue waiting across account switch persists Alice fallback in Bob namespace 2ms
+ ✓ docs/audits/repros/v18-01a-phase-e/probes.test.ts > audit reproductions — assertions describe observed defects, not acceptance > [R6] guest completion helpers report firstTime repeatedly after storage failure 13ms
+ ✓ docs/audits/repros/v18-01a-phase-e/probes.test.ts > audit reproductions — assertions describe observed defects, not acceptance > [R7] restarted game with no pending row treats failed server read as a new reward 5ms
+ ✓ docs/audits/repros/v18-01a-phase-e/probes.test.ts > audit reproductions — assertions describe observed defects, not acceptance > [R8] campaign reward ledger claims before any profile grant and cannot replay that ungranted claim 159ms
+
+ Test Files  1 passed (1)
+      Tests  8 passed (8)
+   Start at  08:01:58
+   Duration  9.18s (transform 262ms, setup 25ms, import 60ms, tests 8.37s, environment 604ms)

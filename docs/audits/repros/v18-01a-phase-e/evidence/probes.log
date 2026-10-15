@@ -1,0 +1,8 @@
+
+ RUN  v4.1.10 /tmp
+
+
+ Test Files  1 passed (1)
+      Tests  8 passed (8)
+   Start at  07:32:14
+   Duration  9.14s (transform 294ms, setup 29ms, import 57ms, tests 8.39s, environment 560ms)

@@ -1,0 +1,25 @@
+
+ RUN  v4.1.10 /workspace/noor-al-maadi-app
+
+ ❯ tests/reflections/reflections.test.ts (0 test)
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/reflections/reflections.test.ts [ tests/reflections/reflections.test.ts ]
+Error: Cannot bundle Node.js built-in "bun:test" imported from "tests/reflections/reflections.test.ts". Consider disabling environments.client.noExternal or remove the built-in dependency.
+  Plugin: builtin:vite-resolve
+ ❯ EnvironmentPluginContainer.resolveId ../.onboarding-deps/node_modules/vite/dist/node/chunks/node.js:30303:19
+ ❯ TransformPluginContext.resolve ../.onboarding-deps/node_modules/vite/dist/node/chunks/node.js:30532:13
+ ❯ normalizeUrl ../.onboarding-deps/node_modules/vite/dist/node/chunks/node.js:27834:22
+ ❯ ../.onboarding-deps/node_modules/vite/dist/node/chunks/node.js:27905:30
+ ❯ TransformPluginContext.transform ../.onboarding-deps/node_modules/vite/dist/node/chunks/node.js:27873:4
+ ❯ EnvironmentPluginContainer.transform ../.onboarding-deps/node_modules/vite/dist/node/chunks/node.js:30387:14
+ ❯ loadAndTransform ../.onboarding-deps/node_modules/vite/dist/node/chunks/node.js:24646:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 4 passed (5)
+      Tests  47 passed (47)
+   Start at  07:32:23
+   Duration  2.43s (transform 726ms, setup 75ms, import 1.05s, tests 38ms, environment 2.95s)

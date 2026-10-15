@@ -1,0 +1,82 @@
+
+CASE: classifies personal vs shared keys correctly
+bun test v1.3.11 (af24e281)
+
+tests/identity/isolation.test.ts:
+(pass) identity isolation — owner-partitioned storage > classifies personal vs shared keys correctly [20.59ms]
+
+ 1 pass
+ 9 filtered out
+ 0 fail
+ 20 expect() calls
+Ran 1 test across 1 file. [78.00ms]
+EXIT: 0
+
+CASE: writes every personal key under the active owner namespace
+bun test v1.3.11 (af24e281)
+
+tests/identity/isolation.test.ts:
+(pass) identity isolation — owner-partitioned storage > writes every personal key under the active owner namespace [16.57ms]
+TIMEOUT: 12 seconds
+
+CASE: scenario 1: logout leaves zero bytes of account A visible
+bun test v1.3.11 (af24e281)
+
+tests/identity/isolation.test.ts:
+(pass) identity isolation — owner-partitioned storage > scenario 1: logout leaves zero bytes of account A visible [14.40ms]
+TIMEOUT: 12 seconds
+
+CASE: scenario 2: account B never sees account A data
+bun test v1.3.11 (af24e281)
+
+tests/identity/isolation.test.ts:
+(pass) identity isolation — owner-partitioned storage > scenario 2: account B never sees account A data [16.70ms]
+TIMEOUT: 12 seconds
+
+CASE: scenario 3: guest progress is restored after login+logout
+bun test v1.3.11 (af24e281)
+
+tests/identity/isolation.test.ts:
+(pass) identity isolation — owner-partitioned storage > scenario 3: guest progress is restored after login+logout [14.98ms]
+TIMEOUT: 12 seconds
+
+CASE: scenario 4: all three spaces stay independent across a full cycle
+bun test v1.3.11 (af24e281)
+
+tests/identity/isolation.test.ts:
+(pass) identity isolation — owner-partitioned storage > scenario 4: all three spaces stay independent across a full cycle [15.97ms]
+TIMEOUT: 12 seconds
+
+CASE: scenario 5: a late response from the previous account is rejected
+bun test v1.3.11 (af24e281)
+
+tests/identity/isolation.test.ts:
+(pass) identity isolation — owner-partitioned storage > scenario 5: a late response from the previous account is rejected [16.58ms]
+
+ 1 pass
+ 9 filtered out
+ 0 fail
+ 4 expect() calls
+Ran 1 test across 1 file. [104.00ms]
+EXIT: 0
+
+CASE: scenario 6: relaunch after logout boots into guest with no account data
+bun test v1.3.11 (af24e281)
+
+tests/identity/isolation.test.ts:
+(pass) identity isolation — owner-partitioned storage > scenario 6: relaunch after logout boots into guest with no account data [19.49ms]
+TIMEOUT: 12 seconds
+
+CASE: migrates pre-partition legacy keys into the booting owner's space
+bun test v1.3.11 (af24e281)
+
+tests/identity/isolation.test.ts:
+(pass) identity isolation — owner-partitioned storage > migrates pre-partition legacy keys into the booting owner's space [23.83ms]
+TIMEOUT: 12 seconds
+
+CASE: purges one owner's data without touching the others
+bun test v1.3.11 (af24e281)
+
+tests/identity/isolation.test.ts:
+(pass) identity isolation — owner-partitioned storage > purges one owner's data without touching the others [15.33ms]
+TIMEOUT: 12 seconds

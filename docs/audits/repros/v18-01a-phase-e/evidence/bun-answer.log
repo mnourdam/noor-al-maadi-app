@@ -1,0 +1,27 @@
+bun test v1.3.11 (af24e281)
+
+tests/investigations/answer-machine.test.ts:
+(pass) answer machine — wrong then correct retry > 1. unanswered + wrong confirm → incorrect [0.16ms]
+(pass) answer machine — wrong then correct retry > 2. incorrect + retry → unanswered (same question) [0.08ms]
+(pass) answer machine — wrong then correct retry > 3. retry + correct confirm → correct AND counts once [0.04ms]
+(pass) answer machine — wrong then correct retry > 4. correct contributes exactly once — repeated confirms cannot double [0.02ms]
+(pass) answer machine — wrong then correct retry > wrong → wrong → right also counts exactly once [0.02ms]
+(pass) answer machine — advance rules > 5. Next unavailable before correct [0.02ms]
+(pass) answer machine — advance rules > 6. Next advances exactly one step after correct [0.03ms]
+(pass) answer machine — advance rules > 7. repeated next() before answering does not advance twice [0.04ms]
+(pass) answer machine — advance rules > 8. final completion only after all required questions correct [0.08ms]
+(pass) answer machine — advance rules > decision step with no correctAnswer accepts any pick as correct [0.02ms]
+(pass) difficulty mapping > maps every canonical slug to Arabic [0.29ms]
+(pass) difficulty mapping > unknown → غير محدد, never the raw slug [0.03ms]
+(pass) difficulty mapping > canonicalDifficulty rejects unknown [0.04ms]
+(pass) filter persistence serialization > round-trips a full filter set [0.23ms]
+(pass) filter persistence serialization > returns defaults for null / invalid payloads [0.09ms]
+(pass) combined filter predicate > search alone [0.15ms]
+(pass) combined filter predicate > era + difficulty [0.03ms]
+(pass) combined filter predicate > status + era [0.05ms]
+(pass) combined filter predicate > no matches yields empty list [0.01ms]
+
+ 19 pass
+ 0 fail
+ 43 expect() calls
+Ran 19 tests across 1 file. [108.00ms]

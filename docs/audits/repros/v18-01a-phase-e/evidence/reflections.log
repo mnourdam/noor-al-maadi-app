@@ -1,0 +1,21 @@
+bun test v1.3.11 (af24e281)
+
+tests/reflections/reflections.test.ts:
+(pass) resolveReflectionMode > continue when no options and no explicit mode [0.16ms]
+(pass) resolveReflectionMode > choose inferred from ≥2 non-empty options [0.04ms]
+(pass) resolveReflectionMode > empty options do not trigger choose [0.02ms]
+(pass) resolveReflectionMode > authored write wins over options [0.02ms]
+(pass) resolveReflectionMode > authored continue wins over options [0.02ms]
+(pass) resolveReflectionMode > authored choose downgrades to continue when options missing [0.01ms]
+(pass) reflectionChoices > trims and filters empties [0.05ms]
+(pass) persistence > save + get round-trip for choose mode [1.55ms]
+(pass) persistence > save + get round-trip for write mode [0.06ms]
+(pass) persistence > resume after reload preserves state [0.06ms]
+(pass) persistence > repeated save is idempotent per (campaignId, activityId) [0.23ms]
+(pass) persistence > returns null when no record exists [0.03ms]
+(pass) persistence > SSR-safe when window is undefined [5.35ms]
+
+ 13 pass
+ 0 fail
+ 17 expect() calls
+Ran 13 tests across 1 file. [130.00ms]

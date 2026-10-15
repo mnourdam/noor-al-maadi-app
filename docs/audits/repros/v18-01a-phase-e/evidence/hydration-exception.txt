@@ -1,0 +1,58 @@
+Error: Hydration failed because the server rendered HTML didn't match the client. As a result this tree will be regenerated on the client. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <CatchBoundaryImpl getResetKey={function getResetKey} onCatch={function onCatch}>
+      <MatchInnerImpl matchId="__root__/">
+        <RootComponent>
+          <QueryClientProvider client={{}} data-tsd-source="/src/route...">
+            <ProfileProvider data-tsd-source="/src/route...">
+              <AccountProvider data-tsd-source="/src/route...">
+                <NavigationProvider data-tsd-source="/src/route...">
+                  <ColdStartWatcher>
+                  <HardwareBackListener>
+                  <ExitConfirmDialog>
+                  <TutorialProvider data-tsd-source="/src/route...">
+                    <OutletImpl>
+                    <AudioInitializer>
+                    <CinematicOpening data-tsd-source="/src/route...">
++                     <div
++                       className="fixed inset-0 z-[2000] bg-black touch-none select-none"
++                       role="dialog"
++                       aria-modal="true"
++                       aria-label="Cinematic opening"
++                       data-irth-cinematic-opening=""
++                       data-phase="gate"
++                       onClick={function onClick}
++                       onTouchStart={function onTouchStart}
++                       onPointerDown={function onPointerDown}
++                       style={{opacity:1,transition:"opacity 15...",willChange:"opacity",pointerEvents:"auto"}}
++                       data-tsd-source="/src/components/cinematic/CinematicOpening.tsx:376:5"
++                     >
+-                     <section
+-                       aria-label="Notifications alt+T"
+-                       tabindex="-1"
+-                       aria-live="polite"
+-                       aria-relevant="additions text"
+-                       aria-atomic="false"
+-                     >
+                    ...
+
+    at throwOnHydrationMismatch (http://127.0.0.1:4187/node_modules/.vite/deps/react-dom_client.js?v=c9053dad:2968:51)
+    at beginWork (http://127.0.0.1:4187/node_modules/.vite/deps/react-dom_client.js?v=c9053dad:6200:914)
+    at runWithFiberInDEV (http://127.0.0.1:4187/node_modules/.vite/deps/react-dom_client.js?v=c9053dad:851:66)
+    at performUnitOfWork (http://127.0.0.1:4187/node_modules/.vite/deps/react-dom_client.js?v=c9053dad:8429:92)
+    at workLoopConcurrentByScheduler (http://127.0.0.1:4187/node_modules/.vite/deps/react-dom_client.js?v=c9053dad:8425:55)
+    at renderRootConcurrent (http://127.0.0.1:4187/node_modules/.vite/deps/react-dom_client.js?v=c9053dad:8408:64)
+    at performWorkOnRoot (http://127.0.0.1:4187/node_modules/.vite/deps/react-dom_client.js?v=c9053dad:7957:145)
+    at performWorkOnRootViaSchedulerTask (http://127.0.0.1:4187/node_modules/.vite/deps/react-dom_client.js?v=c9053dad:9059:4)
+    at MessagePort.performWorkUntilDeadline (http://127.0.0.1:4187/node_modules/.vite/deps/react-dom_client.js?v=c9053dad:36:38)

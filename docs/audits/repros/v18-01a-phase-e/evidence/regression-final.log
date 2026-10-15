@@ -1,0 +1,107 @@
+
+ RUN  v4.1.10 /workspace/noor-al-maadi-app
+
+ ✓ tests/startup/reconciliation.test.ts > withBoundedTimeout > returns success synchronously when work resolves fast 2ms
+ ✓ tests/startup/reconciliation.test.ts > withBoundedTimeout > returns timeout when work exceeds deadline and invokes onLate later 26ms
+ × tests/startup/reconciliation.test.ts > withBoundedTimeout > classifies network rejections as offline 6ms
+   → expected 'failed' to be 'offline' // Object.is equality
+ ✓ tests/startup/reconciliation.test.ts > withBoundedTimeout > classifies non-network errors as failed 1ms
+ ✓ tests/startup/reconciliation.test.ts > reconciliation state machine > resolves awaitReconciliationReady on offline-local transition 6ms
+ ✓ tests/startup/reconciliation.test.ts > reconciliation state machine > returns current state on bounded wait exhaustion without flipping 31ms
+stdout | tests/streak/hydration-coherence.test.tsx > applyServerStats — streak and day arrive together > adopts the server streak with the server day
+[sync-forensics] LOCAL_PROFILE_HYDRATE_START {"owner":"guest:fdbea715-a05f-43c8-8a9e-7e07e28d3468"}
+[sync-forensics] LOCAL_PROFILE_HYDRATE_DONE 0ms
+
+stdout | tests/streak/hydration-coherence.test.tsx > applyServerStats — streak and day arrive together > cannot create a streak/day mismatch that renders a false 0
+[sync-forensics] LOCAL_PROFILE_HYDRATE_START {"owner":"guest:fdbea715-a05f-43c8-8a9e-7e07e28d3468"}
+[sync-forensics] LOCAL_PROFILE_HYDRATE_DONE 1ms
+
+stdout | tests/streak/hydration-coherence.test.tsx > applyServerStats — streak and day arrive together > an older server day never regresses a newer local day
+[sync-forensics] LOCAL_PROFILE_HYDRATE_START {"owner":"guest:fdbea715-a05f-43c8-8a9e-7e07e28d3468"}
+[sync-forensics] LOCAL_PROFILE_HYDRATE_DONE 1ms
+
+stdout | tests/streak/hydration-coherence.test.tsx > applyServerStats — streak and day arrive together > a duplicate identical server payload changes nothing
+[sync-forensics] LOCAL_PROFILE_HYDRATE_START {"owner":"guest:fdbea715-a05f-43c8-8a9e-7e07e28d3468"}
+[sync-forensics] LOCAL_PROFILE_HYDRATE_DONE 0ms
+
+stdout | tests/streak/hydration-coherence.test.tsx > applyServerStats — streak and day arrive together > xp / dinars behaviour is unchanged
+[sync-forensics] LOCAL_PROFILE_HYDRATE_START {"owner":"guest:fdbea715-a05f-43c8-8a9e-7e07e28d3468"}
+[sync-forensics] LOCAL_PROFILE_HYDRATE_DONE 0ms
+
+stdout | tests/streak/hydration-coherence.test.tsx > mergeCloudSave — day precedence is explicit > an older cloud lastActiveDay cannot overwrite a newer local one
+[sync-forensics] LOCAL_PROFILE_HYDRATE_START {"owner":"guest:fdbea715-a05f-43c8-8a9e-7e07e28d3468"}
+[sync-forensics] LOCAL_PROFILE_HYDRATE_DONE 0ms
+
+stdout | tests/streak/hydration-coherence.test.tsx > mergeCloudSave — day precedence is explicit > a newer cloud day is adopted
+[sync-forensics] LOCAL_PROFILE_HYDRATE_START {"owner":"guest:fdbea715-a05f-43c8-8a9e-7e07e28d3468"}
+[sync-forensics] LOCAL_PROFILE_HYDRATE_DONE 1ms
+
+stdout | tests/streak/hydration-coherence.test.tsx > mergeCloudSave — day precedence is explicit > guest local state cannot beat the server streak after sign-in hydration
+[sync-forensics] LOCAL_PROFILE_HYDRATE_START {"owner":"guest:fdbea715-a05f-43c8-8a9e-7e07e28d3468"}
+[sync-forensics] LOCAL_PROFILE_HYDRATE_DONE 0ms
+
+ ✓ tests/streak/hydration-coherence.test.tsx > applyServerStats — streak and day arrive together > adopts the server streak with the server day 32ms
+ ✓ tests/streak/hydration-coherence.test.tsx > applyServerStats — streak and day arrive together > cannot create a streak/day mismatch that renders a false 0 5ms
+ ✓ tests/streak/hydration-coherence.test.tsx > applyServerStats — streak and day arrive together > an older server day never regresses a newer local day 3ms
+ ✓ tests/streak/hydration-coherence.test.tsx > applyServerStats — streak and day arrive together > a duplicate identical server payload changes nothing 4ms
+ ✓ tests/streak/hydration-coherence.test.tsx > applyServerStats — streak and day arrive together > xp / dinars behaviour is unchanged 3ms
+ ✓ tests/streak/hydration-coherence.test.tsx > mergeCloudSave — day precedence is explicit > an older cloud lastActiveDay cannot overwrite a newer local one 3ms
+ ✓ tests/streak/hydration-coherence.test.tsx > mergeCloudSave — day precedence is explicit > a newer cloud day is adopted 2ms
+ ✓ tests/streak/hydration-coherence.test.tsx > mergeCloudSave — day precedence is explicit > guest local state cannot beat the server streak after sign-in hydration 27ms
+ ✓ tests/streak/server-authority.test.ts > public stats payload never carries streak > derivePublicStats omits streak entirely 16ms
+ ✓ tests/streak/server-authority.test.ts > public stats payload never carries streak > a local optimistic streak bump cannot change the outbound payload 1ms
+ ✓ tests/streak/server-authority.test.ts > public stats payload never carries streak > a guest/fresh-hydrate zero streak cannot be pushed either 0ms
+ ✓ tests/streak/server-authority.test.ts > public stats payload never carries streak > XP, dinars, hearts and the other public stats are unchanged 1ms
+ ✓ tests/streak/server-authority.test.ts > public stats payload never carries streak > the avatar/offline-flush payloads reuse the same helper, so they cannot leak streak 0ms
+ ✓ tests/streak/server-authority.test.ts > streak value and its day stay coherent > laterDayKey picks the newer day and tolerates nulls 0ms
+ ✓ tests/streak/server-authority.test.ts > streak value and its day stay coherent > a server streak carrying today's day displays the real number, not 0 1ms
+ ✓ tests/streak/server-authority.test.ts > streak value and its day stay coherent > yesterday still displays the streak (at-risk), unchanged product rule 0ms
+ ✓ tests/streak/server-authority.test.ts > streak value and its day stay coherent > a genuinely broken run still displays 0 (unchanged product rule) 0ms
+ ✓ tests/streak/server-authority.test.ts > streak value and its day stay coherent > an older cloud day can never replace a newer local day 2ms
+ ✓ tests/streak/durable-outbox.test.ts > V16 durable streak outbox > enqueues durably BEFORE the network call, with the IRTH activity day 25ms
+ ✓ tests/streak/durable-outbox.test.ts > V16 durable streak outbox > calls the additive V16 RPC with the original day and client key 5ms
+ ✓ tests/streak/durable-outbox.test.ts > V16 durable streak outbox > acknowledges (removes) the queued item only on success 2ms
+ ✓ tests/streak/durable-outbox.test.ts > V16 durable streak outbox > leaves the outbox item intact when the RPC rejects 3ms
+ ✓ tests/streak/durable-outbox.test.ts > V16 durable streak outbox > leaves the outbox item intact when the RPC times out 6ms
+ ✓ tests/streak/durable-outbox.test.ts > V16 durable streak outbox > does not discard the mutation while offline 2ms
+ ✓ tests/streak/durable-outbox.test.ts > V16 durable streak outbox > uses one stable id per (user, day) so replays cannot double-count 1ms
+ ✓ tests/streak/durable-outbox.test.ts > V16 durable streak outbox > guests never enqueue or call the server 0ms
+ ✓ tests/streak/irth-day.test.ts > irthDayKey — device timezone independence > 23:30 Riyadh resolves to that Riyadh day 23ms
+ ✓ tests/streak/irth-day.test.ts > irthDayKey — device timezone independence > 00:30 Riyadh resolves to the NEXT Riyadh day 0ms
+ ✓ tests/streak/irth-day.test.ts > irthDayKey — device timezone independence > is identical for conceptually UTC / UTC+3 / UTC+8 / UTC-5 devices 1ms
+ ✓ tests/streak/irth-day.test.ts > irthDayKey — device timezone independence > is stable across a DST transition in a device zone (Riyadh has no DST) 1ms
+ ✓ tests/streak/irth-day.test.ts > irthDayKey — device timezone independence > yesterday is exactly one Riyadh day back, including across month ends 0ms
+ ✓ tests/streak/irth-day.test.ts > irthDayKey — device timezone independence > day math is timezone-free 0ms
+ ✓ tests/streak/client-non-destructive.test.ts > deriveStreak — display only > counts a Riyadh-today activity as safe 25ms
+ ✓ tests/streak/client-non-destructive.test.ts > deriveStreak — display only > server streak 7 with Riyadh-yesterday last day stays 7 (at-risk, not zero) 1ms
+ ✓ tests/streak/client-non-destructive.test.ts > deriveStreak — display only > reports expired without implying the stored value should be erased 1ms
+ ✓ tests/streak/client-non-destructive.test.ts > deriveStreak — display only > a UTC-slice day (the old bug) no longer marks a live streak expired 1ms
+ ✓ tests/streak/client-non-destructive.test.ts > deriveStreak — display only > a wrong device clock cannot change the Riyadh mapping of a real instant 0ms
+ ✓ tests/startup/onboarding-dedup.test.ts > fetchServerCompletion dedup + cache > shares one in-flight promise across concurrent callers 9ms
+ ✓ tests/startup/onboarding-dedup.test.ts > fetchServerCompletion dedup + cache > caches terminal result for the session 0ms
+ ✓ tests/startup/onboarding-dedup.test.ts > fetchServerCompletion dedup + cache > force bypasses cache 0ms
+ ✓ tests/startup/onboarding-dedup.test.ts > fetchServerCompletion dedup + cache > invalidateOnboardingCache clears the session cache 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/startup/reconciliation.test.ts > withBoundedTimeout > classifies network rejections as offline
+AssertionError: expected 'failed' to be 'offline' // Object.is equality
+
+Expected: "offline"
+Received: "failed"
+
+ ❯ tests/startup/reconciliation.test.ts:35:22
+     33|       1000,
+     34|     );
+     35|     expect(out.kind).toBe("offline");
+       |                      ^
+     36|   });
+     37|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 6 passed (7)
+      Tests  1 failed | 46 passed (47)
+   Start at  07:31:05
+   Duration  3.89s (transform 567ms, setup 100ms, import 781ms, tests 296ms, environment 5.07s)

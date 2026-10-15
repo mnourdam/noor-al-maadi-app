@@ -1,0 +1,1632 @@
+
+> build
+> npm run snapshot:ensure && vite build
+
+
+> snapshot:ensure
+> node scripts/ensure-offline-snapshot.mjs
+
+[snapshot-ensure] inflated public/offline-snapshot.json (22255444 bytes)
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice
+The plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead.
+vite v8.0.16 building client environment for production...
+[2K
+transforming...[plugin tanstack-start-core::server-fn:client] /workspace/noor-al-maadi-app/src/lib/achievements/v2/claim.functions.ts:44:34 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+[plugin tanstack-start-core::server-fn:client] /workspace/noor-al-maadi-app/src/lib/achievements/v2/claim.functions.ts:106:42 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+[plugin tanstack-start-core::server-fn:client] /workspace/noor-al-maadi-app/src/lib/achievements/v2/claim.functions.ts:123:45 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+[plugin tanstack-start-core::server-fn:client] /workspace/noor-al-maadi-app/src/lib/import/import-batch.functions.ts:43:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+[plugin tanstack-start-core::server-fn:client] /workspace/noor-al-maadi-app/src/lib/import/import-batch.functions.ts:56:33 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+[plugin tanstack-start-core::server-fn:client] /workspace/noor-al-maadi-app/src/lib/import/import-batch.functions.ts:72:38 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+[plugin tanstack-start-core::server-fn:client] /workspace/noor-al-maadi-app/src/lib/import/import-batch.functions.ts:90:36 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+[plugin tanstack-start-core::server-fn:client] /workspace/noor-al-maadi-app/src/lib/import/import-batch.functions.ts:111:34 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+[plugin tanstack-start-core::server-fn:client] /workspace/noor-al-maadi-app/src/lib/import/import-batch.functions.ts:132:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+[plugin tanstack-start-core::server-fn:client] /workspace/noor-al-maadi-app/src/lib/teamUsers.functions.ts:26:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+[plugin tanstack-start-core::server-fn:client] /workspace/noor-al-maadi-app/src/lib/teamUsers.functions.ts:81:29 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+[plugin tanstack-start-core::server-fn:client] /workspace/noor-al-maadi-app/src/lib/stories/media/verify.functions.ts:50:33 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+[plugin tanstack-start-core::server-fn:client] /workspace/noor-al-maadi-app/src/lib/deleteAccount.functions.ts:17:32 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+✓ 3518 modules transformed.
+rendering chunks...
+computing gzip size...
+.output/public/assets/ibm-plex-sans-arabic-latin-ext-700-normal-C7GcWn11.woff       5.08 kB
+.output/public/assets/ibm-plex-sans-arabic-latin-ext-400-normal-BeVLg08x.woff       5.10 kB
+.output/public/assets/ibm-plex-sans-arabic-latin-ext-500-normal-eJxPnL1P.woff       5.11 kB
+.output/public/assets/ibm-plex-sans-arabic-latin-ext-600-normal-DT29Q8HW.woff       5.12 kB
+.output/public/assets/ibm-plex-sans-arabic-latin-ext-300-normal-B47YZoZZ.woff       5.13 kB
+.output/public/assets/ibm-plex-sans-arabic-latin-ext-500-normal-Ck_W4G78.woff2      6.54 kB
+.output/public/assets/ibm-plex-sans-arabic-latin-ext-700-normal-BSbyEp0V.woff2      6.56 kB
+.output/public/assets/ibm-plex-sans-arabic-latin-ext-400-normal-BpLfq-63.woff2      6.65 kB
+.output/public/assets/ibm-plex-sans-arabic-latin-ext-600-normal-DjDAeNQD.woff2      6.68 kB
+.output/public/assets/ibm-plex-sans-arabic-latin-ext-300-normal-BzupEmdQ.woff2      6.82 kB
+.output/public/assets/cairo-latin-ext-400-normal-xCL67Y2R.woff2                     7.33 kB
+.output/public/assets/cairo-latin-ext-700-normal-Cscux539.woff2                     7.46 kB
+.output/public/assets/cairo-latin-ext-600-normal-DuRnqffh.woff2                     7.48 kB
+.output/public/assets/cairo-latin-ext-400-normal-C_BIE9Qe.woff                     10.16 kB
+.output/public/assets/cairo-latin-ext-600-normal-DAfLYaOC.woff                     10.24 kB
+.output/public/assets/cairo-latin-ext-700-normal-htXca11Z.woff                     10.25 kB
+.output/public/assets/amiri-latin-ext-400-normal-C9hoIjPx.woff2                    10.44 kB
+.output/public/assets/amiri-latin-ext-700-normal-ByFuOT8o.woff2                    10.86 kB
+.output/public/assets/amiri-latin-ext-400-normal-CGn-6a7O.woff                     13.08 kB
+.output/public/assets/cairo-arabic-400-normal-DN15VWMM.woff2                       13.29 kB
+.output/public/assets/amiri-latin-ext-700-normal-Ck-lxu84.woff                     13.57 kB
+.output/public/assets/cairo-arabic-600-normal-rkrvveqO.woff2                       13.89 kB
+.output/public/assets/cairo-arabic-700-normal-D3nDedWX.woff2                       13.95 kB
+.output/public/assets/cairo-latin-400-normal-Dh7otpdh.woff2                        15.01 kB
+.output/public/assets/cairo-latin-600-normal-mGS0uvCM.woff2                        15.28 kB
+.output/public/assets/cairo-latin-700-normal-C3GYtKbV.woff2                        15.28 kB
+.output/public/assets/cairo-arabic-400-normal-CAYwymWN.woff                        16.80 kB
+.output/public/assets/cairo-arabic-700-normal-CyOqhaeK.woff                        17.26 kB
+.output/public/assets/cairo-arabic-600-normal-B3EOalmC.woff                        17.33 kB
+.output/public/assets/ibm-plex-sans-arabic-latin-400-normal-CFZh1unN.woff          17.51 kB
+.output/public/assets/ibm-plex-sans-arabic-latin-700-normal-Cl4F7CZR.woff          17.78 kB
+.output/public/assets/ibm-plex-sans-arabic-latin-500-normal-BletK1Hp.woff          18.64 kB
+.output/public/assets/ibm-plex-sans-arabic-latin-300-normal-D4-nvPU-.woff          18.67 kB
+.output/public/assets/ibm-plex-sans-arabic-latin-600-normal-Dk5eISD_.woff          18.88 kB
+.output/public/assets/ibm-plex-sans-arabic-latin-400-normal-Bo5KPYvw.woff2         19.16 kB
+.output/public/assets/cairo-latin-400-normal-b1R3q6Pf.woff                         19.48 kB
+.output/public/assets/ibm-plex-sans-arabic-latin-700-normal-BzSf6GNr.woff2         19.50 kB
+.output/public/assets/amiri-latin-400-normal-Czk41Rjn.woff2                        19.54 kB
+.output/public/assets/cairo-latin-600-normal-buYOP1M3.woff                         19.68 kB
+.output/public/assets/cairo-latin-700-normal-6fcUy4Rc.woff                         19.74 kB
+.output/public/assets/ibm-plex-sans-arabic-latin-500-normal-Cd6jVIg7.woff2         20.08 kB
+.output/public/assets/ibm-plex-sans-arabic-latin-300-normal-B_2Ptpb1.woff2         20.28 kB
+.output/public/assets/amiri-latin-700-normal-DIjoEGk6.woff2                        20.30 kB
+.output/public/assets/ibm-plex-sans-arabic-latin-600-normal-KrqB56Mw.woff2         20.50 kB
+.output/public/assets/amiri-latin-400-normal-Bv6IM0kz.woff                         23.73 kB
+.output/public/assets/amiri-latin-700-normal-BH9dHmOv.woff                         24.65 kB
+.output/public/assets/01-city-sunrise-B22Ic9nc.jpg                                 41.35 kB
+.output/public/assets/ibm-plex-sans-arabic-arabic-400-normal-CyU-ddYS.woff2        42.84 kB
+.output/public/assets/ibm-plex-sans-arabic-arabic-400-normal-EA1o-u_Q.woff         44.13 kB
+.output/public/assets/ibm-plex-sans-arabic-arabic-700-normal-DrtBj6UE.woff2        44.28 kB
+.output/public/assets/ibm-plex-sans-arabic-arabic-700-normal-9rXc6cUL.woff         44.36 kB
+.output/public/assets/ibm-plex-sans-arabic-arabic-300-normal-CbO9c89e.woff2        45.04 kB
+.output/public/assets/ibm-plex-sans-arabic-arabic-500-normal-C4MQITzh.woff2        45.29 kB
+.output/public/assets/ibm-plex-sans-arabic-arabic-600-normal-0pRdybE_.woff2        45.68 kB
+.output/public/assets/ibm-plex-sans-arabic-arabic-300-normal-D1YP2vdu.woff         46.12 kB
+.output/public/assets/ibm-plex-sans-arabic-arabic-600-normal-MJZ0liF5.woff         46.78 kB
+.output/public/assets/ibm-plex-sans-arabic-arabic-500-normal-DPXcppbm.woff         46.92 kB
+.output/public/assets/02-desert-caravan-DpWm-BHV.jpg                               62.83 kB
+.output/public/assets/17-caravan-dunes-B7UWyT_-.jpg                                67.28 kB
+.output/public/assets/06-damascus-sunrise-CJEdsgX-.jpg                             72.33 kB
+.output/public/assets/09-jerusalem-twilight-B1bmbpAm.jpg                           75.72 kB
+.output/public/assets/hero-fortress-B_6pfmLW.jpg                                   82.02 kB
+.output/public/assets/12-samarkand-xfJT8Mh6.jpg                                    94.14 kB
+.output/public/assets/05-baghdad-golden-age-CH1HugeL.jpg                           95.60 kB
+.output/public/assets/amiri-arabic-700-normal-D8FrblyB.woff2                       99.96 kB
+.output/public/assets/03-manuscript-lamp-DggUTaJL.jpg                             102.79 kB
+.output/public/assets/13-bukhara-caravanserai-CTQTjlml.jpg                        103.11 kB
+.output/public/assets/20-scholar-writing-CgrHF_Gt.jpg                             107.36 kB
+.output/public/assets/amiri-arabic-400-normal-D0NIBXga.woff2                      108.56 kB
+.output/public/assets/19-observatory-DYAwgHwU.jpg                                 112.71 kB
+.output/public/assets/11-madinah-sunset-DzkbVNd7.jpg                              121.60 kB
+.output/public/assets/amiri-arabic-700-normal-dUd6sHq-.woff                       129.81 kB
+.output/public/assets/investigations-hero-CwWjIgR6.jpg                            133.58 kB
+.output/public/assets/07-cordoba-night-X60fLMlj.jpg                               133.65 kB
+.output/public/assets/15-ottoman-harbor-CBuzA85d.jpg                              140.37 kB
+.output/public/assets/amiri-arabic-400-normal-C_1DQziU.woff                       140.49 kB
+.output/public/assets/08-cairo-market-MGsZLgun.jpg                                155.10 kB
+.output/public/assets/10-makkah-dawn-DQbDS_NL.jpg                                 192.26 kB
+.output/public/assets/14-andalusian-palace-C__dH2Jm.jpg                           199.87 kB
+.output/public/assets/22-scholar-journey-CVABPEQH.jpg                             211.71 kB
+.output/public/assets/18-mountain-fortress-DBR718Aq.jpg                           218.66 kB
+.output/public/assets/21-islamic-army-banners-DgP6EN77.jpg                        223.47 kB
+.output/public/assets/16-historical-library-0c_ej3sX.jpg                          273.83 kB
+.output/public/assets/atlas-v1-base-B4IYktB6.webp                               4,077.58 kB
+.output/public/assets/index-C48dcNhJ.css                                            8.50 kB │ gzip:   2.23 kB
+.output/public/assets/styles-syQQVGdO.css                                         407.62 kB │ gzip:  61.25 kB
+.output/public/assets/root-DLTE-HSj.js                                              0.03 kB │ gzip:   0.05 kB
+.output/public/assets/achievements-DJ7LAi8J.js                                      0.03 kB │ gzip:   0.05 kB
+.output/public/assets/queryOptions-Dfvzj6n2.js                                      0.03 kB │ gzip:   0.05 kB
+.output/public/assets/referrals-DJ7LAi8J.js                                         0.03 kB │ gzip:   0.05 kB
+.output/public/assets/timeline-DJ7LAi8J.js                                          0.03 kB │ gzip:   0.05 kB
+.output/public/assets/atlas-source-M6y1BDO3.js                                      0.05 kB │ gzip:   0.07 kB
+.output/public/assets/invariant-DEEwAagU.js                                         0.06 kB │ gzip:   0.08 kB
+.output/public/assets/14-andalusian-palace-DB2xzu0_.js                              0.06 kB │ gzip:   0.08 kB
+.output/public/assets/campaign-yszTWn5U.js                                          0.06 kB │ gzip:   0.07 kB
+.output/public/assets/16-historical-library-DIsWzTnT.js                             0.06 kB │ gzip:   0.08 kB
+.output/public/assets/21-islamic-army-banners-CUnkUbt3.js                           0.06 kB │ gzip:   0.08 kB
+.output/public/assets/useQuery-BInk8Mpc.js                                          0.09 kB │ gzip:   0.10 kB
+.output/public/assets/esm-CX376kUr.js                                               0.10 kB │ gzip:   0.10 kB
+.output/public/assets/minus-CXXYO7uI.js                                             0.11 kB │ gzip:   0.13 kB
+.output/public/assets/not-found-i5RsCZif.js                                         0.11 kB │ gzip:   0.11 kB
+.output/public/assets/check-PT5soyZt.js                                             0.12 kB │ gzip:   0.14 kB
+.output/public/assets/chevron-down-DLL8Qhx-.js                                      0.12 kB │ gzip:   0.14 kB
+.output/public/assets/chevron-up-Ch7xVTGn.js                                        0.12 kB │ gzip:   0.14 kB
+.output/public/assets/chevron-left-CVlnnoc4.js                                      0.13 kB │ gzip:   0.14 kB
+.output/public/assets/chevron-right-rUsO7-1m.js                                     0.13 kB │ gzip:   0.14 kB
+.output/public/assets/matchContext-CfgENKAl.js                                      0.13 kB │ gzip:   0.11 kB
+.output/public/assets/useRouter-BTb7w0jp.js                                         0.14 kB │ gzip:   0.13 kB
+.output/public/assets/admin.encyclopedia-gMRMhS1y.js                                0.14 kB │ gzip:   0.13 kB
+.output/public/assets/admin.games-gMRMhS1y.js                                       0.14 kB │ gzip:   0.13 kB
+.output/public/assets/admin.investigations-gMRMhS1y.js                              0.14 kB │ gzip:   0.13 kB
+.output/public/assets/plus-ileNG0MB.js                                              0.15 kB │ gzip:   0.15 kB
+.output/public/assets/arrow-up-BLfYAqxT.js                                          0.16 kB │ gzip:   0.16 kB
+.output/public/assets/map-BSgb2bGR.js                                               0.16 kB │ gzip:   0.15 kB
+.output/public/assets/arrow-down-BHHV2b6D.js                                        0.16 kB │ gzip:   0.16 kB
+.output/public/assets/arrow-left-BLamfP5z.js                                        0.16 kB │ gzip:   0.16 kB
+.output/public/assets/arrow-right-te-EGCnW.js                                       0.16 kB │ gzip:   0.16 kB
+.output/public/assets/arrow-up-right-D30858od.js                                    0.16 kB │ gzip:   0.15 kB
+.output/public/assets/clock-CRXfjFqP.js                                             0.16 kB │ gzip:   0.16 kB
+.output/public/assets/trending-up-YHY-TQhi.js                                       0.17 kB │ gzip:   0.17 kB
+.output/public/assets/seasons-lLBXe4M5.js                                           0.17 kB │ gzip:   0.16 kB
+.output/public/assets/ban-87uQBgLu.js                                               0.18 kB │ gzip:   0.16 kB
+.output/public/assets/encyclopedia-CVxLIWbD.js                                      0.18 kB │ gzip:   0.16 kB
+.output/public/assets/play-Dzo_MFko.js                                              0.19 kB │ gzip:   0.18 kB
+.output/public/assets/user-DqAgc4YV.js                                              0.19 kB │ gzip:   0.18 kB
+.output/public/assets/rotate-ccw-etmRxcur.js                                        0.20 kB │ gzip:   0.18 kB
+.output/public/assets/info-BCuJNCNx.js                                              0.20 kB │ gzip:   0.17 kB
+.output/public/assets/lock-CbD8zjze.js                                              0.20 kB │ gzip:   0.19 kB
+.output/public/assets/circle-plus-BuU6IWgj.js                                       0.20 kB │ gzip:   0.17 kB
+.output/public/assets/undo-2-Dy6eLMgL.js                                            0.20 kB │ gzip:   0.18 kB
+.output/public/assets/offline-fallback-BMPkf2PS.js                                  0.21 kB │ gzip:   0.18 kB
+.output/public/assets/encyclopedia.state._id--1-EM3LH.js                            0.22 kB │ gzip:   0.18 kB
+.output/public/assets/games.index-BblAnPjp.js                                       0.22 kB │ gzip:   0.19 kB
+.output/public/assets/target-Cn4o4WzD.js                                            0.22 kB │ gzip:   0.16 kB
+.output/public/assets/safe-text-D5X1Qc7G.js                                         0.22 kB │ gzip:   0.17 kB
+.output/public/assets/library-CssJnMLT.js                                           0.23 kB │ gzip:   0.17 kB
+.output/public/assets/upload-jUo6vFtw.js                                            0.23 kB │ gzip:   0.19 kB
+.output/public/assets/message-square-D0y0vAYc.js                                    0.23 kB │ gzip:   0.20 kB
+.output/public/assets/useRouterState-DsTrTCy6.js                                    0.23 kB │ gzip:   0.18 kB
+.output/public/assets/activity-DvBx8n5y.js                                          0.23 kB │ gzip:   0.20 kB
+.output/public/assets/copy-Be0qlOh9.js                                              0.23 kB │ gzip:   0.21 kB
+.output/public/assets/useStalled-C3OZ5X7K.js                                        0.23 kB │ gzip:   0.19 kB
+.output/public/assets/history-Wp79Yrh5.js                                           0.23 kB │ gzip:   0.19 kB
+.output/public/assets/skip-forward-C4a_pAQY.js                                      0.23 kB │ gzip:   0.20 kB
+.output/public/assets/timer-CVhWIglz.js                                             0.23 kB │ gzip:   0.18 kB
+.output/public/assets/message-circle-DqjycaCQ.js                                    0.24 kB │ gzip:   0.21 kB
+.output/public/assets/link-2-CK9lNw9E.js                                            0.24 kB │ gzip:   0.20 kB
+.output/public/assets/database-CMwWg5vx.js                                          0.24 kB │ gzip:   0.20 kB
+.output/public/assets/book-marked-DquLmT-h.js                                       0.24 kB │ gzip:   0.21 kB
+.output/public/assets/circle-question-mark-BhwTD55n.js                              0.24 kB │ gzip:   0.20 kB
+.output/public/assets/circle-alert-BHmLbc2I.js                                      0.25 kB │ gzip:   0.18 kB
+.output/public/assets/chart-column-CyAq60Wl.js                                      0.25 kB │ gzip:   0.19 kB
+.output/public/assets/cloud-upload-C9Qwvb_C.js                                      0.25 kB │ gzip:   0.20 kB
+.output/public/assets/external-link-CKWTD_ls.js                                     0.25 kB │ gzip:   0.19 kB
+.output/public/assets/sword-CYmu_z7U.js                                             0.25 kB │ gzip:   0.20 kB
+.output/public/assets/verify.functions-BEEOJgoS.js                                  0.25 kB │ gzip:   0.22 kB
+.output/public/assets/archive-fmf7bGgv.js                                           0.25 kB │ gzip:   0.21 kB
+.output/public/assets/flag-Df6oPnJF.js                                              0.25 kB │ gzip:   0.21 kB
+.output/public/assets/circle-play-DBqzYMBw.js                                       0.25 kB │ gzip:   0.21 kB
+.output/public/assets/eye-DfWtkYD0.js                                               0.25 kB │ gzip:   0.20 kB
+.output/public/assets/funnel-B5kjiYwl.js                                            0.25 kB │ gzip:   0.21 kB
+.output/public/assets/calendar-B8bsalua.js                                          0.25 kB │ gzip:   0.20 kB
+.output/public/assets/search-x-DBXx-XFz.js                                          0.25 kB │ gzip:   0.20 kB
+.output/public/assets/heart-DvnBxLQJ.js                                             0.25 kB │ gzip:   0.21 kB
+.output/public/assets/map-pin-BQbXTDdn.js                                           0.25 kB │ gzip:   0.22 kB
+.output/public/assets/zap-DJiwKlRD.js                                               0.26 kB │ gzip:   0.20 kB
+.output/public/assets/workflow-ByRmEXPS.js                                          0.26 kB │ gzip:   0.20 kB
+.output/public/assets/scroll-RqtlOhyM.js                                            0.26 kB │ gzip:   0.20 kB
+.output/public/assets/campaigns.imported._id.chapter._chapter-BJAds2lC.js           0.27 kB │ gzip:   0.24 kB
+.output/public/assets/award-CmrFc8RS.js                                             0.27 kB │ gzip:   0.22 kB
+.output/public/assets/campaigns.imported._id.index-BDPn4zXo.js                      0.27 kB │ gzip:   0.24 kB
+.output/public/assets/pencil-CgX27myX.js                                            0.27 kB │ gzip:   0.22 kB
+.output/public/assets/WorldEmblem-BJ5gKkEk.js                                       0.28 kB │ gzip:   0.23 kB
+.output/public/assets/lightbulb-CU_SvYYf.js                                         0.28 kB │ gzip:   0.22 kB
+.output/public/assets/send-DGmL_eLq.js                                              0.29 kB │ gzip:   0.23 kB
+.output/public/assets/aps-BIkpyC2e.js                                               0.29 kB │ gzip:   0.20 kB
+.output/public/assets/maximize-CenEU7Up.js                                          0.29 kB │ gzip:   0.20 kB
+.output/public/assets/CachedImage-DfUnlH_6.js                                       0.29 kB │ gzip:   0.22 kB
+.output/public/assets/grid-3x3-BHc_ejS8.js                                          0.29 kB │ gzip:   0.21 kB
+.output/public/assets/feather-BS9eE1Wl.js                                           0.29 kB │ gzip:   0.23 kB
+.output/public/assets/androidFreezeDiagnostics-Doy0_2qx.js                          0.30 kB │ gzip:   0.20 kB
+.output/public/assets/sprout-CQMkGPfj.js                                            0.30 kB │ gzip:   0.22 kB
+.output/public/assets/richText-BywCZ-gr.js                                          0.31 kB │ gzip:   0.20 kB
+.output/public/assets/badge-check-WhoQPbX5.js                                       0.31 kB │ gzip:   0.21 kB
+.output/public/assets/shield-check-XEFWRDX6.js                                      0.32 kB │ gzip:   0.25 kB
+.output/public/assets/refresh-cw-D8ul4mZO.js                                        0.32 kB │ gzip:   0.22 kB
+.output/public/assets/id-card-qi-pL_o1.js                                           0.32 kB │ gzip:   0.24 kB
+.output/public/assets/square-C6z6oXWo.js                                            0.32 kB │ gzip:   0.25 kB
+.output/public/assets/tag-CwN35EMk.js                                               0.32 kB │ gzip:   0.25 kB
+.output/public/assets/save-BTCTiZ5j.js                                              0.32 kB │ gzip:   0.22 kB
+.output/public/assets/trash-2-ZrcrsWPM.js                                           0.32 kB │ gzip:   0.21 kB
+.output/public/assets/auth-middleware-JDjVgB0Q.js                                   0.33 kB │ gzip:   0.19 kB
+.output/public/assets/graduation-cap-BYmD6S0M.js                                    0.33 kB │ gzip:   0.24 kB
+.output/public/assets/offline-snapshot-warm-bridge-5vdsqkJF.js                      0.33 kB │ gzip:   0.26 kB
+.output/public/assets/gem-CbKUSTDm.js                                               0.33 kB │ gzip:   0.24 kB
+.output/public/assets/pin-off-Bw6yfNmB.js                                           0.33 kB │ gzip:   0.24 kB
+.output/public/assets/ReadingScale-ru-2s_gp.js                                      0.33 kB │ gzip:   0.25 kB
+.output/public/assets/layout-grid-D3K-_W_L.js                                       0.34 kB │ gzip:   0.19 kB
+.output/public/assets/gift-CKHixOeQ.js                                              0.34 kB │ gzip:   0.25 kB
+.output/public/assets/scroll-text-DKs63A3M.js                                       0.34 kB │ gzip:   0.23 kB
+.output/public/assets/crosshair-D-WP0vuy.js                                         0.35 kB │ gzip:   0.21 kB
+.output/public/assets/shield-alert-D0CyGFT9.js                                      0.35 kB │ gzip:   0.26 kB
+.output/public/assets/AndroidPlainTextInput-D7hvlZ7W.js                             0.35 kB │ gzip:   0.23 kB
+.output/public/assets/hourglass-rdV-tSKY.js                                         0.36 kB │ gzip:   0.24 kB
+.output/public/assets/encyclopedia.type._type-D6dTWtPv.js                           0.36 kB │ gzip:   0.29 kB
+.output/public/assets/web-BLo1YKUq.js                                               0.36 kB │ gzip:   0.24 kB
+.output/public/assets/encyclopedia.type._type-nPLH5YRE.js                           0.36 kB │ gzip:   0.29 kB
+.output/public/assets/web-BND1s6QE.js                                               0.36 kB │ gzip:   0.24 kB
+.output/public/assets/messages-square-DOJuwp9h.js                                   0.36 kB │ gzip:   0.25 kB
+.output/public/assets/clsx-CjueKrWZ.js                                              0.36 kB │ gzip:   0.23 kB
+.output/public/assets/esm-0RjrSfxL.js                                               0.36 kB │ gzip:   0.26 kB
+.output/public/assets/git-compare-arrows-DYTZ9Q2p.js                                0.37 kB │ gzip:   0.25 kB
+.output/public/assets/esm-CVY7F-Ey.js                                               0.38 kB │ gzip:   0.26 kB
+.output/public/assets/building-2-RUvzJK9s.js                                        0.38 kB │ gzip:   0.24 kB
+.output/public/assets/network-rlX-kotB.js                                           0.38 kB │ gzip:   0.23 kB
+.output/public/assets/file-text-K8LfYFsD.js                                         0.38 kB │ gzip:   0.25 kB
+.output/public/assets/scan-search-BgEQE3pp.js                                       0.38 kB │ gzip:   0.25 kB
+.output/public/assets/hard-drive-Bb2kXyEV.js                                        0.38 kB │ gzip:   0.25 kB
+.output/public/assets/earth-B4FDqc3E.js                                             0.39 kB │ gzip:   0.26 kB
+.output/public/assets/hammer-CgVyB-0j.js                                            0.39 kB │ gzip:   0.27 kB
+.output/public/assets/bell-ring-DYVq2Xsi.js                                         0.39 kB │ gzip:   0.28 kB
+.output/public/assets/qss-CuvTgpZA.js                                               0.39 kB │ gzip:   0.26 kB
+.output/public/assets/useServerFn-CWp0Qg8u.js                                       0.39 kB │ gzip:   0.27 kB
+.output/public/assets/landmark-BOh3bx6O.js                                          0.40 kB │ gzip:   0.26 kB
+.output/public/assets/cloud-DaRILwPO.js                                             0.40 kB │ gzip:   0.26 kB
+.output/public/assets/recoveryMode-CmfpalNR.js                                      0.41 kB │ gzip:   0.25 kB
+.output/public/assets/mail-open-Dh22YuEe.js                                         0.41 kB │ gzip:   0.28 kB
+.output/public/assets/castle-D0vHdqY_.js                                            0.41 kB │ gzip:   0.25 kB
+.output/public/assets/layers-xSVSkcC2.js                                            0.42 kB │ gzip:   0.24 kB
+.output/public/assets/jsx-runtime-DZ-DzmD7.js                                       0.42 kB │ gzip:   0.29 kB
+.output/public/assets/sliders-horizontal-yQzJl2jc.js                                0.42 kB │ gzip:   0.24 kB
+.output/public/assets/map-i1gjyMWt.js                                               0.42 kB │ gzip:   0.27 kB
+.output/public/assets/file-spreadsheet-CFm6d-_3.js                                  0.42 kB │ gzip:   0.26 kB
+.output/public/assets/eye-off-CfWx3DED.js                                           0.43 kB │ gzip:   0.27 kB
+.output/public/assets/irth-day-DuPwajyP.js                                          0.43 kB │ gzip:   0.29 kB
+.output/public/assets/contentRegistryStorage-Zod_w1UH.js                            0.44 kB │ gzip:   0.28 kB
+.output/public/assets/campaigns.imported._id.chapter._chapter-DlIiD5Ib.js           0.45 kB │ gzip:   0.33 kB
+.output/public/assets/encyclopedia-icons-BjWHhe48.js                                0.46 kB │ gzip:   0.29 kB
+.output/public/assets/campaigns.imported._id.index-_SfbBUTU.js                      0.46 kB │ gzip:   0.32 kB
+.output/public/assets/file-braces-DRmTKNFW.js                                       0.46 kB │ gzip:   0.27 kB
+.output/public/assets/worlds._slug-3uechoGC.js                                      0.47 kB │ gzip:   0.33 kB
+.output/public/assets/formatNumber-2Y4Bf5iq.js                                      0.47 kB │ gzip:   0.31 kB
+.output/public/assets/encyclopedia.path._id-Db7zqcNM.js                             0.47 kB │ gzip:   0.34 kB
+.output/public/assets/calendar-days-jV6XkbI5.js                                     0.49 kB │ gzip:   0.26 kB
+.output/public/assets/redirect-Dhm19zUi.js                                          0.50 kB │ gzip:   0.31 kB
+.output/public/assets/unlock-notices-Gi4YpeNt.js                                    0.50 kB │ gzip:   0.32 kB
+.output/public/assets/wand-sparkles-YOLPeMI7.js                                     0.51 kB │ gzip:   0.29 kB
+.output/public/assets/logout-flush-CsULAhBP.js                                      0.51 kB │ gzip:   0.34 kB
+.output/public/assets/spray-can-DXV36PBP.js                                         0.52 kB │ gzip:   0.29 kB
+.output/public/assets/send-Bn2_aOZQ.js                                              0.52 kB │ gzip:   0.36 kB
+.output/public/assets/serverApi-BGzcclbw.js                                         0.53 kB │ gzip:   0.35 kB
+.output/public/assets/swords-DG8MZ9yO.js                                            0.55 kB │ gzip:   0.28 kB
+.output/public/assets/utils-P_pPwONJ.js                                             0.59 kB │ gzip:   0.35 kB
+.output/public/assets/context-DVgysGFm.js                                           0.59 kB │ gzip:   0.35 kB
+.output/public/assets/priority-BPDGs-5R.js                                          0.60 kB │ gzip:   0.30 kB
+.output/public/assets/gamepad-2-DEQorVbo.js                                         0.62 kB │ gzip:   0.38 kB
+.output/public/assets/esm-eY2rRzmK.js                                               0.63 kB │ gzip:   0.37 kB
+.output/public/assets/identity-map-e61hTC4w.js                                      0.64 kB │ gzip:   0.36 kB
+.output/public/assets/authOrigin-C7balMaY.js                                        0.64 kB │ gzip:   0.33 kB
+.output/public/assets/eras-public-CxSLepLs.js                                       0.66 kB │ gzip:   0.40 kB
+.output/public/assets/useMatch-awHcsdQY.js                                          0.68 kB │ gzip:   0.41 kB
+.output/public/assets/campaignChronologyBackfill-CWemOL9K.js                        0.69 kB │ gzip:   0.45 kB
+.output/public/assets/EncyclopediaUnavailable-BX4BtTCJ.js                           0.72 kB │ gzip:   0.49 kB
+.output/public/assets/guestCompletions-CbVu_cEI.js                                  0.72 kB │ gzip:   0.37 kB
+.output/public/assets/types-pl9qsofA.js                                             0.73 kB │ gzip:   0.40 kB
+.output/public/assets/diag-trace-DlVBhShy.js                                        0.74 kB │ gzip:   0.44 kB
+.output/public/assets/22-scholar-journey-DACBtVt-.js                                0.75 kB │ gzip:   0.41 kB
+.output/public/assets/EmblemArt-DU9CNYrg.js                                         0.75 kB │ gzip:   0.51 kB
+.output/public/assets/optionShuffle-BK4XmAde.js                                     0.77 kB │ gzip:   0.47 kB
+.output/public/assets/library-filter-CJvwaIpw.js                                    0.78 kB │ gzip:   0.45 kB
+.output/public/assets/play.decisions-Cqwzayu6.js                                    0.80 kB │ gzip:   0.51 kB
+.output/public/assets/play.timeline-CjBfRXe1.js                                     0.80 kB │ gzip:   0.52 kB
+.output/public/assets/play.investigate-BGCVwjpP.js                                  0.81 kB │ gzip:   0.52 kB
+.output/public/assets/guestCompletions-DHvdsiEO.js                                  0.81 kB │ gzip:   0.48 kB
+.output/public/assets/import-batch.functions-C0vw5nRR.js                            0.84 kB │ gzip:   0.44 kB
+.output/public/assets/web-CiCQzjbq.js                                               0.84 kB │ gzip:   0.40 kB
+.output/public/assets/WorldFilterChip-BQ7Ddld6.js                                   0.87 kB │ gzip:   0.47 kB
+.output/public/assets/campaignDividers-CBE4vRl_.js                                  0.90 kB │ gzip:   0.46 kB
+.output/public/assets/content-audit-Bofvv6Ab.js                                     0.91 kB │ gzip:   0.54 kB
+.output/public/assets/campaignChronology-ChSAgBye.js                                0.93 kB │ gzip:   0.56 kB
+.output/public/assets/import-v2-Qmq1C69s.js                                         0.95 kB │ gzip:   0.47 kB
+.output/public/assets/timing-CM17bcxB.js                                            0.97 kB │ gzip:   0.57 kB
+.output/public/assets/slug-CmYYoaMp.js                                              0.98 kB │ gzip:   0.68 kB
+.output/public/assets/orphanUnlocksMigration-z4ULQ3cu.js                            0.98 kB │ gzip:   0.54 kB
+.output/public/assets/campaignArtwork-BKOPEupb.js                                   1.00 kB │ gzip:   0.57 kB
+.output/public/assets/newsletter-DqdIpcgZ.js                                        1.01 kB │ gzip:   0.43 kB
+.output/public/assets/AndroidTextEntry-DXLaJa0h.js                                  1.02 kB │ gzip:   0.45 kB
+.output/public/assets/encyclopedia.entity._id-B3d1CrQ9.js                           1.05 kB │ gzip:   0.62 kB
+.output/public/assets/reports-DVICeKpn.js                                           1.06 kB │ gzip:   0.62 kB
+.output/public/assets/play.chapter-BzamiTO3.js                                      1.09 kB │ gzip:   0.60 kB
+.output/public/assets/crossword-validate-IiNpmBLe.js                                1.09 kB │ gzip:   0.57 kB
+.output/public/assets/perf-mode-YayBv8kJ.js                                         1.11 kB │ gzip:   0.59 kB
+.output/public/assets/entities-CqWa4sUV.js                                          1.17 kB │ gzip:   0.60 kB
+.output/public/assets/createLucideIcon-DIMgJfjR.js                                  1.18 kB │ gzip:   0.68 kB
+.output/public/assets/web-DtUmCX9J.js                                               1.19 kB │ gzip:   0.54 kB
+.output/public/assets/preload-helper-zJ_50EbN.js                                    1.19 kB │ gzip:   0.68 kB
+.output/public/assets/figure._id-DQ3KzEpT.js                                        1.20 kB │ gzip:   0.67 kB
+.output/public/assets/city._id-JQr9gckv.js                                          1.21 kB │ gzip:   0.67 kB
+.output/public/assets/battle._id-CdvfL_Eu.js                                        1.22 kB │ gzip:   0.67 kB
+.output/public/assets/Avatar-CF3tL-m4.js                                            1.24 kB │ gzip:   0.69 kB
+.output/public/assets/adminCampaignsApi-1CLxNe-v.js                                 1.25 kB │ gzip:   0.54 kB
+.output/public/assets/transform-DVLFIFFW.js                                         1.26 kB │ gzip:   0.69 kB
+.output/public/assets/FeedbackCTA-BUXc_QD1.js                                       1.27 kB │ gzip:   0.79 kB
+.output/public/assets/KeyArtDissolve-Bh-gpuJp.js                                    1.31 kB │ gzip:   0.69 kB
+.output/public/assets/Breadcrumbs-BUX7cB0Q.js                                       1.33 kB │ gzip:   0.71 kB
+.output/public/assets/admin.migration-BPXZ9gkp.js                                   1.33 kB │ gzip:   0.65 kB
+.output/public/assets/content-identity-store-BUQGwzKt.js                            1.34 kB │ gzip:   0.59 kB
+.output/public/assets/serverRequest-CCCiLLqB.js                                     1.37 kB │ gzip:   0.72 kB
+.output/public/assets/ReadingProgress-DWX6dVq4.js                                   1.39 kB │ gzip:   0.75 kB
+.output/public/assets/esm-CQjpXGWq.js                                               1.41 kB │ gzip:   0.74 kB
+.output/public/assets/api-DjLqsMb0.js                                               1.43 kB │ gzip:   0.50 kB
+.output/public/assets/taxonomy-e0qACocS.js                                          1.46 kB │ gzip:   0.81 kB
+.output/public/assets/arabic-normalize-DX8zk-H0.js                                  1.46 kB │ gzip:   0.71 kB
+.output/public/assets/PasswordField-Bc55LxwC.js                                     1.46 kB │ gzip:   0.85 kB
+.output/public/assets/encyclopedia-quality-hTHNZKdn.js                              1.48 kB │ gzip:   0.66 kB
+.output/public/assets/owner-DK6QXHOq.js                                             1.50 kB │ gzip:   0.73 kB
+.output/public/assets/museumUnlocks-3bOYNWfT.js                                     1.50 kB │ gzip:   0.74 kB
+.output/public/assets/campaigns-DdqG52U5.js                                         1.51 kB │ gzip:   0.79 kB
+.output/public/assets/streak-activity-DUmbEmx6.js                                   1.52 kB │ gzip:   0.76 kB
+.output/public/assets/campaignKeyArtOverlay-B84B4C0V.js                             1.53 kB │ gzip:   0.72 kB
+.output/public/assets/offline-manifest-DsZQITZi.js                                  1.54 kB │ gzip:   0.80 kB
+.output/public/assets/03-manuscript-lamp-KbQGDkMS.js                                1.54 kB │ gzip:   0.77 kB
+.output/public/assets/encyclopedia-canonical-D3VypBBD.js                            1.55 kB │ gzip:   0.72 kB
+.output/public/assets/display-names-CVqZDaMe.js                                     1.70 kB │ gzip:   0.81 kB
+.output/public/assets/googleAuthResult-cvakPSD6.js                                  1.71 kB │ gzip:   0.73 kB
+.output/public/assets/today-in-history-B8rUSt7H.js                                  1.75 kB │ gzip:   0.84 kB
+.output/public/assets/gameplay-write-BV7RoY1P.js                                    1.78 kB │ gzip:   0.84 kB
+.output/public/assets/unlock-cache-Dr4x-x09.js                                      1.80 kB │ gzip:   0.86 kB
+.output/public/assets/derive-prereqs-D-nh23p7.js                                    1.91 kB │ gzip:   0.79 kB
+.output/public/assets/exploration-paths-CKMN_67i.js                                 1.95 kB │ gzip:   0.98 kB
+.output/public/assets/AdminLayout-DXBeTLvh.js                                       1.96 kB │ gzip:   0.77 kB
+.output/public/assets/progress-mirror-FLH3JVZG.js                                   1.98 kB │ gzip:   0.78 kB
+.output/public/assets/investigations-normalize-m4Ccck5X.js                          2.14 kB │ gzip:   0.87 kB
+.output/public/assets/presentation-CBsS8Uk9.js                                      2.15 kB │ gzip:   1.02 kB
+.output/public/assets/local-titles-C5a67Qyv.js                                      2.15 kB │ gzip:   0.96 kB
+.output/public/assets/emblems-B_Ek3gF7.js                                           2.20 kB │ gzip:   1.14 kB
+.output/public/assets/campaignUnlocks-DUqE3sYT.js                                   2.26 kB │ gzip:   1.12 kB
+.output/public/assets/adminApi-CGZkfdPD.js                                          2.28 kB │ gzip:   0.94 kB
+.output/public/assets/content-identity-check-DHV8v82b.js                            2.29 kB │ gzip:   1.07 kB
+.output/public/assets/CinematicPageBackdrop-DVxzIcut.js                             2.34 kB │ gzip:   1.08 kB
+.output/public/assets/adminUsers-CUMRjaHM.js                                        2.35 kB │ gzip:   1.03 kB
+.output/public/assets/url-CAKS89ju.js                                               2.35 kB │ gzip:   1.03 kB
+.output/public/assets/image-processor-DIyB4tHR.js                                   2.37 kB │ gzip:   1.23 kB
+.output/public/assets/app-constants-LOBDF1U0.js                                     2.41 kB │ gzip:   0.95 kB
+.output/public/assets/unsubscribe-BVL9dP5Q.js                                       2.43 kB │ gzip:   1.17 kB
+.output/public/assets/atlas-search-bc5HwYQe.js                                      2.47 kB │ gzip:   1.09 kB
+.output/public/assets/admin.games.index-M7E12QgZ.js                                 2.51 kB │ gzip:   1.06 kB
+.output/public/assets/progression-wTYZbVAh.js                                       2.55 kB │ gzip:   1.16 kB
+.output/public/assets/admin.encyclopedia-cleanup-Dum-a5_N.js                        2.58 kB │ gzip:   1.22 kB
+.output/public/assets/contributions-C2pTDnSG.js                                     2.64 kB │ gzip:   1.11 kB
+.output/public/assets/atlas-anchors-DkX8f5HH.js                                     2.64 kB │ gzip:   1.15 kB
+.output/public/assets/on-this-day-Dh1YCRuf.js                                       2.67 kB │ gzip:   1.05 kB
+.output/public/assets/guest-progress-buffer-CJ1ZIrKU.js                             2.70 kB │ gzip:   1.18 kB
+.output/public/assets/types-oRYpRh9b.js                                             2.71 kB │ gzip:   1.17 kB
+.output/public/assets/passwordPolicy-Hp64NaOr.js                                    2.82 kB │ gzip:   1.47 kB
+.output/public/assets/worlds-BYO2tkxE.js                                            2.88 kB │ gzip:   1.32 kB
+.output/public/assets/content-store-B2X5Qpm9.js                                     2.99 kB │ gzip:   1.20 kB
+.output/public/assets/atlas-entities-FU3CVV6s.js                                    3.01 kB │ gzip:   1.50 kB
+.output/public/assets/Istazadtu-DQpnhfzU.js                                         3.03 kB │ gzip:   1.56 kB
+.output/public/assets/avatar-persistence-C0NwBlj5.js                                3.04 kB │ gzip:   1.37 kB
+.output/public/assets/era-canonical-D8OfCCbs.js                                     3.10 kB │ gzip:   1.10 kB
+.output/public/assets/sender-BNUI1ZlS.js                                            3.15 kB │ gzip:   1.52 kB
+.output/public/assets/completions-DycI9XPu.js                                       3.24 kB │ gzip:   1.28 kB
+.output/public/assets/admin.crash-diagnostics-DBt1d9zQ.js                           3.24 kB │ gzip:   1.29 kB
+.output/public/assets/sync-B5lYCgLw.js                                              3.24 kB │ gzip:   1.29 kB
+.output/public/assets/relationship-graph-B3Dz2YDy.js                                3.28 kB │ gzip:   1.49 kB
+.output/public/assets/admin-0wa0no0a.js                                             3.34 kB │ gzip:   1.06 kB
+.output/public/assets/web-rnnxSpyi.js                                               3.35 kB │ gzip:   1.05 kB
+.output/public/assets/EntityNotFound-CBWbXU4L.js                                    3.38 kB │ gzip:   1.40 kB
+.output/public/assets/entityDiscoveries-CzaebyjX.js                                 3.44 kB │ gzip:   1.40 kB
+.output/public/assets/taxonomy-labels-BkeAtA3j.js                                   3.52 kB │ gzip:   1.10 kB
+.output/public/assets/react-dom-DuAoATpF.js                                         3.53 kB │ gzip:   1.33 kB
+.output/public/assets/offline-baseline-resolver-D5ZXO0Bz.js                         3.58 kB │ gzip:   1.43 kB
+.output/public/assets/terms-CzrUXd-l.js                                             3.62 kB │ gzip:   1.51 kB
+.output/public/assets/EncyclopediaCard-CjwIeeqD.js                                  3.63 kB │ gzip:   1.68 kB
+.output/public/assets/contentIntegrity-DTUUYVyy.js                                  3.70 kB │ gzip:   1.47 kB
+.output/public/assets/image-cache-BWdUpHzx.js                                       3.70 kB │ gzip:   1.46 kB
+.output/public/assets/content-sync-Faq1QqCH.js                                      3.72 kB │ gzip:   1.64 kB
+.output/public/assets/offline-snapshot-validate-CD98Uvry.js                         3.74 kB │ gzip:   1.48 kB
+.output/public/assets/auth-emails-DmUmmNBz.js                                       3.77 kB │ gzip:   1.83 kB
+.output/public/assets/dead-letter-CRza-Og1.js                                       3.77 kB │ gzip:   1.54 kB
+.output/public/assets/record-CYe_PJ3q.js                                            3.81 kB │ gzip:   1.35 kB
+.output/public/assets/AtlasSafeMode-B8-Pit8R.js                                     3.85 kB │ gzip:   1.70 kB
+.output/public/assets/feedback.index-e6281bFS.js                                    4.00 kB │ gzip:   1.64 kB
+.output/public/assets/admin.stories.export-v2-DkLcW6FL.js                           4.05 kB │ gzip:   1.57 kB
+.output/public/assets/security-BLWg51OV.js                                          4.09 kB │ gzip:   1.82 kB
+.output/public/assets/trace-DFqJX0sc.js                                             4.16 kB │ gzip:   1.86 kB
+.output/public/assets/encyclopedia-source-DgWfuHey.js                               4.37 kB │ gzip:   1.67 kB
+.output/public/assets/encyclopedia-search-C2p1fu3F.js                               4.42 kB │ gzip:   1.81 kB
+.output/public/assets/OutOfHeartsModal-C3yRgBr4.js                                  4.42 kB │ gzip:   1.99 kB
+.output/public/assets/admin.related-stories-CzeMJil9.js                             4.48 kB │ gzip:   1.76 kB
+.output/public/assets/link-Bc1IioE-.js                                              4.52 kB │ gzip:   2.21 kB
+.output/public/assets/admin.emblems-CnkU2HoL.js                                     4.59 kB │ gzip:   1.63 kB
+.output/public/assets/validate-DAlN73Fa.js                                          4.83 kB │ gzip:   1.66 kB
+.output/public/assets/reflections-D9qBbj5u.js                                       4.84 kB │ gzip:   2.04 kB
+.output/public/assets/auth.callback-BvhZaKQ_.js                                     4.85 kB │ gzip:   2.09 kB
+.output/public/assets/local-CL-sOgtD.js                                             4.85 kB │ gzip:   1.44 kB
+.output/public/assets/CampaignKeyArt-YZQneYbJ.js                                    4.87 kB │ gzip:   2.10 kB
+.output/public/assets/useCampaignProgression-yz71XYA-.js                            5.03 kB │ gzip:   2.16 kB
+.output/public/assets/admin-guard-BzwrIH8T.js                                       5.06 kB │ gzip:   2.06 kB
+.output/public/assets/admin.encyclopedia-cleanup.redirects-ZSxu9wUL.js              5.10 kB │ gzip:   1.93 kB
+.output/public/assets/admin.world-membership-review-Cm4_RYHx.js                     5.17 kB │ gzip:   2.14 kB
+.output/public/assets/daily-quest-2BAt539f.js                                       5.29 kB │ gzip:   2.11 kB
+.output/public/assets/encyclopedia.path._id-Bx5AIl33.js                             5.37 kB │ gzip:   1.92 kB
+.output/public/assets/reset-BSIvKIEF.js                                             5.39 kB │ gzip:   2.24 kB
+.output/public/assets/admin.import-history-CnIjqGil.js                              5.40 kB │ gzip:   1.97 kB
+.output/public/assets/useStore-DmFUHvMP.js                                          5.41 kB │ gzip:   2.29 kB
+.output/public/assets/segments-qLDL2014.js                                          5.43 kB │ gzip:   2.05 kB
+.output/public/assets/supabaseCampaigns-CBkCbBSt.js                                 5.45 kB │ gzip:   1.94 kB
+.output/public/assets/admin.era-normalization-CH6E74Vx.js                           5.45 kB │ gzip:   2.18 kB
+.output/public/assets/reflections-DHgN88O2.js                                       5.53 kB │ gzip:   2.07 kB
+.output/public/assets/campaignStorage-D3nXO1ql.js                                   5.53 kB │ gzip:   2.25 kB
+.output/public/assets/feedback.new-CG3b4yVk.js                                      5.54 kB │ gzip:   2.15 kB
+.output/public/assets/offline-storage-CbEO-Fal.js                                   5.62 kB │ gzip:   2.30 kB
+.output/public/assets/admin.import-history._id-DD7MZdQ6.js                          5.63 kB │ gzip:   1.98 kB
+.output/public/assets/worlds.index-BtHw0o0M.js                                      5.65 kB │ gzip:   2.12 kB
+.output/public/assets/homeSummary-CJ9eL2qR.js                                       5.71 kB │ gzip:   2.33 kB
+.output/public/assets/CollectibleRevealDialog-vPDviNfL.js                           5.88 kB │ gzip:   2.09 kB
+.output/public/assets/shareService-hq2TPJ4j.js                                      6.06 kB │ gzip:   2.59 kB
+.output/public/assets/rewardSummary-B2CKsGBf.js                                     6.24 kB │ gzip:   2.60 kB
+.output/public/assets/reset-password-HgxcYp1R.js                                    6.35 kB │ gzip:   2.66 kB
+.output/public/assets/outbox-DP_DxGwx.js                                            6.41 kB │ gzip:   2.57 kB
+.output/public/assets/about-DSdKDCH9.js                                             6.44 kB │ gzip:   2.18 kB
+.output/public/assets/social-CE79dej1.js                                            6.50 kB │ gzip:   2.65 kB
+.output/public/assets/case-number-VgUmV4KW.js                                       6.51 kB │ gzip:   3.18 kB
+.output/public/assets/encyclopedia.type._type-X8vsK_dV.js                           6.51 kB │ gzip:   2.53 kB
+.output/public/assets/useRelatedStories-B6xjL9y3.js                                 6.51 kB │ gzip:   2.93 kB
+.output/public/assets/importedCampaignProgress-DzKUKLXi.js                          6.54 kB │ gzip:   2.43 kB
+.output/public/assets/playerDiscoveries-N9B1hZCg.js                                 6.54 kB │ gzip:   2.47 kB
+.output/public/assets/u._username-BSuqh5wU.js                                       6.61 kB │ gzip:   2.25 kB
+.output/public/assets/campaignLedger-CZkUPpPJ.js                                    6.80 kB │ gzip:   2.78 kB
+.output/public/assets/pushNotifications-D1fdbC-L.js                                 6.95 kB │ gzip:   2.80 kB
+.output/public/assets/notifications-D8bvHEm3.js                                     7.18 kB │ gzip:   2.78 kB
+.output/public/assets/admin.historical-hubs-audit-BDltXtpm.js                       7.21 kB │ gzip:   2.78 kB
+.output/public/assets/account-deletion-CTqKAdqU.js                                  7.22 kB │ gzip:   2.52 kB
+.output/public/assets/progress-DsHXhzjQ.js                                          7.85 kB │ gzip:   3.04 kB
+.output/public/assets/admin.contributions-BNLXg_Js.js                               7.95 kB │ gzip:   2.65 kB
+.output/public/assets/encyclopedia.state._id-DtyVIFx3.js                            7.96 kB │ gzip:   3.04 kB
+.output/public/assets/dist-DoaqEunh.js                                              7.99 kB │ gzip:   3.20 kB
+.output/public/assets/campaignReconciliation-BlK2L3Ml.js                            8.00 kB │ gzip:   2.81 kB
+.output/public/assets/compare._id-BoyehZQU.js                                       8.10 kB │ gzip:   2.94 kB
+.output/public/assets/react-CcBvw7x6.js                                             8.16 kB │ gzip:   3.15 kB
+.output/public/assets/history-calendar-C8xfCMvv.js                                  8.45 kB │ gzip:   3.32 kB
+.output/public/assets/query-keys-DbBr1GCA.js                                        8.48 kB │ gzip:   3.04 kB
+.output/public/assets/web-BZnOUuMg.js                                               8.49 kB │ gzip:   2.85 kB
+.output/public/assets/admin.investigation-rewards-qtjqxBZU.js                       8.65 kB │ gzip:   2.90 kB
+.output/public/assets/feedback._id-DjaFpFve.js                                      8.77 kB │ gzip:   3.04 kB
+.output/public/assets/admin.encyclopedia-cleanup.integrity-Bjt-lgVr.js              9.04 kB │ gzip:   2.81 kB
+.output/public/assets/admin.content-foundation-d2Eq5V-L.js                          9.06 kB │ gzip:   2.86 kB
+.output/public/assets/admin.artifacts-Jzcrydbu.js                                   9.07 kB │ gzip:   3.37 kB
+.output/public/assets/admin.museum-provenance-DNauJNj3.js                           9.35 kB │ gzip:   3.33 kB
+.output/public/assets/journey-zTLeZj2_.js                                           9.36 kB │ gzip:   3.53 kB
+.output/public/assets/admin.campaign-relationships-V7s6q5ie.js                      9.69 kB │ gzip:   3.23 kB
+.output/public/assets/adventure-tXsdaUBx.js                                         9.90 kB │ gzip:   2.90 kB
+.output/public/assets/admin.cross-hub-links-BY5KqPHZ.js                             9.97 kB │ gzip:   3.64 kB
+.output/public/assets/admin.encyclopedia-cleanup.import-preview-Dy88JzQU.js        10.07 kB │ gzip:   3.65 kB
+.output/public/assets/admin.encyclopedia-audit-DnVSYFU6.js                         10.08 kB │ gzip:   3.57 kB
+.output/public/assets/admin.unlock-integrity-C0vtsbdN.js                           10.35 kB │ gzip:   3.28 kB
+.output/public/assets/admin.native-auth-diagnostics-jl4wSLi4.js                    10.53 kB │ gzip:   3.78 kB
+.output/public/assets/admin.content-inventory-8PhwuZ7c.js                          10.75 kB │ gzip:   3.57 kB
+.output/public/assets/flush-B0fI3BEC.js                                            10.86 kB │ gzip:   3.04 kB
+.output/public/assets/admin.atlas-import-Dj42Swvg.js                               11.03 kB │ gzip:   3.61 kB
+.output/public/assets/admin.encyclopedia.priority-audit-CbdTBhPQ.js                11.29 kB │ gzip:   3.82 kB
+.output/public/assets/admin.encyclopedia-cleanup.review-aumSYBXJ.js                11.34 kB │ gzip:   3.84 kB
+.output/public/assets/admin.hub-builder-C0qs3q68.js                                11.35 kB │ gzip:   4.11 kB
+.output/public/assets/EncyclopediaArticleBody-BqMxto80.js                          11.41 kB │ gzip:   3.09 kB
+.output/public/assets/worlds-B6PozBLB.js                                           11.84 kB │ gzip:   3.67 kB
+.output/public/assets/admin.comments-CEkNlSFl.js                                   11.96 kB │ gzip:   4.09 kB
+.output/public/assets/admin.exploration-path-repair-BpAd45zQ.js                    12.05 kB │ gzip:   4.02 kB
+.output/public/assets/encyclopedia.entity._id-BUPv9PGC.js                          12.38 kB │ gzip:   4.43 kB
+.output/public/assets/admin.moderation-Bd7tD89O.js                                 12.77 kB │ gzip:   3.81 kB
+.output/public/assets/admin.content-integrity-DyJ5BYU1.js                          12.91 kB │ gzip:   3.32 kB
+.output/public/assets/sceneLayouts-Bl2PB6U1.js                                     12.95 kB │ gzip:   4.25 kB
+.output/public/assets/admin.offline-BHn1mTO8.js                                    12.98 kB │ gzip:   4.20 kB
+.output/public/assets/SceneExportButton-D_roASAX.js                                13.00 kB │ gzip:   5.87 kB
+.output/public/assets/encyclopedia-DpWmaShP.js                                     13.18 kB │ gzip:   4.12 kB
+.output/public/assets/ClientOnly-MsNpvADU.js                                       13.21 kB │ gzip:   4.60 kB
+.output/public/assets/auth-dbt5F9Zh.js                                             13.25 kB │ gzip:   4.68 kB
+.output/public/assets/admin.announcements-CYbc61vL.js                              13.59 kB │ gzip:   3.67 kB
+.output/public/assets/friends-DHkrqU8m.js                                          13.80 kB │ gzip:   4.17 kB
+.output/public/assets/campaigns.index-BIRhyTTe.js                                  13.87 kB │ gzip:   4.55 kB
+.output/public/assets/OrphanRelationEditor-D46IHCss.js                             13.93 kB │ gzip:   4.82 kB
+.output/public/assets/admin.content-auto-heal-z-d7sB1E.js                          13.95 kB │ gzip:   4.65 kB
+.output/public/assets/admin.canonical-duplicates-INxW-oFp.js                       14.22 kB │ gzip:   4.71 kB
+.output/public/assets/admin.index-DD04dhgR.js                                      14.31 kB │ gzip:   4.46 kB
+.output/public/assets/stories.index-C3ZWl1kS.js                                    14.46 kB │ gzip:   4.54 kB
+.output/public/assets/admin.content-cleanup-DIUReNNq.js                            14.53 kB │ gzip:   4.50 kB
+.output/public/assets/admin.newsletter-rZMQDLaA.js                                 14.79 kB │ gzip:   4.74 kB
+.output/public/assets/admin.atlas-calibration-C9Dxs7zJ.js                          15.05 kB │ gzip:   5.67 kB
+.output/public/assets/native-auth-CZgWSb7S.js                                      15.79 kB │ gzip:   5.59 kB
+.output/public/assets/admin.community-DAd51Tb2.js                                  15.86 kB │ gzip:   4.57 kB
+.output/public/assets/investigations-DczGvlau.js                                   15.91 kB │ gzip:   5.68 kB
+.output/public/assets/inbox-DVIWP8XL.js                                            16.81 kB │ gzip:   4.86 kB
+.output/public/assets/worlds-progress-CdyyWS2A.js                                  17.02 kB │ gzip:   5.30 kB
+.output/public/assets/admin.content-integrity-repair-DgFNu4Rv.js                   17.07 kB │ gzip:   5.06 kB
+.output/public/assets/admin.era-assignment-x17wbfc0.js                             17.41 kB │ gzip:   5.26 kB
+.output/public/assets/admin.taxonomy-BYdw9-Gw.js                                   17.58 kB │ gzip:   5.50 kB
+.output/public/assets/admin.monitor-DsstlP7u.js                                    18.01 kB │ gzip:   5.41 kB
+.output/public/assets/admin.games.crossword-generator-CxwsTGJV.js                  19.26 kB │ gzip:   6.78 kB
+.output/public/assets/admin.persistence-diagnostics-CfwEDOTQ.js                    19.84 kB │ gzip:   5.52 kB
+.output/public/assets/profile-B1UDpYHH.js                                          20.83 kB │ gzip:   7.06 kB
+.output/public/assets/admin.stories.import-v2-DBU63BI-.js                          20.93 kB │ gzip:   6.20 kB
+.output/public/assets/admin.games._mode-DWd8Rj_C.js                                21.42 kB │ gzip:   7.02 kB
+.output/public/assets/encyclopedia.index-jeQStPxy.js                               21.56 kB │ gzip:   6.17 kB
+.output/public/assets/share-card-BFS0BEDU.js                                       22.25 kB │ gzip:   8.28 kB
+.output/public/assets/useBaseQuery-Bn9wp_hI.js                                     22.38 kB │ gzip:   7.39 kB
+.output/public/assets/admin.campaign-order-CavpBks7.js                             23.17 kB │ gzip:   7.14 kB
+.output/public/assets/plan-Coc9M3JX.js                                             23.89 kB │ gzip:   8.73 kB
+.output/public/assets/avatars-Bqtc_VB_.js                                          24.46 kB │ gzip:   5.00 kB
+.output/public/assets/VirtualizedEntityGrid-BtnnTSTb.js                            24.79 kB │ gzip:   7.65 kB
+.output/public/assets/local-first-store-CYexh78k.js                                25.01 kB │ gzip:   8.53 kB
+.output/public/assets/admin.atlas-entities-DbMkrx50.js                             25.51 kB │ gzip:   7.36 kB
+.output/public/assets/utils-W7KuO98j.js                                            26.64 kB │ gzip:   8.58 kB
+.output/public/assets/privacy-BCXxJTUQ.js                                          27.18 kB │ gzip:   9.65 kB
+.output/public/assets/story._id-K-NJQNzY.js                                        27.40 kB │ gzip:   9.15 kB
+.output/public/assets/admin.encyclopedia-report-Bg_9bFFy.js                        27.80 kB │ gzip:   7.85 kB
+.output/public/assets/admin.atlas-repair-D0UklGr-.js                               28.28 kB │ gzip:   7.50 kB
+.output/public/assets/admin.offline-diagnostics-DL8CLQP0.js                        28.74 kB │ gzip:   7.81 kB
+.output/public/assets/collection-CSFlQt0Y.js                                       28.83 kB │ gzip:   9.36 kB
+.output/public/assets/worlds._slug-DWYR3HcM.js                                     29.05 kB │ gzip:   7.54 kB
+.output/public/assets/admin.map-C7T19roP.js                                        29.63 kB │ gzip:   9.65 kB
+.output/public/assets/admin.users-BmdCi-0O.js                                      29.67 kB │ gzip:   7.67 kB
+.output/public/assets/investigation._id-DuJnVjYz.js                                30.83 kB │ gzip:   9.46 kB
+.output/public/assets/admin.stories.index-B32_OXoI.js                              32.12 kB │ gzip:   8.37 kB
+.output/public/assets/offline-pack-Sgq07RDz.js                                     32.79 kB │ gzip:   9.19 kB
+.output/public/assets/PublicContributionsNotice-JgFlxStb.js                        33.30 kB │ gzip:  10.01 kB
+.output/public/assets/admin.atlas-review-BX1__8Fb.js                               34.11 kB │ gzip:   9.26 kB
+.output/public/assets/campaigns.imported._id.index-BDSyby3P.js                     34.93 kB │ gzip:  10.24 kB
+.output/public/assets/admin.stories.v2._id-DFYEXy9z.js                             36.99 kB │ gzip:   8.78 kB
+.output/public/assets/createServerFn-bqEOWyTS.js                                   37.66 kB │ gzip:  11.70 kB
+.output/public/assets/admin.content-CWoUq3CK.js                                    38.38 kB │ gzip:   8.22 kB
+.output/public/assets/map-CaILbW8X.js                                              41.31 kB │ gzip:  13.97 kB
+.output/public/assets/engine-Bxvb690G.js                                           42.81 kB │ gzip:  10.82 kB
+.output/public/assets/admin.investigations._id.edit-BBr0ixDD.js                    44.39 kB │ gzip:  11.10 kB
+.output/public/assets/sortable.esm-QEiEXXqM.js                                     44.65 kB │ gzip:  14.65 kB
+.output/public/assets/admin.campaigns._id.edit-CK_JyMW2.js                         44.86 kB │ gzip:  11.63 kB
+.output/public/assets/admin.campaigns.index-CmBjgBHH.js                            52.91 kB │ gzip:  14.47 kB
+.output/public/assets/investigations-BHgRAmmc.js                                   54.61 kB │ gzip:  15.09 kB
+.output/public/assets/admin.stories._id.edit-CRHOLGIi.js                           55.92 kB │ gzip:  14.78 kB
+.output/public/assets/types-BpV25R4c.js                                            56.90 kB │ gzip:  13.06 kB
+.output/public/assets/admin.notifications-CBWKf4_p.js                              60.35 kB │ gzip:  14.93 kB
+.output/public/assets/AppShell-Byot9a7r.js                                         60.73 kB │ gzip:  21.11 kB
+.output/public/assets/campaigns.imported._id.chapter._chapter-BB74_ZeQ.js          63.65 kB │ gzip:  17.80 kB
+.output/public/assets/admin.encyclopedia-cleanup.index-T1D-NCxd.js                 71.82 kB │ gzip:  19.68 kB
+.output/public/assets/games._mode._slug-Bb8iU0Sm.js                                72.33 kB │ gzip:  20.02 kB
+.output/public/assets/admin.import-cXr5Fbpp.js                                     76.51 kB │ gzip:  20.18 kB
+.output/public/assets/profile-5cvQR14Y.js                                          79.59 kB │ gzip:  19.59 kB
+.output/public/assets/admin.encyclopedia-cleanup.data-hygiene-CBDPebHr.js          84.07 kB │ gzip:  17.39 kB
+.output/public/assets/routes-B2rW4XCW.js                                           87.65 kB │ gzip:  26.37 kB
+.output/public/assets/StoryCard-JLFtlhB_.js                                        92.13 kB │ gzip:  47.72 kB
+.output/public/assets/resolver-DjcLjkrR.js                                        104.61 kB │ gzip:  33.34 kB
+.output/public/assets/client-BMGWU8kR.js                                          204.10 kB │ gzip:  52.50 kB
+.output/public/assets/admin.analytics-COoKcg72.js                                 424.76 kB │ gzip: 111.18 kB
+.output/public/assets/index-CcVxG9cV.js                                           673.39 kB │ gzip: 203.16 kB
+
+[33m[INEFFECTIVE_DYNAMIC_IMPORT] [0msrc/lib/boot/startup-timeline.ts is dynamically imported by src/lib/tutorial/persistence.ts, src/routes/__root.tsx but also statically imported by src/lib/account.tsx, src/routes/admin.persistence-diagnostics.tsx?tsr-split=component, dynamic import will not move module into another chunk.
+
+[plugin builtin:vite-reporter]
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[33m[INEFFECTIVE_DYNAMIC_IMPORT] [0msrc/lib/tutorial/persistence.ts is dynamically imported by src/lib/account.tsx, src/lib/identity/reset.ts but also statically imported by src/lib/tutorial/debug.ts, src/lib/tutorial/engine.tsx, src/lib/tutorial/index.ts, src/routes/admin.persistence-diagnostics.tsx?tsr-split=component, dynamic import will not move module into another chunk.
+
+[33m[INEFFECTIVE_DYNAMIC_IMPORT] [0msrc/lib/encyclopedia/index-store.ts is dynamically imported by src/routes/__root.tsx but also statically imported by src/routes/admin.related-stories.tsx?tsr-split=component, src/routes/encyclopedia.index.tsx, src/routes/encyclopedia.index.tsx?tsr-split=component, src/routes/encyclopedia.type.$type.tsx, src/routes/encyclopedia.type.$type.tsx?tsr-split=component, dynamic import will not move module into another chunk.
+
+[33m[INEFFECTIVE_DYNAMIC_IMPORT] [0msrc/lib/local-first-store.ts is dynamically imported by src/components/atlas/AtlasSafeMode.tsx, src/lib/campaignLedger.ts, src/lib/games/dailyChallengeService.ts, src/lib/historical-calendar.ts, src/lib/investigations-source.ts, ... but also statically imported by src/components/stories/LockedStoryDialog.tsx, src/lib/atlas-entities-query.ts, src/lib/campaignUnlocks.ts, src/lib/daily-quest.ts, src/lib/encyclopedia-canonical.ts, ..., dynamic import will not move module into another chunk.
+
+[33m[PLUGIN_TIMINGS] [0mYour build spent significant time in plugins. Here is a breakdown:
+  - vite-tsconfig-paths (39%)
+  - tanstack-start-core:import-protection-transform-cache (27%)
+  - tanstack-start-core:import-protection (18%)
+  - tanstack-router:code-splitter:compile-reference-file (7%)
+  - tanstack-router:code-splitter:compile-virtual-file (5%)
+See https://rolldown.rs/options/checks#plugintimings for more details.
+
+✓ built in 14.39s
+vite v8.0.16 building ssr environment for production...
+[2K
+transforming...[plugin tanstack-start-core::server-fn:ssr] /workspace/noor-al-maadi-app/src/lib/stories/media/verify.functions.ts?tss-serverfn-split:50:33 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+[plugin tanstack-start-core::server-fn:ssr] /workspace/noor-al-maadi-app/src/lib/achievements/v2/claim.functions.ts?tss-serverfn-split:44:34 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+[plugin tanstack-start-core::server-fn:ssr] /workspace/noor-al-maadi-app/src/lib/achievements/v2/claim.functions.ts?tss-serverfn-split:106:42 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+[plugin tanstack-start-core::server-fn:ssr] /workspace/noor-al-maadi-app/src/lib/achievements/v2/claim.functions.ts?tss-serverfn-split:123:45 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+[plugin tanstack-start-core::server-fn:ssr] /workspace/noor-al-maadi-app/src/lib/import/import-batch.functions.ts?tss-serverfn-split:43:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+[plugin tanstack-start-core::server-fn:ssr] /workspace/noor-al-maadi-app/src/lib/import/import-batch.functions.ts?tss-serverfn-split:56:33 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+[plugin tanstack-start-core::server-fn:ssr] /workspace/noor-al-maadi-app/src/lib/import/import-batch.functions.ts?tss-serverfn-split:72:38 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+[plugin tanstack-start-core::server-fn:ssr] /workspace/noor-al-maadi-app/src/lib/import/import-batch.functions.ts?tss-serverfn-split:90:36 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+[plugin tanstack-start-core::server-fn:ssr] /workspace/noor-al-maadi-app/src/lib/import/import-batch.functions.ts?tss-serverfn-split:111:34 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+[plugin tanstack-start-core::server-fn:ssr] /workspace/noor-al-maadi-app/src/lib/import/import-batch.functions.ts?tss-serverfn-split:132:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+[plugin tanstack-start-core::server-fn:ssr] /workspace/noor-al-maadi-app/src/lib/deleteAccount.functions.ts?tss-serverfn-split:17:32 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+[plugin tanstack-start-core::server-fn:ssr] /workspace/noor-al-maadi-app/src/lib/teamUsers.functions.ts?tss-serverfn-split:26:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+[plugin tanstack-start-core::server-fn:ssr] /workspace/noor-al-maadi-app/src/lib/teamUsers.functions.ts?tss-serverfn-split:81:29 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+[plugin tanstack-start-core::server-fn:ssr] /workspace/noor-al-maadi-app/src/lib/achievements/v2/claim.functions.ts:44:34 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+[plugin tanstack-start-core::server-fn:ssr] /workspace/noor-al-maadi-app/src/lib/achievements/v2/claim.functions.ts:106:42 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+[plugin tanstack-start-core::server-fn:ssr] /workspace/noor-al-maadi-app/src/lib/achievements/v2/claim.functions.ts:123:45 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+[plugin tanstack-start-core::server-fn:ssr] /workspace/noor-al-maadi-app/src/lib/import/import-batch.functions.ts:43:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+[plugin tanstack-start-core::server-fn:ssr] /workspace/noor-al-maadi-app/src/lib/import/import-batch.functions.ts:56:33 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+[plugin tanstack-start-core::server-fn:ssr] /workspace/noor-al-maadi-app/src/lib/import/import-batch.functions.ts:72:38 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+[plugin tanstack-start-core::server-fn:ssr] /workspace/noor-al-maadi-app/src/lib/import/import-batch.functions.ts:90:36 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+[plugin tanstack-start-core::server-fn:ssr] /workspace/noor-al-maadi-app/src/lib/import/import-batch.functions.ts:111:34 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+[plugin tanstack-start-core::server-fn:ssr] /workspace/noor-al-maadi-app/src/lib/import/import-batch.functions.ts:132:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+[plugin tanstack-start-core::server-fn:ssr] /workspace/noor-al-maadi-app/src/lib/teamUsers.functions.ts:26:31 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+[plugin tanstack-start-core::server-fn:ssr] /workspace/noor-al-maadi-app/src/lib/teamUsers.functions.ts:81:29 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+[plugin tanstack-start-core::server-fn:ssr] /workspace/noor-al-maadi-app/src/lib/deleteAccount.functions.ts:17:32 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+[plugin tanstack-start-core::server-fn:ssr] /workspace/noor-al-maadi-app/src/lib/stories/media/verify.functions.ts:50:33 createServerFn().inputValidator() is deprecated. Use createServerFn().validator() instead.
+✓ 993 modules transformed.
+rendering chunks...
+computing gzip size...
+node_modules/.nitro/vite/services/ssr/assets/ibm-plex-sans-arabic-latin-ext-700-normal-C7GcWn11.woff       5.08 kB
+node_modules/.nitro/vite/services/ssr/assets/ibm-plex-sans-arabic-latin-ext-400-normal-BeVLg08x.woff       5.10 kB
+node_modules/.nitro/vite/services/ssr/assets/ibm-plex-sans-arabic-latin-ext-500-normal-eJxPnL1P.woff       5.11 kB
+node_modules/.nitro/vite/services/ssr/assets/ibm-plex-sans-arabic-latin-ext-600-normal-DT29Q8HW.woff       5.12 kB
+node_modules/.nitro/vite/services/ssr/assets/ibm-plex-sans-arabic-latin-ext-300-normal-B47YZoZZ.woff       5.13 kB
+node_modules/.nitro/vite/services/ssr/assets/ibm-plex-sans-arabic-latin-ext-500-normal-Ck_W4G78.woff2      6.54 kB
+node_modules/.nitro/vite/services/ssr/assets/ibm-plex-sans-arabic-latin-ext-700-normal-BSbyEp0V.woff2      6.56 kB
+node_modules/.nitro/vite/services/ssr/assets/ibm-plex-sans-arabic-latin-ext-400-normal-BpLfq-63.woff2      6.65 kB
+node_modules/.nitro/vite/services/ssr/assets/ibm-plex-sans-arabic-latin-ext-600-normal-DjDAeNQD.woff2      6.68 kB
+node_modules/.nitro/vite/services/ssr/assets/ibm-plex-sans-arabic-latin-ext-300-normal-BzupEmdQ.woff2      6.82 kB
+node_modules/.nitro/vite/services/ssr/assets/cairo-latin-ext-400-normal-xCL67Y2R.woff2                     7.33 kB
+node_modules/.nitro/vite/services/ssr/assets/cairo-latin-ext-700-normal-Cscux539.woff2                     7.46 kB
+node_modules/.nitro/vite/services/ssr/assets/cairo-latin-ext-600-normal-DuRnqffh.woff2                     7.48 kB
+node_modules/.nitro/vite/services/ssr/assets/cairo-latin-ext-400-normal-C_BIE9Qe.woff                     10.16 kB
+node_modules/.nitro/vite/services/ssr/assets/cairo-latin-ext-600-normal-DAfLYaOC.woff                     10.24 kB
+node_modules/.nitro/vite/services/ssr/assets/cairo-latin-ext-700-normal-htXca11Z.woff                     10.25 kB
+node_modules/.nitro/vite/services/ssr/assets/amiri-latin-ext-400-normal-C9hoIjPx.woff2                    10.44 kB
+node_modules/.nitro/vite/services/ssr/assets/amiri-latin-ext-700-normal-ByFuOT8o.woff2                    10.86 kB
+node_modules/.nitro/vite/services/ssr/assets/amiri-latin-ext-400-normal-CGn-6a7O.woff                     13.08 kB
+node_modules/.nitro/vite/services/ssr/assets/cairo-arabic-400-normal-DN15VWMM.woff2                       13.29 kB
+node_modules/.nitro/vite/services/ssr/assets/amiri-latin-ext-700-normal-Ck-lxu84.woff                     13.57 kB
+node_modules/.nitro/vite/services/ssr/assets/cairo-arabic-600-normal-rkrvveqO.woff2                       13.89 kB
+node_modules/.nitro/vite/services/ssr/assets/cairo-arabic-700-normal-D3nDedWX.woff2                       13.95 kB
+node_modules/.nitro/vite/services/ssr/assets/cairo-latin-400-normal-Dh7otpdh.woff2                        15.01 kB
+node_modules/.nitro/vite/services/ssr/assets/cairo-latin-600-normal-mGS0uvCM.woff2                        15.28 kB
+node_modules/.nitro/vite/services/ssr/assets/cairo-latin-700-normal-C3GYtKbV.woff2                        15.28 kB
+node_modules/.nitro/vite/services/ssr/assets/cairo-arabic-400-normal-CAYwymWN.woff                        16.80 kB
+node_modules/.nitro/vite/services/ssr/assets/cairo-arabic-700-normal-CyOqhaeK.woff                        17.26 kB
+node_modules/.nitro/vite/services/ssr/assets/cairo-arabic-600-normal-B3EOalmC.woff                        17.33 kB
+node_modules/.nitro/vite/services/ssr/assets/ibm-plex-sans-arabic-latin-400-normal-CFZh1unN.woff          17.51 kB
+node_modules/.nitro/vite/services/ssr/assets/ibm-plex-sans-arabic-latin-700-normal-Cl4F7CZR.woff          17.78 kB
+node_modules/.nitro/vite/services/ssr/assets/ibm-plex-sans-arabic-latin-500-normal-BletK1Hp.woff          18.64 kB
+node_modules/.nitro/vite/services/ssr/assets/ibm-plex-sans-arabic-latin-300-normal-D4-nvPU-.woff          18.67 kB
+node_modules/.nitro/vite/services/ssr/assets/ibm-plex-sans-arabic-latin-600-normal-Dk5eISD_.woff          18.88 kB
+node_modules/.nitro/vite/services/ssr/assets/ibm-plex-sans-arabic-latin-400-normal-Bo5KPYvw.woff2         19.16 kB
+node_modules/.nitro/vite/services/ssr/assets/cairo-latin-400-normal-b1R3q6Pf.woff                         19.48 kB
+node_modules/.nitro/vite/services/ssr/assets/ibm-plex-sans-arabic-latin-700-normal-BzSf6GNr.woff2         19.50 kB
+node_modules/.nitro/vite/services/ssr/assets/amiri-latin-400-normal-Czk41Rjn.woff2                        19.54 kB
+node_modules/.nitro/vite/services/ssr/assets/cairo-latin-600-normal-buYOP1M3.woff                         19.68 kB
+node_modules/.nitro/vite/services/ssr/assets/cairo-latin-700-normal-6fcUy4Rc.woff                         19.74 kB
+node_modules/.nitro/vite/services/ssr/assets/ibm-plex-sans-arabic-latin-500-normal-Cd6jVIg7.woff2         20.08 kB
+node_modules/.nitro/vite/services/ssr/assets/ibm-plex-sans-arabic-latin-300-normal-B_2Ptpb1.woff2         20.28 kB
+node_modules/.nitro/vite/services/ssr/assets/amiri-latin-700-normal-DIjoEGk6.woff2                        20.30 kB
+node_modules/.nitro/vite/services/ssr/assets/ibm-plex-sans-arabic-latin-600-normal-KrqB56Mw.woff2         20.50 kB
+node_modules/.nitro/vite/services/ssr/assets/amiri-latin-400-normal-Bv6IM0kz.woff                         23.73 kB
+node_modules/.nitro/vite/services/ssr/assets/amiri-latin-700-normal-BH9dHmOv.woff                         24.65 kB
+node_modules/.nitro/vite/services/ssr/assets/01-city-sunrise-B22Ic9nc.jpg                                 41.35 kB
+node_modules/.nitro/vite/services/ssr/assets/ibm-plex-sans-arabic-arabic-400-normal-CyU-ddYS.woff2        42.84 kB
+node_modules/.nitro/vite/services/ssr/assets/ibm-plex-sans-arabic-arabic-400-normal-EA1o-u_Q.woff         44.13 kB
+node_modules/.nitro/vite/services/ssr/assets/ibm-plex-sans-arabic-arabic-700-normal-DrtBj6UE.woff2        44.28 kB
+node_modules/.nitro/vite/services/ssr/assets/ibm-plex-sans-arabic-arabic-700-normal-9rXc6cUL.woff         44.36 kB
+node_modules/.nitro/vite/services/ssr/assets/ibm-plex-sans-arabic-arabic-300-normal-CbO9c89e.woff2        45.04 kB
+node_modules/.nitro/vite/services/ssr/assets/ibm-plex-sans-arabic-arabic-500-normal-C4MQITzh.woff2        45.29 kB
+node_modules/.nitro/vite/services/ssr/assets/ibm-plex-sans-arabic-arabic-600-normal-0pRdybE_.woff2        45.68 kB
+node_modules/.nitro/vite/services/ssr/assets/ibm-plex-sans-arabic-arabic-300-normal-D1YP2vdu.woff         46.12 kB
+node_modules/.nitro/vite/services/ssr/assets/ibm-plex-sans-arabic-arabic-600-normal-MJZ0liF5.woff         46.78 kB
+node_modules/.nitro/vite/services/ssr/assets/ibm-plex-sans-arabic-arabic-500-normal-DPXcppbm.woff         46.92 kB
+node_modules/.nitro/vite/services/ssr/assets/02-desert-caravan-DpWm-BHV.jpg                               62.83 kB
+node_modules/.nitro/vite/services/ssr/assets/17-caravan-dunes-B7UWyT_-.jpg                                67.28 kB
+node_modules/.nitro/vite/services/ssr/assets/06-damascus-sunrise-CJEdsgX-.jpg                             72.33 kB
+node_modules/.nitro/vite/services/ssr/assets/09-jerusalem-twilight-B1bmbpAm.jpg                           75.72 kB
+node_modules/.nitro/vite/services/ssr/assets/hero-fortress-B_6pfmLW.jpg                                   82.02 kB
+node_modules/.nitro/vite/services/ssr/assets/12-samarkand-xfJT8Mh6.jpg                                    94.14 kB
+node_modules/.nitro/vite/services/ssr/assets/05-baghdad-golden-age-CH1HugeL.jpg                           95.60 kB
+node_modules/.nitro/vite/services/ssr/assets/amiri-arabic-700-normal-D8FrblyB.woff2                       99.96 kB
+node_modules/.nitro/vite/services/ssr/assets/03-manuscript-lamp-DggUTaJL.jpg                             102.79 kB
+node_modules/.nitro/vite/services/ssr/assets/13-bukhara-caravanserai-CTQTjlml.jpg                        103.11 kB
+node_modules/.nitro/vite/services/ssr/assets/20-scholar-writing-CgrHF_Gt.jpg                             107.36 kB
+node_modules/.nitro/vite/services/ssr/assets/amiri-arabic-400-normal-D0NIBXga.woff2                      108.56 kB
+node_modules/.nitro/vite/services/ssr/assets/19-observatory-DYAwgHwU.jpg                                 112.71 kB
+node_modules/.nitro/vite/services/ssr/assets/11-madinah-sunset-DzkbVNd7.jpg                              121.60 kB
+node_modules/.nitro/vite/services/ssr/assets/amiri-arabic-700-normal-dUd6sHq-.woff                       129.81 kB
+node_modules/.nitro/vite/services/ssr/assets/investigations-hero-CwWjIgR6.jpg                            133.58 kB
+node_modules/.nitro/vite/services/ssr/assets/07-cordoba-night-X60fLMlj.jpg                               133.65 kB
+node_modules/.nitro/vite/services/ssr/assets/15-ottoman-harbor-CBuzA85d.jpg                              140.37 kB
+node_modules/.nitro/vite/services/ssr/assets/amiri-arabic-400-normal-C_1DQziU.woff                       140.49 kB
+node_modules/.nitro/vite/services/ssr/assets/08-cairo-market-MGsZLgun.jpg                                155.10 kB
+node_modules/.nitro/vite/services/ssr/assets/10-makkah-dawn-DQbDS_NL.jpg                                 192.26 kB
+node_modules/.nitro/vite/services/ssr/assets/14-andalusian-palace-C__dH2Jm.jpg                           199.87 kB
+node_modules/.nitro/vite/services/ssr/assets/22-scholar-journey-CVABPEQH.jpg                             211.71 kB
+node_modules/.nitro/vite/services/ssr/assets/18-mountain-fortress-DBR718Aq.jpg                           218.66 kB
+node_modules/.nitro/vite/services/ssr/assets/21-islamic-army-banners-DgP6EN77.jpg                        223.47 kB
+node_modules/.nitro/vite/services/ssr/assets/16-historical-library-0c_ej3sX.jpg                          273.83 kB
+node_modules/.nitro/vite/services/ssr/assets/atlas-v1-base-B4IYktB6.webp                               4,077.58 kB
+node_modules/.nitro/vite/services/ssr/assets/router-C48dcNhJ.css                                           8.50 kB │ gzip:  2.23 kB
+node_modules/.nitro/vite/services/ssr/assets/styles-syQQVGdO.css                                         407.62 kB │ gzip: 61.25 kB
+node_modules/.nitro/vite/services/ssr/assets/timeline-BuzmWqSr.js                                          0.14 kB │ gzip:  0.12 kB
+node_modules/.nitro/vite/services/ssr/assets/referrals-CkyZkIsB.js                                         0.14 kB │ gzip:  0.12 kB
+node_modules/.nitro/vite/services/ssr/assets/achievements-D2D9Fpj3.js                                      0.14 kB │ gzip:  0.12 kB
+node_modules/.nitro/vite/services/ssr/assets/14-andalusian-palace-BN3cacZI.js                              0.19 kB │ gzip:  0.14 kB
+node_modules/.nitro/vite/services/ssr/assets/16-historical-library-BInw_kaT.js                             0.20 kB │ gzip:  0.14 kB
+node_modules/.nitro/vite/services/ssr/assets/21-islamic-army-banners-DbBro76V.js                           0.20 kB │ gzip:  0.15 kB
+node_modules/.nitro/vite/services/ssr/assets/campaign-DHlEWiGG.js                                          0.23 kB │ gzip:  0.20 kB
+node_modules/.nitro/vite/services/ssr/assets/empty-plugin-adapters-Cp2k5mEP.js                             0.24 kB │ gzip:  0.17 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.games-Bt0oR0RE.js                                       0.26 kB │ gzip:  0.19 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.encyclopedia-DCkoicgi.js                                0.26 kB │ gzip:  0.20 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.investigations-B1EmqosW.js                              0.26 kB │ gzip:  0.20 kB
+node_modules/.nitro/vite/services/ssr/assets/seasons-BBk8WDrh.js                                           0.30 kB │ gzip:  0.22 kB
+node_modules/.nitro/vite/services/ssr/assets/map-CbQWUAES.js                                               0.31 kB │ gzip:  0.22 kB
+node_modules/.nitro/vite/services/ssr/assets/encyclopedia-DAK6fbso.js                                      0.33 kB │ gzip:  0.22 kB
+node_modules/.nitro/vite/services/ssr/assets/rolldown-runtime-D7D4PA-g.js                                  0.36 kB │ gzip:  0.25 kB
+node_modules/.nitro/vite/services/ssr/assets/games.index-l_GY5kld.js                                       0.36 kB │ gzip:  0.24 kB
+node_modules/.nitro/vite/services/ssr/assets/u._username-BcIQdPTe.js                                       0.40 kB │ gzip:  0.28 kB
+node_modules/.nitro/vite/services/ssr/assets/createServerRpc-DAOnH7-T.js                                   0.41 kB │ gzip:  0.28 kB
+node_modules/.nitro/vite/services/ssr/assets/utils-Cc-BI2ot.js                                             0.41 kB │ gzip:  0.27 kB
+node_modules/.nitro/vite/services/ssr/assets/encyclopedia-icons-DU8jg279.js                                0.42 kB │ gzip:  0.29 kB
+node_modules/.nitro/vite/services/ssr/assets/encyclopedia.state._id-DD0qJlll.js                            0.43 kB │ gzip:  0.26 kB
+node_modules/.nitro/vite/services/ssr/assets/WorldEmblem-CtTSXxcP.js                                       0.45 kB │ gzip:  0.30 kB
+node_modules/.nitro/vite/services/ssr/assets/campaigns.imported._id.index-D0P__sM0.js                      0.45 kB │ gzip:  0.32 kB
+node_modules/.nitro/vite/services/ssr/assets/campaigns.imported._id.chapter._chapter-VHSbkLAr.js           0.46 kB │ gzip:  0.33 kB
+node_modules/.nitro/vite/services/ssr/assets/CachedImage-DXgHG92J.js                                       0.50 kB │ gzip:  0.32 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.stories._id.edit-C8K6ykva.js                            0.52 kB │ gzip:  0.35 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.import-history._id-xWZWpd9S.js                          0.52 kB │ gzip:  0.36 kB
+node_modules/.nitro/vite/services/ssr/assets/engine.functions-Cf1JkUrc.js                                  0.54 kB │ gzip:  0.34 kB
+node_modules/.nitro/vite/services/ssr/assets/compare._id-fW8bZ6eY.js                                       0.56 kB │ gzip:  0.39 kB
+node_modules/.nitro/vite/services/ssr/assets/encyclopedia.type._type-C8nwrKtA.js                           0.59 kB │ gzip:  0.38 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.stories.v2._id-BZiWdr7g.js                              0.59 kB │ gzip:  0.41 kB
+node_modules/.nitro/vite/services/ssr/assets/encyclopedia.type._type-BCq6AF3_.js                           0.60 kB │ gzip:  0.38 kB
+node_modules/.nitro/vite/services/ssr/assets/verify.functions-BHNuKpsc.js                                  0.60 kB │ gzip:  0.39 kB
+node_modules/.nitro/vite/services/ssr/assets/createSsrRpc-jXn91JoM.js                                      0.61 kB │ gzip:  0.38 kB
+node_modules/.nitro/vite/services/ssr/assets/androidFreezeDiagnostics-L8qxCe-i.js                          0.65 kB │ gzip:  0.33 kB
+node_modules/.nitro/vite/services/ssr/assets/useServerFn-B_F8qRnT.js                                       0.65 kB │ gzip:  0.36 kB
+node_modules/.nitro/vite/services/ssr/assets/profile-CE-g2yxl.js                                           0.68 kB │ gzip:  0.41 kB
+node_modules/.nitro/vite/services/ssr/assets/AndroidPlainTextInput-_b4DSjtd.js                             0.71 kB │ gzip:  0.30 kB
+node_modules/.nitro/vite/services/ssr/assets/campaigns.imported._id.index-BaaZFDTp.js                      0.71 kB │ gzip:  0.42 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.import-Dlb30rbx.js                                      0.72 kB │ gzip:  0.46 kB
+node_modules/.nitro/vite/services/ssr/assets/campaigns.imported._id.chapter._chapter-BkDgJOMr.js           0.72 kB │ gzip:  0.44 kB
+node_modules/.nitro/vite/services/ssr/assets/encyclopedia.path._id-CgRBmrEu.js                             0.72 kB │ gzip:  0.44 kB
+node_modules/.nitro/vite/services/ssr/assets/encyclopedia.state._id-CIWvdcLE.js                            0.76 kB │ gzip:  0.42 kB
+node_modules/.nitro/vite/services/ssr/assets/ReadingScale-Ba0a-let.js                                      0.76 kB │ gzip:  0.48 kB
+node_modules/.nitro/vite/services/ssr/assets/AuthLink-Sara5a4b.js                                          0.77 kB │ gzip:  0.49 kB
+node_modules/.nitro/vite/services/ssr/assets/richText-CTjZiNlG.js                                          0.77 kB │ gzip:  0.38 kB
+node_modules/.nitro/vite/services/ssr/assets/useStalled-BcnB23T3.js                                        0.79 kB │ gzip:  0.50 kB
+node_modules/.nitro/vite/services/ssr/assets/encyclopedia.path._id-DzwN1hS5.js                             0.79 kB │ gzip:  0.47 kB
+node_modules/.nitro/vite/services/ssr/assets/offline-fallback-HXzPgjIt.js                                  0.81 kB │ gzip:  0.52 kB
+node_modules/.nitro/vite/services/ssr/assets/recoveryMode-C_cRmlP8.js                                      0.81 kB │ gzip:  0.36 kB
+node_modules/.nitro/vite/services/ssr/assets/friends-DOC0P2W5.js                                           0.83 kB │ gzip:  0.45 kB
+node_modules/.nitro/vite/services/ssr/assets/worlds.index-DYtQXKdW.js                                      0.85 kB │ gzip:  0.53 kB
+node_modules/.nitro/vite/services/ssr/assets/offline-snapshot-warm-bridge-DSr_5N8x.js                      0.85 kB │ gzip:  0.49 kB
+node_modules/.nitro/vite/services/ssr/assets/auth.callback-Dbk1CExO.js                                     0.89 kB │ gzip:  0.41 kB
+node_modules/.nitro/vite/services/ssr/assets/authDialog-Bh_VppAk.js                                        0.91 kB │ gzip:  0.46 kB
+node_modules/.nitro/vite/services/ssr/assets/types-VYicRTyJ.js                                             0.92 kB │ gzip:  0.50 kB
+node_modules/.nitro/vite/services/ssr/assets/unlock-notices-DidpsIuG.js                                    0.96 kB │ gzip:  0.53 kB
+node_modules/.nitro/vite/services/ssr/assets/investigations-BFkQaz3i.js                                    0.99 kB │ gzip:  0.58 kB
+node_modules/.nitro/vite/services/ssr/assets/campaigns.index-CPpCdYzH.js                                   0.99 kB │ gzip:  0.59 kB
+node_modules/.nitro/vite/services/ssr/assets/send-ClXogsNL.js                                              1.01 kB │ gzip:  0.58 kB
+node_modules/.nitro/vite/services/ssr/assets/worlds._slug-BgBL0pPj.js                                      1.03 kB │ gzip:  0.62 kB
+node_modules/.nitro/vite/services/ssr/assets/inbox-mIFxKFI6.js                                             1.04 kB │ gzip:  0.56 kB
+node_modules/.nitro/vite/services/ssr/assets/encyclopedia.entity._id-SIAM4Bwu.js                           1.05 kB │ gzip:  0.60 kB
+node_modules/.nitro/vite/services/ssr/assets/logout-flush-BuzQGITx.js                                      1.07 kB │ gzip:  0.55 kB
+node_modules/.nitro/vite/services/ssr/assets/play.timeline-CBPtrCIz.js                                     1.07 kB │ gzip:  0.63 kB
+node_modules/.nitro/vite/services/ssr/assets/play.decisions-D8uEEI7Y.js                                    1.07 kB │ gzip:  0.62 kB
+node_modules/.nitro/vite/services/ssr/assets/worlds._slug-kORg198P.js                                      1.07 kB │ gzip:  0.64 kB
+node_modules/.nitro/vite/services/ssr/assets/play.investigate-Qw5r-ftE.js                                  1.08 kB │ gzip:  0.63 kB
+node_modules/.nitro/vite/services/ssr/assets/contentRegistryStorage-BaANO-Vw.js                            1.11 kB │ gzip:  0.59 kB
+node_modules/.nitro/vite/services/ssr/assets/start-Cg5mDh6E.js                                             1.16 kB │ gzip:  0.61 kB
+node_modules/.nitro/vite/services/ssr/assets/aps-C8IjBrGD.js                                               1.17 kB │ gzip:  0.64 kB
+node_modules/.nitro/vite/services/ssr/assets/context-DmbjB7Q0.js                                           1.17 kB │ gzip:  0.59 kB
+node_modules/.nitro/vite/services/ssr/assets/content-audit-R7C0MT6k.js                                     1.20 kB │ gzip:  0.65 kB
+node_modules/.nitro/vite/services/ssr/assets/client.server-mV91GU4A.js                                     1.21 kB │ gzip:  0.58 kB
+node_modules/.nitro/vite/services/ssr/assets/priority-BAYU3hNH.js                                          1.22 kB │ gzip:  0.52 kB
+node_modules/.nitro/vite/services/ssr/assets/identity-map-CkEBA0sS.js                                      1.22 kB │ gzip:  0.67 kB
+node_modules/.nitro/vite/services/ssr/assets/formatNumber-BaUMEs42.js                                      1.23 kB │ gzip:  0.67 kB
+node_modules/.nitro/vite/services/ssr/assets/atlas-source-Bt9WRpg4.js                                      1.26 kB │ gzip:  0.76 kB
+node_modules/.nitro/vite/services/ssr/assets/safe-text-BSK0NJrA.js                                         1.31 kB │ gzip:  0.70 kB
+node_modules/.nitro/vite/services/ssr/assets/EncyclopediaUnavailable-uPQWmqc9.js                           1.33 kB │ gzip:  0.79 kB
+node_modules/.nitro/vite/services/ssr/assets/WorldFilterChip-DvgXib3F.js                                   1.35 kB │ gzip:  0.70 kB
+node_modules/.nitro/vite/services/ssr/assets/guestCompletions-CEC9gdzS.js                                  1.36 kB │ gzip:  0.58 kB
+node_modules/.nitro/vite/services/ssr/assets/externalUrl-g3YHomZ4.js                                       1.38 kB │ gzip:  0.59 kB
+node_modules/.nitro/vite/services/ssr/assets/serverApi-C3zYHyxX.js                                         1.39 kB │ gzip:  0.71 kB
+node_modules/.nitro/vite/services/ssr/assets/campaignChronologyBackfill-z8IQvrO2.js                        1.39 kB │ gzip:  0.70 kB
+node_modules/.nitro/vite/services/ssr/assets/admin-monitor.functions-C15Ck-8K.js                           1.39 kB │ gzip:  0.66 kB
+node_modules/.nitro/vite/services/ssr/assets/EmblemArt-B9r1mqcU.js                                         1.41 kB │ gzip:  0.71 kB
+node_modules/.nitro/vite/services/ssr/assets/optionShuffle-DdWUd_qc.js                                     1.41 kB │ gzip:  0.76 kB
+node_modules/.nitro/vite/services/ssr/assets/diag-trace-Dwugvnmj.js                                        1.43 kB │ gzip:  0.64 kB
+node_modules/.nitro/vite/services/ssr/assets/reconciliation-B7Mu3QQw.js                                    1.43 kB │ gzip:  0.58 kB
+node_modules/.nitro/vite/services/ssr/assets/play.chapter-loZJw-By.js                                      1.43 kB │ gzip:  0.72 kB
+node_modules/.nitro/vite/services/ssr/assets/irth-day-BBq0z64F.js                                          1.44 kB │ gzip:  0.79 kB
+node_modules/.nitro/vite/services/ssr/assets/ModalPortal-BY11MUqQ.js                                       1.45 kB │ gzip:  0.55 kB
+node_modules/.nitro/vite/services/ssr/assets/KeyArtDissolve-Bea09XcK.js                                    1.54 kB │ gzip:  0.75 kB
+node_modules/.nitro/vite/services/ssr/assets/city._id-B_t56MVl.js                                          1.56 kB │ gzip:  0.78 kB
+node_modules/.nitro/vite/services/ssr/assets/reports-SH-Z9Qqs.js                                           1.56 kB │ gzip:  0.82 kB
+node_modules/.nitro/vite/services/ssr/assets/battle._id-BJb7lsvG.js                                        1.57 kB │ gzip:  0.78 kB
+node_modules/.nitro/vite/services/ssr/assets/figure._id-CmKpTL5R.js                                        1.58 kB │ gzip:  0.78 kB
+node_modules/.nitro/vite/services/ssr/assets/deleteAccount.functions-C1CwEweT.js                           1.63 kB │ gzip:  0.85 kB
+node_modules/.nitro/vite/services/ssr/assets/orphanUnlocksMigration-enhWT9us.js                            1.63 kB │ gzip:  0.77 kB
+node_modules/.nitro/vite/services/ssr/assets/authOrigin-BBXka8f9.js                                        1.66 kB │ gzip:  0.73 kB
+node_modules/.nitro/vite/services/ssr/assets/button-1L8SFUib.js                                            1.68 kB │ gzip:  0.78 kB
+node_modules/.nitro/vite/services/ssr/assets/createStart-DqmpBBxf.js                                       1.69 kB │ gzip:  0.59 kB
+node_modules/.nitro/vite/services/ssr/assets/03-manuscript-lamp-DUueTRGt.js                                1.74 kB │ gzip:  0.74 kB
+node_modules/.nitro/vite/services/ssr/assets/perf-mode-CrVkv9V-.js                                         1.74 kB │ gzip:  0.73 kB
+node_modules/.nitro/vite/services/ssr/assets/crossword-validate-O_LPMZjC.js                                1.78 kB │ gzip:  0.78 kB
+node_modules/.nitro/vite/services/ssr/assets/build-info-XULYNicj.js                                        1.78 kB │ gzip:  0.90 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.migration-CK8nTaWp.js                                   1.78 kB │ gzip:  0.78 kB
+node_modules/.nitro/vite/services/ssr/assets/library-filter-CHgKY7U1.js                                    1.79 kB │ gzip:  0.81 kB
+node_modules/.nitro/vite/services/ssr/assets/slug-ClaBZxA5.js                                              1.84 kB │ gzip:  1.00 kB
+node_modules/.nitro/vite/services/ssr/assets/campaignChronology-YhIE0JAW.js                                1.84 kB │ gzip:  0.90 kB
+node_modules/.nitro/vite/services/ssr/assets/22-scholar-journey-Bd-Z7Xxi.js                                1.87 kB │ gzip:  0.83 kB
+node_modules/.nitro/vite/services/ssr/assets/auth-middleware-CgTLAMTD.js                                   1.88 kB │ gzip:  0.81 kB
+node_modules/.nitro/vite/services/ssr/assets/eras-public-DtJb6sFP.js                                       1.88 kB │ gzip:  0.91 kB
+node_modules/.nitro/vite/services/ssr/assets/encyclopedia.type._type-BkCHLa3V.js                           1.89 kB │ gzip:  0.83 kB
+node_modules/.nitro/vite/services/ssr/assets/Breadcrumbs-D-evK2Rx.js                                       1.90 kB │ gzip:  0.86 kB
+node_modules/.nitro/vite/services/ssr/assets/AndroidTextEntry-CgL84mJ0.js                                  1.91 kB │ gzip:  0.59 kB
+node_modules/.nitro/vite/services/ssr/assets/FeedbackCTA-DMlFoiQL.js                                       1.98 kB │ gzip:  1.08 kB
+node_modules/.nitro/vite/services/ssr/assets/startup-timeline-D5nCupDg.js                                  1.99 kB │ gzip:  0.82 kB
+node_modules/.nitro/vite/services/ssr/assets/guestCompletions-Dkh-1y6_.js                                  2.01 kB │ gzip:  0.89 kB
+node_modules/.nitro/vite/services/ssr/assets/campaignDividers-OHRPDLS2.js                                  2.02 kB │ gzip:  0.89 kB
+node_modules/.nitro/vite/services/ssr/assets/newsletter-CIJqaAPT.js                                        2.16 kB │ gzip:  0.73 kB
+node_modules/.nitro/vite/services/ssr/assets/campaignArtwork-t2SNOrBC.js                                   2.20 kB │ gzip:  1.00 kB
+node_modules/.nitro/vite/services/ssr/assets/Avatar-Dy-tQ-zC.js                                            2.21 kB │ gzip:  1.11 kB
+node_modules/.nitro/vite/services/ssr/assets/timing-B4N78g0I.js                                            2.31 kB │ gzip:  1.16 kB
+node_modules/.nitro/vite/services/ssr/assets/api-7EHd2NGO.js                                               2.36 kB │ gzip:  0.67 kB
+node_modules/.nitro/vite/services/ssr/assets/adminCampaignsApi-CMUIEbu-.js                                 2.37 kB │ gzip:  0.86 kB
+node_modules/.nitro/vite/services/ssr/assets/request-response-D_y_zge2.js                                  2.40 kB │ gzip:  0.90 kB
+node_modules/.nitro/vite/services/ssr/assets/ReadingProgress-CCu9ITj4.js                                   2.41 kB │ gzip:  1.09 kB
+node_modules/.nitro/vite/services/ssr/assets/import-v2-Biz1D-Mg.js                                         2.43 kB │ gzip:  1.06 kB
+node_modules/.nitro/vite/services/ssr/assets/types-BgsKpUbe.js                                             2.46 kB │ gzip:  0.97 kB
+node_modules/.nitro/vite/services/ssr/assets/worlds-constants-lh_IlM-V.js                                  2.48 kB │ gzip:  0.98 kB
+node_modules/.nitro/vite/services/ssr/assets/arabic-normalize-C3CWaaiJ.js                                  2.48 kB │ gzip:  1.15 kB
+node_modules/.nitro/vite/services/ssr/assets/local-titles-wHw-zpjG.js                                      2.49 kB │ gzip:  0.96 kB
+node_modules/.nitro/vite/services/ssr/assets/transform-fMUAQCAY.js                                         2.53 kB │ gzip:  1.14 kB
+node_modules/.nitro/vite/services/ssr/assets/encyclopedia-quality-DlTmY5cS.js                              2.56 kB │ gzip:  0.93 kB
+node_modules/.nitro/vite/services/ssr/assets/PasswordField-DZJsKO5R.js                                     2.59 kB │ gzip:  1.18 kB
+node_modules/.nitro/vite/services/ssr/assets/serverRequest-BOGsl4aV.js                                     2.69 kB │ gzip:  1.17 kB
+node_modules/.nitro/vite/services/ssr/assets/content-identity-store-1lnxXSP-.js                            2.76 kB │ gzip:  1.05 kB
+node_modules/.nitro/vite/services/ssr/assets/encyclopedia.entity._id--suFkTnA.js                           2.76 kB │ gzip:  1.24 kB
+node_modules/.nitro/vite/services/ssr/assets/AdminLayout-CB6UepCf.js                                       2.77 kB │ gzip:  0.92 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.encyclopedia-cleanup-DBCibUdo.js                        2.82 kB │ gzip:  1.19 kB
+node_modules/.nitro/vite/services/ssr/assets/today-in-history-CVyt6RnO.js                                  2.82 kB │ gzip:  1.30 kB
+node_modules/.nitro/vite/services/ssr/assets/app-constants-D4SFVV6i.js                                     2.85 kB │ gzip:  1.03 kB
+node_modules/.nitro/vite/services/ssr/assets/categories-Cv7Eb7ct.js                                        2.87 kB │ gzip:  1.17 kB
+node_modules/.nitro/vite/services/ssr/assets/museumUnlocks-Br22S1Wb.js                                     2.91 kB │ gzip:  1.15 kB
+node_modules/.nitro/vite/services/ssr/assets/campaignKeyArtOverlay-BQTEoiLq.js                             2.91 kB │ gzip:  1.17 kB
+node_modules/.nitro/vite/services/ssr/assets/VirtualizedEntityGrid-BSIbllXe.js                             2.91 kB │ gzip:  1.25 kB
+node_modules/.nitro/vite/services/ssr/assets/display-names-DWx2HDXK.js                                     2.94 kB │ gzip:  1.24 kB
+node_modules/.nitro/vite/services/ssr/assets/presentation-Bx19Xg8O.js                                      2.98 kB │ gzip:  1.31 kB
+node_modules/.nitro/vite/services/ssr/assets/MotionPrimitives-BwQkKMlL.js                                  3.00 kB │ gzip:  1.18 kB
+node_modules/.nitro/vite/services/ssr/assets/entities-BhH_B2Nw.js                                          3.00 kB │ gzip:  1.24 kB
+node_modules/.nitro/vite/services/ssr/assets/unlock-cache-BVvKayBD.js                                      3.19 kB │ gzip:  1.29 kB
+node_modules/.nitro/vite/services/ssr/assets/taxonomy-D08ecMAz.js                                          3.25 kB │ gzip:  1.45 kB
+node_modules/.nitro/vite/services/ssr/assets/CinematicPageBackdrop-BLLlMWFv.js                             3.25 kB │ gzip:  1.27 kB
+node_modules/.nitro/vite/services/ssr/assets/derive-prereqs-DXk5N65w.js                                    3.27 kB │ gzip:  1.28 kB
+node_modules/.nitro/vite/services/ssr/index.js                                                             3.27 kB │ gzip:  1.41 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.games.index-DENaPJhz.js                                 3.28 kB │ gzip:  1.26 kB
+node_modules/.nitro/vite/services/ssr/assets/exploration-paths-Barw36QE.js                                 3.30 kB │ gzip:  1.43 kB
+node_modules/.nitro/vite/services/ssr/assets/unsubscribe-BXX0g3X-.js                                       3.38 kB │ gzip:  1.37 kB
+node_modules/.nitro/vite/services/ssr/assets/adminUsers-CXzcl7ey.js                                        3.41 kB │ gzip:  1.21 kB
+node_modules/.nitro/vite/services/ssr/assets/import-batch.functions-D9XSVz8m.js                            3.42 kB │ gzip:  1.23 kB
+node_modules/.nitro/vite/services/ssr/assets/encyclopedia-canonical-D89MBw_r.js                            3.49 kB │ gzip:  1.35 kB
+node_modules/.nitro/vite/services/ssr/assets/gameplay-write-CaGTlyuP.js                                    3.50 kB │ gzip:  1.32 kB
+node_modules/.nitro/vite/services/ssr/assets/owner-BOAy5XCr.js                                             3.52 kB │ gzip:  1.48 kB
+node_modules/.nitro/vite/services/ssr/assets/verify.functions-BdDTlPdp.js                                  3.53 kB │ gzip:  1.45 kB
+node_modules/.nitro/vite/services/ssr/assets/streak-activity-Bo1C7_S8.js                                   3.60 kB │ gzip:  1.55 kB
+node_modules/.nitro/vite/services/ssr/assets/on-this-day-B17vLZje.js                                       3.71 kB │ gzip:  1.25 kB
+node_modules/.nitro/vite/services/ssr/assets/progress-mirror-ot0yIn_4.js                                   3.73 kB │ gzip:  1.27 kB
+node_modules/.nitro/vite/services/ssr/assets/guest-progress-buffer-BZwPXZAx.js                             3.78 kB │ gzip:  1.41 kB
+node_modules/.nitro/vite/services/ssr/assets/dialog-C-XeNzhu.js                                            3.82 kB │ gzip:  1.28 kB
+node_modules/.nitro/vite/services/ssr/assets/adminApi-CvOJLxHc.js                                          3.83 kB │ gzip:  1.27 kB
+node_modules/.nitro/vite/services/ssr/assets/era-canonical-B9fV9ys4.js                                     3.96 kB │ gzip:  1.24 kB
+node_modules/.nitro/vite/services/ssr/assets/__23tanstack-start-server-fn-resolver-NpZFMHj3.js             3.96 kB │ gzip:  1.38 kB
+node_modules/.nitro/vite/services/ssr/assets/progression-CLfithMW.js                                       3.99 kB │ gzip:  1.47 kB
+node_modules/.nitro/vite/services/ssr/assets/client-CD56rbFy.js                                            4.02 kB │ gzip:  1.60 kB
+node_modules/.nitro/vite/services/ssr/assets/atlas-anchors-CEkWGhm8.js                                     4.04 kB │ gzip:  1.48 kB
+node_modules/.nitro/vite/services/ssr/assets/contributions-Wb85ciu3.js                                     4.07 kB │ gzip:  1.38 kB
+node_modules/.nitro/vite/services/ssr/assets/url-SHd75X09.js                                               4.09 kB │ gzip:  1.63 kB
+node_modules/.nitro/vite/services/ssr/assets/campaignUnlocks-D8gwCkBe.js                                   4.14 kB │ gzip:  1.71 kB
+node_modules/.nitro/vite/services/ssr/assets/emblems-CtPDhL_I.js                                           4.17 kB │ gzip:  1.56 kB
+node_modules/.nitro/vite/services/ssr/assets/campaigns-BGFDpA1U.js                                         4.18 kB │ gzip:  1.79 kB
+node_modules/.nitro/vite/services/ssr/assets/googleAuthResult-TeEmkR2R.js                                  4.22 kB │ gzip:  1.58 kB
+node_modules/.nitro/vite/services/ssr/assets/investigations-normalize-UMUyK0zN.js                          4.26 kB │ gzip:  1.33 kB
+node_modules/.nitro/vite/services/ssr/assets/AtlasSafeMode-3ZdDV17K.js                                     4.29 kB │ gzip:  1.67 kB
+node_modules/.nitro/vite/services/ssr/assets/teamUsers.functions-DmEBfIJv.js                               4.38 kB │ gzip:  1.58 kB
+node_modules/.nitro/vite/services/ssr/assets/EntityNotFound-B7JxBx5k.js                                    4.41 kB │ gzip:  1.68 kB
+node_modules/.nitro/vite/services/ssr/assets/relationship-graph-DkeFfRVg.js                                4.48 kB │ gzip:  1.70 kB
+node_modules/.nitro/vite/services/ssr/assets/avatar-persistence-DQW1wTOI.js                                4.49 kB │ gzip:  1.78 kB
+node_modules/.nitro/vite/services/ssr/assets/security-CL1EIf72.js                                          4.52 kB │ gzip:  1.77 kB
+node_modules/.nitro/vite/services/ssr/assets/policy-DDGsc-2M.js                                            4.54 kB │ gzip:  1.61 kB
+node_modules/.nitro/vite/services/ssr/assets/image-processor-BShwpLJ3.js                                   4.55 kB │ gzip:  1.90 kB
+node_modules/.nitro/vite/services/ssr/assets/terms-BMFQKKX0.js                                             4.56 kB │ gzip:  1.70 kB
+node_modules/.nitro/vite/services/ssr/assets/auth-emails-hjBTDvo2.js                                       4.61 kB │ gzip:  2.00 kB
+node_modules/.nitro/vite/services/ssr/assets/worlds-CnjlGIFQ.js                                            4.63 kB │ gzip:  1.79 kB
+node_modules/.nitro/vite/services/ssr/assets/passwordPolicy-BPbzqXfT.js                                    4.63 kB │ gzip:  2.02 kB
+node_modules/.nitro/vite/services/ssr/assets/atlas-entities-DKwx1p_p.js                                    4.72 kB │ gzip:  1.96 kB
+node_modules/.nitro/vite/services/ssr/assets/taxonomy-labels-tjOulX2i.js                                   4.77 kB │ gzip:  1.41 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.crash-diagnostics-xXCcI2wM.js                           4.78 kB │ gzip:  1.60 kB
+node_modules/.nitro/vite/services/ssr/assets/atlas-search-UGOWECbr.js                                      4.81 kB │ gzip:  1.89 kB
+node_modules/.nitro/vite/services/ssr/assets/sender-Ce4YloHk.js                                            4.82 kB │ gzip:  1.75 kB
+node_modules/.nitro/vite/services/ssr/assets/auth-DmQMy8VE.js                                              4.85 kB │ gzip:  2.24 kB
+node_modules/.nitro/vite/services/ssr/assets/reset-Et-NsHVw.js                                             4.92 kB │ gzip:  1.72 kB
+node_modules/.nitro/vite/services/ssr/assets/offline-manifest-BnEW4E-B.js                                  4.94 kB │ gzip:  2.07 kB
+node_modules/.nitro/vite/services/ssr/assets/trace-JxCcUuH1.js                                             4.97 kB │ gzip:  1.88 kB
+node_modules/.nitro/vite/services/ssr/assets/Istazadtu-DaEOvOvZ.js                                         5.03 kB │ gzip:  2.08 kB
+node_modules/.nitro/vite/services/ssr/assets/offline-snapshot-validate-BcmEVDMs.js                         5.42 kB │ gzip:  1.90 kB
+node_modules/.nitro/vite/services/ssr/assets/feedback.index-BBp9HhCO.js                                    5.43 kB │ gzip:  1.96 kB
+node_modules/.nitro/vite/services/ssr/assets/claim.functions-BaM_f-N-.js                                   5.49 kB │ gzip:  1.72 kB
+node_modules/.nitro/vite/services/ssr/assets/map-CpTw9DPC.js                                               5.60 kB │ gzip:  2.32 kB
+node_modules/.nitro/vite/services/ssr/assets/debug-DuBAuJ7U.js                                             5.66 kB │ gzip:  1.94 kB
+node_modules/.nitro/vite/services/ssr/assets/server-BfcvN_yv.js                                            5.67 kB │ gzip:  1.82 kB
+node_modules/.nitro/vite/services/ssr/assets/contentIntegrity-CQ3uwz03.js                                  5.78 kB │ gzip:  2.00 kB
+node_modules/.nitro/vite/services/ssr/assets/action-CPJi6_OC.js                                            6.06 kB │ gzip:  2.23 kB
+node_modules/.nitro/vite/services/ssr/assets/content-store-BRQKOCnE.js                                     6.07 kB │ gzip:  1.91 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.stories.export-v2-DL9DefWj.js                           6.30 kB │ gzip:  1.97 kB
+node_modules/.nitro/vite/services/ssr/assets/EncyclopediaCard-CnK5lRL3.js                                  6.36 kB │ gzip:  2.39 kB
+node_modules/.nitro/vite/services/ssr/assets/admin-DDEf1V1h.js                                             6.58 kB │ gzip:  1.81 kB
+node_modules/.nitro/vite/services/ssr/assets/dead-letter-C1X-N_yB.js                                       6.74 kB │ gzip:  2.18 kB
+node_modules/.nitro/vite/services/ssr/assets/OutOfHeartsModal-BYh4aM7u.js                                  6.81 kB │ gzip:  2.45 kB
+node_modules/.nitro/vite/services/ssr/assets/offline-baseline-resolver-CMUvB-R4.js                         6.82 kB │ gzip:  2.20 kB
+node_modules/.nitro/vite/services/ssr/assets/pushNotifications-BCioXZwQ.js                                 6.84 kB │ gzip:  2.12 kB
+node_modules/.nitro/vite/services/ssr/assets/entityDiscoveries-D-kynxvw.js                                 6.84 kB │ gzip:  2.31 kB
+node_modules/.nitro/vite/services/ssr/assets/content-identity-check-Bx-gT9J_.js                            6.89 kB │ gzip:  2.74 kB
+node_modules/.nitro/vite/services/ssr/assets/import-batch.functions-BfYWcMwh.js                            6.90 kB │ gzip:  1.73 kB
+node_modules/.nitro/vite/services/ssr/assets/record-JxmRUO8Q.js                                            6.95 kB │ gzip:  2.33 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.related-stories-Cs7Kc5Bf.js                             6.98 kB │ gzip:  2.17 kB
+node_modules/.nitro/vite/services/ssr/assets/reflections-BUJWgQ1L.js                                       7.07 kB │ gzip:  2.49 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.emblems-DYUYpEu4.js                                     7.14 kB │ gzip:  2.03 kB
+node_modules/.nitro/vite/services/ssr/assets/completions-CUQXrySI.js                                       7.14 kB │ gzip:  2.48 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.encyclopedia-cleanup.redirects-DoBjKXAc.js              7.27 kB │ gzip:  2.33 kB
+node_modules/.nitro/vite/services/ssr/assets/auth.callback-CesxVOYs.js                                     7.42 kB │ gzip:  2.57 kB
+node_modules/.nitro/vite/services/ssr/assets/sync-Bi08Gsy7.js                                              7.49 kB │ gzip:  2.57 kB
+node_modules/.nitro/vite/services/ssr/assets/eligibility-B1jFqiKg.js                                       7.56 kB │ gzip:  2.37 kB
+node_modules/.nitro/vite/services/ssr/assets/content-sync-DE8WkYvU.js                                      7.56 kB │ gzip:  2.56 kB
+node_modules/.nitro/vite/services/ssr/assets/feedback.new-CxuEQ8RZ.js                                      7.64 kB │ gzip:  2.56 kB
+node_modules/.nitro/vite/services/ssr/assets/validate-C2H6Tdlk.js                                          7.72 kB │ gzip:  2.43 kB
+node_modules/.nitro/vite/services/ssr/assets/admin-guard-BKo6DuJs.js                                       7.76 kB │ gzip:  2.60 kB
+node_modules/.nitro/vite/services/ssr/assets/about-CyA-1gYN.js                                             7.80 kB │ gzip:  2.29 kB
+node_modules/.nitro/vite/services/ssr/assets/campaignStorage-ofwtGZs_.js                                   7.90 kB │ gzip:  2.85 kB
+node_modules/.nitro/vite/services/ssr/assets/encyclopedia.path._id-82aWvpJd.js                             7.97 kB │ gzip:  2.44 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.world-membership-review-BYULOWWK.js                     8.05 kB │ gzip:  2.68 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.import-history-Bd4Bqx4S.js                              8.07 kB │ gzip:  2.39 kB
+node_modules/.nitro/vite/services/ssr/assets/worlds.index-okucheR-.js                                      8.11 kB │ gzip:  2.51 kB
+node_modules/.nitro/vite/services/ssr/assets/segments-AKlIbzss.js                                          8.11 kB │ gzip:  2.91 kB
+node_modules/.nitro/vite/services/ssr/assets/encyclopedia-search-CrU0TcAo.js                               8.12 kB │ gzip:  2.60 kB
+node_modules/.nitro/vite/services/ssr/assets/dailyChallengeService-C3cMyoid.js                             8.14 kB │ gzip:  2.81 kB
+node_modules/.nitro/vite/services/ssr/assets/account-deletion-BjFCte88.js                                  8.33 kB │ gzip:  2.60 kB
+node_modules/.nitro/vite/services/ssr/assets/local-BxBJj4JT.js                                             8.42 kB │ gzip:  2.30 kB
+node_modules/.nitro/vite/services/ssr/assets/CollectibleRevealDialog-yT6B6lz6.js                           8.58 kB │ gzip:  2.74 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.era-normalization-DW-38gsc.js                           8.58 kB │ gzip:  2.79 kB
+node_modules/.nitro/vite/services/ssr/assets/supabaseCampaigns-Cc7HieHp.js                                 8.93 kB │ gzip:  2.70 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.import-history._id-DTlhEvUw.js                          8.93 kB │ gzip:  2.42 kB
+node_modules/.nitro/vite/services/ssr/assets/driver-DZL8t8Bw.js                                            9.06 kB │ gzip:  2.86 kB
+node_modules/.nitro/vite/services/ssr/assets/useCampaignProgression-DWOU0keX.js                            9.30 kB │ gzip:  3.25 kB
+node_modules/.nitro/vite/services/ssr/assets/index-store-C_FxpcWz.js                                       9.34 kB │ gzip:  3.45 kB
+node_modules/.nitro/vite/services/ssr/assets/encyclopedia-source-CqOLfvro.js                               9.35 kB │ gzip:  3.08 kB
+node_modules/.nitro/vite/services/ssr/assets/CampaignKeyArt-COJJWiXi.js                                    9.50 kB │ gzip:  3.34 kB
+node_modules/.nitro/vite/services/ssr/assets/image-cache-CZJrORM-.js                                       9.55 kB │ gzip:  3.25 kB
+node_modules/.nitro/vite/services/ssr/assets/encyclopedia.type._type-u3TjuzSc.js                           9.73 kB │ gzip:  3.07 kB
+node_modules/.nitro/vite/services/ssr/assets/case-number-D7Moq5JW.js                                       9.89 kB │ gzip:  4.01 kB
+node_modules/.nitro/vite/services/ssr/assets/reset-password-BQjVTWJl.js                                    9.89 kB │ gzip:  3.35 kB
+node_modules/.nitro/vite/services/ssr/assets/u._username-CpcZAU8O.js                                      10.10 kB │ gzip:  2.76 kB
+node_modules/.nitro/vite/services/ssr/assets/shareService-9jVeCN_q.js                                     10.28 kB │ gzip:  3.64 kB
+node_modules/.nitro/vite/services/ssr/assets/rewardSummary-B0b70cOa.js                                    10.29 kB │ gzip:  3.47 kB
+node_modules/.nitro/vite/services/ssr/assets/persistence-BSRfqAQ2.js                                      10.32 kB │ gzip:  3.19 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.historical-hubs-audit-ChLUCCpq.js                      10.42 kB │ gzip:  3.37 kB
+node_modules/.nitro/vite/services/ssr/assets/importedCampaignProgress-DLwTGs4s.js                         10.58 kB │ gzip:  2.98 kB
+node_modules/.nitro/vite/services/ssr/assets/notifications-B6rm-Vuf.js                                    10.87 kB │ gzip:  3.48 kB
+node_modules/.nitro/vite/services/ssr/assets/reflections-DeDFsT4H.js                                      10.92 kB │ gzip:  3.41 kB
+node_modules/.nitro/vite/services/ssr/assets/homeSummary-DXq3r4e2.js                                      10.94 kB │ gzip:  3.44 kB
+node_modules/.nitro/vite/services/ssr/assets/social-qKFTuViZ.js                                           11.08 kB │ gzip:  3.74 kB
+node_modules/.nitro/vite/services/ssr/assets/daily-quest-DfarhSBV.js                                      11.28 kB │ gzip:  3.90 kB
+node_modules/.nitro/vite/services/ssr/assets/safe-boot-LIPCMeZG.js                                        11.31 kB │ gzip:  4.24 kB
+node_modules/.nitro/vite/services/ssr/assets/store-CNFUkGnZ.js                                            11.53 kB │ gzip:  4.40 kB
+node_modules/.nitro/vite/services/ssr/assets/offline-content-update-lklJmzhu.js                           11.62 kB │ gzip:  4.18 kB
+node_modules/.nitro/vite/services/ssr/assets/history-calendar-BrCsYH_A.js                                 11.79 kB │ gzip:  3.93 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.contributions-JX4nX_dd.js                              11.83 kB │ gzip:  3.23 kB
+node_modules/.nitro/vite/services/ssr/assets/compare._id-CZK--Liv.js                                      11.87 kB │ gzip:  3.65 kB
+node_modules/.nitro/vite/services/ssr/assets/campaignLedger-B4ixFDzk.js                                   12.08 kB │ gzip:  4.04 kB
+node_modules/.nitro/vite/services/ssr/assets/offline-storage-CPzUr6qJ.js                                  12.20 kB │ gzip:  4.56 kB
+node_modules/.nitro/vite/services/ssr/assets/playerDiscoveries-DuD7GuBF.js                                12.22 kB │ gzip:  3.61 kB
+node_modules/.nitro/vite/services/ssr/assets/outbox-CC9mY0hD.js                                           12.29 kB │ gzip:  3.85 kB
+node_modules/.nitro/vite/services/ssr/assets/encyclopedia.state._id-CAA5syyF.js                           12.32 kB │ gzip:  3.80 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.investigation-rewards-DCFcTBSa.js                      12.34 kB │ gzip:  3.45 kB
+node_modules/.nitro/vite/services/ssr/assets/useRelatedStories-BS9_vOLk.js                                12.36 kB │ gzip:  4.43 kB
+node_modules/.nitro/vite/services/ssr/assets/feedback._id-CfrITPGP.js                                     12.43 kB │ gzip:  3.69 kB
+node_modules/.nitro/vite/services/ssr/assets/esm-DS_SJqmQ.js                                              12.77 kB │ gzip:  3.74 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.encyclopedia-cleanup.integrity-D1cmk_uM.js             12.89 kB │ gzip:  3.37 kB
+node_modules/.nitro/vite/services/ssr/assets/adventure-BxyMECoB.js                                        13.40 kB │ gzip:  3.32 kB
+node_modules/.nitro/vite/services/ssr/assets/query-keys-DKAinrT1.js                                       13.63 kB │ gzip:  4.52 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.artifacts-o8mFZXph.js                                  13.89 kB │ gzip:  4.23 kB
+node_modules/.nitro/vite/services/ssr/assets/journey-CqjihEEW.js                                          13.94 kB │ gzip:  4.67 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.encyclopedia-cleanup.import-preview-DBSkPg7y.js        14.40 kB │ gzip:  4.31 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.museum-provenance-qq_S6Zvt.js                          14.43 kB │ gzip:  4.12 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.content-foundation-gnCmxKKT.js                         14.51 kB │ gzip:  3.68 kB
+node_modules/.nitro/vite/services/ssr/assets/campaignReconciliation-BP-TQkb4.js                           14.66 kB │ gzip:  4.11 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.encyclopedia-audit-BCFfEYa6.js                         14.99 kB │ gzip:  4.39 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.campaign-relationships-BVrUWWRB.js                     15.04 kB │ gzip:  4.18 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.unlock-integrity-UdKPJFLU.js                           15.04 kB │ gzip:  4.01 kB
+node_modules/.nitro/vite/services/ssr/assets/qa-status-C2d21hPp.js                                        15.06 kB │ gzip:  5.46 kB
+node_modules/.nitro/vite/services/ssr/assets/flush-B_1XFZ70.js                                            15.35 kB │ gzip:  3.27 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.encyclopedia.priority-audit-iA2Cj6XY.js                15.48 kB │ gzip:  4.09 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.cross-hub-links-cqZZ8FaW.js                            15.52 kB │ gzip:  4.48 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.content-inventory-EbGGTZhg.js                          15.67 kB │ gzip:  4.39 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.native-auth-diagnostics-DfmXlRVF.js                    15.69 kB │ gzip:  4.48 kB
+node_modules/.nitro/vite/services/ssr/assets/EncyclopediaArticleBody-bN9wDhiD.js                          16.59 kB │ gzip:  4.03 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.atlas-import-t2KV9_H_.js                               16.95 kB │ gzip:  4.55 kB
+node_modules/.nitro/vite/services/ssr/assets/progress-xxkknXID.js                                         17.04 kB │ gzip:  5.58 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.hub-builder-BJhqjRyS.js                                17.04 kB │ gzip:  5.15 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.comments-D5EwjqiE.js                                   17.28 kB │ gzip:  4.99 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.encyclopedia-cleanup.review-xMhSnNMS.js                17.43 kB │ gzip:  4.86 kB
+node_modules/.nitro/vite/services/ssr/assets/SceneExportButton-CQP6rNCU.js                                17.91 kB │ gzip:  6.41 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.exploration-path-repair-DPG0ZYL1.js                    18.09 kB │ gzip:  4.97 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.moderation-D9x03-sl.js                                 18.31 kB │ gzip:  4.40 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.index-CWTEP6rN.js                                      18.80 kB │ gzip:  4.72 kB
+node_modules/.nitro/vite/services/ssr/assets/auth-y0umqdJK.js                                             18.98 kB │ gzip:  5.40 kB
+node_modules/.nitro/vite/services/ssr/assets/worlds-dG-ISc6l.js                                           19.30 kB │ gzip:  4.64 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.offline-Bswk3bvm.js                                    19.41 kB │ gzip:  5.05 kB
+node_modules/.nitro/vite/services/ssr/assets/encyclopedia-BQQiCqHt.js                                     19.81 kB │ gzip:  5.00 kB
+node_modules/.nitro/vite/services/ssr/assets/encyclopedia.entity._id-DdPzX6IW.js                          19.86 kB │ gzip:  5.89 kB
+node_modules/.nitro/vite/services/ssr/assets/friends-D_sBngIm.js                                          19.92 kB │ gzip:  5.20 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.announcements-G4qwbn04.js                              20.05 kB │ gzip:  4.57 kB
+node_modules/.nitro/vite/services/ssr/assets/campaigns.index-C0GVhbTp.js                                  20.43 kB │ gzip:  5.82 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.content-auto-heal-CTF1WQhQ.js                          20.99 kB │ gzip:  5.88 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.content-integrity-Da4wYDXi.js                          21.05 kB │ gzip:  4.24 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.newsletter-4IQRtIrB.js                                 21.06 kB │ gzip:  5.63 kB
+node_modules/.nitro/vite/services/ssr/assets/sceneLayouts-BOSw8WCZ.js                                     21.16 kB │ gzip:  6.24 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.canonical-duplicates-DC4ntwwl.js                       21.24 kB │ gzip:  5.91 kB
+node_modules/.nitro/vite/services/ssr/assets/OrphanRelationEditor-DpNK2j81.js                             21.57 kB │ gzip:  6.17 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.content-cleanup--O77HokV.js                            22.00 kB │ gzip:  5.65 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.taxonomy-h69ECGYl.js                                   22.10 kB │ gzip:  5.39 kB
+node_modules/.nitro/vite/services/ssr/assets/audioManager-BVNKNoDI.js                                     22.32 kB │ gzip:  7.17 kB
+node_modules/.nitro/vite/services/ssr/assets/stories.index-DluevF93.js                                    22.57 kB │ gzip:  5.78 kB
+node_modules/.nitro/vite/services/ssr/assets/engine.functions-t41fnOdB.js                                 22.96 kB │ gzip:  7.97 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.community-MIfcXgyL.js                                  23.83 kB │ gzip:  5.77 kB
+node_modules/.nitro/vite/services/ssr/assets/inbox-DE7fqJgV.js                                            24.12 kB │ gzip:  5.85 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.atlas-calibration-tn0WhkDf.js                          24.29 kB │ gzip:  6.97 kB
+node_modules/.nitro/vite/services/ssr/assets/account-DSIgDe1t.js                                          24.43 kB │ gzip:  6.97 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.monitor-BuU484xA.js                                    24.46 kB │ gzip:  5.91 kB
+node_modules/.nitro/vite/services/ssr/assets/investigations-CgHqqnac.js                                   26.07 kB │ gzip:  7.63 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.era-assignment-CEYFs61w.js                             26.09 kB │ gzip:  6.56 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.content-integrity-repair-Bvs9VOVF.js                   26.88 kB │ gzip:  6.59 kB
+node_modules/.nitro/vite/services/ssr/assets/native-auth-D6x5WVT2.js                                      27.40 kB │ gzip:  7.99 kB
+node_modules/.nitro/vite/services/ssr/assets/avatars-BkRRpbe3.js                                          29.83 kB │ gzip:  5.37 kB
+node_modules/.nitro/vite/services/ssr/assets/privacy-C4PY44Cd.js                                          30.03 kB │ gzip:  9.96 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.games.crossword-generator-DbcDsXVx.js                  31.43 kB │ gzip:  8.91 kB
+node_modules/.nitro/vite/services/ssr/assets/overlay-registration-CGwPwlva.js                             31.53 kB │ gzip:  8.91 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.stories.import-v2-CM4vmzfV.js                          31.62 kB │ gzip:  7.67 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.games._mode-BLagc60p.js                                31.93 kB │ gzip:  8.92 kB
+node_modules/.nitro/vite/services/ssr/assets/encyclopedia.index-DMvBdkDE.js                               31.97 kB │ gzip:  7.46 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.analytics-NkEACFGY.js                                  32.95 kB │ gzip:  7.10 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.persistence-diagnostics-K6W-MNYF.js                    33.77 kB │ gzip:  7.27 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.campaign-order-BBRdCsHC.js                             33.96 kB │ gzip:  8.74 kB
+node_modules/.nitro/vite/services/ssr/assets/worlds-progress-DiLVdFL-.js                                  33.97 kB │ gzip:  8.75 kB
+node_modules/.nitro/vite/services/ssr/assets/share-card-BDqFIs4h.js                                       34.93 kB │ gzip: 10.60 kB
+node_modules/.nitro/vite/services/ssr/assets/story._id-BE73fWE1.js                                        35.34 kB │ gzip:  9.95 kB
+node_modules/.nitro/vite/services/ssr/assets/offline-pack-USWprhZk.js                                     36.50 kB │ gzip:  9.78 kB
+node_modules/.nitro/vite/services/ssr/assets/profile-DNaGzCm_.js                                          37.96 kB │ gzip: 10.69 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.atlas-entities-CNa0HMM-.js                             39.92 kB │ gzip:  9.35 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.encyclopedia-report-BeMklnZv.js                        40.45 kB │ gzip:  9.65 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.offline-diagnostics-Dhx98169.js                        42.69 kB │ gzip:  9.56 kB
+node_modules/.nitro/vite/services/ssr/assets/investigation._id-ByanO1z4.js                                43.66 kB │ gzip: 10.86 kB
+node_modules/.nitro/vite/services/ssr/assets/plan-UA2sDj7b.js                                             43.69 kB │ gzip: 13.04 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.atlas-repair-DSKPWG5X.js                               44.16 kB │ gzip:  9.45 kB
+node_modules/.nitro/vite/services/ssr/assets/AppShell-CgO0IBI2.js                                         45.62 kB │ gzip: 12.38 kB
+node_modules/.nitro/vite/services/ssr/assets/worlds._slug-Bx8CLSI_.js                                     46.11 kB │ gzip: 10.57 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.map-z7xNjNyn.js                                        46.13 kB │ gzip: 11.86 kB
+node_modules/.nitro/vite/services/ssr/assets/local-first-store-ani51ZG7.js                                46.17 kB │ gzip: 12.95 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.users-D_Lc62dE.js                                      46.93 kB │ gzip:  9.65 kB
+node_modules/.nitro/vite/services/ssr/assets/collection-4cKE8dWQ.js                                       48.05 kB │ gzip: 12.53 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.stories.index-BpdzXtcD.js                              49.74 kB │ gzip: 10.80 kB
+node_modules/.nitro/vite/services/ssr/assets/server-DLWm10rf.js                                           50.77 kB │ gzip: 13.08 kB
+node_modules/.nitro/vite/services/ssr/assets/PublicContributionsNotice-CMXH8mmP.js                        53.58 kB │ gzip: 13.71 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.stories.v2._id-DEhAxq0L.js                             55.47 kB │ gzip: 11.38 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.atlas-review-BRt8IwB8.js                               55.69 kB │ gzip: 12.47 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.content-dH4qHjw3.js                                    58.58 kB │ gzip: 10.32 kB
+node_modules/.nitro/vite/services/ssr/assets/campaigns.imported._id.index-ugI2U874.js                     59.24 kB │ gzip: 14.42 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.investigations._id.edit-C7LtqNNM.js                    62.98 kB │ gzip: 13.39 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.campaigns._id.edit-DR2xd78t.js                         66.68 kB │ gzip: 14.53 kB
+node_modules/.nitro/vite/services/ssr/assets/engine-CFduNyKW.js                                           67.13 kB │ gzip: 15.67 kB
+node_modules/.nitro/vite/services/ssr/assets/map-B4cmFmuf.js                                              70.96 kB │ gzip: 20.79 kB
+node_modules/.nitro/vite/services/ssr/assets/_tanstack-start-manifest_v-Ccjn1A-Z.js                       74.40 kB │ gzip: 11.08 kB
+node_modules/.nitro/vite/services/ssr/assets/investigations-CuQ4IIXK.js                                   79.01 kB │ gzip: 17.65 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.campaigns.index-DKF__XHh.js                            80.89 kB │ gzip: 19.38 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.stories._id.edit-ClqAcRv3.js                           85.45 kB │ gzip: 19.37 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.notifications-CU-Aj18C.js                              89.55 kB │ gzip: 19.67 kB
+node_modules/.nitro/vite/services/ssr/assets/routes-D2j36nR-.js                                          105.72 kB │ gzip: 26.42 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.encyclopedia-cleanup.index-CiG62zkM.js                108.39 kB │ gzip: 25.55 kB
+node_modules/.nitro/vite/services/ssr/assets/campaigns.imported._id.chapter._chapter-BwTBCk6b.js         108.55 kB │ gzip: 26.04 kB
+node_modules/.nitro/vite/services/ssr/assets/StoryCard-Cwe0vICf.js                                       111.39 kB │ gzip: 52.87 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.import-D191F5mZ.js                                    118.12 kB │ gzip: 26.00 kB
+node_modules/.nitro/vite/services/ssr/assets/games._mode._slug-BCKYQHPy.js                               118.52 kB │ gzip: 28.23 kB
+node_modules/.nitro/vite/services/ssr/assets/profile-SWIb8N3M.js                                         119.42 kB │ gzip: 25.51 kB
+node_modules/.nitro/vite/services/ssr/assets/resolver-bh3q3xa1.js                                        123.76 kB │ gzip: 35.26 kB
+node_modules/.nitro/vite/services/ssr/assets/admin.encyclopedia-cleanup.data-hygiene-DuIB3eDD.js         133.11 kB │ gzip: 22.65 kB
+node_modules/.nitro/vite/services/ssr/assets/router-BE2Kl8Yv.js                                          381.95 kB │ gzip: 90.42 kB
+
+[33m[INEFFECTIVE_DYNAMIC_IMPORT] [0msrc/lib/local-first-store.ts is dynamically imported by src/components/atlas/AtlasSafeMode.tsx, src/lib/campaignLedger.ts, src/lib/games/dailyChallengeService.ts, src/lib/historical-calendar.ts, src/lib/investigations-source.ts, ... but also statically imported by src/components/stories/LockedStoryDialog.tsx, src/lib/atlas-entities-query.ts, src/lib/campaignUnlocks.ts, src/lib/daily-quest.ts, src/lib/encyclopedia-canonical.ts, ..., dynamic import will not move module into another chunk.
+
+[33m[PLUGIN_TIMINGS] [0mYour build spent significant time in plugins. Here is a breakdown:
+  - tanstack-start-core:import-protection-transform-cache (38%)
+  - vite-tsconfig-paths (18%)
+  - tanstack-router:code-splitter:compile-reference-file (16%)
+  - tanstack-start-core:import-protection (13%)
+  - tanstack-router:code-splitter:compile-virtual-file (10%)
+See https://rolldown.rs/options/checks#plugintimings for more details.
+
+✓ built in 13.92s
+
+[nitro] ◐ Building [Nitro] (preset: cloudflare-module, compatibility: 2026-10-15)
+[nitro] ✔ Generated public .output/public
+vite v8.0.16 building nitro environment for production...
+
+ WARN  inlineDynamicImports option is ignored because the codeSplitting option is specified.
+
+[2K
+transforming...✓ 3126 modules transformed.
+rendering chunks...
+computing gzip size...
+.output/server/_ssr/timeline-BuzmWqSr.mjs                                       0.18 kB │ gzip:   0.15 kB
+.output/server/_ssr/referrals-CkyZkIsB.mjs                                      0.18 kB │ gzip:   0.16 kB
+.output/server/_ssr/achievements-D2D9Fpj3.mjs                                   0.18 kB │ gzip:   0.16 kB
+.output/server/_ssr/14-andalusian-palace-BN3cacZI.mjs                           0.24 kB │ gzip:   0.17 kB
+.output/server/_ssr/empty-plugin-adapters-Cp2k5mEP.mjs                          0.25 kB │ gzip:   0.17 kB
+.output/server/_ssr/16-historical-library-BInw_kaT.mjs                          0.25 kB │ gzip:   0.17 kB
+.output/server/_ssr/21-islamic-army-banners-DbBro76V.mjs                        0.26 kB │ gzip:   0.18 kB
+.output/server/_ssr/campaign-DHlEWiGG.mjs                                       0.29 kB │ gzip:   0.24 kB
+.output/server/_libs/unenv.mjs                                                  0.36 kB │ gzip:   0.23 kB
+.output/server/_libs/capacitor__push-notifications.mjs                          0.41 kB │ gzip:   0.25 kB
+.output/server/_ssr/createServerRpc-DAOnH7-T.mjs                                0.41 kB │ gzip:   0.29 kB
+.output/server/_libs/radix-ui__primitive.mjs                                    0.42 kB │ gzip:   0.23 kB
+.output/server/_ssr/rolldown-runtime-D7D4PA-g.mjs                               0.43 kB │ gzip:   0.30 kB
+.output/server/_ssr/admin.games-Bt0oR0RE.mjs                                    0.44 kB │ gzip:   0.28 kB
+.output/server/_ssr/admin.encyclopedia-DCkoicgi.mjs                             0.45 kB │ gzip:   0.29 kB
+.output/server/_ssr/admin.investigations-B1EmqosW.mjs                           0.45 kB │ gzip:   0.29 kB
+.output/server/_ssr/map-CbQWUAES.mjs                                            0.47 kB │ gzip:   0.30 kB
+.output/server/_ssr/u._username-BcIQdPTe.mjs                                    0.49 kB │ gzip:   0.34 kB
+.output/server/_ssr/seasons-BBk8WDrh.mjs                                        0.49 kB │ gzip:   0.32 kB
+.output/server/_ssr/androidFreezeDiagnostics-L8qxCe-i.mjs                       0.51 kB │ gzip:   0.31 kB
+.output/server/_ssr/utils-Cc-BI2ot.mjs                                          0.53 kB │ gzip:   0.35 kB
+.output/server/_ssr/encyclopedia-icons-DU8jg279.mjs                             0.54 kB │ gzip:   0.37 kB
+.output/server/_ssr/encyclopedia-DAK6fbso.mjs                                   0.55 kB │ gzip:   0.32 kB
+.output/server/_ssr/engine.functions-Cf1JkUrc.mjs                               0.59 kB │ gzip:   0.37 kB
+.output/server/_ssr/games.index-l_GY5kld.mjs                                    0.60 kB │ gzip:   0.38 kB
+.output/server/_ssr/encyclopedia.state._id-DD0qJlll.mjs                         0.61 kB │ gzip:   0.34 kB
+.output/server/_ssr/admin.stories._id.edit-C8K6ykva.mjs                         0.61 kB │ gzip:   0.42 kB
+.output/server/_ssr/admin.stories.v2._id-BZiWdr7g.mjs                           0.61 kB │ gzip:   0.43 kB
+.output/server/_ssr/admin.import-history._id-xWZWpd9S.mjs                       0.62 kB │ gzip:   0.43 kB
+.output/server/_ssr/createSsrRpc-jXn91JoM.mjs                                   0.62 kB │ gzip:   0.39 kB
+.output/server/_ssr/WorldEmblem-CtTSXxcP.mjs                                    0.63 kB │ gzip:   0.39 kB
+.output/server/_ssr/campaigns.imported._id.index-D0P__sM0.mjs                   0.64 kB │ gzip:   0.41 kB
+.output/server/_chunks/ssr-renderer.mjs                                         0.64 kB │ gzip:   0.38 kB
+.output/server/_libs/react-email__html.mjs                                      0.64 kB │ gzip:   0.38 kB
+.output/server/_ssr/campaigns.imported._id.chapter._chapter-VHSbkLAr.mjs        0.65 kB │ gzip:   0.42 kB
+.output/server/_ssr/compare._id-fW8bZ6eY.mjs                                    0.66 kB │ gzip:   0.46 kB
+.output/server/_ssr/CachedImage-DXgHG92J.mjs                                    0.72 kB │ gzip:   0.42 kB
+.output/server/_ssr/verify.functions-BHNuKpsc.mjs                               0.73 kB │ gzip:   0.46 kB
+.output/server/_libs/react-email__img.mjs                                       0.75 kB │ gzip:   0.43 kB
+.output/server/_ssr/campaigns.index-CPpCdYzH.mjs                                0.80 kB │ gzip:   0.48 kB
+.output/server/_ssr/admin.import-Dlb30rbx.mjs                                   0.81 kB │ gzip:   0.52 kB
+.output/server/_ssr/encyclopedia.type._type-C8nwrKtA.mjs                        0.82 kB │ gzip:   0.48 kB
+.output/server/_ssr/richText-CTjZiNlG.mjs                                       0.82 kB │ gzip:   0.42 kB
+.output/server/_ssr/encyclopedia.type._type-BCq6AF3_.mjs                        0.83 kB │ gzip:   0.48 kB
+.output/server/_ssr/encyclopedia.entity._id-SIAM4Bwu.mjs                        0.84 kB │ gzip:   0.48 kB
+.output/server/_ssr/worlds._slug-kORg198P.mjs                                   0.84 kB │ gzip:   0.51 kB
+.output/server/_ssr/encyclopedia.state._id-CIWvdcLE.mjs                         0.85 kB │ gzip:   0.49 kB
+.output/server/_ssr/useServerFn-B_F8qRnT.mjs                                    0.85 kB │ gzip:   0.47 kB
+.output/server/_ssr/profile-CE-g2yxl.mjs                                        0.85 kB │ gzip:   0.50 kB
+.output/server/_libs/react-email__head.mjs                                      0.86 kB │ gzip:   0.46 kB
+.output/server/_ssr/offline-fallback-HXzPgjIt.mjs                               0.88 kB │ gzip:   0.57 kB
+.output/server/_ssr/recoveryMode-C_cRmlP8.mjs                                   0.88 kB │ gzip:   0.41 kB
+.output/server/_ssr/encyclopedia.path._id-DzwN1hS5.mjs                          0.89 kB │ gzip:   0.53 kB
+.output/server/_ssr/investigations-BFkQaz3i.mjs                                 0.89 kB │ gzip:   0.53 kB
+.output/server/_ssr/friends-DOC0P2W5.mjs                                        0.91 kB │ gzip:   0.52 kB
+.output/server/_ssr/offline-snapshot-warm-bridge-DSr_5N8x.mjs                   0.92 kB │ gzip:   0.54 kB
+.output/server/_ssr/worlds.index-DYtQXKdW.mjs                                   0.94 kB │ gzip:   0.60 kB
+.output/server/_ssr/ReadingScale-Ba0a-let.mjs                                   0.95 kB │ gzip:   0.55 kB
+.output/server/_libs/radix-ui__react-arrow.mjs                                  0.95 kB │ gzip:   0.51 kB
+.output/server/_ssr/campaigns.imported._id.index-BaaZFDTp.mjs                   0.96 kB │ gzip:   0.51 kB
+.output/server/_ssr/campaigns.imported._id.chapter._chapter-BkDgJOMr.mjs        0.97 kB │ gzip:   0.52 kB
+.output/server/_ssr/encyclopedia.path._id-CgRBmrEu.mjs                          0.97 kB │ gzip:   0.53 kB
+.output/server/_ssr/AuthLink-Sara5a4b.mjs                                       0.97 kB │ gzip:   0.59 kB
+.output/server/_ssr/authDialog-Bh_VppAk.mjs                                     0.98 kB │ gzip:   0.51 kB
+.output/server/_ssr/auth.callback-Dbk1CExO.mjs                                  0.98 kB │ gzip:   0.48 kB
+.output/server/_ssr/types-VYicRTyJ.mjs                                          0.98 kB │ gzip:   0.55 kB
+.output/server/_ssr/unlock-notices-DidpsIuG.mjs                                 1.02 kB │ gzip:   0.57 kB
+.output/server/_ssr/useStalled-BcnB23T3.mjs                                     1.03 kB │ gzip:   0.65 kB
+.output/server/_libs/react-email__container.mjs                                 1.05 kB │ gzip:   0.50 kB
+.output/server/_ssr/send-ClXogsNL.mjs                                           1.07 kB │ gzip:   0.62 kB
+.output/server/_libs/capacitor__share.mjs                                       1.07 kB │ gzip:   0.50 kB
+.output/server/_ssr/AndroidPlainTextInput-_b4DSjtd.mjs                          1.08 kB │ gzip:   0.43 kB
+.output/server/_libs/capacitor__browser.mjs                                     1.09 kB │ gzip:   0.50 kB
+.output/server/_ssr/logout-flush-BuzQGITx.mjs                                   1.13 kB │ gzip:   0.59 kB
+.output/server/_ssr/inbox-mIFxKFI6.mjs                                          1.14 kB │ gzip:   0.63 kB
+.output/server/_ssr/start-Cg5mDh6E.mjs                                          1.16 kB │ gzip:   0.63 kB
+.output/server/_ssr/contentRegistryStorage-BaANO-Vw.mjs                         1.18 kB │ gzip:   0.64 kB
+.output/server/_libs/hookable.mjs                                               1.18 kB │ gzip:   0.52 kB
+.output/server/_ssr/context-DmbjB7Q0.mjs                                        1.22 kB │ gzip:   0.63 kB
+.output/server/_ssr/aps-C8IjBrGD.mjs                                            1.23 kB │ gzip:   0.69 kB
+.output/server/_libs/react-email__preview.mjs                                   1.24 kB │ gzip:   0.65 kB
+.output/server/_ssr/priority-BAYU3hNH.mjs                                       1.27 kB │ gzip:   0.56 kB
+.output/server/_ssr/identity-map-CkEBA0sS.mjs                                   1.28 kB │ gzip:   0.72 kB
+.output/server/_ssr/worlds._slug-BgBL0pPj.mjs                                   1.28 kB │ gzip:   0.72 kB
+.output/server/_ssr/formatNumber-BaUMEs42.mjs                                   1.30 kB │ gzip:   0.72 kB
+.output/server/_ssr/atlas-source-Bt9WRpg4.mjs                                   1.30 kB │ gzip:   0.80 kB
+.output/server/_ssr/client.server-mV91GU4A.mjs                                  1.33 kB │ gzip:   0.64 kB
+.output/server/_ssr/play.timeline-CBPtrCIz.mjs                                  1.35 kB │ gzip:   0.73 kB
+.output/server/_ssr/play.decisions-D8uEEI7Y.mjs                                 1.35 kB │ gzip:   0.71 kB
+.output/server/_ssr/play.investigate-Qw5r-ftE.mjs                               1.36 kB │ gzip:   0.72 kB
+.output/server/_ssr/safe-text-BSK0NJrA.mjs                                      1.38 kB │ gzip:   0.74 kB
+.output/server/_ssr/admin-monitor.functions-C15Ck-8K.mjs                        1.39 kB │ gzip:   0.70 kB
+.output/server/_ssr/guestCompletions-CEC9gdzS.mjs                               1.42 kB │ gzip:   0.62 kB
+.output/server/_ssr/externalUrl-g3YHomZ4.mjs                                    1.43 kB │ gzip:   0.63 kB
+.output/server/_ssr/serverApi-C3zYHyxX.mjs                                      1.45 kB │ gzip:   0.76 kB
+.output/server/_ssr/optionShuffle-DdWUd_qc.mjs                                  1.47 kB │ gzip:   0.81 kB
+.output/server/_runtime.mjs                                                     1.48 kB │ gzip:   0.69 kB
+.output/server/_ssr/reconciliation-B7Mu3QQw.mjs                                 1.49 kB │ gzip:   0.63 kB
+.output/server/_ssr/irth-day-BBq0z64F.mjs                                       1.51 kB │ gzip:   0.83 kB
+.output/server/_ssr/content-audit-R7C0MT6k.mjs                                  1.52 kB │ gzip:   0.76 kB
+.output/server/_ssr/EncyclopediaUnavailable-uPQWmqc9.mjs                        1.54 kB │ gzip:   0.89 kB
+.output/server/_libs/react-email__heading.mjs                                   1.56 kB │ gzip:   0.70 kB
+.output/server/_ssr/createStart-DqmpBBxf.mjs                                    1.58 kB │ gzip:   0.59 kB
+.output/server/_ssr/reports-SH-Z9Qqs.mjs                                        1.62 kB │ gzip:   0.86 kB
+.output/server/_libs/react-is.mjs                                               1.65 kB │ gzip:   0.67 kB
+.output/server/_ssr/WorldFilterChip-DvgXib3F.mjs                                1.66 kB │ gzip:   0.80 kB
+.output/server/_ssr/orphanUnlocksMigration-enhWT9us.mjs                         1.70 kB │ gzip:   0.82 kB
+.output/server/_ssr/diag-trace-Dwugvnmj.mjs                                     1.72 kB │ gzip:   0.73 kB
+.output/server/_ssr/authOrigin-BBXka8f9.mjs                                     1.73 kB │ gzip:   0.78 kB
+.output/server/_libs/react-email__body.mjs                                      1.74 kB │ gzip:   0.70 kB
+.output/server/_ssr/deleteAccount.functions-C1CwEweT.mjs                        1.75 kB │ gzip:   0.93 kB
+.output/server/_ssr/KeyArtDissolve-Bea09XcK.mjs                                 1.76 kB │ gzip:   0.85 kB
+.output/server/_ssr/EmblemArt-B9r1mqcU.mjs                                      1.78 kB │ gzip:   0.86 kB
+.output/server/_ssr/play.chapter-loZJw-By.mjs                                   1.81 kB │ gzip:   0.82 kB
+.output/server/_ssr/ModalPortal-BY11MUqQ.mjs                                    1.81 kB │ gzip:   0.70 kB
+.output/server/_ssr/perf-mode-CrVkv9V-.mjs                                      1.81 kB │ gzip:   0.77 kB
+.output/server/_ssr/crossword-validate-O_LPMZjC.mjs                             1.84 kB │ gzip:   0.83 kB
+.output/server/_ssr/build-info-XULYNicj.mjs                                     1.85 kB │ gzip:   0.95 kB
+.output/server/_ssr/slug-ClaBZxA5.mjs                                           1.89 kB │ gzip:   1.04 kB
+.output/server/_ssr/campaignChronology-YhIE0JAW.mjs                             1.90 kB │ gzip:   0.95 kB
+.output/server/_ssr/encyclopedia.type._type-BkCHLa3V.mjs                        1.91 kB │ gzip:   0.88 kB
+.output/server/_ssr/city._id-B_t56MVl.mjs                                       1.94 kB │ gzip:   0.89 kB
+.output/server/_ssr/03-manuscript-lamp-DUueTRGt.mjs                             1.94 kB │ gzip:   0.85 kB
+.output/server/_ssr/eras-public-DtJb6sFP.mjs                                    1.95 kB │ gzip:   0.96 kB
+.output/server/_ssr/battle._id-BJb7lsvG.mjs                                     1.95 kB │ gzip:   0.88 kB
+.output/server/_ssr/figure._id-CmKpTL5R.mjs                                     1.96 kB │ gzip:   0.89 kB
+.output/server/_ssr/auth-middleware-CgTLAMTD.mjs                                2.00 kB │ gzip:   0.87 kB
+.output/server/_ssr/button-1L8SFUib.mjs                                         2.06 kB │ gzip:   0.91 kB
+.output/server/_ssr/22-scholar-journey-Bd-Z7Xxi.mjs                             2.07 kB │ gzip:   0.94 kB
+.output/server/_ssr/campaignDividers-OHRPDLS2.mjs                               2.08 kB │ gzip:   0.94 kB
+.output/server/_ssr/library-filter-CHgKY7U1.mjs                                 2.09 kB │ gzip:   0.90 kB
+.output/server/_ssr/admin.migration-CK8nTaWp.mjs                                2.20 kB │ gzip:   0.88 kB
+.output/server/_ssr/newsletter-CIJqaAPT.mjs                                     2.22 kB │ gzip:   0.78 kB
+.output/server/_ssr/AndroidTextEntry-CgL84mJ0.mjs                               2.28 kB │ gzip:   0.73 kB
+.output/server/_ssr/FeedbackCTA-DMlFoiQL.mjs                                    2.29 kB │ gzip:   1.19 kB
+.output/server/_libs/capacitor__preferences.mjs                                 2.31 kB │ gzip:   0.87 kB
+.output/server/_libs/prop-types.mjs                                             2.33 kB │ gzip:   0.85 kB
+.output/server/_ssr/guestCompletions-Dkh-1y6_.mjs                               2.35 kB │ gzip:   0.99 kB
+.output/server/_ssr/timing-B4N78g0I.mjs                                         2.35 kB │ gzip:   1.20 kB
+.output/server/_ssr/api-7EHd2NGO.mjs                                            2.42 kB │ gzip:   0.72 kB
+.output/server/_ssr/request-response-D_y_zge2.mjs                               2.43 kB │ gzip:   0.93 kB
+.output/server/_ssr/startup-timeline-D5nCupDg.mjs                               2.44 kB │ gzip:   0.95 kB
+.output/server/_ssr/Breadcrumbs-D-evK2Rx.mjs                                    2.45 kB │ gzip:   1.02 kB
+.output/server/_libs/lovable.dev__email-js.mjs                                  2.46 kB │ gzip:   1.06 kB
+.output/server/_ssr/Avatar-Dy-tQ-zC.mjs                                         2.47 kB │ gzip:   1.20 kB
+.output/server/_ssr/import-v2-Biz1D-Mg.mjs                                      2.49 kB │ gzip:   1.10 kB
+.output/server/_ssr/adminCampaignsApi-CMUIEbu-.mjs                              2.50 kB │ gzip:   0.93 kB
+.output/server/_ssr/worlds-constants-lh_IlM-V.mjs                               2.54 kB │ gzip:   1.03 kB
+.output/server/_ssr/arabic-normalize-C3CWaaiJ.mjs                               2.55 kB │ gzip:   1.20 kB
+.output/server/_ssr/local-titles-wHw-zpjG.mjs                                   2.56 kB │ gzip:   1.00 kB
+.output/server/_ssr/campaignArtwork-t2SNOrBC.mjs                                2.57 kB │ gzip:   1.16 kB
+.output/server/_ssr/types-BgsKpUbe.mjs                                          2.58 kB │ gzip:   1.05 kB
+.output/server/_ssr/transform-fMUAQCAY.mjs                                      2.60 kB │ gzip:   1.19 kB
+.output/server/_ssr/encyclopedia-quality-DlTmY5cS.mjs                           2.63 kB │ gzip:   0.98 kB
+.output/server/_ssr/serverRequest-BOGsl4aV.mjs                                  2.79 kB │ gzip:   1.24 kB
+.output/server/_ssr/content-identity-store-1lnxXSP-.mjs                         2.81 kB │ gzip:   1.09 kB
+.output/server/_ssr/app-constants-D4SFVV6i.mjs                                  2.91 kB │ gzip:   1.09 kB
+.output/server/_ssr/encyclopedia.entity._id--suFkTnA.mjs                        2.94 kB │ gzip:   1.32 kB
+.output/server/_ssr/museumUnlocks-Br22S1Wb.mjs                                  2.97 kB │ gzip:   1.19 kB
+.output/server/_ssr/campaignKeyArtOverlay-BQTEoiLq.mjs                          2.98 kB │ gzip:   1.22 kB
+.output/server/_ssr/ReadingProgress-CCu9ITj4.mjs                                2.98 kB │ gzip:   1.27 kB
+.output/server/_libs/react-email__text.mjs                                      2.99 kB │ gzip:   1.05 kB
+.output/server/_ssr/categories-Cv7Eb7ct.mjs                                     3.00 kB │ gzip:   1.25 kB
+.output/server/_ssr/display-names-DWx2HDXK.mjs                                  3.00 kB │ gzip:   1.29 kB
+.output/server/_ssr/entities-BhH_B2Nw.mjs                                       3.06 kB │ gzip:   1.29 kB
+.output/server/_ssr/PasswordField-DZJsKO5R.mjs                                  3.07 kB │ gzip:   1.33 kB
+.output/server/_ssr/today-in-history-CVyt6RnO.mjs                               3.08 kB │ gzip:   1.42 kB
+.output/server/_ssr/presentation-Bx19Xg8O.mjs                                   3.10 kB │ gzip:   1.40 kB
+.output/server/_libs/embla-carousel-react+[...].mjs                             3.16 kB │ gzip:   1.04 kB
+.output/server/_libs/lovable.dev__webhooks-js.mjs                               3.19 kB │ gzip:   1.30 kB
+.output/server/_libs/class-variance-authority+clsx.mjs                          3.21 kB │ gzip:   1.26 kB
+.output/server/_ssr/ssr.mjs                                                     3.23 kB │ gzip:   1.43 kB
+.output/server/_ssr/unlock-cache-BVvKayBD.mjs                                   3.25 kB │ gzip:   1.34 kB
+.output/server/_libs/d3-path.mjs                                                3.26 kB │ gzip:   1.18 kB
+.output/server/_ssr/derive-prereqs-DXk5N65w.mjs                                 3.32 kB │ gzip:   1.32 kB
+.output/server/_ssr/admin.encyclopedia-cleanup-DBCibUdo.mjs                     3.33 kB │ gzip:   1.30 kB
+.output/server/_ssr/exploration-paths-Barw36QE.mjs                              3.37 kB │ gzip:   1.48 kB
+.output/server/_ssr/VirtualizedEntityGrid-BSIbllXe.mjs                          3.40 kB │ gzip:   1.41 kB
+.output/server/_ssr/AdminLayout-CB6UepCf.mjs                                    3.44 kB │ gzip:   1.03 kB
+.output/server/_ssr/adminUsers-CXzcl7ey.mjs                                     3.48 kB │ gzip:   1.26 kB
+.output/server/_ssr/MotionPrimitives-BwQkKMlL.mjs                               3.50 kB │ gzip:   1.31 kB
+.output/server/_ssr/taxonomy-D08ecMAz.mjs                                       3.53 kB │ gzip:   1.57 kB
+.output/server/_ssr/gameplay-write-CaGTlyuP.mjs                                 3.56 kB │ gzip:   1.36 kB
+.output/server/_ssr/owner-BOAy5XCr.mjs                                          3.57 kB │ gzip:   1.52 kB
+.output/server/_ssr/streak-activity-Bo1C7_S8.mjs                                3.67 kB │ gzip:   1.60 kB
+.output/server/_ssr/verify.functions-BdDTlPdp.mjs                               3.71 kB │ gzip:   1.55 kB
+.output/server/_ssr/import-batch.functions-D9XSVz8m.mjs                         3.71 kB │ gzip:   1.35 kB
+.output/server/_ssr/progress-mirror-ot0yIn_4.mjs                                3.79 kB │ gzip:   1.31 kB
+.output/server/_ssr/unsubscribe-BXX0g3X-.mjs                                    3.82 kB │ gzip:   1.52 kB
+.output/server/_ssr/guest-progress-buffer-BZwPXZAx.mjs                          3.85 kB │ gzip:   1.46 kB
+.output/server/_ssr/encyclopedia-canonical-D89MBw_r.mjs                         3.86 kB │ gzip:   1.45 kB
+.output/server/_ssr/adminApi-CvOJLxHc.mjs                                       3.96 kB │ gzip:   1.34 kB
+.output/server/_ssr/CinematicPageBackdrop-BLLlMWFv.mjs                          3.96 kB │ gzip:   1.45 kB
+.output/server/_ssr/admin.games.index-DENaPJhz.mjs                              3.99 kB │ gzip:   1.38 kB
+.output/server/_ssr/era-canonical-B9fV9ys4.mjs                                  4.02 kB │ gzip:   1.29 kB
+.output/server/_ssr/progression-CLfithMW.mjs                                    4.09 kB │ gzip:   1.55 kB
+.output/server/_ssr/atlas-anchors-CEkWGhm8.mjs                                  4.10 kB │ gzip:   1.53 kB
+.output/server/_ssr/emblems-CtPDhL_I.mjs                                        4.12 kB │ gzip:   1.59 kB
+.output/server/_ssr/contributions-Wb85ciu3.mjs                                  4.13 kB │ gzip:   1.43 kB
+.output/server/__23tanstack-start-server-fn-resolver-NpZFMHj3.mjs               4.14 kB │ gzip:   1.44 kB
+.output/server/_ssr/client-CD56rbFy.mjs                                         4.19 kB │ gzip:   1.67 kB
+.output/server/_ssr/googleAuthResult-TeEmkR2R.mjs                               4.20 kB │ gzip:   1.60 kB
+.output/server/_ssr/investigations-normalize-UMUyK0zN.mjs                       4.33 kB │ gzip:   1.38 kB
+.output/server/_ssr/dialog-C-XeNzhu.mjs                                         4.35 kB │ gzip:   1.42 kB
+.output/server/_ssr/campaigns-BGFDpA1U.mjs                                      4.39 kB │ gzip:   1.89 kB
+.output/server/_libs/radix-ui__react-slot.mjs                                   4.41 kB │ gzip:   1.41 kB
+.output/server/_ssr/campaignUnlocks-D8gwCkBe.mjs                                4.49 kB │ gzip:   1.83 kB
+.output/server/_ssr/teamUsers.functions-DmEBfIJv.mjs                            4.53 kB │ gzip:   1.67 kB
+.output/server/_ssr/relationship-graph-DkeFfRVg.mjs                             4.57 kB │ gzip:   1.75 kB
+.output/server/_ssr/url-SHd75X09.mjs                                            4.60 kB │ gzip:   1.77 kB
+.output/server/_ssr/image-processor-BShwpLJ3.mjs                                4.61 kB │ gzip:   1.95 kB
+.output/server/_ssr/on-this-day-B17vLZje.mjs                                    4.63 kB │ gzip:   1.40 kB
+.output/server/_ssr/policy-DDGsc-2M.mjs                                         4.64 kB │ gzip:   1.68 kB
+.output/server/_ssr/avatar-persistence-DQW1wTOI.mjs                             4.64 kB │ gzip:   1.84 kB
+.output/server/_ssr/auth-emails-hjBTDvo2.mjs                                    4.68 kB │ gzip:   2.05 kB
+.output/server/_ssr/worlds-CnjlGIFQ.mjs                                         4.70 kB │ gzip:   1.85 kB
+.output/server/_ssr/passwordPolicy-BPbzqXfT.mjs                                 4.70 kB │ gzip:   2.07 kB
+.output/server/_ssr/atlas-entities-DKwx1p_p.mjs                                 4.79 kB │ gzip:   2.01 kB
+.output/server/_ssr/taxonomy-labels-tjOulX2i.mjs                                4.84 kB │ gzip:   1.46 kB
+.output/server/_ssr/atlas-search-UGOWECbr.mjs                                   4.87 kB │ gzip:   1.94 kB
+.output/server/_ssr/trace-JxCcUuH1.mjs                                          5.06 kB │ gzip:   1.93 kB
+.output/server/_libs/react-email__button.mjs                                    5.09 kB │ gzip:   1.73 kB
+.output/server/_ssr/EntityNotFound-B7JxBx5k.mjs                                 5.13 kB │ gzip:   1.81 kB
+.output/server/_ssr/AtlasSafeMode-3ZdDV17K.mjs                                  5.17 kB │ gzip:   1.85 kB
+.output/server/_libs/d3-interpolate.mjs                                         5.26 kB │ gzip:   1.63 kB
+.output/server/_ssr/sender-Ce4YloHk.mjs                                         5.26 kB │ gzip:   1.87 kB
+.output/server/_ssr/security-CL1EIf72.mjs                                       5.28 kB │ gzip:   1.90 kB
+.output/server/_ssr/offline-manifest-BnEW4E-B.mjs                               5.29 kB │ gzip:   2.17 kB
+.output/server/_ssr/reset-Et-NsHVw.mjs                                          5.30 kB │ gzip:   1.82 kB
+.output/server/_ssr/auth-DmQMy8VE.mjs                                           5.34 kB │ gzip:   2.39 kB
+.output/server/_ssr/terms-BMFQKKX0.mjs                                          5.46 kB │ gzip:   1.82 kB
+.output/server/_ssr/offline-snapshot-validate-BcmEVDMs.mjs                      5.49 kB │ gzip:   1.95 kB
+.output/server/_ssr/Istazadtu-DaEOvOvZ.mjs                                      5.52 kB │ gzip:   2.23 kB
+.output/server/_ssr/map-CpTw9DPC.mjs                                            5.65 kB │ gzip:   2.37 kB
+.output/server/_ssr/debug-DuBAuJ7U.mjs                                          5.65 kB │ gzip:   1.98 kB
+.output/server/_ssr/claim.functions-BaM_f-N-.mjs                                5.69 kB │ gzip:   1.82 kB
+.output/server/_ssr/admin.crash-diagnostics-xXCcI2wM.mjs                        5.76 kB │ gzip:   1.76 kB
+.output/server/_ssr/content-store-BRQKOCnE.mjs                                  6.13 kB │ gzip:   1.95 kB
+.output/server/_ssr/server-BfcvN_yv.mjs                                         6.14 kB │ gzip:   1.94 kB
+.output/server/_libs/capacitor__local-notifications.mjs                         6.17 kB │ gzip:   1.67 kB
+.output/server/_ssr/action-CPJi6_OC.mjs                                         6.41 kB │ gzip:   2.37 kB
+.output/server/_ssr/feedback.index-BBp9HhCO.mjs                                 6.56 kB │ gzip:   2.13 kB
+.output/server/_ssr/admin-DDEf1V1h.mjs                                          6.64 kB │ gzip:   1.86 kB
+.output/server/_ssr/dead-letter-C1X-N_yB.mjs                                    6.80 kB │ gzip:   2.22 kB
+.output/server/_ssr/EncyclopediaCard-CnK5lRL3.mjs                               6.86 kB │ gzip:   2.47 kB
+.output/server/_ssr/content-identity-check-Bx-gT9J_.mjs                         6.89 kB │ gzip:   2.79 kB
+.output/server/_ssr/offline-baseline-resolver-CMUvB-R4.mjs                      6.95 kB │ gzip:   2.28 kB
+.output/server/_ssr/pushNotifications-BCioXZwQ.mjs                              7.00 kB │ gzip:   2.20 kB
+.output/server/_ssr/campaignChronologyBackfill-z8IQvrO2.mjs                     7.13 kB │ gzip:   2.49 kB
+.output/server/_ssr/import-batch.functions-BfYWcMwh.mjs                         7.17 kB │ gzip:   1.85 kB
+.output/server/_ssr/record-JxmRUO8Q.mjs                                         7.33 kB │ gzip:   2.44 kB
+.output/server/_ssr/sync-Bi08Gsy7.mjs                                           7.37 kB │ gzip:   2.59 kB
+.output/server/_ssr/entityDiscoveries-D-kynxvw.mjs                              7.42 kB │ gzip:   2.47 kB
+.output/server/_ssr/eligibility-B1jFqiKg.mjs                                    7.44 kB │ gzip:   2.33 kB
+.output/server/_ssr/OutOfHeartsModal-BYh4aM7u.mjs                               7.54 kB │ gzip:   2.59 kB
+.output/server/_ssr/completions-CUQXrySI.mjs                                    7.58 kB │ gzip:   2.61 kB
+.output/server/_ssr/admin.stories.export-v2-DL9DefWj.mjs                        7.59 kB │ gzip:   2.14 kB
+.output/server/_ssr/content-sync-DE8WkYvU.mjs                                   7.62 kB │ gzip:   2.60 kB
+.output/server/_ssr/validate-C2H6Tdlk.mjs                                       7.72 kB │ gzip:   2.46 kB
+.output/server/_ssr/encyclopedia-search-CrU0TcAo.mjs                            7.96 kB │ gzip:   2.61 kB
+.output/server/_ssr/reflections-BUJWgQ1L.mjs                                    8.07 kB │ gzip:   2.66 kB
+.output/server/_libs/tanstack__react-query.mjs                                  8.07 kB │ gzip:   2.07 kB
+.output/server/_ssr/auth.callback-CesxVOYs.mjs                                  8.10 kB │ gzip:   2.73 kB
+.output/server/_ssr/segments-AKlIbzss.mjs                                       8.16 kB │ gzip:   2.95 kB
+.output/server/_ssr/campaignStorage-ofwtGZs_.mjs                                8.24 kB │ gzip:   2.95 kB
+.output/server/_libs/d3-array.mjs                                               8.28 kB │ gzip:   2.26 kB
+.output/server/_ssr/admin.related-stories-Cs7Kc5Bf.mjs                          8.29 kB │ gzip:   2.34 kB
+.output/server/_libs/eventemitter3.mjs                                          8.33 kB │ gzip:   2.06 kB
+.output/server/_ssr/local-BxBJj4JT.mjs                                          8.36 kB │ gzip:   2.33 kB
+.output/server/_ssr/admin.encyclopedia-cleanup.redirects-DoBjKXAc.mjs           8.42 kB │ gzip:   2.50 kB
+.output/server/_ssr/admin.emblems-DYUYpEu4.mjs                                  8.46 kB │ gzip:   2.16 kB
+.output/server/_ssr/dailyChallengeService-C3cMyoid.mjs                          8.48 kB │ gzip:   2.92 kB
+.output/server/_ssr/feedback.new-CxuEQ8RZ.mjs                                   8.89 kB │ gzip:   2.75 kB
+.output/server/_ssr/admin-guard-BKo6DuJs.mjs                                    8.90 kB │ gzip:   2.78 kB
+.output/server/_ssr/about-CyA-1gYN.mjs                                          9.11 kB │ gzip:   2.42 kB
+.output/server/_ssr/admin.world-membership-review-BYULOWWK.mjs                  9.17 kB │ gzip:   2.85 kB
+.output/server/_ssr/encyclopedia.path._id-82aWvpJd.mjs                          9.24 kB │ gzip:   2.57 kB
+.output/server/_ssr/worlds.index-okucheR-.mjs                                   9.30 kB │ gzip:   2.65 kB
+.output/server/_libs/floating-ui__react-dom.mjs                                 9.36 kB │ gzip:   2.71 kB
+.output/server/_ssr/supabaseCampaigns-Cc7HieHp.mjs                              9.42 kB │ gzip:   2.83 kB
+.output/server/_ssr/driver-DZL8t8Bw.mjs                                         9.46 kB │ gzip:   2.97 kB
+.output/server/_ssr/useCampaignProgression-DWOU0keX.mjs                         9.55 kB │ gzip:   3.35 kB
+.output/server/_ssr/encyclopedia-source-CqOLfvro.mjs                            9.61 kB │ gzip:   3.20 kB
+.output/server/_ssr/admin.import-history-Bd4Bqx4S.mjs                           9.65 kB │ gzip:   2.57 kB
+.output/server/_ssr/CollectibleRevealDialog-yT6B6lz6.mjs                        9.69 kB │ gzip:   2.90 kB
+.output/server/_ssr/account-deletion-BjFCte88.mjs                               9.71 kB │ gzip:   2.73 kB
+.output/server/_libs/h3-v2+srvx.mjs                                             9.77 kB │ gzip:   3.03 kB
+.output/server/_ssr/index-store-C_FxpcWz.mjs                                    9.81 kB │ gzip:   3.61 kB
+.output/server/_ssr/admin.era-normalization-DW-38gsc.mjs                        9.89 kB │ gzip:   2.95 kB
+.output/server/_ssr/CampaignKeyArt-COJJWiXi.mjs                                 9.91 kB │ gzip:   3.47 kB
+.output/server/_ssr/image-cache-CZJrORM-.mjs                                   10.01 kB │ gzip:   3.40 kB
+.output/server/_ssr/case-number-D7Moq5JW.mjs                                   10.04 kB │ gzip:   4.12 kB
+.output/server/_ssr/shareService-9jVeCN_q.mjs                                  10.31 kB │ gzip:   3.70 kB
+.output/server/_libs/d3-color.mjs                                              10.39 kB │ gzip:   3.58 kB
+.output/server/_ssr/admin.import-history._id-DTlhEvUw.mjs                      10.66 kB │ gzip:   2.60 kB
+.output/server/_ssr/persistence-BSRfqAQ2.mjs                                   10.72 kB │ gzip:   3.28 kB
+.output/server/_libs/d3-format.mjs                                             10.88 kB │ gzip:   3.05 kB
+.output/server/_ssr/rewardSummary-B0b70cOa.mjs                                 10.98 kB │ gzip:   3.63 kB
+.output/server/_ssr/reflections-DeDFsT4H.mjs                                   11.06 kB │ gzip:   3.47 kB
+.output/server/_ssr/importedCampaignProgress-DLwTGs4s.mjs                      11.07 kB │ gzip:   3.09 kB
+.output/server/_ssr/reset-password-BQjVTWJl.mjs                                11.10 kB │ gzip:   3.52 kB
+.output/server/_ssr/safe-boot-LIPCMeZG.mjs                                     11.30 kB │ gzip:   4.28 kB
+.output/server/_ssr/encyclopedia.type._type-u3TjuzSc.mjs                       11.33 kB │ gzip:   3.25 kB
+.output/server/_ssr/daily-quest-DfarhSBV.mjs                                   11.35 kB │ gzip:   3.95 kB
+.output/server/_ssr/homeSummary-DXq3r4e2.mjs                                   11.47 kB │ gzip:   3.55 kB
+.output/server/_ssr/admin.historical-hubs-audit-ChLUCCpq.mjs                   11.52 kB │ gzip:   3.50 kB
+.output/server/_ssr/store-CNFUkGnZ.mjs                                         11.54 kB │ gzip:   4.44 kB
+.output/server/_ssr/social-qKFTuViZ.mjs                                        11.76 kB │ gzip:   3.90 kB
+.output/server/_ssr/u._username-CpcZAU8O.mjs                                   11.92 kB │ gzip:   2.95 kB
+.output/server/_ssr/esm-DS_SJqmQ.mjs                                           11.95 kB │ gzip:   3.71 kB
+.output/server/_libs/tanstack__history.mjs                                     12.11 kB │ gzip:   3.49 kB
+.output/server/_ssr/offline-storage-CPzUr6qJ.mjs                               12.13 kB │ gzip:   4.50 kB
+.output/server/_libs/supabase__functions-js.mjs                                12.13 kB │ gzip:   3.31 kB
+.output/server/_ssr/offline-content-update-lklJmzhu.mjs                        12.16 kB │ gzip:   4.33 kB
+.output/server/_ssr/campaignLedger-B4ixFDzk.mjs                                12.20 kB │ gzip:   4.08 kB
+.output/server/_ssr/notifications-B6rm-Vuf.mjs                                 12.40 kB │ gzip:   3.66 kB
+.output/server/_ssr/useRelatedStories-BS9_vOLk.mjs                             12.49 kB │ gzip:   4.52 kB
+.output/server/_ssr/outbox-CC9mY0hD.mjs                                        12.60 kB │ gzip:   3.97 kB
+.output/server/_ssr/playerDiscoveries-DuD7GuBF.mjs                             12.68 kB │ gzip:   3.73 kB
+.output/server/_ssr/history-calendar-BrCsYH_A.mjs                              13.18 kB │ gzip:   4.10 kB
+.output/server/_ssr/admin.contributions-JX4nX_dd.mjs                           13.36 kB │ gzip:   3.42 kB
+.output/server/_ssr/compare._id-CZK--Liv.mjs                                   13.61 kB │ gzip:   3.82 kB
+.output/server/_ssr/query-keys-DKAinrT1.mjs                                    13.96 kB │ gzip:   4.63 kB
+.output/server/_ssr/encyclopedia.state._id-CAA5syyF.mjs                        14.00 kB │ gzip:   3.99 kB
+.output/server/_libs/fast-equals.mjs                                           14.39 kB │ gzip:   3.64 kB
+.output/server/_ssr/admin.investigation-rewards-DCFcTBSa.mjs                   14.40 kB │ gzip:   3.66 kB
+.output/server/_ssr/feedback._id-CfrITPGP.mjs                                  14.49 kB │ gzip:   3.89 kB
+.output/server/_ssr/campaignReconciliation-BP-TQkb4.mjs                        14.73 kB │ gzip:   4.17 kB
+.output/server/_ssr/admin.encyclopedia-cleanup.integrity-D1cmk_uM.mjs          14.75 kB │ gzip:   3.57 kB
+.output/server/_ssr/journey-CqjihEEW.mjs                                       15.32 kB │ gzip:   4.84 kB
+.output/server/_libs/dnd-kit__sortable.mjs                                     15.50 kB │ gzip:   4.24 kB
+.output/server/_ssr/admin.artifacts-o8mFZXph.mjs                               15.62 kB │ gzip:   4.40 kB
+.output/server/_ssr/adventure-BxyMECoB.mjs                                     15.67 kB │ gzip:   3.49 kB
+.output/server/_ssr/flush-B_1XFZ70.mjs                                         15.80 kB │ gzip:   3.40 kB
+.output/server/_ssr/admin.encyclopedia-cleanup.import-preview-DBSkPg7y.mjs     16.29 kB │ gzip:   4.51 kB
+.output/server/_ssr/admin.museum-provenance-qq_S6Zvt.mjs                       16.33 kB │ gzip:   4.29 kB
+.output/server/_libs/dnd-kit__accessibility+react.mjs                          16.81 kB │ gzip:   4.72 kB
+.output/server/_ssr/admin.encyclopedia-audit-BCFfEYa6.mjs                      16.86 kB │ gzip:   4.58 kB
+.output/server/_ssr/admin.campaign-relationships-BVrUWWRB.mjs                  16.92 kB │ gzip:   4.35 kB
+.output/server/_ssr/admin.content-foundation-gnCmxKKT.mjs                      16.95 kB │ gzip:   3.85 kB
+.output/server/_ssr/admin.unlock-integrity-UdKPJFLU.mjs                        17.05 kB │ gzip:   4.20 kB
+.output/server/_ssr/admin.content-inventory-EbGGTZhg.mjs                       17.22 kB │ gzip:   4.55 kB
+.output/server/_ssr/admin.cross-hub-links-cqZZ8FaW.mjs                         17.29 kB │ gzip:   4.68 kB
+.output/server/_ssr/progress-xxkknXID.mjs                                      17.71 kB │ gzip:   5.73 kB
+.output/server/_ssr/admin.native-auth-diagnostics-DfmXlRVF.mjs                 17.72 kB │ gzip:   4.65 kB
+.output/server/_ssr/admin.encyclopedia.priority-audit-iA2Cj6XY.mjs             18.14 kB │ gzip:   4.33 kB
+.output/server/_ssr/EncyclopediaArticleBody-bN9wDhiD.mjs                       18.46 kB │ gzip:   4.15 kB
+.output/server/_ssr/SceneExportButton-CQP6rNCU.mjs                             18.57 kB │ gzip:   6.58 kB
+.output/server/_ssr/admin.hub-builder-BJhqjRyS.mjs                             18.94 kB │ gzip:   5.34 kB
+.output/server/_ssr/admin.encyclopedia-cleanup.review-xMhSnNMS.mjs             19.23 kB │ gzip:   5.04 kB
+.output/server/_ssr/admin.atlas-import-t2KV9_H_.mjs                            19.25 kB │ gzip:   4.74 kB
+.output/server/_ssr/admin.comments-D5EwjqiE.mjs                                19.51 kB │ gzip:   5.19 kB
+.output/server/_libs/h3+rou3+srvx+unenv.mjs                                    20.39 kB │ gzip:   5.57 kB
+.output/server/_ssr/admin.exploration-path-repair-DPG0ZYL1.mjs                 20.41 kB │ gzip:   5.17 kB
+.output/server/_ssr/admin.moderation-D9x03-sl.mjs                              20.44 kB │ gzip:   4.58 kB
+.output/server/_libs/@capacitor/app+[...].mjs                                  20.47 kB │ gzip:   5.82 kB
+.output/server/_ssr/auth-y0umqdJK.mjs                                          20.49 kB │ gzip:   5.57 kB
+.output/server/_ssr/admin.index-CWTEP6rN.mjs                                   21.81 kB │ gzip:   4.98 kB
+.output/server/_libs/@capacitor/filesystem+[...].mjs                           22.01 kB │ gzip:   5.67 kB
+.output/server/_ssr/worlds-dG-ISc6l.mjs                                        22.01 kB │ gzip:   4.85 kB
+.output/server/_ssr/encyclopedia.entity._id-DdPzX6IW.mjs                       22.12 kB │ gzip:   6.09 kB
+.output/server/_ssr/admin.offline-Bswk3bvm.mjs                                 22.16 kB │ gzip:   5.24 kB
+.output/server/_ssr/admin.announcements-G4qwbn04.mjs                           22.27 kB │ gzip:   4.75 kB
+.output/server/_ssr/audioManager-BVNKNoDI.mjs                                  22.38 kB │ gzip:   7.24 kB
+.output/server/_ssr/encyclopedia-BQQiCqHt.mjs                                  22.67 kB │ gzip:   5.22 kB
+.output/server/_ssr/admin.content-auto-heal-CTF1WQhQ.mjs                       22.77 kB │ gzip:   6.05 kB
+.output/server/_ssr/engine.functions-t41fnOdB.mjs                              22.78 kB │ gzip:   7.98 kB
+.output/server/_ssr/friends-D_sBngIm.mjs                                       23.13 kB │ gzip:   5.43 kB
+.output/server/_libs/decimal.js-light.mjs                                      23.27 kB │ gzip:   6.90 kB
+.output/server/_ssr/sceneLayouts-BOSw8WCZ.mjs                                  23.44 kB │ gzip:   6.40 kB
+.output/server/_ssr/campaigns.index-C0GVhbTp.mjs                               23.45 kB │ gzip:   6.07 kB
+.output/server/_ssr/OrphanRelationEditor-DpNK2j81.mjs                          23.78 kB │ gzip:   6.38 kB
+.output/server/_ssr/admin.canonical-duplicates-DC4ntwwl.mjs                    23.83 kB │ gzip:   6.12 kB
+.output/server/_ssr/admin.content-integrity-Da4wYDXi.mjs                       23.92 kB │ gzip:   4.41 kB
+.output/server/_libs/@radix-ui/react-popover+[...].mjs                         24.04 kB │ gzip:   5.90 kB
+.output/server/_ssr/admin.newsletter-4IQRtIrB.mjs                              24.39 kB │ gzip:   5.84 kB
+.output/server/_ssr/admin.content-cleanup--O77HokV.mjs                         24.82 kB │ gzip:   5.87 kB
+.output/server/_libs/d3-shape.mjs                                              25.32 kB │ gzip:   5.04 kB
+.output/server/_ssr/account-DSIgDe1t.mjs                                       25.40 kB │ gzip:   7.15 kB
+.output/server/_ssr/admin.taxonomy-h69ECGYl.mjs                                25.40 kB │ gzip:   5.64 kB
+.output/server/_ssr/stories.index-DluevF93.mjs                                 25.53 kB │ gzip:   5.98 kB
+.output/server/_libs/@floating-ui/dom+[...].mjs                                25.89 kB │ gzip:   6.58 kB
+.output/server/_libs/@floating-ui/core+[...].mjs                               25.93 kB │ gzip:   6.37 kB
+.output/server/_ssr/admin.atlas-calibration-tn0WhkDf.mjs                       26.84 kB │ gzip:   7.18 kB
+.output/server/_ssr/inbox-DE7fqJgV.mjs                                         26.97 kB │ gzip:   6.03 kB
+.output/server/_ssr/admin.community-MIfcXgyL.mjs                               27.49 kB │ gzip:   6.01 kB
+.output/server/_ssr/native-auth-D6x5WVT2.mjs                                   27.90 kB │ gzip:   8.11 kB
+.output/server/_ssr/admin.monitor-BuU484xA.mjs                                 27.93 kB │ gzip:   6.12 kB
+.output/server/_ssr/investigations-CgHqqnac.mjs                                28.95 kB │ gzip:   7.86 kB
+.output/server/_ssr/admin.era-assignment-CEYFs61w.mjs                          29.41 kB │ gzip:   6.78 kB
+.output/server/_ssr/admin.content-integrity-repair-Bvs9VOVF.mjs                29.86 kB │ gzip:   6.79 kB
+.output/server/_ssr/avatars-BkRRpbe3.mjs                                       29.90 kB │ gzip:   5.42 kB
+.output/server/_ssr/privacy-C4PY44Cd.mjs                                       31.14 kB │ gzip:  10.14 kB
+.output/server/_ssr/overlay-registration-CGwPwlva.mjs                          32.35 kB │ gzip:   9.05 kB
+.output/server/_ssr/admin.games.crossword-generator-DbcDsXVx.mjs               33.93 kB │ gzip:   9.15 kB
+.output/server/_ssr/admin.games._mode-BLagc60p.mjs                             34.42 kB │ gzip:   9.18 kB
+.output/server/_ssr/worlds-progress-DiLVdFL-.mjs                               34.84 kB │ gzip:   8.89 kB
+.output/server/_ssr/admin.stories.import-v2-CM4vmzfV.mjs                       35.22 kB │ gzip:   7.86 kB
+.output/server/_ssr/share-card-BDqFIs4h.mjs                                    35.81 kB │ gzip:  10.71 kB
+.output/server/_libs/supabase__supabase-js.mjs                                 36.00 kB │ gzip:  10.39 kB
+.output/server/_ssr/offline-pack-USWprhZk.mjs                                  36.48 kB │ gzip:   9.79 kB
+.output/server/_ssr/encyclopedia.index-DMvBdkDE.mjs                            36.56 kB │ gzip:   7.71 kB
+.output/server/_ssr/admin.campaign-order-BBRdCsHC.mjs                          37.27 kB │ gzip:   8.99 kB
+.output/server/_libs/react-smooth.mjs                                          37.97 kB │ gzip:   8.16 kB
+.output/server/_ssr/story._id-BE73fWE1.mjs                                     38.13 kB │ gzip:  10.19 kB
+.output/server/_ssr/admin.analytics-NkEACFGY.mjs                               38.34 kB │ gzip:   7.36 kB
+.output/server/_ssr/admin.persistence-diagnostics-K6W-MNYF.mjs                 38.46 kB │ gzip:   7.45 kB
+.output/server/_ssr/profile-DNaGzCm_.mjs                                       39.22 kB │ gzip:  10.99 kB
+.output/server/_libs/@tanstack/react-virtual+[...].mjs                         42.55 kB │ gzip:  10.17 kB
+.output/server/_libs/embla-carousel.mjs                                        43.13 kB │ gzip:  10.77 kB
+.output/server/_ssr/plan-UA2sDj7b.mjs                                          43.47 kB │ gzip:  13.04 kB
+.output/server/_ssr/admin.atlas-entities-CNa0HMM-.mjs                          45.00 kB │ gzip:   9.60 kB
+.output/server/_ssr/admin.encyclopedia-report-BeMklnZv.mjs                     45.41 kB │ gzip:   9.92 kB
+.output/server/_ssr/local-first-store-ani51ZG7.mjs                             47.37 kB │ gzip:  13.21 kB
+.output/server/_ssr/investigation._id-ByanO1z4.mjs                             48.54 kB │ gzip:  11.12 kB
+.output/server/_ssr/admin.offline-diagnostics-Dhx98169.mjs                     48.62 kB │ gzip:   9.83 kB
+.output/server/_ssr/AppShell-CgO0IBI2.mjs                                      48.87 kB │ gzip:  12.56 kB
+.output/server/_libs/supabase__phoenix.mjs                                     49.14 kB │ gzip:  12.38 kB
+.output/server/_ssr/admin.atlas-repair-DSKPWG5X.mjs                            49.61 kB │ gzip:   9.74 kB
+.output/server/_ssr/server-DLWm10rf.mjs                                        49.64 kB │ gzip:  13.01 kB
+.output/server/_ssr/admin.map-z7xNjNyn.mjs                                     50.98 kB │ gzip:  12.05 kB
+.output/server/_ssr/collection-4cKE8dWQ.mjs                                    51.63 kB │ gzip:  12.80 kB
+.output/server/_ssr/worlds._slug-Bx8CLSI_.mjs                                  51.83 kB │ gzip:  10.83 kB
+.output/server/_libs/sonner.mjs                                                51.97 kB │ gzip:  11.79 kB
+.output/server/_libs/prismjs.mjs                                               52.00 kB │ gzip:  15.34 kB
+.output/server/_ssr/admin.users-D_Lc62dE.mjs                                   53.83 kB │ gzip:  10.03 kB
+.output/server/_ssr/admin.stories.index-BpdzXtcD.mjs                           56.78 kB │ gzip:  11.13 kB
+.output/server/_ssr/PublicContributionsNotice-CMXH8mmP.mjs                     57.57 kB │ gzip:  13.91 kB
+.output/server/_libs/d3-scale+[...].mjs                                        58.96 kB │ gzip:  12.13 kB
+.output/server/_ssr/admin.atlas-review-BRt8IwB8.mjs                            61.52 kB │ gzip:  12.74 kB
+.output/server/_ssr/admin.stories.v2._id-DEhAxq0L.mjs                          61.67 kB │ gzip:  11.60 kB
+.output/server/_libs/marked.mjs                                                62.40 kB │ gzip:  14.90 kB
+.output/server/_ssr/campaigns.imported._id.index-ugI2U874.mjs                  64.30 kB │ gzip:  14.65 kB
+.output/server/_ssr/admin.content-dH4qHjw3.mjs                                 64.93 kB │ gzip:  10.59 kB
+.output/server/_libs/tanstack__query-core.mjs                                  65.97 kB │ gzip:  13.87 kB
+.output/server/_ssr/engine-CFduNyKW.mjs                                        67.23 kB │ gzip:  15.88 kB
+.output/server/_ssr/admin.investigations._id.edit-C7LtqNNM.mjs                 70.17 kB │ gzip:  13.78 kB
+.output/server/_libs/supabase__realtime-js.mjs                                 73.12 kB │ gzip:  18.39 kB
+.output/server/_ssr/admin.campaigns._id.edit-DR2xd78t.mjs                      74.10 kB │ gzip:  14.89 kB
+.output/server/_tanstack-start-manifest_v-Ccjn1A-Z.mjs                         74.47 kB │ gzip:  11.14 kB
+.output/server/_ssr/map-B4cmFmuf.mjs                                           75.50 kB │ gzip:  21.06 kB
+.output/server/_libs/tailwind-merge.mjs                                        85.67 kB │ gzip:  15.23 kB
+.output/server/_libs/@radix-ui/react-alert-dialog+[...].mjs                    87.31 kB │ gzip:  20.34 kB
+.output/server/_ssr/admin.campaigns.index-DKF__XHh.mjs                         88.48 kB │ gzip:  19.72 kB
+.output/server/_libs/@dnd-kit/core+[...].mjs                                   91.91 kB │ gzip:  20.60 kB
+.output/server/_ssr/admin.stories._id.edit-ClqAcRv3.mjs                        94.51 kB │ gzip:  19.76 kB
+.output/server/_ssr/admin.notifications-CU-Aj18C.mjs                           98.42 kB │ gzip:  20.07 kB
+.output/server/_libs/tanstack__zod-adapter+zod.mjs                            101.86 kB │ gzip:  17.82 kB
+.output/server/_ssr/investigations-CuQ4IIXK.mjs                               103.06 kB │ gzip:  22.58 kB
+.output/server/_libs/lucide-react.mjs                                         104.51 kB │ gzip:  18.60 kB
+.output/server/_ssr/StoryCard-Cwe0vICf.mjs                                    112.93 kB │ gzip:  53.00 kB
+.output/server/_libs/@supabase/storage-js+[...].mjs                           114.59 kB │ gzip:  21.36 kB
+.output/server/_ssr/routes-D2j36nR-.mjs                                       116.46 kB │ gzip:  26.93 kB
+.output/server/_ssr/admin.encyclopedia-cleanup.index-CiG62zkM.mjs             116.54 kB │ gzip:  25.96 kB
+.output/server/_ssr/campaigns.imported._id.chapter._chapter-BwTBCk6b.mjs      116.62 kB │ gzip:  26.33 kB
+.output/server/_libs/@tanstack/router-core+[...].mjs                          121.35 kB │ gzip:  25.48 kB
+.output/server/_ssr/resolver-bh3q3xa1.mjs                                     123.50 kB │ gzip:  35.23 kB
+.output/server/_ssr/admin.import-D191F5mZ.mjs                                 127.20 kB │ gzip:  26.50 kB
+.output/server/_ssr/games._mode._slug-BCKYQHPy.mjs                            130.34 kB │ gzip:  28.65 kB
+.output/server/_libs/supabase__postgrest-js.mjs                               134.35 kB │ gzip:  24.71 kB
+.output/server/_ssr/profile-SWIb8N3M.mjs                                      134.39 kB │ gzip:  26.36 kB
+.output/server/_ssr/admin.encyclopedia-cleanup.data-hygiene-DuIB3eDD.mjs      148.34 kB │ gzip:  23.54 kB
+.output/server/_libs/lodash.mjs                                               166.65 kB │ gzip:  29.75 kB
+.output/server/_libs/supabase__auth-js.mjs                                    301.69 kB │ gzip:  60.13 kB
+.output/server/_ssr/router-BE2Kl8Yv.mjs                                       387.08 kB │ gzip:  90.24 kB
+.output/server/_libs/@react-email/render+[...].mjs                            510.33 kB │ gzip: 151.94 kB
+.output/server/_libs/recharts+[...].mjs                                       555.13 kB │ gzip: 102.86 kB
+.output/server/_libs/@tanstack/react-router+[...].mjs                         662.09 kB │ gzip: 139.50 kB
+.output/server/index.mjs                                                      964.03 kB │ gzip: 197.27 kB
+.output/server/_libs/react-email+tailwindcss.mjs                            1,314.78 kB │ gzip: 324.96 kB
+
+✓ built in 1.98s
+[nitro] ℹ Using auto generated worker name: mnourdam-noor-al-maadi-app
+ℹ Generated .output/server/wrangler.json
+ℹ Generated .wrangler/deploy/config.json
+ℹ Generated .output/public/_headers
+ℹ Generated .output/nitro.json
+
+[nitro] ✔ You can preview this build using npx vite preview
+[nitro] ✔ You can deploy this build using npx nitro deploy --prebuilt
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice
