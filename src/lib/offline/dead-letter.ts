@@ -1,6 +1,8 @@
 // Durable, per-revision archive. The V17 array remains readable until each
 // snapshot has been copied to its own key and its write has been confirmed.
 import { remove, type OutboxItem } from "./outbox";
+import { getActiveOwner, getIdentityEpoch } from "../identity/owner";
+import { logicalKeyOf, ownerOfPhysicalKey, physicalKey } from "../identity/partition";
 
 const LS_KEY = "irth.outbox.dead-letter.v1";
 const ENTRY_PREFIX = `${LS_KEY}:entry:`;
@@ -69,8 +71,43 @@ function storage(): Storage {
   return localStorage;
 }
 
-function readLegacy(): DeadLetter[] {
-  const raw = storage().getItem(LS_KEY);
+interface ArchiveScope {
+  store: Storage;
+  owner: string | null;
+  userId?: string;
+  key(logical: string): string;
+  assertCurrent(): void;
+}
+
+/** Freeze the namespace before waiting for a lock; never follow a new owner.
+ * The partition exposes its original getter for existing diagnostic adapters.
+ * Read that marker only: no prototype or global partition changes here.
+ * Unpartitioned runtimes retain the original V17 shared-archive behavior.
+ */
+function captureScope(userId?: string): ArchiveScope {
+  const store = storage();
+  const prototype = Object.getPrototypeOf(store) as { __originalGetItem?: Storage["getItem"] } | null;
+  const partitioned = typeof prototype?.__originalGetItem === "function" && store.getItem !== prototype.__originalGetItem;
+  const owner = partitioned ? getActiveOwner() : null;
+  const epoch = partitioned ? getIdentityEpoch() : null;
+  const expectedOwner = userId === undefined ? owner : `user:${userId}`;
+  const scope: ArchiveScope = {
+    store, owner,
+    userId: owner?.startsWith("user:") ? owner.slice(5) : undefined,
+    key: (logical) => owner === null ? logical : physicalKey(logical, owner),
+    assertCurrent() {
+      if (owner !== null && (owner !== expectedOwner || getActiveOwner() !== owner || getIdentityEpoch() !== epoch)) {
+        throw new DeadLetterStorageError("dead-letter-owner-changed-or-mismatched");
+      }
+    },
+  };
+  scope.assertCurrent();
+  return scope;
+}
+
+function readLegacy(scope: ArchiveScope): DeadLetter[] {
+  scope.assertCurrent();
+  const raw = scope.store.getItem(scope.key(LS_KEY));
   if (raw === null) return [];
   const rows: unknown = JSON.parse(raw);
   if (!Array.isArray(rows)) throw new DeadLetterStorageError("invalid-dead-letter-legacy");
@@ -78,123 +115,143 @@ function readLegacy(): DeadLetter[] {
   return rows as DeadLetter[];
 }
 
-function readEntry(key: string): ArchiveEntry {
-  const raw = storage().getItem(key);
+function belongsToScope(scope: ArchiveScope, letter: DeadLetter): boolean {
+  return scope.owner === null || letter.userId === scope.userId;
+}
+
+function readEntry(scope: ArchiveScope, key: string): ArchiveEntry {
+  const raw = scope.store.getItem(key);
   if (raw === null) throw new DeadLetterStorageError("dead-letter-read-incomplete");
   const entry = JSON.parse(raw) as ArchiveEntry;
   if (!entry || entry.version !== 1) throw new DeadLetterStorageError("invalid-dead-letter-entry");
   validateLetter(entry.letter);
+  if (!belongsToScope(scope, entry.letter)) throw new DeadLetterStorageError("dead-letter-owner-mismatch");
   if (entry.source && canonical(letterFor(entry.source, entry.letter.reason, entry.letter.createdAt)) !== canonical(entry.letter)) {
     throw new DeadLetterStorageError("dead-letter-source-mismatch");
   }
-  if (keyFor(entry) !== key) throw new DeadLetterStorageError("dead-letter-key-mismatch");
+  // Validate the complete expected PHYSICAL key, including its owner suffix.
+  if (scope.key(keyFor(entry)) !== key) throw new DeadLetterStorageError("dead-letter-key-mismatch");
   return entry;
 }
 
-function readArchive(): Map<string, ArchiveEntry> {
+function readArchive(scope: ArchiveScope): Map<string, ArchiveEntry> {
   const entries = new Map<string, ArchiveEntry>();
-  for (const letter of readLegacy()) {
+  for (const letter of readLegacy(scope)) {
+    if (!belongsToScope(scope, letter)) continue;
     const entry: ArchiveEntry = { version: 1, letter };
-    entries.set(keyFor(entry), entry);
+    entries.set(scope.key(keyFor(entry)), entry);
   }
-  const store = storage();
+  const store = scope.store;
   const size = store.length;
   const keys: string[] = [];
   for (let i = 0; i < size; i++) {
     const key = store.key(i);
     if (key === null) throw new DeadLetterStorageError("dead-letter-read-incomplete");
-    if (key.startsWith(ENTRY_PREFIX)) keys.push(key);
+    // Filter physical namespaces BEFORE reading/parsing a foreign value.
+    if (ownerOfPhysicalKey(key) !== scope.owner) continue;
+    if (logicalKeyOf(key).startsWith(ENTRY_PREFIX)) keys.push(key);
   }
-  for (const key of keys) entries.set(key, readEntry(key));
+  for (const key of keys) entries.set(key, readEntry(scope, key));
+  scope.assertCurrent();
   return entries;
 }
 
-function persist(key: string, entry: ArchiveEntry): void {
-  const store = storage();
+function persist(scope: ArchiveScope, key: string, entry: ArchiveEntry): void {
+  scope.assertCurrent();
   const serialized = JSON.stringify(entry);
-  store.setItem(key, serialized);
-  if (store.getItem(key) !== serialized) throw new DeadLetterStorageError("dead-letter-write-unconfirmed");
+  scope.store.setItem(key, serialized);
+  if (scope.store.getItem(key) !== serialized) throw new DeadLetterStorageError("dead-letter-write-unconfirmed");
+  scope.assertCurrent();
 }
 
-async function exclusive<T>(action: () => Promise<T> | T): Promise<T> {
+async function exclusive<T>(scope: ArchiveScope, action: () => Promise<T> | T): Promise<T> {
   const locks = typeof navigator !== "undefined" ? navigator.locks : undefined;
   if (!locks) throw new DeadLetterStorageError("dead-letter-requires-web-locks");
-  return locks.request(LS_KEY, { mode: "exclusive" }, action);
+  return locks.request(LS_KEY, { mode: "exclusive" }, () => { scope.assertCurrent(); return action(); });
 }
 
 function changed(): void {
   try { if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("irth:dead-letter:changed")); } catch { /* observer only */ }
 }
 
-function migrateUnlocked(): void {
-  const legacy = readLegacy();
+function migrateUnlocked(scope: ArchiveScope): void {
+  const legacy = readLegacy(scope).filter((letter) => belongsToScope(scope, letter));
   // Validate every existing entry before any write/cleanup, not just the array.
-  const existing = readArchive();
+  const existing = readArchive(scope);
   for (const letter of legacy) {
     const entry: ArchiveEntry = { version: 1, letter };
-    const key = keyFor(entry);
-    if (!existing.has(key) || storage().getItem(key) === null) persist(key, entry);
+    const key = scope.key(keyFor(entry));
+    if (!existing.has(key) || scope.store.getItem(key) === null) persist(scope, key, entry);
   }
   if (legacy.length) {
     // Crash before this line leaves readable duplicates, never missing records.
-    const current = readLegacy();
-    const copied = new Set(legacy.map((letter) => keyFor({ version: 1, letter })));
-    storage().setItem(LS_KEY, JSON.stringify(current.filter((letter) => !copied.has(keyFor({ version: 1, letter })))));
+    const current = readLegacy(scope);
+    const copied = new Set(legacy.map((letter) => scope.key(keyFor({ version: 1, letter }))));
+    scope.assertCurrent();
+    scope.store.setItem(scope.key(LS_KEY), JSON.stringify(current.filter((letter) => !copied.has(scope.key(keyFor({ version: 1, letter }))))));
   }
 }
 
 export async function migrateDeadLetters(): Promise<void> {
-  return exclusive(() => { migrateUnlocked(); changed(); });
+  const scope = captureScope();
+  return exclusive(scope, () => { migrateUnlocked(scope); changed(); });
 }
 
-function archiveUnlocked(source: OutboxItem, reason: string): ArchiveReceipt {
-  migrateUnlocked();
-  const entries = readArchive();
+function archiveUnlocked(scope: ArchiveScope, source: OutboxItem, reason: string): ArchiveReceipt {
+  migrateUnlocked(scope);
+  const entries = readArchive(scope);
   const entry: ArchiveEntry = { version: 1, source, letter: letterFor(source, reason, Date.now()) };
   validateLetter(entry.letter);
-  const key = keyFor(entry);
+  const key = scope.key(keyFor(entry));
   const existing = entries.get(key);
   if (existing) return { key, letter: existing.letter };
   if (entries.size >= MAX_ENTRIES) throw new DeadLetterStorageError("dead-letter-full");
-  persist(key, entry);
+  persist(scope, key, entry);
   changed();
   return { key, letter: entry.letter };
 }
 
 export async function recordDeadLetter(item: OutboxItem, reason: string): Promise<ArchiveReceipt> {
   const snapshot = JSON.parse(JSON.stringify(item)) as OutboxItem;
-  return exclusive(() => archiveUnlocked(snapshot, reason));
+  const scope = captureScope(snapshot.userId);
+  return exclusive(scope, () => archiveUnlocked(scope, snapshot, reason));
 }
 
 /** Hold the archive lock through conditional dequeue, so clear cannot race it. */
 export async function archiveRejected(item: OutboxItem, reason: string): Promise<boolean> {
   const snapshot = JSON.parse(JSON.stringify(item)) as OutboxItem;
-  return exclusive(async () => {
-    archiveUnlocked(snapshot, reason);
+  const scope = captureScope(snapshot.userId);
+  return exclusive(scope, async () => {
+    archiveUnlocked(scope, snapshot, reason);
+    scope.assertCurrent();
     return remove(snapshot.id, snapshot);
   });
 }
 
 export function listDeadLetters(userId: string | null): DeadLetter[] {
   if (!userId) return [];
-  return [...readArchive().values()].map((entry) => entry.letter)
+  const scope = captureScope(userId);
+  return [...readArchive(scope).values()].map((entry) => entry.letter)
     .filter((letter) => letter.userId === userId).sort((a, b) => b.createdAt - a.createdAt);
 }
 
 export async function clearDeadLetters(userId: string): Promise<void> {
-  return exclusive(() => {
-    migrateUnlocked();
+  const scope = captureScope(userId);
+  return exclusive(scope, () => {
+    migrateUnlocked(scope);
     // A complete read is required before deleting even one account-owned entry.
-    const entries = readArchive();
+    const entries = readArchive(scope);
     for (const [key, entry] of entries) {
       if (entry.letter.userId !== userId) continue;
-      storage().removeItem(key);
-      if (storage().getItem(key) !== null) throw new DeadLetterStorageError("dead-letter-clear-unconfirmed");
+      scope.assertCurrent();
+      scope.store.removeItem(key);
+      if (scope.store.getItem(key) !== null) throw new DeadLetterStorageError("dead-letter-clear-unconfirmed");
     }
     // Preserve any new V17 snapshots observed after migration.
-    const legacy = readLegacy();
+    const legacy = readLegacy(scope);
     if (legacy.some((letter) => letter.userId === userId)) {
-      storage().setItem(LS_KEY, JSON.stringify(legacy.filter((letter) => letter.userId !== userId)));
+      scope.assertCurrent();
+      scope.store.setItem(scope.key(LS_KEY), JSON.stringify(legacy.filter((letter) => letter.userId !== userId)));
     }
     changed();
   });

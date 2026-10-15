@@ -3,6 +3,7 @@ import { runInNewContext } from "node:vm";
 import { webcrypto } from "node:crypto";
 import { transpileModule, ModuleKind, ScriptTarget } from "typescript";
 import { IDBFactory, IDBDatabase } from "fake-indexeddb";
+import { logicalKeyOf, ownerOfPhysicalKey, physicalKey } from "../../src/lib/identity/partition";
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import type { OutboxItem } from "../../src/lib/offline/outbox";
 import type { DeadLetter } from "../../src/lib/offline/dead-letter";
@@ -78,7 +79,12 @@ function realm() {
     const compiled = transpileModule(source, { compilerOptions: { module: ModuleKind.CommonJS, target: ScriptTarget.ES2022 } }).outputText;
     const exports = {}; cache.set(name, exports);
     runInNewContext(compiled, {
-      exports, require: (path: string) => { if (path !== "./outbox") throw new Error("Unexpected dependency"); return load("outbox"); },
+      exports, require: (path: string) => {
+        if (path === "../identity/partition") return { logicalKeyOf, ownerOfPhysicalKey, physicalKey };
+        if (path === "../identity/owner") return {}; // No partition installed in these legacy realms.
+        if (path !== "./outbox") throw new Error("Unexpected dependency");
+        return load("outbox");
+      },
       indexedDB: factory, localStorage: storage, navigator, crypto: webcrypto,
     });
     return exports;
