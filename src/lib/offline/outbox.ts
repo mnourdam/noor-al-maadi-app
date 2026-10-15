@@ -48,6 +48,15 @@ const DB_NAME = "irth-offline-outbox";
 const DB_VERSION = 1;
 const STORE = "items";
 const LS_FALLBACK = "irth.outbox.fallback.v1";
+const FALLBACK_CAPACITY = 2000;
+
+/** A rejected enqueue means neither storage backend confirmed persistence. */
+export class OutboxStorageError extends Error {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = "OutboxStorageError";
+  }
+}
 
 let dbPromise: Promise<IDBDatabase> | null = null;
 
@@ -71,6 +80,11 @@ function openDB(): Promise<IDBDatabase> {
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error ?? new Error("idb-open-failed"));
   });
+  // An unavailable database must not poison every later enqueue in this tab.
+  dbPromise = dbPromise.catch((error) => {
+    dbPromise = null;
+    throw error;
+  });
   return dbPromise;
 }
 
@@ -86,20 +100,31 @@ function uuid(): string {
 
 // ---------- localStorage fallback (emergency only) ----------
 
+function lsReadAllOrThrow(): OutboxItem[] {
+  if (typeof localStorage === "undefined") throw new Error("no-local-storage");
+  const raw = localStorage.getItem(LS_FALLBACK);
+  if (raw === null) return [];
+  const arr: unknown = JSON.parse(raw);
+  if (!Array.isArray(arr) || !arr.every((item) =>
+    item && typeof item === "object" &&
+    typeof item.id === "string" && typeof item.userId === "string" &&
+    typeof item.kind === "string" && typeof item.createdAt === "number" &&
+    typeof item.attempts === "number" && item.payload &&
+    typeof item.payload === "object" && !Array.isArray(item.payload)
+  )) throw new Error("invalid-outbox-fallback");
+  return arr as OutboxItem[];
+}
+
 function lsReadAll(): OutboxItem[] {
-  try {
-    const raw = typeof localStorage !== "undefined" ? localStorage.getItem(LS_FALLBACK) : null;
-    if (!raw) return [];
-    const arr = JSON.parse(raw);
-    return Array.isArray(arr) ? (arr as OutboxItem[]) : [];
-  } catch { return []; }
+  // Read/merge semantics are handled separately from enqueue durability.
+  try { return lsReadAllOrThrow(); } catch { return []; }
 }
 
 function lsWriteAll(items: OutboxItem[]): void {
-  try {
-    if (typeof localStorage === "undefined") return;
-    localStorage.setItem(LS_FALLBACK, JSON.stringify(items.slice(0, 2000)));
-  } catch { /* quota */ }
+  if (typeof localStorage === "undefined") throw new Error("no-local-storage");
+  if (items.length > FALLBACK_CAPACITY) throw new Error("outbox-fallback-full");
+  // Never trim pending operations to make room or swallow a quota/write error.
+  localStorage.setItem(LS_FALLBACK, JSON.stringify(items));
 }
 
 // ---------- Public API ----------
@@ -154,11 +179,19 @@ async function enqueueInternal(
       tx.objectStore(STORE).put(item);
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error ?? new Error("idb-put-failed"));
+      tx.onabort = () => reject(tx.error ?? new Error("idb-put-aborted"));
     });
-  } catch {
-    const all = lsReadAll().filter((i) => i.id !== item.id);
-    all.push(item);
-    lsWriteAll(all);
+  } catch (indexedDBError) {
+    try {
+      // A failed/corrupt read is not an empty queue: preserve the original data.
+      const all = lsReadAllOrThrow().filter((i) => i.id !== item.id);
+      all.push(item);
+      lsWriteAll(all);
+    } catch (fallbackError) {
+      throw new OutboxStorageError("Outbox persistence failed", {
+        cause: new AggregateError([indexedDBError, fallbackError]),
+      });
+    }
   }
   try {
     if (typeof window !== "undefined") {
