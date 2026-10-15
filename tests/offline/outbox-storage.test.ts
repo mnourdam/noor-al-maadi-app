@@ -15,6 +15,8 @@ beforeEach(() => {
   };
   vi.stubGlobal("localStorage", storage);
   vi.stubGlobal("indexedDB", undefined);
+  // Fallback read/modify/write now requires a cross-context lock (phase B).
+  vi.stubGlobal("navigator", { locks: { request: (_name: string, _options: unknown, run: () => unknown) => run() } });
 });
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
@@ -22,11 +24,25 @@ const api = () => import("../../src/lib/offline/outbox");
 
 // Controlled IDB transactions: request success alone must never acknowledge a write.
 function database() {
-  const tx = { objectStore: () => ({ put: vi.fn() }), oncomplete: null, onerror: null, onabort: null, error: null } as unknown as IDBTransaction;
+  const tx = { objectStore: () => ({ put: vi.fn(), getAll: () => read(tx, false) }), oncomplete: null, onerror: null, onabort: null, error: null } as unknown as IDBTransaction;
+  let controlled = false;
+  function read(target: IDBTransaction, complete: boolean) {
+    const request = { result: [] } as unknown as IDBRequest;
+    queueMicrotask(() => {
+      request.onsuccess?.call(request, {} as Event);
+      if (complete) queueMicrotask(() => target.oncomplete?.call(target, {} as Event));
+    });
+    return request;
+  }
+  const db = { transaction: (_store: string, mode: string) => {
+    if (mode === "readwrite" && !controlled) { controlled = true; return tx; }
+    const automatic = { objectStore: () => ({ put: vi.fn(), getAll: () => read(automatic, true) }) } as unknown as IDBTransaction;
+    return automatic;
+  } };
   const request = {} as IDBOpenDBRequest;
   const open = vi.fn(() => {
     queueMicrotask(() => {
-      Object.defineProperty(request, "result", { value: { transaction: () => tx } });
+      Object.defineProperty(request, "result", { value: db });
       request.onsuccess?.({} as Event);
     });
     return request;
@@ -155,6 +171,7 @@ describe("Outbox storage durability (phase A)", () => {
     expect(open).toHaveBeenCalledOnce();
     tx.oncomplete?.call(tx, {} as Event);
     await pending;
-    expect(storage.setItem).toHaveBeenCalledTimes(1);
+    // Recovery commits the first fallback row, then cleans its matching copy.
+    expect(JSON.parse(saved.get(KEY)!)).toEqual([]);
   });
 });

@@ -500,17 +500,18 @@ export async function flushOutbox(userId: string): Promise<{ flushed: number; fa
         }
 
         if (res.ok) {
-          await remove(item.id);
-          flushed++;
+          // A response for an older write must not acknowledge its replacement.
+          if (await remove(item.id, item)) flushed++;
+          else failed++;
         } else if (isPermanentReason(res.error)) {
           // Priority-Zero §3: never retry a permanent rejection forever.
           // Never mark as synced. Move to the dead-letter diagnostics store
           // so admins can see the failure, then drop from the retry queue.
           recordDeadLetter(item, res.error ?? "permanent");
-          await remove(item.id);
+          await remove(item.id, item);
           failed++;
         } else {
-          await bumpAttempt(item.id, res.error ?? null);
+          await bumpAttempt(item.id, res.error ?? null, item);
           failed++;
         }
       }

@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "types": ["vite/client", "node"] },
+  "include": ["tests/offline/outbox-*.test.ts", "vitest.outbox.config.ts"]
+}

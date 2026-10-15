@@ -30,6 +30,8 @@
     "apk:debug": "npm run sync:android && node scripts/run-android-gradle.mjs",
     "check:economy-parity": "node scripts/check-economy-parity.mjs",
     "test:daily-challenge-scheduler": "node --import tsx scripts/test-daily-challenge-scheduler.mjs",
+    "test:outbox": "vitest run --config vitest.outbox.config.ts",
+    "typecheck:outbox": "tsc --noEmit && tsc --project tsconfig.outbox.json --noEmit",
     "test:answer-matching": "node --experimental-strip-types scripts/test-arabic-answer-matching.mjs"
   },
   "dependencies": {
@@ -126,6 +128,7 @@
     "eslint-plugin-prettier": "^5.2.6",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
+    "fake-indexeddb": "6.2.4",
     "globals": "^15.15.0",
     "jsdom": "^30.0.1",
     "jsqr": "^1.4.0",
