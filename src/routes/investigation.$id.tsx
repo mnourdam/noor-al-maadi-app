@@ -1,5 +1,8 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
+import { toast } from "sonner";
+import { getIdentityEpoch } from "@/lib/identity/owner";
+import { saveAccepted } from "@/lib/offline/gameplay-write";
 import { Search, Check, X, Trophy, Coins, BookOpen, Heart, Loader2, Lightbulb, Lock } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { ReadingScale } from "@/components/ReadingScale";
@@ -152,6 +155,9 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
   // the state transition must be dropped so Next never advances twice
   // and grantRewards never fires twice in the same tick.
   const [advancing, setAdvancing] = useState(false);
+  const savingRef = useRef(false);
+  const activeRef = useRef(true);
+  useEffect(() => { activeRef.current = true; return () => { activeRef.current = false; }; }, []);
 
   const step = steps[idx];
   const isLast = idx >= steps.length - 1;
@@ -229,6 +235,15 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
     const totalQuestionLike = steps.filter((s) => s.type === "question" || s.type === "decision").length;
     const correctCount = resolvedIndices.size;
 
+    const epoch = getIdentityEpoch();
+    const outcome = await recordInvestigationCompletion({
+      investigationId: row.id,
+      investigationSlug: row.slug,
+      score: correctCount,
+      correctCount,
+    });
+
+    if (!activeRef.current || getIdentityEpoch() !== epoch || !saveAccepted(outcome)) return false;
     // Local optimistic marker (no economy) — safe to do immediately.
     markInvestigationCompletedLocal(row.slug);
     clearInvestigationOpened(row.slug);
@@ -244,13 +259,6 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
     }
     setHeartGain(gained);
     void totalQuestionLike;
-
-    const outcome = await recordInvestigationCompletion({
-      investigationId: row.id,
-      investigationSlug: row.slug,
-      score: correctCount,
-      correctCount,
-    });
 
     // Reward truth. `applied` is the server's own "this call granted the
     // reward" flag; a replay (reinstall, cleared local marker) returns the
@@ -271,7 +279,9 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
 
     // Phase 3A — canonical qualifying-activity call (server-authoritative).
     // Runs strictly AFTER the grant so its mirrored totals are post-grant.
+    void (async () => {
     await recordStreakActivity("investigation", row.id);
+    if (!activeRef.current || getIdentityEpoch() !== epoch) return;
 
     // Final reconciliation against the authoritative profile row. Covers
     // the case where the streak call was a no-op (already recorded today,
@@ -282,7 +292,7 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
         const srv = (data ?? null) as
           | { xp?: number; dinars?: number; hearts?: number; streak?: number; last_streak_day?: string | null }
           | null;
-        if (srv) {
+        if (srv && activeRef.current && getIdentityEpoch() === epoch) {
           applyServerStats({
             xp: srv.xp ?? null,
             dinars: srv.dinars ?? null,
@@ -293,12 +303,16 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
         }
       } catch { /* offline — outbox flush + cold-start sync reconcile later */ }
     }
+    })().catch(() => {});
+    return true;
   };
 
 
-  const onNext = () => {
-    if (advancing) return;
+  const onNext = async () => {
+    if (advancing || savingRef.current) return;
+    savingRef.current = true;
     setAdvancing(true);
+    try {
     setPicked(null);
     setAnswerState("unanswered");
     if (!isLast) {
@@ -311,10 +325,15 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
     if (!alreadyDone) {
       // Completion fanfare — same asset the campaigns use.
       audioManager.playSfx("campaign-complete", { dedupeKey: `inv:done:${row.slug}`, dedupeMs: 5000 });
-      void grantRewards();
+      const saved = await grantRewards();
+      if (!saved) {
+        if (activeRef.current) toast.error("تعذر حفظ التحقيق. أعد المحاولة؛ لم تُمنح مكافآت جديدة.");
+        return;
+      }
     }
-    setFinished(true);
-
+    if (activeRef.current) setFinished(true);
+    } catch { if (activeRef.current) toast.error("تعذر حفظ التحقيق. حاول مجددًا."); }
+    finally { savingRef.current = false; if (activeRef.current) setAdvancing(false); }
   };
 
   if (steps.length === 0) {

@@ -30,6 +30,8 @@
     "apk:debug": "npm run sync:android && node scripts/run-android-gradle.mjs",
     "check:economy-parity": "node scripts/check-economy-parity.mjs",
     "test:daily-challenge-scheduler": "node --import tsx scripts/test-daily-challenge-scheduler.mjs",
+    "test": "npm run test:outbox",
+    "typecheck": "npm run typecheck:outbox",
     "test:outbox": "vitest run --config vitest.outbox.config.ts",
     "typecheck:outbox": "tsc --noEmit && tsc --project tsconfig.outbox.json --noEmit",
     "test:answer-matching": "node --experimental-strip-types scripts/test-arabic-answer-matching.mjs"

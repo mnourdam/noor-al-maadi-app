@@ -27,6 +27,8 @@
 
 import { ACTIVITY_DEFAULTS, type Campaign, type CampaignActivity, type CampaignChapter, type CampaignReward } from "@/types/campaign";
 import { upsertChapterProgress, addCollectionItems, type CollectionItemInsert } from "@/lib/progressSync";
+import { getIdentityEpoch } from "@/lib/identity/owner";
+import { saveAccepted } from "@/lib/offline/gameplay-write";
 import { parseUnlockId } from "@/lib/campaignUnlocks";
 
 const LEDGER_KEY = "irth_campaign_ledger_v1";
@@ -60,22 +62,23 @@ interface LedgerState {
 function isBrowser() {
   return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
 }
-function read(): LedgerState {
+function read(strict = false): LedgerState {
   if (!isBrowser()) return { keys: {}, pending: [] };
   try {
     const raw = window.localStorage.getItem(LEDGER_KEY);
     if (!raw) return { keys: {}, pending: [] };
     const parsed = JSON.parse(raw) as Partial<LedgerState>;
+    if (strict && (!parsed || !parsed.keys || typeof parsed.keys !== "object" || Array.isArray(parsed.keys) || !Array.isArray(parsed.pending))) throw new Error("invalid-ledger");
     return {
       keys: parsed.keys ?? {},
       active: parsed.active,
       pending: parsed.pending ?? [],
     };
-  } catch { return { keys: {}, pending: [] }; }
+  } catch (error) { if (strict) throw error; return { keys: {}, pending: [] }; }
 }
 function write(s: LedgerState) {
-  if (!isBrowser()) return;
-  try { window.localStorage.setItem(LEDGER_KEY, JSON.stringify(s)); } catch { /* quota */ }
+  if (!isBrowser()) return false;
+  try { window.localStorage.setItem(LEDGER_KEY, JSON.stringify(s)); return true; } catch { return false; }
 }
 
 // -------------------- Keys --------------------
@@ -89,11 +92,11 @@ export function hasClaimed(key: string): boolean {
 }
 
 function claim(key: string): boolean {
-  const s = read();
+  let s: LedgerState;
+  try { s = read(true); } catch { return false; }
   if (s.keys[key]) return false;
   s.keys[key] = { at: new Date().toISOString(), synced: false };
-  write(s);
-  return true;
+  return write(s);
 }
 
 // -------------------- Reward shape --------------------
@@ -204,23 +207,26 @@ export async function flushPending(): Promise<void> {
   if (!isBrowser() || flushing) return;
   if (typeof navigator !== "undefined" && navigator.onLine === false) return;
   flushing = true;
+  const epoch = getIdentityEpoch();
   try {
     // Snapshot then attempt each op. On success, drop it from the queue.
-    let s = read();
+    let s = read(true);
+    const attempted = s.pending;
     const remaining: PendingOp[] = [];
-    for (const op of s.pending) {
+    for (const op of attempted) {
+      if (getIdentityEpoch() !== epoch) return;
       let ok = false;
       try {
         if (op.kind === "chapter") {
-          await upsertChapterProgress({
+          const saved = await upsertChapterProgress({
             campaignId: op.campaignId, chapterId: op.chapterId,
             status: op.status, score: op.score,
             xpEarned: op.xpEarned, coinsEarned: op.coinsEarned,
             completed: op.completed,
           });
-          ok = true;
+          ok = saveAccepted(saved);
         } else if (op.kind === "collection") {
-          await addCollectionItems(op.items);
+          if (!await addCollectionItems(op.items)) { remaining.push(op); continue; }
           // Preferred behavior: a reward unlock also marks the entity as
           // discovered (encyclopedia read ledger). Reading never marks
           // ownership, but ownership implies discovery. Guest-safe and
@@ -254,8 +260,9 @@ export async function flushPending(): Promise<void> {
     }
     // Re-read in case another tab/path mutated during await; preserve any
     // entries added since snapshot.
-    s = read();
-    const newer = s.pending.slice(s.pending.length); // (always empty here, kept for clarity)
+    if (getIdentityEpoch() !== epoch) return;
+    s = read(true);
+    const newer = s.pending.filter((op) => !attempted.some((original) => JSON.stringify(original) === JSON.stringify(op)));
     s.pending = [...remaining, ...newer];
     // Mark synced ledger keys (best-effort; we mark all unsynced as synced
     // when the queue drains completely — coarse but safe for dedup).
@@ -263,7 +270,8 @@ export async function flushPending(): Promise<void> {
       for (const k of Object.keys(s.keys)) s.keys[k].synced = true;
     }
     write(s);
-  } finally {
+  } catch { /* An unreadable queue must not be replaced with an empty one. */ }
+  finally {
     flushing = false;
   }
 }

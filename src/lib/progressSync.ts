@@ -1,3 +1,4 @@
+import { getIdentityEpoch } from "@/lib/identity/owner";
 // ============================================================
 // Progress Sync — Granular Supabase Mirror Writes
 // ------------------------------------------------------------
@@ -10,6 +11,7 @@
 // never block gameplay.
 // ============================================================
 
+import type { SaveOutcome } from "@/lib/offline/gameplay-write";
 import { recordChapterProgress, recordCollectionAdd } from "@/lib/offline/record";
 
 export interface ChapterProgressUpsert {
@@ -42,8 +44,8 @@ export interface CollectionItemInsert {
 }
 
 /** Enqueue one collection row. Server upsert is idempotent on (user_id,item_id). */
-export async function addCollectionItem(i: CollectionItemInsert): Promise<void> {
-  await recordCollectionAdd({
+export async function addCollectionItem(i: CollectionItemInsert): Promise<SaveOutcome> {
+  return recordCollectionAdd({
     itemId: i.itemId,
     itemType: i.itemType,
     sourceCampaignId: i.sourceCampaignId ?? null,
@@ -52,13 +54,17 @@ export async function addCollectionItem(i: CollectionItemInsert): Promise<void> 
 }
 
 /** Batch enqueue multiple collection items. */
-export async function addCollectionItems(items: CollectionItemInsert[]): Promise<void> {
+export async function addCollectionItems(items: CollectionItemInsert[]): Promise<boolean> {
+  const epoch = getIdentityEpoch();
   for (const i of items) {
-    await recordCollectionAdd({
+    if (getIdentityEpoch() !== epoch) return false;
+    const saved = await recordCollectionAdd({
       itemId: i.itemId,
       itemType: i.itemType,
       sourceCampaignId: i.sourceCampaignId ?? null,
       sourceChapterId: i.sourceChapterId ?? null,
     });
+    if (getIdentityEpoch() !== epoch || (!saved.acknowledged && !saved.queued)) return false;
   }
+  return true;
 }

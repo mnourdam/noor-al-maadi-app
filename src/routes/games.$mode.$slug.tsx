@@ -1,3 +1,5 @@
+import { getIdentityEpoch } from "@/lib/identity/owner";
+import { saveUserId } from "@/lib/offline/gameplay-write";
 import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -45,11 +47,15 @@ function GamePlayPage() {
   androidMark("render:GamePlay");
   const { mode, slug } = useParams({ from: "/games/$mode/$slug" });
   const navigate = useNavigate();
-  const { addPoints, addDinars, spendDinars, loseHeartOnce, hasHearts, recordStreakActivity } = useProfile();
+  const { profile, addPoints, addDinars, spendDinars, loseHeartOnce, hasHearts, recordStreakActivity } = useProfile();
 
   const [game, setGame] = useState<GameRow | null | "loading">("loading");
   const [stageIdx, setStageIdx] = useState(0);
   const [stageDone, setStageDone] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const completionPending = useRef(false);
+  const completionActive = useRef(true);
+  useEffect(() => { completionActive.current = true; return () => { completionActive.current = false; }; }, []);
   const [finalScore, setFinalScore] = useState<number | null>(null);
   // Permanently completed (discovered) — blocks replay. Null = unknown yet.
   const [alreadyCompleted, setAlreadyCompleted] = useState<boolean | null>(null);
@@ -142,20 +148,20 @@ function GamePlayPage() {
   const handleComplete = useCallback(async (score: number) => {
     if (!game || game === "loading") return;
     // Timeout / attempts failure must block any reward pipeline.
-    if (failed || stageDone) return;
-    setStageDone(true);
+    if (failed || stageDone || completionPending.current) return;
+    completionPending.current = true;
+    const epoch = getIdentityEpoch();
+    try {
+    setSaving(true);
+    if (!isLast) setStageDone(true);
     if (isLast) {
       setFinalScore(score);
 
       // Resolve identity ONCE — determines both the reward-guard source and
       // the userKey passed to the daily-challenge event.
-      let uid: string | null = null;
-      try {
-        const { data } = await supabase.auth.getUser();
-        uid = data.user?.id ?? null;
-      } catch {
-        uid = null;
-      }
+      const uid = await saveUserId();
+      if (!completionActive.current || getIdentityEpoch() !== epoch) return;
+      if (!uid && profile.loggedIn) throw new Error("session unavailable");
 
       // Reward guard.
       //   • Authenticated: server `game_progress.completed` via recordCompletion.
@@ -164,6 +170,8 @@ function GamePlayPage() {
       let firstTime = false;
       if (uid) {
         const res = await recordCompletion(game.id, stageIdx, score);
+        if (!res.saved) throw new Error("save failed");
+        if (!completionActive.current || getIdentityEpoch() !== epoch) return;
         firstTime = res.firstTime;
       } else {
         firstTime = addGuestCompletion(game.id).firstTime;
@@ -175,7 +183,7 @@ function GamePlayPage() {
         if (game.coin_reward > 0) addDinars(Math.min(game.coin_reward, 20));
         // Qualifying streak activity: completing a mini-game / daily challenge.
         // Phase 3A — server-authoritative for auth users; guest falls back locally.
-        void recordStreakActivity("game", game.id);
+        void recordStreakActivity("game", game.id).catch(() => {});
         // Museum unlocks — reuse the Campaign pipeline (user_collection).
         const unlockIds = extractMuseumUnlocks({
           metadata: (game.metadata as Record<string, unknown> | null) ?? undefined,
@@ -189,6 +197,7 @@ function GamePlayPage() {
           }
         }
       }
+      setStageDone(true);
       // Canonical daily-challenge event — Home + Hall subscribe to this and
       // will immediately reflect the new completion state. Idempotent, so
       // firing on replay is harmless (rewards are gated by `firstTime`).
@@ -196,7 +205,10 @@ function GamePlayPage() {
       // Plays once per game id thanks to the dedupe scope key.
       sfx("completion", `${game.id}`);
     }
-  }, [game, isLast, stageIdx, failed, stageDone, addPoints, addDinars, recordStreakActivity]);
+    } catch {
+      if (completionActive.current) { setStageDone(false); setFinalScore(null); toast.error("تعذر حفظ التحدي. حاول مجددًا."); }
+    } finally { completionPending.current = false; if (completionActive.current) setSaving(false); }
+  }, [game, isLast, stageIdx, failed, stageDone, profile.loggedIn, addPoints, addDinars, recordStreakActivity]);
 
   // ── Time-Expired grace flow ──────────────────────────────────────────
   // When the countdown hits zero we DO NOT immediately fail. We open a
@@ -415,7 +427,7 @@ function GamePlayPage() {
             spendDinars={spendDinars}
             hasTimer={timerSeconds > 0}
             addSeconds={(s) => timerRef.current?.addSeconds(s)}
-            disabled={stageDone || failed}
+            disabled={stageDone || failed || saving}
           />
         ) : (
           <GameHelpDialog
@@ -478,13 +490,13 @@ function GamePlayPage() {
               ref={timerRef}
               key={`${game.id}-${stageIdx}-${retryNonce}`}
               seconds={timerSeconds}
-              paused={stageDone || failed}
+              paused={stageDone || failed || saving}
               onExpire={handleTimeout}
             />
             <button
               type="button"
               onClick={() => setHelpOpen(true)}
-              disabled={stageDone || failed}
+              disabled={stageDone || failed || saving}
               aria-label="مساعدة"
               title="مساعدة"
               className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/60 bg-gradient-to-b from-amber-500/25 to-amber-600/10 px-3 py-1.5 text-[11px] font-bold text-amber-100 shadow-[0_0_0_1px_rgba(251,191,36,0.15)_inset] transition hover:from-amber-500/35 hover:to-amber-600/20 disabled:opacity-40"

@@ -1,3 +1,4 @@
+import { getIdentityEpoch } from "@/lib/identity/owner";
 // ============================================================
 // Imported Campaign Progress (localStorage adapter)
 // ------------------------------------------------------------
@@ -39,10 +40,13 @@ type ProgressMap = Record<string, CampaignProgress>;
 function isBrowser() {
   return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
 }
-function readAll(): ProgressMap {
-  if (!isBrowser()) return {};
-  try { return JSON.parse(window.localStorage.getItem(PROGRESS_KEY) ?? "{}") as ProgressMap; }
-  catch { return {}; }
+function readAll(strict = false): ProgressMap {
+  if (!isBrowser()) { if (strict) throw new Error("progress-storage-unavailable"); return {}; }
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(PROGRESS_KEY) ?? "{}");
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("invalid-progress");
+    return parsed as ProgressMap;
+  } catch (error) { if (strict) throw error; return {}; }
 }
 function writeAll(map: ProgressMap) {
   if (!isBrowser()) return;
@@ -74,15 +78,16 @@ export function recordActivity(
   chapter: CampaignChapter,
   activity: CampaignActivity,
   correct: boolean,
+  persist = true,
 ): CampaignProgress {
-  const all = readAll();
+  const all = readAll(true);
   const cur = all[campaign.id] ?? blankCampaign(campaign.id);
   const ch  = cur.chapters[chapter.id] ?? blankChapter();
 
   // Idempotent: don't double-credit a completed activity.
   if (ch.completedActivityIds.includes(activity.id)) {
     all[campaign.id] = cur;
-    writeAll(all);
+    if (persist) writeAll(all);
     return cur;
   }
 
@@ -125,17 +130,19 @@ export function recordActivity(
 
   cur.updatedAt = new Date().toISOString();
   all[campaign.id] = cur;
+  if (!persist) return cur;
   writeAll(all);
 
   // Record the sticky completion fact once, at the completion transition.
   // Best-effort, offline-safe; failures never affect gameplay state.
   if (campaignDone && !wasCompleted) {
+    const epoch = getIdentityEpoch();
     void import("@/lib/campaigns/completions")
-      .then(mod => mod.recordCampaignCompletion({
+      .then(mod => getIdentityEpoch() === epoch ? mod.recordCampaignCompletion({
         campaignId: campaign.id,
         campaignVersion: (campaign as any).version ?? null,
         source: "gameplay",
-      }))
+      }) : undefined)
       .catch(() => { /* silent */ });
   }
   return cur;
@@ -175,12 +182,13 @@ export function markActivityComplete(
   all[campaign.id] = cur;
   writeAll(all);
   if (campaignDone && !wasCompleted) {
+    const epoch = getIdentityEpoch();
     void import("@/lib/campaigns/completions")
-      .then(mod => mod.recordCampaignCompletion({
+      .then(mod => getIdentityEpoch() === epoch ? mod.recordCampaignCompletion({
         campaignId: campaign.id,
         campaignVersion: (campaign as any).version ?? null,
         source: "gameplay",
-      }))
+      }) : undefined)
       .catch(() => { /* silent */ });
   }
   return cur;

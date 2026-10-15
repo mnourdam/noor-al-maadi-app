@@ -18,8 +18,7 @@
 // ============================================================
 
 import { supabase } from "@/integrations/supabase/client";
-import { enqueueWithId, remove as removeFromOutbox } from "@/lib/offline/outbox";
-import { flushOutbox } from "@/lib/offline/flush";
+import { saveGameplay, saveUserId, type SaveOutcome } from "@/lib/offline/gameplay-write";
 import type {
   StoryAccessBundle,
   StoryCompletionResult,
@@ -153,90 +152,38 @@ export async function fetchStoryAccess(storyId: string): Promise<StoryAccessBund
  * Safe to call repeatedly with the same or lower `sceneIndex`; the RPC uses
  * GREATEST() so historical high-water mark is never downgraded.
  */
-export async function recordStoryProgress(
-  storyId: string,
-  sceneIndex: number,
-): Promise<{ acknowledged: boolean; reason?: string }> {
-  const uid = await currentUserId();
-  if (!uid) return { acknowledged: false, reason: "unauthenticated" };
-  const outboxId = `story_progress:${uid}:${storyId}:${sceneIndex}`;
-  await enqueueWithId(uid, outboxId, "story_progress", { storyId, sceneIndex });
-  if (typeof navigator === "undefined" || navigator.onLine) {
+export async function recordStoryProgress(storyId: string, sceneIndex: number): Promise<SaveOutcome> {
+  const uid = await saveUserId();
+  if (!uid) return { acknowledged: false, queued: false, reason: "unauthenticated" };
+  const outcome = await saveGameplay({
+    userId: uid, id: `story_progress:${uid}:${storyId}:${sceneIndex}`, kind: "story_progress", payload: { storyId, sceneIndex },
+    rpc: () => supabase.rpc("record_story_progress_v2" as any, { p_story_id: storyId, p_scene_index: sceneIndex }),
+  });
+  if (outcome.acknowledged) {
     try {
-      const { data, error } = await supabase.rpc(
-        "record_story_progress_v2" as any,
-        { p_story_id: storyId, p_scene_index: sceneIndex },
-      );
-      if (!error) {
-        const payload = (data ?? {}) as { ok?: boolean; reason?: string };
-        if (payload.ok) {
-          try { await removeFromOutbox(outboxId); } catch { /* ignore */ }
-          try {
-            const { upsertProgress } = await import("./progress-mirror");
-            upsertProgress(uid, storyId, {
-              lastSceneIndex: sceneIndex,
-              maxSceneIndexReached: sceneIndex,
-            });
-          } catch { /* cache only */ }
-          try {
-            if (typeof window !== "undefined") {
-              window.dispatchEvent(new CustomEvent("irth:story-progress:changed"));
-            }
-          } catch { /* ignore */ }
-          return { acknowledged: true };
-        }
-
-        void flushOutbox(uid);
-        return { acknowledged: false, reason: payload.reason ?? "rpc-not-ok" };
-      }
-    } catch { /* fall through */ }
+      const { upsertProgress } = await import("./progress-mirror");
+      if (await saveUserId() !== uid) return { acknowledged: false, queued: outcome.queued, reason: "identity_changed" };
+      upsertProgress(uid, storyId, { lastSceneIndex: sceneIndex, maxSceneIndexReached: sceneIndex });
+      window.dispatchEvent(new CustomEvent("irth:story-progress:changed"));
+    } catch { /* cache only */ }
   }
-  void flushOutbox(uid);
-  return { acknowledged: false, reason: "queued" };
+  return outcome;
 }
 
-/**
- * Sticky one-shot completion. Reward is granted at most once per
- * (user, story) regardless of `content_version`. Concurrent calls
- * are safe: the RPC uses ON CONFLICT DO NOTHING for the completion
- * row and apply_profile_delta's PK dedupes the reward.
- */
-export async function completeStory(
-  storyId: string,
-): Promise<{ acknowledged: boolean; reason?: string; result?: StoryCompletionResult }> {
-  const uid = await currentUserId();
-  if (!uid) return { acknowledged: false, reason: "unauthenticated" };
-  const outboxId = `story_completion:${uid}:${storyId}`;
-  await enqueueWithId(uid, outboxId, "story_completion", { storyId });
-  if (typeof navigator === "undefined" || navigator.onLine) {
+export async function completeStory(storyId: string): Promise<SaveOutcome<StoryCompletionResult>> {
+  const uid = await saveUserId();
+  if (!uid) return { acknowledged: false, queued: false, reason: "unauthenticated" };
+  const outcome = await saveGameplay<StoryCompletionResult>({
+    userId: uid, id: `story_completion:${uid}:${storyId}`, kind: "story_completion", payload: { storyId },
+    rpc: () => supabase.rpc("complete_story_v2" as any, { p_story_id: storyId }),
+  });
+  if (outcome.acknowledged) {
     try {
-      const { data, error } = await supabase.rpc(
-        "complete_story_v2" as any,
-        { p_story_id: storyId },
-      );
-      if (!error) {
-        const payload = (data ?? {}) as StoryCompletionResult;
-        if (payload.ok) {
-          try { await removeFromOutbox(outboxId); } catch { /* ignore */ }
-          try {
-            const { markCompleted } = await import("./progress-mirror");
-            markCompleted(uid, storyId, {
-              contentVersion: (payload as { content_version?: number | null }).content_version ?? null,
-            });
-          } catch { /* cache only */ }
-
-          try {
-            if (typeof window !== "undefined") {
-              window.dispatchEvent(new CustomEvent("irth:story-completions:changed"));
-            }
-          } catch { /* ignore */ }
-          return { acknowledged: true, result: payload };
-        }
-        void flushOutbox(uid);
-        return { acknowledged: false, reason: payload.reason ?? "rpc-not-ok" };
-      }
-    } catch { /* fall through */ }
+      const { markCompleted } = await import("./progress-mirror");
+      if (await saveUserId() !== uid) return { acknowledged: false, queued: outcome.queued, reason: "identity_changed" };
+      markCompleted(uid, storyId, { contentVersion: (outcome.result as { content_version?: number })?.content_version ?? null });
+      window.dispatchEvent(new CustomEvent("irth:story-completions:changed"));
+    } catch { /* cache only */ }
   }
-  void flushOutbox(uid);
-  return { acknowledged: false, reason: "queued" };
+  return outcome;
 }

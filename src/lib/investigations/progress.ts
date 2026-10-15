@@ -24,6 +24,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { InvestigationRow } from "@/lib/investigations-source";
 import { enqueueWithId } from "@/lib/offline/outbox";
+import { saveGameplay, saveUserId } from "@/lib/offline/gameplay-write";
 import { flushOutbox } from "@/lib/offline/flush";
 
 // ------------------------------------------------------------
@@ -84,6 +85,7 @@ export interface InvestigationCompletionOutcome {
   heartsEarned: number;
   /** Queued for later flush (offline / signed-out / transient failure). */
   queued: boolean;
+  reason?: string;
 }
 
 /**
@@ -103,78 +105,36 @@ export interface InvestigationCompletionOutcome {
 export async function recordInvestigationCompletion(
   input: InvestigationCompletionInput,
 ): Promise<InvestigationCompletionOutcome> {
+  input = { ...input };
   const none: InvestigationCompletionOutcome = {
     acknowledged: false, applied: false,
     xpEarned: 0, dinarsEarned: 0, heartsEarned: 0, queued: false,
   };
-  const uid = await currentUserId();
+  const uid = await saveUserId();
   if (!uid) return none;
   const investigationId = input.investigationId;
   if (!investigationId) return none;
   const deltaId = await stableDeltaId(uid, investigationId);
-  await enqueueWithId(uid, deltaId, "investigation_complete", {
-    investigationId,
-    score: Math.max(0, input.score ?? 0),
-    correctCount: Math.max(0, input.correctCount ?? 0),
+  const payload = { investigationId, score: Math.max(0, input.score ?? 0), correctCount: Math.max(0, input.correctCount ?? 0) };
+  const outcome = await saveGameplay<{
+    ok?: boolean; reason?: string; applied?: boolean; reward_granted?: boolean;
+    xp_earned?: number; dinars_earned?: number; hearts_earned?: number;
+  }>({
+    userId: uid, id: deltaId, kind: "investigation_complete", payload,
+    rpc: () => supabase.rpc("complete_investigation_v2" as any, {
+      p_investigation_id: investigationId, p_delta_id: deltaId,
+      p_score: payload.score, p_correct_count: payload.correctCount,
+    }),
   });
-
-  const offline = typeof navigator !== "undefined" && navigator.onLine === false;
-  if (offline) return { ...none, queued: true };
-
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase.rpc as any)("complete_investigation_v2", {
-      p_investigation_id: investigationId,
-      p_delta_id: deltaId,
-      p_score: Math.max(0, input.score ?? 0),
-      p_correct_count: Math.max(0, input.correctCount ?? 0),
-    });
-    if (error) {
-      console.warn("[investigation-complete] rpc-error", error.message);
-      void flushOutbox(uid);
-      return { ...none, queued: true };
-    }
-    const payload = (data ?? {}) as {
-      ok?: boolean; reason?: string; applied?: boolean;
-      xp_earned?: number; dinars_earned?: number; hearts_earned?: number;
-      reward_granted?: boolean;
-    };
-    if (payload.ok !== true) {
-      if (payload.reason === "investigation_not_found") {
-        // Permanent refusal — drop the queued copy so it can't jam the queue.
-        try {
-          const { remove } = await import("@/lib/offline/outbox");
-          await remove(deltaId);
-        } catch { /* flush will drop it */ }
-        return none;
-      }
-      void flushOutbox(uid);
-      return { ...none, queued: true };
-    }
-    // Acknowledged — drop the queued copy, then notify readers.
-    try {
-      const { remove } = await import("@/lib/offline/outbox");
-      await remove(deltaId);
-    } catch { /* flush will drop it */ }
-    try {
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent("irth:investigation-progress:changed"));
-      }
-    } catch { /* ignore */ }
-    void flushOutbox(uid);
-    return {
-      acknowledged: true,
-      applied: !!payload.applied || !!payload.reward_granted,
-      xpEarned: Number(payload.xp_earned ?? 0),
-      dinarsEarned: Number(payload.dinars_earned ?? 0),
-      heartsEarned: Number(payload.hearts_earned ?? 0),
-      queued: false,
-    };
-  } catch (e) {
-    console.warn("[investigation-complete] rpc-exception", e);
-    void flushOutbox(uid);
-    return { ...none, queued: true };
-  }
+  if (!outcome.acknowledged) return { ...none, queued: outcome.queued, reason: outcome.reason };
+  if (await saveUserId() !== uid) return { ...none, queued: outcome.queued, reason: "identity_changed" };
+  try { window.dispatchEvent(new CustomEvent("irth:investigation-progress:changed")); } catch { /* observer */ }
+  const result = outcome.result!;
+  return {
+    acknowledged: true, applied: !!result.applied || !!result.reward_granted,
+    xpEarned: Number(result.xp_earned ?? 0), dinarsEarned: Number(result.dinars_earned ?? 0),
+    heartsEarned: Number(result.hearts_earned ?? 0), queued: outcome.queued,
+  };
 }
 
 
@@ -260,12 +220,11 @@ export async function migrateLegacyInvestigationCompletions(
   // the same pending set collapse onto the same outbox row.
   const sorted = [...pending].sort().join("|");
   const batchId = await stableDeltaId(uid, `backfill_batch:${sorted}`);
-  await enqueueWithId(uid, batchId, "investigation_backfill_batch", {
-    legacyKeys: pending,
-  });
+  try { await enqueueWithId(uid, batchId, "investigation_backfill_batch", { legacyKeys: pending }); }
+  catch { return; }
   for (const k of pending) ledger.add(k);
   writeLedger(uid, ledger);
-  void flushOutbox(uid);
+  void flushOutbox(uid).catch(() => {});
 }
 
 

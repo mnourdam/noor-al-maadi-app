@@ -1,3 +1,6 @@
+import { toast } from "sonner";
+import { getIdentityEpoch } from "@/lib/identity/owner";
+import { saveAccepted } from "@/lib/offline/gameplay-write";
 // ============================================================
 // /campaigns/imported/$id/chapter/$chapter — Imported chapter player
 // ------------------------------------------------------------
@@ -114,6 +117,8 @@ function ImportedChapterPlayer() {
   // PR1: per-render lock to swallow rapid duplicate onResolve calls
   // (e.g. double-tap on the answer button before the next paint).
   const resolveLockRef = useRef(false);
+  const activeSaveRef = useRef(true);
+  useEffect(() => { activeSaveRef.current = true; return () => { activeSaveRef.current = false; }; }, []);
   const camProgress = campaign ? getCampaignProgress(campaign.id) : null;
   const chProgress  = campaign ? getChapterProgress(campaign.id, chapterId) : null;
 
@@ -223,7 +228,8 @@ function ImportedChapterPlayer() {
     // PR1: hard guard against rapid duplicate submissions.
     if (resolveLockRef.current) return;
     resolveLockRef.current = true;
-    setTimeout(() => { resolveLockRef.current = false; }, 350);
+    const epoch = getIdentityEpoch();
+    try {
 
     // PR2 hard hearts gate — at 0 hearts, no answer is accepted (right or wrong).
     // Skipping an optional reflective moment is not an answer and costs no
@@ -264,6 +270,22 @@ function ImportedChapterPlayer() {
         : wrongAttempts === 1
           ? "half"
           : "full";
+
+    const projected = recordActivity(campaign!, chapter!, activity, true, false);
+    const projectedChapter = projected.chapters[chapter!.id];
+    const ack = await upsertChapterProgress({
+      campaignId: campaign!.id, chapterId: chapter!.id,
+      status: projectedChapter?.completed ? "completed" : "unlocked",
+      score: projectedChapter?.completedActivityIds.length ?? 0,
+      xpEarned: projectedChapter?.xpEarned ?? 0, coinsEarned: projectedChapter?.coinsEarned ?? 0,
+      completed: projectedChapter?.completed ?? false,
+    });
+    if (!activeSaveRef.current || getIdentityEpoch() !== epoch) return;
+    if (!saveAccepted(ack) && !(ack.reason === "buffered_no_session" && !profile.loggedIn)) {
+      toast.error("تعذر حفظ تقدم الفصل. حاول مجددًا؛ لم تُمنح مكافآت جديدة.");
+      return;
+    }
+    const nextProgress = recordActivity(campaign!, chapter!, activity, true);
 
     // PR3 local-first reward ledger: only grants once, across refreshes /
     // offline / reopen. Returns {granted:false, xp:0, coins:0} on replays.
@@ -306,8 +328,6 @@ function ImportedChapterPlayer() {
       clearOrderingHelp(logicalKey);
     }
 
-    const nextProgress = recordActivity(campaign!, chapter!, activity, true);
-
     const nextChapter   = nextProgress.chapters[chapter!.id];
     const newlyChapter  = !wasChapterComplete  && Boolean(nextChapter?.completed);
     const newlyCampaign = !wasCampaignComplete && nextProgress.completed;
@@ -316,7 +336,7 @@ function ImportedChapterPlayer() {
     if (newlyChapter) {
       audioManager.playSfx("chapter-complete", { dedupeKey: `ch:${chapter!.id}` });
       // Qualifying streak activity: completing a campaign chapter.
-      void recordStreakActivity("campaign_chapter", chapter!.id);
+      void recordStreakActivity("campaign_chapter", chapter!.id).catch(() => {});
       // Memory Engine — chapter is over, drop the runtime plan so a
       // re-entry (or the next chapter) starts from a clean slate.
       if (plan) clearPlan(plan.planKey);
@@ -357,67 +377,12 @@ function ImportedChapterPlayer() {
       setActivePosition({ campaignId: campaign!.id, chapterId: chapter!.id, activityId: activity.id });
     }
 
-    // Server-authoritative chapter sync (offline-safe, awaited when online).
-    // Final chapters MUST send completed=true to record_campaign_progress_v2;
-    // the RPC owns the campaign-complete decision and sticky ledger update.
-    const nextCh = nextProgress.chapters[chapter!.id];
-    const chapterPayload = {
-      campaignId: campaign!.id,
-      chapterId: chapter!.id,
-      status: nextCh?.completed ? "completed" : "unlocked",
-      score: nextCh?.completedActivityIds.length ?? 0,
-      xpEarned: nextCh?.xpEarned ?? 0,
-      coinsEarned: nextCh?.coinsEarned ?? 0,
-      completed: nextCh?.completed ?? false,
-    } as const;
-    recordTrace(
-      "campaign-persistence",
-      newlyCampaign ? "final-chapter-rpc-before" : "chapter-rpc-before",
-      JSON.stringify({
-        campaignId: chapterPayload.campaignId,
-        chapterId: chapterPayload.chapterId,
-        completed: chapterPayload.completed,
-        score: chapterPayload.score,
-        xpEarned: chapterPayload.xpEarned,
-        coinsEarned: chapterPayload.coinsEarned,
-        localOptimisticWriteResult: {
-          chapterCompleted: !!nextCh?.completed,
-          campaignCompleted: !!nextProgress.completed,
-          completedActivityCount: nextCh?.completedActivityIds.length ?? 0,
-        },
-      }),
-    );
-    const ack = await upsertChapterProgress(chapterPayload);
-    recordTrace(
-      "campaign-persistence",
-      newlyCampaign ? "final-chapter-rpc-after" : "chapter-rpc-after",
-      JSON.stringify({
-        campaignId: chapterPayload.campaignId,
-        chapterId: chapterPayload.chapterId,
-        operationId: ack.operationId ?? `chapter_progress:${chapterPayload.campaignId}:${chapterPayload.chapterId}`,
-        completed: chapterPayload.completed,
-        score: chapterPayload.score,
-        xpEarned: chapterPayload.xpEarned,
-        coinsEarned: chapterPayload.coinsEarned,
-        localMirrorUpdateResult: "localStorage-updated-before-rpc",
-        acknowledged: ack.acknowledged,
-        normalizedError: ack.reason ?? "none",
-        rpcResponse: ack.rpc ?? null,
-        finalConfirmation: newlyCampaign ? {
-          chapterCompleted: ack.rpc?.chapter_completed ?? null,
-          chapterCompletedAt: ack.rpc?.chapter_completed_at ?? null,
-          campaignCompleted: ack.rpc?.campaign_completed ?? null,
-          campaignCompletionUpdated: ack.rpc?.campaign_completion_updated ?? null,
-          campaignCompletionCompletedAt: ack.rpc?.campaign_completion_completed_at ?? null,
-          campaignVersion: ack.rpc?.campaign_version ?? null,
-        } : null,
-      }),
-    );
-
     if (newlyCampaign) {
-      setTimeout(() => setCompletionOpen(true), 350);
+      setTimeout(() => { if (activeSaveRef.current && getIdentityEpoch() === epoch) setCompletionOpen(true); }, 350);
     }
     bump();
+    } catch { if (activeSaveRef.current) toast.error("تعذر حفظ تقدم الفصل. حاول مجددًا."); }
+    finally { resolveLockRef.current = false; }
   };
 
   // PR2: only advances after a correct answer (or on activities without validation).

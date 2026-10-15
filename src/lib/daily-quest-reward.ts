@@ -42,6 +42,7 @@ import { flushOutbox } from "@/lib/offline/flush";
 export type GrantOutcome =
   | "granted"          // RPC returned applied=true this call
   | "already_granted"  // RPC returned applied=false (idempotent no-op)
+  | "storage_error"
   | "queued"           // offline / RPC unreachable — outbox will retry
   | "unauthenticated"; // no user session
 
@@ -239,7 +240,7 @@ export async function grantDailyQuestReward(params: {
         hearts: 0,
         source: "daily_quest",
       });
-      void flushOutbox(userId);
+      void flushOutbox(userId).catch(() => {});
       return {
         outcome: "queued",
         deltaId,
@@ -257,9 +258,10 @@ export async function grantDailyQuestReward(params: {
           hearts: 0,
           source: "daily_quest",
         });
-        void flushOutbox(userId);
+        void flushOutbox(userId).catch(() => {});
       } catch (enqueueErr) {
         console.warn("[daily-quest-reward] enqueue failed", enqueueErr);
+        return { outcome: "storage_error", deltaId, rpcStatus: "error", rpcError: message, serverStatsBefore };
       }
       return {
         outcome: "queued",
@@ -282,9 +284,10 @@ export async function grantDailyQuestReward(params: {
       source: "daily_quest",
     });
     // Fire-and-forget flush; safe if offline (early-returns).
-    void flushOutbox(userId);
+    void flushOutbox(userId).catch(() => {});
   } catch (err) {
     console.warn("[daily-quest-reward] enqueue failed", err);
+    return { outcome: "storage_error", deltaId, rpcStatus: "error" };
   }
   return { outcome: "queued", deltaId, rpcStatus: "queued" };
 }

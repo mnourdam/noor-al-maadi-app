@@ -27,6 +27,8 @@ import {
   type ReactNode,
 } from "react";
 
+import { toast } from "sonner";
+import { saveAccepted } from "@/lib/offline/gameplay-write";
 import { useRouterState } from "@tanstack/react-router";
 
 import { useOverlayDismiss, useOverlayEntries } from "@/lib/navigation";
@@ -225,7 +227,23 @@ interface InternalEngine extends TutorialEngineApi {
   completeFromHydration(): void;
 }
 
+const disposedStores = new WeakSet<InternalStore>();
 function createEngine(store: InternalStore): InternalEngine {
+  let saving = false;
+  function completeAfterSave(action: () => void) {
+    if (saving) return;
+    saving = true;
+    const step = store.stepIndex;
+    void persistence.markCompleted(store.config.version).then((outcome) => {
+      if (store.stepIndex !== step || disposedStores.has(store)) return;
+      if (!saveAccepted(outcome) && !(outcome.reason === "local" && outcome.queued)) {
+        toast.error("تعذر حفظ الإكمال. يمكنك المحاولة مجددًا أو المغادرة.");
+        return;
+      }
+      action();
+    }).catch(() => { toast.error("تعذر حفظ الإكمال. حاول مجددًا."); })
+      .finally(() => { saving = false; });
+  }
   return {
     getSnapshot: () => snapshotOf(store),
     subscribe(listener) {
@@ -285,7 +303,7 @@ function createEngine(store: InternalStore): InternalEngine {
         // `finishing` so the overlay can smoothly scroll Home to the
         // top and fade out before the tutorial closes.
         const finalStep = store.config.steps[store.stepIndex]!;
-        persistence.markCompleted(store.config.version);
+        completeAfterSave(() => {
         fireHook(store.hooks, "onTutorialCompleted", {
           id: store.config.id,
           version: store.config.version,
@@ -294,6 +312,7 @@ function createEngine(store: InternalStore): InternalEngine {
         store.stepIndex = null;
         store.targetRect = null;
         transition(store, "finishing");
+        });
         return;
       }
       store.stepIndex = nextIdx;
@@ -314,7 +333,7 @@ function createEngine(store: InternalStore): InternalEngine {
       const atStepIndex = store.stepIndex;
       const atStep =
         atStepIndex != null ? store.config.steps[atStepIndex] ?? null : null;
-      persistence.markCompleted(store.config.version);
+      completeAfterSave(() => {
       fireHook(store.hooks, "onTutorialSkipped", {
         id: store.config.id,
         version: store.config.version,
@@ -327,6 +346,7 @@ function createEngine(store: InternalStore): InternalEngine {
       store.skipConfirmOpen = false;
       store.targetRect = null;
       transition(store, "completed");
+      });
     },
     finish() {
       // Route through `finishing` so the overlay can scroll Home to
@@ -334,7 +354,7 @@ function createEngine(store: InternalStore): InternalEngine {
       const lastIdx = lastEnabledIndex(store.config);
       const finalStep =
         lastIdx != null ? store.config.steps[lastIdx] ?? null : null;
-      persistence.markCompleted(store.config.version);
+      completeAfterSave(() => {
       fireHook(store.hooks, "onTutorialCompleted", {
         id: store.config.id,
         version: store.config.version,
@@ -343,6 +363,7 @@ function createEngine(store: InternalStore): InternalEngine {
       store.stepIndex = null;
       store.targetRect = null;
       transition(store, "finishing");
+      });
     },
     completeAfterFinishing() {
       if (store.state !== "finishing") return;
@@ -481,6 +502,7 @@ export function TutorialProvider({
     storeRef.current.hooks = hooks ?? {};
   }
   const store = storeRef.current;
+  useEffect(() => { disposedStores.delete(store); return () => { disposedStores.add(store); }; }, [store]);
 
   const apiRef = useRef<InternalEngine | null>(null);
   if (apiRef.current == null) {

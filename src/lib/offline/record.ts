@@ -10,42 +10,52 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { enqueue, enqueueWithId, type OutboxKind } from "./outbox";
+import { saveGameplay, saveUserId, type SaveOutcome } from "./gameplay-write";
 import { flushOutbox } from "./flush";
 import { recordTrace } from "@/lib/diag-trace";
 
 async function currentUserId(): Promise<string | null> {
   try {
-    const { data } = await supabase.auth.getSession();
-    return data.session?.user?.id ?? null;
+    return await saveUserId();
   } catch { return null; }
 }
 
-async function record(kind: OutboxKind, payload: Record<string, unknown>): Promise<void> {
+async function record(kind: OutboxKind, payload: Record<string, unknown>): Promise<SaveOutcome> {
+  try { payload = JSON.parse(JSON.stringify(payload)); }
+  catch { return { acknowledged: false, queued: false, reason: "storage_error" }; }
   const uid = await currentUserId();
-  if (!uid) return; // guest — nothing to sync
-  await enqueue(uid, kind, payload);
-  // Fire-and-forget flush; safe if offline (early-returns).
-  void flushOutbox(uid);
+  if (!uid) return { acknowledged: false, queued: false, reason: "unauthenticated" };
+  try { await enqueue(uid, kind, payload); }
+  catch { return { acknowledged: false, queued: false, reason: "storage_error" }; }
+  void flushOutbox(uid).catch(() => {});
+  return { acknowledged: false, queued: true };
 }
 
 export async function recordCollectionAdd(p: {
   itemId: string; itemType: string;
   sourceCampaignId?: string | null; sourceChapterId?: string | null;
-}): Promise<void> {
-  await record("collection_add", p);
+}): Promise<SaveOutcome> {
+  const outcome = await record("collection_add", p);
   // Artifact ownership gates (`artifact_owned` unlock nodes) listen for this.
-  if (typeof window !== "undefined") {
+  if (outcome.queued && typeof window !== "undefined") {
     try {
       window.dispatchEvent(new CustomEvent("irth:collection:changed", { detail: { itemId: p.itemId } }));
     } catch { /* noop */ }
   }
+  return outcome;
 }
 
 
 export async function recordGameComplete(p: {
   gameId: string; stageIndex: number; score: number;
-}): Promise<void> {
-  await record("game_complete", p);
+}, owner?: string): Promise<SaveOutcome> {
+  p = { ...p };
+  const uid = owner ?? await saveUserId();
+  if (!uid) return { acknowledged: false, queued: false, reason: "unauthenticated" };
+  try { await enqueueWithId(uid, `game_complete:${uid}:${p.gameId}`, "game_complete", p); }
+  catch { return { acknowledged: false, queued: false, reason: "storage_error" }; }
+  if (typeof navigator === "undefined" || navigator.onLine) void flushOutbox(uid).catch(() => {});
+  return { acknowledged: false, queued: true };
 }
 
 /**
@@ -71,6 +81,8 @@ export async function recordChapterProgress(p: {
   completed?: boolean;
 }): Promise<{
   acknowledged: boolean;
+  queued: boolean;
+  dequeued?: boolean;
   reason?: string;
   operationId?: string;
   rpc?: {
@@ -84,170 +96,43 @@ export async function recordChapterProgress(p: {
     campaign_version?: number | null;
   };
 }> {
-  recordTrace(
-    "campaign-persistence",
-    "recordChapterProgress-called",
-    `${p.campaignId}/${p.chapterId}:${p.status}:completed=${!!p.completed}`,
-  );
-  const uid = await currentUserId();
+  p = { ...p };
+  let uid: string | null;
+  try { uid = await saveUserId(true); }
+  catch { return { acknowledged: false, queued: false, reason: "identity_changed" }; }
   if (!uid) {
-    // V16: never drop the write. Buffer it locally (durable, sticky) and
-    // promote it through this same verified path once a session exists.
     try {
       const { bufferChapterProgress } = await import("@/lib/campaigns/guest-progress-buffer");
       bufferChapterProgress(p);
-    } catch { /* buffer is best-effort */ }
-    recordTrace("campaign-persistence", "recordChapterProgress-no-session", `${p.campaignId}/${p.chapterId}`);
-    return { acknowledged: false, reason: "buffered_no_session" };
+    } catch { return { acknowledged: false, queued: false, reason: "storage_error" }; }
+    return { acknowledged: false, queued: false, reason: "buffered_no_session" };
   }
   const outboxId = `chapter_progress:${uid}:${p.campaignId}:${p.chapterId}`;
-  recordTrace(
-    "campaign-persistence",
-    "chapter-write-operation",
-    JSON.stringify({
-      campaignId: p.campaignId,
-      chapterId: p.chapterId,
-      operationId: outboxId,
-      completed: !!p.completed,
-      score: p.score ?? null,
-      xpEarned: p.xpEarned ?? null,
-      coinsEarned: p.coinsEarned ?? null,
+  const outcome = await saveGameplay({
+    userId: uid, id: outboxId, kind: "chapter_progress", payload: p,
+    rpc: () => supabase.rpc("record_campaign_progress_v2" as any, {
+      p_campaign_id: p.campaignId, p_chapter_id: p.chapterId, p_completed: !!p.completed,
+      p_score: p.score ?? null, p_xp_earned: p.xpEarned ?? null, p_coins_earned: p.coinsEarned ?? null,
     }),
-  );
-  await enqueueWithId(uid, outboxId, "chapter_progress", p);
-  recordTrace(
-    "campaign-persistence",
-    "chapter-progress-enqueued",
-    JSON.stringify({ campaignId: p.campaignId, chapterId: p.chapterId, operationId: outboxId, result: "ok" }),
-  );
-  // Immediate awaited acknowledgement when online.
-  if (typeof navigator === "undefined" || navigator.onLine) {
+  });
+  if (outcome.acknowledged) {
     try {
-      const rpcStartedAt = new Date().toISOString();
-      recordTrace(
-        "campaign-persistence",
-        "record_campaign_progress_v2-start",
-        JSON.stringify({
-          rpc: "record_campaign_progress_v2",
-          rpcStartedAt,
-          campaignId: p.campaignId,
-          chapterId: p.chapterId,
-          operationId: outboxId,
-          payload: {
-            p_campaign_id: p.campaignId,
-            p_chapter_id: p.chapterId,
-            p_completed: !!p.completed,
-            p_score: p.score ?? null,
-            p_xp_earned: p.xpEarned ?? null,
-            p_coins_earned: p.coinsEarned ?? null,
-          },
-        }),
-      );
-      const { data, error } = await supabase.rpc(
-        "record_campaign_progress_v2" as any,
-        {
-          p_campaign_id: p.campaignId,
-          p_chapter_id: p.chapterId,
-          p_completed: !!p.completed,
-          p_score: p.score ?? null,
-          p_xp_earned: p.xpEarned ?? null,
-          p_coins_earned: p.coinsEarned ?? null,
-        },
-      );
-      if (!error) {
-        const payload = (data ?? {}) as {
-          ok?: boolean;
-          reason?: string;
-          chapter_completed?: boolean;
-          chapter_completed_at?: string | null;
-          campaign_completed?: boolean;
-          campaign_completion_updated?: boolean;
-          campaign_completion_completed_at?: string | null;
-          campaign_version?: number | null;
-        };
-        if (payload.ok) {
-          let outboxRemovalResult = "not-attempted";
-          try {
-            const { remove } = await import("./outbox");
-            await remove(outboxId);
-            outboxRemovalResult = "removed";
-          } catch (e) {
-            outboxRemovalResult = `failed:${e instanceof Error ? e.message : String(e)}`;
-          }
-          try {
-            if (typeof window !== "undefined") {
-              window.dispatchEvent(new CustomEvent("irth:campaign-progress:changed"));
-              window.dispatchEvent(new CustomEvent("irth:campaign-completions:changed"));
-            }
-          } catch { /* ignore */ }
-          recordTrace(
-            "campaign-persistence",
-            "record_campaign_progress_v2-ok",
-            JSON.stringify({
-              campaignId: p.campaignId,
-              chapterId: p.chapterId,
-              operationId: outboxId,
-              acknowledged: true,
-              rpcResponse: payload,
-              outboxAcknowledgement: outboxRemovalResult,
-            }),
-          );
-          return { acknowledged: true, operationId: outboxId, rpc: payload };
-        }
-        // Permanent rejection — surface via flush → dead-letter.
-        recordTrace(
-          "campaign-persistence",
-          "record_campaign_progress_v2-not-ok",
-          JSON.stringify({
-            campaignId: p.campaignId,
-            chapterId: p.chapterId,
-            operationId: outboxId,
-            acknowledged: false,
-            normalizedError: payload.reason ?? "rpc-not-ok",
-            rpcResponse: payload,
-          }),
-        );
-        void flushOutbox(uid);
-        return { acknowledged: false, reason: payload.reason ?? "rpc-not-ok", operationId: outboxId, rpc: payload };
-      }
-      recordTrace(
-        "campaign-persistence",
-        "record_campaign_progress_v2-error",
-        JSON.stringify({
-          campaignId: p.campaignId,
-          chapterId: p.chapterId,
-          operationId: outboxId,
-          acknowledged: false,
-          normalizedError: error.message,
-        }),
-      );
-    } catch (e) {
-      recordTrace(
-        "campaign-persistence",
-        "record_campaign_progress_v2-exception",
-        JSON.stringify({
-          campaignId: p.campaignId,
-          chapterId: p.chapterId,
-          operationId: outboxId,
-          acknowledged: false,
-          normalizedError: e instanceof Error ? e.message : String(e),
-        }),
-      );
-    }
+      window.dispatchEvent(new CustomEvent("irth:campaign-progress:changed"));
+      window.dispatchEvent(new CustomEvent("irth:campaign-completions:changed"));
+    } catch { /* observer */ }
   }
-  recordTrace(
-    "campaign-persistence",
-    "recordChapterProgress-queued",
-    JSON.stringify({ campaignId: p.campaignId, chapterId: p.chapterId, operationId: outboxId, acknowledged: false, reason: "queued" }),
-  );
-  void flushOutbox(uid);
-  return { acknowledged: false, reason: "queued", operationId: outboxId };
+  recordTrace("campaign-persistence", outcome.acknowledged ? "record_campaign_progress_v2-ok" : "record_campaign_progress_v2-not-ok", JSON.stringify({
+    operationId: outboxId, acknowledged: outcome.acknowledged, queued: outcome.queued,
+    normalizedError: outcome.reason, rpcResponse: outcome.result,
+    outboxAcknowledgement: outcome.dequeued ? "removed" : "retained-or-unavailable",
+  }));
+  return { ...outcome, operationId: outboxId, rpc: outcome.result };
 }
 
 export async function recordProfileDelta(p: {
   xp?: number; dinars?: number; hearts?: number; source?: string;
-}): Promise<void> {
-  await record("profile_delta", p);
+}): Promise<SaveOutcome> {
+  return record("profile_delta", p);
 }
 
 /**
@@ -261,20 +146,21 @@ export async function recordEntityDiscovery(p: {
   entitySlug: string;
   entityType: string;
   source?: string;
-}): Promise<void> {
+}): Promise<SaveOutcome> {
   const uid = await currentUserId();
-  if (!uid) return;
+  if (!uid) return { acknowledged: false, queued: false, reason: "unauthenticated" };
   const id = `entity_discovery:${uid}:${p.entityId}`;
-  await enqueueWithId(uid, id, "entity_discovery", {
+  try { await enqueueWithId(uid, id, "entity_discovery", {
     entityId: p.entityId,
     entitySlug: p.entitySlug,
     entityType: p.entityType,
     source: p.source ?? "encyclopedia",
     viewedAt: new Date().toISOString(),
-  });
+  }); } catch { return { acknowledged: false, queued: false, reason: "storage_error" }; }
   // Awaited: story unlocks gated on `entity_discovered` re-evaluate against
   // the server row, so callers must be able to know when it actually landed.
   try { await flushOutbox(uid); } catch { /* queued; retried later */ }
+  return { acknowledged: false, queued: true };
 }
 
 /**
@@ -285,9 +171,9 @@ export async function recordCampaignCompletion(p: {
   campaignId: string;
   campaignVersion?: number | null;
   source?: string;
-}): Promise<void> {
+}): Promise<SaveOutcome> {
   const { recordCampaignCompletion: impl } = await import("@/lib/campaigns/completions");
-  await impl(p);
+  return impl(p);
 }
 
 /**
@@ -307,16 +193,17 @@ export async function recordCampaignIntroWatch(p: {
   storyId?: string | null;
   status: "started" | "completed" | "skipped";
   lastSceneIndex?: number;
-}): Promise<void> {
+}): Promise<SaveOutcome> {
   const uid = await currentUserId();
-  if (!uid) return;
+  if (!uid) return { acknowledged: false, queued: false, reason: "unauthenticated" };
   const id = `campaign_intro:${uid}:${p.campaignId}:v${p.introVersion}`;
-  await enqueueWithId(uid, id, "campaign_intro", {
+  try { await enqueueWithId(uid, id, "campaign_intro", {
     campaignId: p.campaignId,
     introVersion: p.introVersion,
     storyId: p.storyId ?? null,
     status: p.status,
     lastSceneIndex: Math.max(0, Math.trunc(p.lastSceneIndex ?? 0)),
-  });
-  void flushOutbox(uid);
+  }); } catch { return { acknowledged: false, queued: false, reason: "storage_error" }; }
+  void flushOutbox(uid).catch(() => {});
+  return { acknowledged: false, queued: true };
 }

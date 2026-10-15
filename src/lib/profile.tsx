@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { recordTrace } from "@/lib/diag-trace";
-import { getActiveOwner } from "./identity/owner";
+import { getActiveOwner, getIdentityEpoch } from "./identity/owner";
 import { irthDayKey, irthYesterdayKey } from "./irth-day";
 
 /**
@@ -928,11 +928,15 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
     // V16 — durable qualifying-activity call.
     recordStreakActivity: async (source, sourceId) => {
+      const epoch = getIdentityEpoch();
+      const owner = getActiveOwner();
       const { recordStreakActivity: rpc } = await import("./streak-activity");
       const outcome = await rpc(source, sourceId ?? null);
+      if (getIdentityEpoch() !== epoch || getActiveOwner() !== owner) return;
       if (outcome.ok !== true) {
-        // Guest, offline, timeout or RPC error. The authenticated case is
-        // already DURABLY QUEUED (`streak_activity` outbox kind) and will
+        if (profile.loggedIn && !outcome.queued) return;
+        // Guest or confirmed durable queue only. An unpersisted authenticated
+        // attempt must not project successful activity. Pending work will
         // replay with the original IRTH day, so the local mirror here is
         // purely optimistic UI — it never fabricates server truth.
         update((p) => {

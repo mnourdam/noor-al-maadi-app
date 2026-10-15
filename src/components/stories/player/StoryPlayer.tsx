@@ -19,6 +19,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/lib/profile";
 import type { StoryRow, StorySceneRow } from "@/lib/stories/types";
 import type { StoryMediaRow } from "@/lib/stories/media/dao";
+import { getIdentityEpoch } from "@/lib/identity/owner";
+import { saveAccepted } from "@/lib/offline/gameplay-write";
 import { recordStoryProgress, completeStory } from "@/lib/stories/progress";
 import type { StorySummary } from "@/lib/stories/summary";
 import { SegmentedProgress } from "./SegmentedProgress";
@@ -68,6 +70,10 @@ export function StoryPlayer({
   const [grantedXp, setGrantedXp] = useState<number | null>(null);
   const [grantedDinars, setGrantedDinars] = useState<number | null>(null);
   const completionFiredRef = useRef(false);
+  const savingRef = useRef(false);
+  const activeRef = useRef(true);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  useEffect(() => { activeRef.current = true; return () => { activeRef.current = false; }; }, []);
   const resumeAfterExportRef = useRef(false);
   const [exportLockScene, setExportLockScene] = useState<number | null>(null);
   const navigate = useNavigate();
@@ -101,7 +107,7 @@ export function StoryPlayer({
       if (res.acknowledged) {
         void queryClient.invalidateQueries({ queryKey: ["stories-summary"] });
       }
-    });
+    }).catch(() => {});
   }, [phase, scene, story.id, alreadyCompleted]);
 
 
@@ -146,11 +152,15 @@ export function StoryPlayer({
       // Sticky one-shot completion. `completionFiredRef` guarantees at most
       // one grant per mount even if the user double-taps the ending pill
       // or auto-advance and the tap collide.
+      if (savingRef.current) return;
       if (completionFiredRef.current) {
         setPhase("journey");
         return;
       }
-      completionFiredRef.current = true;
+      savingRef.current = true;
+      const epoch = getIdentityEpoch();
+      setSaveError(null);
+      try {
 
       // REPLAY PATH — story was already completed on a prior session.
       // Skip the completion RPC entirely (no XP / Dinars / ledger / event)
@@ -160,7 +170,7 @@ export function StoryPlayer({
         return;
       }
 
-      setPhase("reward");
+      setPaused(true);
 
       const summaryXp = summary?.xp_reward ?? story.xp_reward ?? 0;
       const summaryDin = summary?.dinar_reward ?? story.dinar_reward ?? 0;
@@ -175,6 +185,12 @@ export function StoryPlayer({
         if (grantDin > 0) addDinars(grantDin);
       } else {
         const res = await completeStory(story.id);
+        if (!activeRef.current) return;
+        if (getIdentityEpoch() !== epoch) { setSaveError("تغير الحساب أثناء الحفظ. أعد المحاولة بالحساب الحالي."); return; }
+        if (!saveAccepted(res)) {
+          setSaveError("تعذر تأكيد حفظ القصة. حاول مجددًا أو أغلق للعودة لاحقًا.");
+          return;
+        }
         const grantXp = res.result?.reward_granted_xp ?? 0;
         const grantDin = res.result?.reward_granted_dinars ?? 0;
         setGrantedXp(grantXp);
@@ -185,16 +201,21 @@ export function StoryPlayer({
         // the recorder enqueues the IRTH activity day before any network call.
         try {
           const { recordStreakActivity } = await import("@/lib/streak-activity");
-          void recordStreakActivity("story", story.id);
+          if (res.acknowledged) void recordStreakActivity("story", story.id).catch(() => {});
         } catch { /* never block completion UI */ }
       }
 
 
+      completionFiredRef.current = true;
+      setPhase("reward");
       try {
         void queryClient.invalidateQueries({ queryKey: ["stories-summary"] });
       } catch {
         /* ignore */
       }
+      } catch {
+        if (activeRef.current) setSaveError("تعذر حفظ القصة. حاول مجددًا.");
+      } finally { savingRef.current = false; }
       return;
     }
     setIdx((n) => Math.min(n + 1, ordered.length - 1));
@@ -435,6 +456,7 @@ export function StoryPlayer({
               className="pointer-events-auto grid size-9 place-items-center rounded-full bg-black/40 text-white/85 backdrop-blur"
               onClick={(e) => {
                 e.stopPropagation();
+                activeRef.current = false;
                 onExit();
               }}
               aria-label="إغلاق"
@@ -485,6 +507,11 @@ export function StoryPlayer({
           <Istazadtu anchorType="story" anchorId={story.id} size="sm" />
         </div>
       )}
+
+      {saveError && <div role="alert" className="absolute inset-x-4 bottom-24 z-50 rounded bg-black/90 p-4">
+        <p>{saveError}</p>
+        <button type="button" onClick={(event) => { event.stopPropagation(); void goNext(); }}>إعادة المحاولة</button>
+      </div>}
 
       {/* Reward moment — first completion only. Replay path skips
           this block entirely (goNext jumps straight to "journey"). */}

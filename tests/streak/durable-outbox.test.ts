@@ -11,7 +11,10 @@ let rpcImpl: (args: Record<string, unknown>) => Promise<unknown> = async () => (
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
-    auth: { getUser: async () => ({ data: { user: { id: "u1" } } }) },
+    auth: {
+      getUser: async () => ({ data: { user: { id: "u1" } } }),
+      getSession: async () => ({ data: { session: { user: { id: "u1" } } } }),
+    },
     rpc: (name: string, args: Record<string, unknown>) => {
       rpcCalls.push({ name, args });
       return rpcImpl(args);

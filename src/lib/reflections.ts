@@ -257,7 +257,7 @@ async function syncReflectionToServer(
   try {
     const { flushOutbox } = await import("@/lib/offline/flush");
     await flushOutbox(uid);
-    if (queued) return "synced";
+    // A completed flush is not proof that this revision reached the server.
   } catch { /* ignore */ }
   try {
     const { error } = await supabase

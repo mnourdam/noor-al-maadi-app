@@ -6,7 +6,7 @@ export default defineConfig({
   resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
   test: {
     environment: "jsdom",
-    include: ["tests/offline/outbox-*.test.ts", "tests/streak/durable-outbox.test.ts"],
+    include: ["tests/offline/outbox-*.test.{ts,tsx}", "tests/streak/durable-outbox.test.ts"],
     maxWorkers: 2,
   },
 });

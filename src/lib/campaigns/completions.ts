@@ -18,8 +18,7 @@
 
 import { recordTrace } from "@/lib/diag-trace";
 import { supabase } from "@/integrations/supabase/client";
-import { enqueueWithId } from "@/lib/offline/outbox";
-import { flushOutbox } from "@/lib/offline/flush";
+import { saveGameplay, saveUserId, saveAccepted, type SaveOutcome } from "@/lib/offline/gameplay-write";
 import { getActiveOwner, getActiveUserId } from "@/lib/identity/owner";
 
 const inflightFetch = new Map<string, Promise<{ userId: string | null; ids: Set<string> }>>();
@@ -126,10 +125,23 @@ export async function recordCampaignCompletion(p: {
    * default changed. Opt in explicitly when a verified caller needs it.
    */
   allowUnverifiedServerWrite?: boolean;
-}): Promise<void> {
+}): Promise<SaveOutcome> {
+  p = { ...p };
   const cid = String(p.campaignId ?? "").trim();
-  if (!cid) return;
+  if (!cid) return { acknowledged: false, queued: false, reason: "invalid_campaign_id" };
 
+  // The deprecated direct path must prove persistence before projecting completion.
+  let outcome: SaveOutcome | undefined;
+  if (p.allowUnverifiedServerWrite) {
+    const uid = await saveUserId();
+    if (!uid) return { acknowledged: false, queued: false, reason: "unauthenticated" };
+    outcome = await saveGameplay({
+      userId: uid, id: `campaign_completion:${uid}:${cid}`, kind: "campaign_completion",
+      payload: { campaignId: cid, campaignVersion: p.campaignVersion ?? null, source: p.source ?? "gameplay" },
+      rpc: () => supabase.rpc("record_campaign_completion" as any, { p_campaign_id: cid, p_campaign_version: p.campaignVersion ?? null, p_source: p.source ?? "gameplay" }),
+    });
+    if (!saveAccepted(outcome)) return outcome;
+  }
   // 1) Local sticky — persists even for guests.
   const m = readLocalSticky();
   if (!m[cid]) {
@@ -149,58 +161,7 @@ export async function recordCampaignCompletion(p: {
     } catch { /* ignore */ }
   }
 
-  // 2) Server ledger — DEPRECATED unverified path (V16).
-  //    Normal gameplay stops here: the local sticky fact is enough for
-  //    display, and `record_campaign_progress_v2` stamps the authoritative
-  //    ledger when the last authored chapter is verified complete.
-  if (!p.allowUnverifiedServerWrite) return;
-
-  //    Enqueue FIRST so a crash or offline state cannot lose the fact,
-  //    then attempt the awaited RPC. On success drop the queued item;
-  //    on failure leave it queued for later flush attempts.
-  const uid = await currentUserId();
-  if (!uid) return;
-  const outboxId = `campaign_completion:${uid}:${cid}`;
-  await enqueueWithId(uid, outboxId, "campaign_completion", {
-    campaignId: cid,
-    campaignVersion: p.campaignVersion ?? null,
-    source: p.source ?? "gameplay",
-  });
-
-  // Immediate awaited server acknowledgement when online.
-  if (typeof navigator === "undefined" || navigator.onLine) {
-    try {
-      const { data, error } = await supabase.rpc(
-        "record_campaign_completion" as any,
-        {
-          p_campaign_id: cid,
-          p_campaign_version: p.campaignVersion ?? null,
-          p_source: p.source ?? "gameplay",
-        },
-      );
-      if (!error) {
-        const payload = (data ?? {}) as { ok?: boolean; reason?: string };
-        if (payload.ok || payload.reason === "invalid_campaign_id") {
-          // Server accepted (or refused permanently). Drop the queued copy.
-          try {
-            const { remove } = await import("@/lib/offline/outbox");
-            await remove(outboxId);
-          } catch { /* leave queued — flush will drop it */ }
-        } else if (payload.reason === "unauthenticated") {
-          // Transient — leave queued for post-login flush.
-        } else {
-          console.warn("[campaign-completion] rpc-not-ok", payload.reason, { cid });
-        }
-      } else {
-        console.warn("[campaign-completion] rpc-error", error.message, { cid });
-      }
-    } catch (e) {
-      console.warn("[campaign-completion] rpc-exception", e);
-    }
-  }
-
-  // Best-effort background flush of any other pending items.
-  void flushOutbox(uid);
+  return outcome ?? { acknowledged: false, queued: false, reason: "local" };
 }
 
 /**

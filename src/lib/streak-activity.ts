@@ -1,3 +1,4 @@
+import { getIdentityEpoch } from "@/lib/identity/owner";
 /**
  * V16 — Durable qualifying-activity recorder.
  *
@@ -19,8 +20,7 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import { irthDayKey } from "@/lib/irth-day";
-import { enqueueWithId, remove as removeFromOutbox } from "@/lib/offline/outbox";
-import { flushOutbox } from "@/lib/offline/flush";
+import { saveGameplay, saveDeadline, SAVE_TIMEOUT_MS } from "@/lib/offline/gameplay-write";
 
 export type StreakSource =
   | "campaign_chapter"
@@ -30,7 +30,7 @@ export type StreakSource =
   | "unknown";
 
 /** Finite RPC budget — a hanging call must never block gameplay. */
-export const STREAK_RPC_TIMEOUT_MS = 8000;
+export const STREAK_RPC_TIMEOUT_MS = SAVE_TIMEOUT_MS;
 
 export interface StreakGrant {
   reward_key: string;
@@ -45,6 +45,8 @@ export interface StreakGrant {
 
 export interface StreakActivityResult {
   ok: true;
+  queued?: boolean;
+  dequeued?: boolean;
   already_recorded_today: boolean;
   current_streak: number;
   longest_streak: number;
@@ -100,24 +102,14 @@ export async function callRecordStreakActivityV16(
   }
 }
 
-function withTimeout<T>(p: Promise<T>, ms: number, onTimeout: T): Promise<T> {
-  return new Promise<T>((resolve) => {
-    const t = setTimeout(() => resolve(onTimeout), ms);
-    p.then((v) => { clearTimeout(t); resolve(v); })
-     .catch(() => { clearTimeout(t); resolve(onTimeout); });
-  });
-}
-
 export async function recordStreakActivity(
   source: StreakSource,
   sourceId?: string | null,
 ): Promise<StreakActivityOutcome> {
+  const epoch = getIdentityEpoch();
   let uid: string | null = null;
-  try {
-    const { data: userData } = await supabase.auth.getUser();
-    uid = userData?.user?.id ?? null;
-  } catch { uid = null; }
-  if (!uid) return { ok: false, reason: "unauthenticated" };
+  try { uid = (await saveDeadline(supabase.auth.getUser())).data.user?.id ?? null; } catch { /* unauthenticated */ }
+  if (!uid || getIdentityEpoch() !== epoch) return { ok: false, reason: "unauthenticated" };
 
   const activityDay = irthDayKey();
   const clientKey = streakOutboxId(uid, activityDay);
@@ -128,42 +120,21 @@ export async function recordStreakActivity(
     clientKey,
   };
 
-  // 1. DURABLE FIRST — survives offline, kill, restart, RPC failure.
-  let durable = true;
-  try {
-    await enqueueWithId(uid, clientKey, "streak_activity", { ...payload });
-  } catch (e) {
-    // Storage unavailable (private mode / quota). We still try the live RPC,
-    // but we must NOT later claim the activity is safely queued.
-    durable = false;
-    console.warn("[streak] enqueue failed", e);
-  }
-
-
-  // 2. Live attempt (never gated on navigator.onLine — the queue already holds it).
-  const res = await withTimeout(
-    callRecordStreakActivityV16(payload),
-    STREAK_RPC_TIMEOUT_MS,
-    { ok: false as const, error: "timeout" },
-  );
-
-  if (!res.ok || !res.data) {
-    if (durable) void flushOutbox(uid);
-    return {
-      ok: false,
-      reason: durable ? "queued" : "rpc_error",
-      queued: durable,
-      error: res.error,
-    };
-  }
-
-
-  // 3. Acknowledge — the day is now durably recorded server-side.
-  try { await removeFromOutbox(clientKey); } catch { /* ignore */ }
-
-  const d = res.data;
+  const outcome = await saveGameplay<Record<string, any>>({
+    userId: uid, id: clientKey, kind: "streak_activity", payload: { ...payload },
+    rpc: async () => {
+      const response = await callRecordStreakActivityV16(payload);
+      return { data: response.data, error: response.ok ? null : { message: response.error ?? "rpc_error" } };
+    },
+  });
+  if (!outcome.acknowledged) return {
+    ok: false, reason: outcome.queued ? "queued" : "rpc_error", queued: outcome.queued, error: outcome.reason,
+  };
+  const d = outcome.result!;
   return {
     ok: true,
+    queued: outcome.queued,
+    dequeued: outcome.dequeued,
     already_recorded_today: !d["newly_recorded_day"],
     current_streak: Number(d["current_streak"] ?? 0),
     longest_streak: Number(d["longest_streak"] ?? 0),
