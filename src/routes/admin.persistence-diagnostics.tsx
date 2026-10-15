@@ -76,6 +76,7 @@ function PersistenceDiagnostics() {
   const uid = user?.id ?? null;
   const [items, setItems] = useState<OutboxItem[]>([]);
   const [dead, setDead] = useState<DeadLetter[]>([]);
+  const [archiveError, setArchiveError] = useState<string | null>(null);
   const [lastFlush, setLastFlush] = useState<number>(0);
   const [flushing, setFlushing] = useState(false);
   const [flushResult, setFlushResult] = useState<string | null>(null);
@@ -105,12 +106,14 @@ function PersistenceDiagnostics() {
     if (!uid) {
       setItems([]);
       setDead([]);
+      setArchiveError(null);
       setServerCampaignCompletionCount(null);
       setTutorialServerVersion(null);
       setTutorialServerError(null);
     } else {
       try { setItems(await peekAll(uid)); } catch { setItems([]); }
-      setDead(listDeadLetters(uid));
+      try { setDead(listDeadLetters(uid)); setArchiveError(null); }
+      catch { setDead([]); setArchiveError("تعذرت قراءة الأرشيف؛ عدد السجلات غير معروف."); }
       try { setServerCampaignCompletionCount((await fetchServerCompletedIds()).ids.size); }
       catch { setServerCampaignCompletionCount(null); }
       try {
@@ -181,10 +184,11 @@ function PersistenceDiagnostics() {
     }
   };
 
-  const doClearDeadLetters = () => {
+  const doClearDeadLetters = async () => {
     if (!uid) return;
-    clearDeadLetters(uid);
-    void refresh();
+    try { await clearDeadLetters(uid); }
+    catch { setArchiveError("تعذر تأكيد مسح الأرشيف. أعد تحميل السجلات للتحقق."); return; }
+    await refresh();
   };
 
   const doClearTraces = () => {
@@ -428,12 +432,13 @@ function PersistenceDiagnostics() {
           </Button>
         </CardHeader>
         <CardContent>
-          {dead.length === 0 ? (
+          {archiveError && <p role="alert" className="text-sm text-destructive">{archiveError}</p>}
+          {!archiveError && (dead.length === 0 ? (
             <p className="text-sm text-muted-foreground">No permanent failures ✓</p>
           ) : (
             <ul className="text-xs font-mono space-y-1 max-h-96 overflow-auto">
-              {dead.map((d) => (
-                <li key={d.id + d.createdAt} className="border-b py-1">
+              {dead.map((d, index) => (
+                <li key={`${d.userId}:${d.id}:${d.revision ?? "v17"}:${d.createdAt}:${index}`} className="border-b py-1">
                   <div><b>{d.kind}</b> — reason: <code>{d.reason}</code></div>
                   <div className="text-muted-foreground truncate">{d.id}</div>
                   <div className="text-muted-foreground">
@@ -445,7 +450,7 @@ function PersistenceDiagnostics() {
                 </li>
               ))}
             </ul>
-          )}
+          ))}
         </CardContent>
       </Card>
 

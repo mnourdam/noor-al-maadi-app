@@ -333,16 +333,20 @@ describe("Outbox recovery and independent contexts (phase B)", () => {
     expect(await dbRows()).toEqual([]);
   });
 
-  it("rejects legacy cross-account id collisions instead of overwriting either user", async () => {
+  it("isolates legacy cross-account id collisions without overwriting either user", async () => {
     const api = await initialize();
     const first = await api.enqueueWithId("u1", "shared", "game_complete", {});
     seedFallback([legacy("shared", "u2")]);
-    await expect(api.peekAll("u2")).rejects.toThrow("outbox-account-id-collision");
-    await expect(api.enqueueWithId("u2", "shared", "game_complete", {})).rejects.toThrow("Outbox persistence failed");
+    expect(await api.peekAll("u2")).toEqual([legacy("shared", "u2")]);
+    const second = await api.enqueueWithId("u2", "shared", "game_complete", { updated: true });
     expect(await dbRows()).toEqual([first]);
-    expect(fallback()).toEqual([legacy("shared", "u2")]);
-    await expect(api.remove(first.id, { ...first, userId: "u2" })).rejects.toThrow("outbox-account-id-collision");
+    expect(fallback()).toEqual([second]);
+    expect(await api.remove(first.id, { ...first, userId: "u2" })).toBe(false);
     expect(await dbRows()).toEqual([first]);
+    expect(await api.remove(first.id, first)).toBe(true);
+    expect(await api.peekAll("u2")).toEqual([second]);
+    expect(await dbRows()).toEqual([second]);
+    expect(fallback()).toEqual([]);
   });
   it("flush acknowledges the exact persisted revision using a mock server only", async () => {
     const api = await initialize();

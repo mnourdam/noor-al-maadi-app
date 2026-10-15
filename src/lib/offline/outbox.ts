@@ -71,6 +71,7 @@ export class OutboxReadError extends OutboxStorageError {
 }
 
 class DatabaseError extends Error {}
+class AccountCollision extends DatabaseError {}
 let dbPromise: Promise<IDBDatabase> | null = null;
 
 function openDB(): Promise<IDBDatabase> {
@@ -220,23 +221,29 @@ function changed(): void {
 /** Copy -> commit -> remove only unchanged fallback rows. Caller holds the lock. */
 async function recover(fallback: OutboxItem[], locked: boolean): Promise<OutboxItem[]> {
   // Without a cross-context lock, do not mutate the shared localStorage array.
-  if (fallback.length) requireLock(locked);
+  if (fallback.length && !locked) return transaction("readonly", (_store, stored) => merge([...stored, ...fallback]));
+  let copied: OutboxItem[] = [];
   const rows = await transaction(fallback.length ? "readwrite" : "readonly", (store, stored) => {
     const merged = merge([...stored, ...fallback]);
-    for (const row of fallback) {
-      const collision = stored.find((item) => item.id === row.id && item.userId !== row.userId);
-      const otherFallback = fallback.find((item) => item.id === row.id && item.userId !== row.userId);
-      // v1 IDB is keyed by id alone. Preserve both accounts instead of overwriting.
-      if (collision || otherFallback) throw new OutboxStorageError("outbox-account-id-collision");
+    // Keep v1's id key and all original idempotency keys. One owner per IDB key;
+    // other owners stay durably in fallback, without blocking unrelated rows.
+    const owners = new Map(stored.map((row) => [row.id, row.userId]));
+    for (const row of fallback) if (!owners.has(row.id)) owners.set(row.id, row.userId);
+    copied = fallback.filter((row) => owners.get(row.id) === row.userId);
+    for (const source of copied) {
+      const latest = merged.find((row) => identity(row) === identity(source))!;
+      store.put(latest);
     }
-    if (fallback.length) for (const row of merged) store.put(row);
     return merged;
   });
-  if (fallback.length) {
+  if (copied.length) {
     const current = lsReadAllOrThrow();
-    const remaining = current.filter((row) => !fallback.some((copied) => same(copied, row)));
+    const remaining = current.filter((row) => !copied.some((source) => same(source, row)));
     lsWriteAll(remaining);
-    if (remaining.length) throw new OutboxStorageError("outbox-fallback-changed-during-recovery");
+    const retained = fallback.filter((row) => !copied.includes(row));
+    if (remaining.some((row) => !retained.some((source) => same(source, row)))) {
+      throw new OutboxStorageError("outbox-fallback-changed-during-recovery");
+    }
   }
   return rows;
 }
@@ -270,12 +277,13 @@ export async function enqueueWithId(userId: string, id: string, kind: OutboxKind
   return coordinated(async (locked) => {
     try {
       const fallback = lsReadAllOrThrow();
+      if (fallback.length) requireLock(locked);
       let base: OutboxItem | undefined;
       try {
         const recovered = await recover(fallback, locked);
         base = recovered.find((row) => row.id === id && row.userId === userId);
         const saved = await transaction("readwrite", (store, rows) => {
-          if (rows.some((row) => row.id === id && row.userId !== userId)) throw new OutboxStorageError("outbox-account-id-collision");
+          if (rows.some((row) => row.id === id && row.userId !== userId)) throw new AccountCollision("outbox-account-id-collision");
           const previous = rows.find((row) => row.id === id);
           const item = makeItem(previous);
           store.put(item);
@@ -287,12 +295,11 @@ export async function enqueueWithId(userId: string, id: string, kind: OutboxKind
         if (!(error instanceof DatabaseError)) throw error;
         requireLock(locked);
         const current = lsReadAllOrThrow();
-        if (current.some((row) => row.id === id && row.userId !== userId)) throw new OutboxStorageError("outbox-account-id-collision");
-        const pending = current.find((row) => row.id === id);
+        const pending = current.find((row) => row.id === id && row.userId === userId);
         const previous = pending ?? base;
         const anchor = pending?.recoveryBase ?? (previous ? token(previous) : undefined);
         const item = makeItem(previous, anchor);
-        lsWriteAll([...current.filter((row) => row.id !== id), item]);
+        lsWriteAll([...current.filter((row) => row.id !== id || row.userId !== userId), item]);
         changed();
         return item;
       }
@@ -319,31 +326,43 @@ export async function countAll(userId: string): Promise<number> { return (await 
 
 /** Legacy id-only acknowledgements fail closed; a stale caller cannot delete a new write. */
 export async function remove(id: string, expected?: OutboxItem): Promise<boolean> {
-  return mutate(id, expected, (store, current) => { store.delete(current.id); });
+  return mutate(id, expected, () => null);
 }
 
 export async function bumpAttempt(id: string, error: string | null, expected?: OutboxItem): Promise<boolean> {
-  return mutate(id, expected, (store, current) => {
-    store.put({ ...current, attempts: current.attempts + 1, lastError: error, revision: uuid(), supersedes: token(current) });
-  });
+  return mutate(id, expected, (current) => ({
+    ...current, attempts: current.attempts + 1, lastError: error, revision: uuid(), supersedes: token(current),
+  }));
 }
 
-async function mutate(id: string, expected: OutboxItem | undefined, change: (store: IDBObjectStore, current: OutboxItem) => void): Promise<boolean> {
+async function mutate(id: string, expected: OutboxItem | undefined, change: (current: OutboxItem) => OutboxItem | null): Promise<boolean> {
   if (!expected || expected.id !== id) throw new OutboxStorageError("outbox-revision-required");
-  // The caller may reuse/mutate its object while waiting for the lock.
-  expected = JSON.parse(JSON.stringify(expected)) as OutboxItem;
-  const snapshot = expected;
+  const snapshot = JSON.parse(JSON.stringify(expected)) as OutboxItem;
   return coordinated(async (locked) => {
     const { fallback } = await readBoth(snapshot.userId);
-    await recover(fallback, locked);
-    const updated = await transaction("readwrite", (store, rows) => {
+    if (fallback.some((row) => identity(row) === identity(snapshot))) requireLock(locked);
+    const recovered = await recover(fallback, locked);
+    const latest = recovered.find((row) => identity(row) === identity(snapshot));
+    if (!latest || !same(latest, snapshot)) return false;
+    const result = await transaction("readwrite", (store, rows) => {
       const current = rows.find((row) => row.id === id && row.userId === snapshot.userId);
-      if (!current || !same(current, snapshot)) return false;
-      change(store, current);
-      return true;
+      if (!current) return "fallback";
+      if (!same(current, snapshot)) return "stale";
+      const next = change(current);
+      if (next) store.put(next); else store.delete(current.id);
+      return "updated";
     });
-    if (updated) changed();
-    return updated;
+    if (result === "stale") return false;
+    if (result === "fallback") {
+      requireLock(locked);
+      const current = lsReadAllOrThrow();
+      const row = current.find((row) => identity(row) === identity(snapshot));
+      if (!row || !same(row, snapshot)) return false;
+      const next = change(row);
+      lsWriteAll(current.flatMap((candidate) => candidate === row ? (next ? [next] : []) : [candidate]));
+    }
+    changed();
+    return true;
   });
 }
 

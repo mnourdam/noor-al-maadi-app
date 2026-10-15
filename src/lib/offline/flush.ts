@@ -12,7 +12,7 @@ import { recordTrace } from "@/lib/diag-trace";
 import { supabase } from "@/integrations/supabase/client";
 import { getIdentityEpoch } from "../identity/owner";
 import { peekAll, remove, bumpAttempt, type OutboxItem } from "./outbox";
-import { recordDeadLetter, isPermanentReason } from "./dead-letter";
+import { archiveRejected, isPermanentReason } from "./dead-letter";
 
 let lastFlushAt = 0;
 let inflight: Promise<{ flushed: number; failed: number }> | null = null;
@@ -501,17 +501,27 @@ export async function flushOutbox(userId: string): Promise<{ flushed: number; fa
 
         if (res.ok) {
           // A response for an older write must not acknowledge its replacement.
-          if (await remove(item.id, item)) flushed++;
-          else failed++;
+          try {
+            if (await remove(item.id, item)) flushed++;
+            else failed++;
+          } catch (error) {
+            failed++;
+            console.warn("[flush] acknowledgement remains queued", error);
+          }
         } else if (isPermanentReason(res.error)) {
           // Priority-Zero §3: never retry a permanent rejection forever.
           // Never mark as synced. Move to the dead-letter diagnostics store
           // so admins can see the failure, then drop from the retry queue.
-          recordDeadLetter(item, res.error ?? "permanent");
-          await remove(item.id, item);
+          try {
+            await archiveRejected(item, res.error ?? "permanent");
+          } catch (error) {
+            // Keep the pending revision if archive/dequeue could not be confirmed.
+            console.warn("[flush] permanent rejection remains queued", error);
+          }
           failed++;
         } else {
-          await bumpAttempt(item.id, res.error ?? null, item);
+          try { await bumpAttempt(item.id, res.error ?? null, item); }
+          catch (error) { console.warn("[flush] attempt update unconfirmed", error); }
           failed++;
         }
       }
