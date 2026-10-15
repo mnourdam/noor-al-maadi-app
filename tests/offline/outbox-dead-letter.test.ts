@@ -7,10 +7,11 @@ import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import type { OutboxItem } from "../../src/lib/offline/outbox";
 import type { DeadLetter } from "../../src/lib/offline/dead-letter";
 
-const server = vi.hoisted(() => ({ userId: "u1", upsert: vi.fn() }));
+const server = vi.hoisted(() => ({ userId: "u1", upsert: vi.fn(), rpc: vi.fn() }));
 vi.mock("@/integrations/supabase/client", () => ({ supabase: {
   auth: { getSession: async () => ({ data: { session: { user: { id: server.userId } } } }) },
   from: () => ({ upsert: server.upsert }),
+  rpc: server.rpc,
 } }));
 vi.mock("@/lib/identity/owner", () => ({ getIdentityEpoch: () => 0 }));
 
@@ -56,6 +57,7 @@ beforeEach(() => {
   vi.stubGlobal("indexedDB", factory); vi.stubGlobal("localStorage", storage);
   vi.stubGlobal("navigator", { locks: lockService() });
   server.userId = "u1";
+  server.rpc.mockReset().mockResolvedValue({ data: { ok: false, reason: "investigation_not_found" }, error: null });
   server.upsert.mockReset().mockResolvedValue({ error: { message: "not_published" } });
   vi.spyOn(console, "warn").mockImplementation(() => {});
 });
@@ -408,6 +410,49 @@ describe("Phase C: durable archive and account isolation", () => {
     vi.mocked(storage.setItem).mockImplementation((key, value) => { if (!key.startsWith(PREFIX)) values.set(key, value); });
     expect(await flush("u1")).toEqual({ flushed: 0, failed: 1 });
     expect(archiveKeys()).toEqual([]); expect(await outbox.peekAll("u1")).toEqual([queued]);
+  });
+
+  it("archives investigation_not_found before dequeue and never counts it as flushed", async () => {
+    const { outbox, dead, flush } = await api();
+    const queued = await outbox.enqueue("u1", "investigation_complete", { investigationId: "missing" });
+    let confirmed = false;
+    vi.mocked(storage.getItem).mockImplementation((key) => {
+      const value = values.get(key) ?? null;
+      if (key.startsWith(PREFIX) && value !== null) confirmed = true;
+      return value;
+    });
+    const originalRemove = outbox.remove;
+    const remove = vi.spyOn(outbox, "remove").mockImplementation((id, expected) => {
+      expect(confirmed).toBe(true);
+      expect(dead.listDeadLetters("u1")).toEqual([expect.objectContaining({ id: queued.id, revision: queued.revision, reason: "investigation_not_found" })]);
+      return originalRemove(id, expected);
+    });
+    expect(await flush("u1")).toEqual({ flushed: 0, failed: 1 });
+    expect(remove).toHaveBeenCalledWith(queued.id, queued);
+    expect(await outbox.peekAll("u1")).toEqual([]);
+    expect(server.rpc).toHaveBeenCalledWith("complete_investigation_v2", expect.objectContaining({ p_investigation_id: "missing", p_delta_id: queued.id }));
+    expect(dead.listDeadLetters("u1")).toHaveLength(1);
+  });
+
+  it.each(["write-failure", "full", "unconfirmed"])("retains investigation_not_found when archival is %s", async (failure) => {
+    const { outbox, dead, flush } = await api();
+    const queued = await outbox.enqueue("u1", "investigation_complete", { investigationId: "missing" });
+    const remove = vi.spyOn(outbox, "remove");
+    if (failure === "full") values.set(KEY, JSON.stringify(Array.from({ length: 500 }, (_, i) => letter(String(i)))));
+    if (failure === "write-failure") vi.mocked(storage.setItem).mockImplementation((key, value) => {
+      if (key.startsWith(PREFIX)) throw new DOMException("full", "QuotaExceededError");
+      values.set(key, value);
+    });
+    if (failure === "unconfirmed") vi.mocked(storage.getItem).mockImplementation((key) => {
+      const value = values.get(key) ?? null;
+      if (key.startsWith(PREFIX) && value !== null) throw new Error("confirmation unavailable");
+      return value;
+    });
+    expect(await flush("u1")).toEqual({ flushed: 0, failed: 1 });
+    expect(remove).not.toHaveBeenCalled();
+    expect(await outbox.peekAll("u1")).toEqual([queued]);
+    if (failure !== "unconfirmed") expect(dead.listDeadLetters("u1")).toHaveLength(failure === "full" ? 500 : 0);
+    else expect(archiveKeys()).toHaveLength(1);
   });
 
 });

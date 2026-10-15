@@ -165,9 +165,6 @@ async function handleItem(item: OutboxItem): Promise<{ ok: boolean; error?: stri
         if (error) return { ok: false, error: error.message };
         const payload = (res ?? {}) as { ok?: boolean; reason?: string };
         if (!payload.ok) {
-          // Investigation not found on server (disabled / removed). Drop the
-          // item so it doesn't jam the queue — nothing to record.
-          if (payload.reason === "investigation_not_found") return { ok: true };
           return { ok: false, error: payload.reason ?? "rpc-not-ok" };
         }
         try {
