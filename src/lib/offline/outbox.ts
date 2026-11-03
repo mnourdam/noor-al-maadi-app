@@ -13,6 +13,9 @@
 //          never touch another account's queue.
 // ============================================================
 
+import { getActiveOwner, getIdentityEpoch, onOwnerChange } from "../identity/owner";
+import { physicalKey } from "../identity/partition";
+
 export type OutboxKind =
   | "collection_add"        // user_collection upsert (ownership/awards)
   | "entity_discovery"      // user_entity_discoveries upsert (encyclopedia reads)
@@ -70,6 +73,37 @@ export class OutboxReadError extends OutboxStorageError {
   }
 }
 
+interface OutboxScope {
+  store: Storage | undefined;
+  fallbackKey: string;
+  userId: string;
+  partitioned: boolean;
+  assertCurrent(): void;
+}
+
+/** Capture before the first await. Explicit physical keys never follow a new
+ * owner; the epoch also rejects Alice -> Bob -> Alice while work was pending.
+ * Keep V17's shared-key behavior in runtimes without the partition adapter.
+ */
+function captureScope(userId: string): OutboxScope {
+  const store = typeof localStorage === "undefined" ? undefined : localStorage;
+  const prototype = store && Object.getPrototypeOf(store) as { __originalGetItem?: Storage["getItem"] } | null;
+  const partitioned = typeof prototype?.__originalGetItem === "function" && store?.getItem !== prototype.__originalGetItem;
+  const owner = partitioned ? getActiveOwner() : null;
+  const epoch = partitioned ? getIdentityEpoch() : null;
+  const scope: OutboxScope = {
+    store, userId, partitioned,
+    fallbackKey: owner === null ? LS_FALLBACK : physicalKey(LS_FALLBACK, owner),
+    assertCurrent() {
+      if (owner !== null && (owner !== `user:${userId}` || getActiveOwner() !== owner || getIdentityEpoch() !== epoch)) {
+        throw new OutboxStorageError("outbox-owner-changed-or-mismatched");
+      }
+    },
+  };
+  scope.assertCurrent();
+  return scope;
+}
+
 class DatabaseError extends Error {}
 class AccountCollision extends DatabaseError {}
 let dbPromise: Promise<IDBDatabase> | null = null;
@@ -105,13 +139,20 @@ function openDB(): Promise<IDBDatabase> {
 }
 
 /** IDB serializes read/compare/write across tabs even without Web Locks. */
-async function transaction<T>(mode: IDBTransactionMode, action: (store: IDBObjectStore, rows: OutboxItem[]) => T): Promise<T> {
+async function transaction<T>(
+  scope: OutboxScope,
+  mode: IDBTransactionMode,
+  action: (store: IDBObjectStore, rows: OutboxItem[]) => T,
+): Promise<T> {
   try {
+    scope.assertCurrent();
     const db = await openDB();
+    scope.assertCurrent();
     return await new Promise<T>((resolve, reject) => {
       let tx: IDBTransaction;
-      try { tx = db.transaction(STORE, mode); }
-      catch (cause) {
+      try {
+        tx = db.transaction(STORE, mode);
+      } catch (cause) {
         // A closed/invalid handle must be reopened on the next operation.
         dbPromise = null;
         reject(new DatabaseError("Outbox IDB transaction unavailable", { cause }));
@@ -119,17 +160,50 @@ async function transaction<T>(mode: IDBTransactionMode, action: (store: IDBObjec
       }
       let value: T;
       let actionError: unknown;
-      tx.oncomplete = () => resolve(value);
-      tx.onabort = tx.onerror = () => reject(actionError ?? new DatabaseError("Outbox IDB transaction failed", { cause: tx.error }));
+      const unsubscribe = scope.partitioned
+        ? onOwnerChange(() => {
+            try {
+              scope.assertCurrent();
+            } catch (error) {
+              actionError = error;
+              // Abort only an uncommitted transaction. If it already committed,
+              // preserve its bytes and let oncomplete reject the stale receipt.
+              try {
+                tx.abort();
+              } catch {
+                /* already committed */
+              }
+            }
+          })
+        : () => {};
+      tx.oncomplete = () => {
+        unsubscribe();
+        // A committed write is retained even if the owner changed before delivery
+        // of this event. Never fall back or issue a success receipt in that case.
+        try {
+          scope.assertCurrent();
+          resolve(value);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      tx.onabort = tx.onerror = () => {
+        unsubscribe();
+        reject(
+          actionError ?? new DatabaseError("Outbox IDB transaction failed", { cause: tx.error }),
+        );
+      };
       const store = tx.objectStore(STORE);
       const request = store.getAll();
       request.onsuccess = () => {
         try {
+          scope.assertCurrent();
           const rows = validateRows(request.result);
           value = action(store, rows);
+          scope.assertCurrent();
         } catch (error) {
           actionError = error;
-          tx.abort();
+          try { tx.abort(); } catch { /* owner listener may already have aborted */ }
         }
       };
     });
@@ -165,15 +239,20 @@ function validateRows(value: unknown): OutboxItem[] {
   return value as OutboxItem[];
 }
 
-function lsReadAllOrThrow(): OutboxItem[] {
-  if (typeof localStorage === "undefined") throw new OutboxStorageError("no-local-storage");
-  const raw = localStorage.getItem(LS_FALLBACK);
+function lsReadAllOrThrow(scope: OutboxScope): OutboxItem[] {
+  scope.assertCurrent();
+  if (!scope.store) throw new OutboxStorageError("no-local-storage");
+  const raw = scope.store.getItem(scope.fallbackKey);
+  scope.assertCurrent();
   return raw === null ? [] : validateRows(JSON.parse(raw));
 }
 
-function lsWriteAll(items: OutboxItem[]): void {
+function lsWriteAll(scope: OutboxScope, items: OutboxItem[]): void {
+  scope.assertCurrent();
   if (items.length > FALLBACK_CAPACITY) throw new OutboxStorageError("outbox-fallback-full");
-  localStorage.setItem(LS_FALLBACK, JSON.stringify(items));
+  if (!scope.store) throw new OutboxStorageError("no-local-storage");
+  scope.store.setItem(scope.fallbackKey, JSON.stringify(items));
+  scope.assertCurrent();
 }
 
 // Canonical comparison also supports V17 rows that have no revision token.
@@ -205,9 +284,15 @@ function merge(rows: OutboxItem[]): OutboxItem[] {
   return [...result.values()];
 }
 
-async function coordinated<T>(action: (locked: boolean) => Promise<T>): Promise<T> {
+async function coordinated<T>(scope: OutboxScope, action: (locked: boolean) => Promise<T>): Promise<T> {
   const locks = typeof navigator !== "undefined" ? navigator.locks : undefined;
-  return locks ? locks.request(LS_FALLBACK, { mode: "exclusive" }, () => action(true)) : action(false);
+  const run = async (locked: boolean) => {
+    scope.assertCurrent();
+    const result = await action(locked);
+    scope.assertCurrent();
+    return result;
+  };
+  return locks ? locks.request(LS_FALLBACK, { mode: "exclusive" }, () => run(true)) : run(false);
 }
 
 function requireLock(locked: boolean): void {
@@ -219,11 +304,15 @@ function changed(): void {
 }
 
 /** Copy -> commit -> remove only unchanged fallback rows. Caller holds the lock. */
-async function recover(fallback: OutboxItem[], locked: boolean): Promise<OutboxItem[]> {
+async function recover(scope: OutboxScope, fallback: OutboxItem[], locked: boolean): Promise<OutboxItem[]> {
+  scope.assertCurrent();
+  // Never copy or clean a foreign V17 snapshot found in an own-account array.
+  // Keep its snapshot in the original namespace; do not guess a migration.
+  fallback = scope.partitioned ? fallback.filter((row) => row.userId === scope.userId) : fallback;
   // Without a cross-context lock, do not mutate the shared localStorage array.
-  if (fallback.length && !locked) return transaction("readonly", (_store, stored) => merge([...stored, ...fallback]));
+  if (fallback.length && !locked) return transaction(scope, "readonly", (_store, stored) => merge([...stored, ...fallback]));
   let copied: OutboxItem[] = [];
-  const rows = await transaction(fallback.length ? "readwrite" : "readonly", (store, stored) => {
+  const rows = await transaction(scope, fallback.length ? "readwrite" : "readonly", (store, stored) => {
     const merged = merge([...stored, ...fallback]);
     // Keep v1's id key and all original idempotency keys. One owner per IDB key;
     // other owners stay durably in fallback, without blocking unrelated rows.
@@ -237,10 +326,10 @@ async function recover(fallback: OutboxItem[], locked: boolean): Promise<OutboxI
     return merged;
   });
   if (copied.length) {
-    const current = lsReadAllOrThrow();
+    const current = lsReadAllOrThrow(scope);
     const remaining = current.filter((row) => !copied.some((source) => same(source, row)));
-    lsWriteAll(remaining);
-    const retained = fallback.filter((row) => !copied.includes(row));
+    lsWriteAll(scope, remaining);
+    const retained = current.filter((row) => scope.partitioned && row.userId !== scope.userId).concat(fallback.filter((row) => !copied.includes(row)));
     if (remaining.some((row) => !retained.some((source) => same(source, row)))) {
       throw new OutboxStorageError("outbox-fallback-changed-during-recovery");
     }
@@ -249,11 +338,13 @@ async function recover(fallback: OutboxItem[], locked: boolean): Promise<OutboxI
 }
 
 /** Both stores are required for a complete observation, even after one fails. */
-async function readBoth(userId: string): Promise<{ fallback: OutboxItem[]; stored: OutboxItem[] }> {
+async function readBoth(scope: OutboxScope): Promise<{ fallback: OutboxItem[]; stored: OutboxItem[] }> {
   const [ls, idb] = await Promise.allSettled([
-    Promise.resolve().then(lsReadAllOrThrow),
-    transaction("readonly", (_store, rows) => rows),
+    Promise.resolve().then(() => lsReadAllOrThrow(scope)),
+    transaction(scope, "readonly", (_store, rows) => rows),
   ]);
+  scope.assertCurrent();
+  const userId = scope.userId;
   if (ls.status === "rejected" || idb.status === "rejected") {
     throw new OutboxReadError([
       ...(idb.status === "fulfilled" ? idb.value.filter((row) => row.userId === userId) : []),
@@ -269,20 +360,21 @@ export async function enqueue(userId: string, kind: OutboxKind, payload: Record<
 
 /** A receipt describes this exact committed JSON snapshot, not the caller's live object. */
 export async function enqueueWithId(userId: string, id: string, kind: OutboxKind, payload: Record<string, unknown>): Promise<OutboxItem> {
+  const scope = captureScope(userId);
   let frozenPayload: Record<string, unknown>;
   try {
     frozenPayload = JSON.parse(JSON.stringify(payload));
     if (!frozenPayload || typeof frozenPayload !== "object" || Array.isArray(frozenPayload)) throw new Error("invalid-payload");
   } catch (cause) { throw new OutboxStorageError("Outbox persistence failed", { cause }); }
-  return coordinated(async (locked) => {
+  return coordinated(scope, async (locked) => {
     try {
-      const fallback = lsReadAllOrThrow();
+      const fallback = lsReadAllOrThrow(scope);
       if (fallback.length) requireLock(locked);
       let base: OutboxItem | undefined;
       try {
-        const recovered = await recover(fallback, locked);
+        const recovered = await recover(scope, fallback, locked);
         base = recovered.find((row) => row.id === id && row.userId === userId);
-        const saved = await transaction("readwrite", (store, rows) => {
+        const saved = await transaction(scope, "readwrite", (store, rows) => {
           if (rows.some((row) => row.id === id && row.userId !== userId)) throw new AccountCollision("outbox-account-id-collision");
           const previous = rows.find((row) => row.id === id);
           const item = makeItem(previous);
@@ -294,12 +386,12 @@ export async function enqueueWithId(userId: string, id: string, kind: OutboxKind
       } catch (error) {
         if (!(error instanceof DatabaseError)) throw error;
         requireLock(locked);
-        const current = lsReadAllOrThrow();
+        const current = lsReadAllOrThrow(scope);
         const pending = current.find((row) => row.id === id && row.userId === userId);
         const previous = pending ?? base;
         const anchor = pending?.recoveryBase ?? (previous ? token(previous) : undefined);
         const item = makeItem(previous, anchor);
-        lsWriteAll([...current.filter((row) => row.id !== id || row.userId !== userId), item]);
+        lsWriteAll(scope, [...current.filter((row) => row.id !== id || row.userId !== userId), item]);
         changed();
         return item;
       }
@@ -315,9 +407,11 @@ export async function enqueueWithId(userId: string, id: string, kind: OutboxKind
 }
 
 export async function peekAll(userId: string): Promise<OutboxItem[]> {
-  return coordinated(async (locked) => {
-    const { fallback, stored } = await readBoth(userId);
-    const items = locked ? await recover(fallback, true) : merge([...stored, ...fallback]);
+  const scope = captureScope(userId);
+  return coordinated(scope, async (locked) => {
+    const { fallback, stored } = await readBoth(scope);
+    const items = locked ? await recover(scope, fallback, true) : merge([...stored, ...fallback]);
+    scope.assertCurrent();
     return items.filter((row) => row.userId === userId).sort((a, b) => a.createdAt - b.createdAt);
   });
 }
@@ -337,14 +431,15 @@ export async function bumpAttempt(id: string, error: string | null, expected?: O
 
 async function mutate(id: string, expected: OutboxItem | undefined, change: (current: OutboxItem) => OutboxItem | null): Promise<boolean> {
   if (!expected || expected.id !== id) throw new OutboxStorageError("outbox-revision-required");
+  const scope = captureScope(expected.userId);
   const snapshot = JSON.parse(JSON.stringify(expected)) as OutboxItem;
-  return coordinated(async (locked) => {
-    const { fallback } = await readBoth(snapshot.userId);
+  return coordinated(scope, async (locked) => {
+    const { fallback } = await readBoth(scope);
     if (fallback.some((row) => identity(row) === identity(snapshot))) requireLock(locked);
-    const recovered = await recover(fallback, locked);
+    const recovered = await recover(scope, fallback, locked);
     const latest = recovered.find((row) => identity(row) === identity(snapshot));
     if (!latest || !same(latest, snapshot)) return false;
-    const result = await transaction("readwrite", (store, rows) => {
+    const result = await transaction(scope, "readwrite", (store, rows) => {
       const current = rows.find((row) => row.id === id && row.userId === snapshot.userId);
       if (!current) return "fallback";
       if (!same(current, snapshot)) return "stale";
@@ -355,11 +450,11 @@ async function mutate(id: string, expected: OutboxItem | undefined, change: (cur
     if (result === "stale") return false;
     if (result === "fallback") {
       requireLock(locked);
-      const current = lsReadAllOrThrow();
+      const current = lsReadAllOrThrow(scope);
       const row = current.find((row) => identity(row) === identity(snapshot));
       if (!row || !same(row, snapshot)) return false;
       const next = change(row);
-      lsWriteAll(current.flatMap((candidate) => candidate === row ? (next ? [next] : []) : [candidate]));
+      lsWriteAll(scope, current.flatMap((candidate) => candidate === row ? (next ? [next] : []) : [candidate]));
     }
     changed();
     return true;

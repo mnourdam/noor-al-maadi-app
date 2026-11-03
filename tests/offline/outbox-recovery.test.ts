@@ -4,6 +4,7 @@ import { webcrypto } from "node:crypto";
 import { transpileModule, ModuleKind, ScriptTarget } from "typescript";
 import { IDBFactory, IDBDatabase, IDBObjectStore } from "fake-indexeddb";
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
+import { physicalKey } from "../../src/lib/identity/partition";
 import type { OutboxItem } from "../../src/lib/offline/outbox";
 
 const server = vi.hoisted(() => ({ upsert: vi.fn() }));
@@ -91,7 +92,11 @@ function realm(withLocks: boolean, withIDB: boolean) {
   const compiled = transpileModule(source, { compilerOptions: { module: ModuleKind.CommonJS, target: ScriptTarget.ES2022 } }).outputText;
   const exports = {};
   runInNewContext(compiled, {
-    exports, indexedDB: withIDB ? factory : undefined, localStorage: storage,
+    exports, require: (path: string) => {
+      if (path === "../identity/owner") return {};
+      if (path === "../identity/partition") return { physicalKey };
+      throw new Error("Unexpected dependency");
+    }, indexedDB: withIDB ? factory : undefined, localStorage: storage,
     navigator: withLocks ? navigator : {}, crypto: webcrypto,
   });
   return exports as typeof import("../../src/lib/offline/outbox");
