@@ -1,5 +1,7 @@
 /** Foundation only: no profile writes, RPC, Outbox inference or delivery API. */
 import { getActiveOwner, getIdentityEpoch, onOwnerChange } from "@/lib/identity/owner";
+import { openSettlementDatabase } from "./database";
+export { SETTLEMENT_DB } from "./database";
 
 export type ProgressState =
   | "storage_pending"
@@ -30,7 +32,6 @@ export interface Entitlement {
   terms: string;
   attempts: Attempt[];
 }
-export const SETTLEMENT_DB = "irth-reward-settlement-v1";
 const STORE = "entitlements";
 function fail(message: string): never {
   throw new Error(`settlement:${message}`);
@@ -47,7 +48,8 @@ function validBinding(b: Binding): boolean {
 function token(b: Binding): string {
   return JSON.stringify([b.operationId, b.revision, b.snapshot]);
 }
-function validate(row: Entitlement, owner: string, key: string): void {
+/** Internal validation shared by transactional readers; no repair or coercion. */
+export function validateEntitlement(row: Entitlement, owner: string, key: string): void {
   if (
     !row ||
     row.version !== 1 ||
@@ -87,20 +89,7 @@ export function settlementForOwner(owner: string) {
   guard();
   async function open(): Promise<IDBDatabase> {
     guard();
-    const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      let abandoned = false;
-      const req = indexedDB.open(SETTLEMENT_DB, 1);
-      req.onupgradeneeded = () => req.result.createObjectStore(STORE);
-      req.onsuccess = () => {
-        if (abandoned) req.result.close();
-        else resolve(req.result);
-      };
-      req.onerror = () => reject(req.error);
-      req.onblocked = () => {
-        abandoned = true;
-        reject(new Error("settlement:database-blocked"));
-      };
-    });
+    const db = await openSettlementDatabase();
     try {
       guard();
     } catch (e) {
@@ -142,10 +131,10 @@ export function settlementForOwner(owner: string) {
           try {
             guard();
             result = req.result as Entitlement | undefined;
-            if (result !== undefined) validate(result, owner, key);
+            if (result !== undefined) validateEntitlement(result, owner, key);
             if (change) {
               result = change(result);
-              validate(result, owner, key);
+              validateEntitlement(result, owner, key);
               guard();
               store.put(result, JSON.stringify([owner, key]));
             }
@@ -198,7 +187,7 @@ export function settlementForOwner(owner: string) {
               fail("corrupt-key");
             if (key[0] === owner) {
               const row = cursor.value as Entitlement;
-              validate(row, owner, key[1]);
+              validateEntitlement(row, owner, key[1]);
               rows.push(row);
             }
             cursor.continue();

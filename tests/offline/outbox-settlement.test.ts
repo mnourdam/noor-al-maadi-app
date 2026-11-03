@@ -16,7 +16,7 @@ const ack = { state: "confirmed" as const, rewardDue: true, evidence: "rpc-resul
 const latest = (row: any) => row.attempts.at(-1);
 async function raw(write: (store: IDBObjectStore) => void) {
   const db = await new Promise<IDBDatabase>((resolve, reject) => {
-    const req = indexedDB.open(SETTLEMENT_DB, 1);
+    const req = indexedDB.open(SETTLEMENT_DB);
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });
