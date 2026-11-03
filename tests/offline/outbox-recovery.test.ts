@@ -311,19 +311,21 @@ describe("Outbox recovery and independent contexts (phase B)", () => {
     expect(storage.setItem).not.toHaveBeenCalled();
   });
 
-  it("uses atomic IDB revisions without Web Locks across independent contexts", async () => {
+  it("uses atomic IDB comparisons without Web Locks across independent contexts", async () => {
     const first = await initialize();
     const second = await context();
     vi.stubGlobal("navigator", {});
-    const [one, two] = await Promise.all([
+    const results = await Promise.allSettled([
       first.enqueueWithId("u1", "shared", "game_complete", { v: 1 }),
       second.enqueueWithId("u1", "shared", "game_complete", { v: 2 }),
     ]);
-    expect(one.revision).not.toBe(two.revision);
-    expect(await dbRows()).toEqual([two]);
-    expect(await first.remove(one.id, one)).toBe(false);
-    expect(await second.bumpAttempt(two.id, "retry", two)).toBe(true);
-    expect((await dbRows())[0].payload).toEqual(two.payload);
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    const winner = results.find((result) => result.status === "fulfilled")!;
+    if (winner.status !== "fulfilled") throw new Error("missing winner");
+    expect(results.find((result) => result.status === "rejected")).toMatchObject({ reason: { cause: { message: "outbox-stale-enqueue" } } });
+    expect(await dbRows()).toEqual([winner.value]);
+    expect(await second.bumpAttempt(winner.value.id, "retry", winner.value)).toBe(true);
+    expect((await dbRows())[0].payload).toEqual(winner.value.payload);
   });
 
   it("refuses unsafe fallback cleanup/acknowledgement without Web Locks", async () => {
@@ -415,18 +417,20 @@ describe("Outbox recovery and independent contexts (phase B)", () => {
     expect(storage.setItem).not.toHaveBeenCalled();
   });
 
-  it("serializes IDB compare/write across separate realms without Web Locks", async () => {
+  it("rejects competing IDB compare/write across separate realms without Web Locks", async () => {
     await initialize();
     const first = realm(false, true);
     const second = realm(false, true);
-    const [one, two] = await Promise.all([
+    const results = await Promise.allSettled([
       first.enqueueWithId("u1", "shared", "game_complete", { v: 1 }),
       second.enqueueWithId("u1", "shared", "game_complete", { v: 2 }),
     ]);
-    expect(two.supersedes).toBe(one.revision);
-    expect(await first.remove(one.id, one)).toBe(false);
-    expect(await dbRows()).toEqual([two]);
-    expect(await second.remove(two.id, two)).toBe(true);
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    expect(results.find((result) => result.status === "rejected")).toMatchObject({ reason: { cause: { message: "outbox-stale-enqueue" } } });
+    const winner = results.find((result) => result.status === "fulfilled")!;
+    if (winner.status !== "fulfilled") throw new Error("missing winner");
+    expect(await dbRows()).toEqual([winner.value]);
+    expect(await second.remove(winner.value.id, winner.value)).toBe(true);
   });
 
   it("waits for the read transaction to commit, not just getAll success", async () => {

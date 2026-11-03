@@ -73,7 +73,10 @@ export class OutboxReadError extends OutboxStorageError {
   }
 }
 
+export interface EnqueueOptions { signal?: AbortSignal }
+
 interface OutboxScope {
+  signal?: AbortSignal;
   store: Storage | undefined;
   fallbackKey: string;
   userId: string;
@@ -85,16 +88,17 @@ interface OutboxScope {
  * owner; the epoch also rejects Alice -> Bob -> Alice while work was pending.
  * Keep V17's shared-key behavior in runtimes without the partition adapter.
  */
-function captureScope(userId: string): OutboxScope {
+function captureScope(userId: string, signal?: AbortSignal): OutboxScope {
   const store = typeof localStorage === "undefined" ? undefined : localStorage;
   const prototype = store && Object.getPrototypeOf(store) as { __originalGetItem?: Storage["getItem"] } | null;
   const partitioned = typeof prototype?.__originalGetItem === "function" && store?.getItem !== prototype.__originalGetItem;
   const owner = partitioned ? getActiveOwner() : null;
   const epoch = partitioned ? getIdentityEpoch() : null;
   const scope: OutboxScope = {
-    store, userId, partitioned,
+    store, userId, partitioned, signal,
     fallbackKey: owner === null ? LS_FALLBACK : physicalKey(LS_FALLBACK, owner),
     assertCurrent() {
+      if (signal?.aborted) throw new OutboxStorageError("outbox-enqueue-cancelled");
       if (owner !== null && (owner !== `user:${userId}` || getActiveOwner() !== owner || getIdentityEpoch() !== epoch)) {
         throw new OutboxStorageError("outbox-owner-changed-or-mismatched");
       }
@@ -160,22 +164,19 @@ async function transaction<T>(
       }
       let value: T;
       let actionError: unknown;
-      const unsubscribe = scope.partitioned
-        ? onOwnerChange(() => {
-            try {
-              scope.assertCurrent();
-            } catch (error) {
-              actionError = error;
-              // Abort only an uncommitted transaction. If it already committed,
-              // preserve its bytes and let oncomplete reject the stale receipt.
-              try {
-                tx.abort();
-              } catch {
-                /* already committed */
-              }
-            }
-          })
-        : () => {};
+      const abortIfInvalid = () => {
+        try { scope.assertCurrent(); } catch (error) {
+          actionError = error;
+          // A completed commit is retained; only pending work is abortable.
+          try { tx.abort(); } catch { /* already committed */ }
+        }
+      };
+      const offOwner = scope.partitioned ? onOwnerChange(abortIfInvalid) : () => {};
+      scope.signal?.addEventListener("abort", abortIfInvalid);
+      const unsubscribe = () => {
+        offOwner();
+        scope.signal?.removeEventListener("abort", abortIfInvalid);
+      };
       tx.oncomplete = () => {
         unsubscribe();
         // A committed write is retained even if the owner changed before delivery
@@ -266,6 +267,11 @@ function canonical(value: unknown): string {
 }
 
 function same(a: OutboxItem, b: OutboxItem): boolean { return canonical(a) === canonical(b); }
+function assertBase(current: OutboxItem | undefined, base: OutboxItem | undefined): void {
+  if (current ? !base || !same(current, base) : base !== undefined) {
+    throw new OutboxStorageError("outbox-stale-enqueue");
+  }
+}
 function token(item: OutboxItem): string { return item.revision ?? `v17:${canonical(item)}`; }
 function identity(item: OutboxItem): string { return JSON.stringify([item.userId, item.id]); }
 
@@ -359,8 +365,8 @@ export async function enqueue(userId: string, kind: OutboxKind, payload: Record<
 }
 
 /** A receipt describes this exact committed JSON snapshot, not the caller's live object. */
-export async function enqueueWithId(userId: string, id: string, kind: OutboxKind, payload: Record<string, unknown>): Promise<OutboxItem> {
-  const scope = captureScope(userId);
+export async function enqueueWithId(userId: string, id: string, kind: OutboxKind, payload: Record<string, unknown>, options: EnqueueOptions = {}): Promise<OutboxItem> {
+  const scope = captureScope(userId, options.signal);
   let frozenPayload: Record<string, unknown>;
   try {
     frozenPayload = JSON.parse(JSON.stringify(payload));
@@ -370,14 +376,18 @@ export async function enqueueWithId(userId: string, id: string, kind: OutboxKind
     try {
       const fallback = lsReadAllOrThrow(scope);
       if (fallback.length) requireLock(locked);
+      const fallbackBase = fallback.find((row) => row.id === id && row.userId === userId);
       let base: OutboxItem | undefined;
+      let observed = false;
       try {
         const recovered = await recover(scope, fallback, locked);
         base = recovered.find((row) => row.id === id && row.userId === userId);
+        observed = true;
         const saved = await transaction(scope, "readwrite", (store, rows) => {
           if (rows.some((row) => row.id === id && row.userId !== userId)) throw new AccountCollision("outbox-account-id-collision");
           const previous = rows.find((row) => row.id === id);
-          const item = makeItem(previous);
+          assertBase(previous, base);
+          const item = makeItem(base);
           store.put(item);
           return item;
         });
@@ -388,6 +398,9 @@ export async function enqueueWithId(userId: string, id: string, kind: OutboxKind
         requireLock(locked);
         const current = lsReadAllOrThrow(scope);
         const pending = current.find((row) => row.id === id && row.userId === userId);
+        // Never adopt a newer fallback revision after an asynchronous IDB
+        // failure. Recovery may have removed our exact old backup after copying.
+        if (pending || !observed) assertBase(pending, fallbackBase);
         const previous = pending ?? base;
         const anchor = pending?.recoveryBase ?? (previous ? token(previous) : undefined);
         const item = makeItem(previous, anchor);

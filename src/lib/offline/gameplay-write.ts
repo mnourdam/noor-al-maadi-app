@@ -7,6 +7,8 @@ export interface SaveOutcome<T = Record<string, unknown>> {
   acknowledged: boolean;
   queued: boolean;
   dequeued?: boolean;
+  /** Deadline elapsed without a confirmed storage result; not proof of loss. */
+  storageState?: "unresolved";
   reason?: string;
   result?: T;
 }
@@ -17,13 +19,13 @@ export function saveAccepted(outcome: SaveOutcome<any>): boolean {
 }
 export const SAVE_TIMEOUT_MS = 8000;
 
-export async function saveDeadline<T>(operation: PromiseLike<T>): Promise<T> {
+export async function saveDeadline<T>(operation: PromiseLike<T>, onTimeout?: () => void): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([
       Promise.resolve(operation),
       new Promise<never>((_, reject) => {
-        timer = setTimeout(() => reject(new Error("save-timeout")), SAVE_TIMEOUT_MS);
+        timer = setTimeout(() => { onTimeout?.(); reject(new Error("save-timeout")); }, SAVE_TIMEOUT_MS);
       }),
     ]);
   } finally {
@@ -44,6 +46,9 @@ export async function saveUserId(strict = false): Promise<string | null> {
   }
 }
 
+// Keep the raw persistence lifetime separate from the finite UI deadline.
+// A timed-out write stays fenced until cancellation/commit has actually settled.
+const pendingWrites = new Map<string, Promise<OutboxItem>>();
 const inflight = new Map<string, Promise<SaveOutcome<any>>>();
 /** Small caller adapter: receipt-bound ack, finite waits, and owner fencing. */
 export function saveGameplay<T extends { ok?: boolean; reason?: string }>(p: {
@@ -63,6 +68,10 @@ export function saveGameplay<T extends { ok?: boolean; reason?: string }>(p: {
   const key = JSON.stringify([epoch, p.userId, p.id, p.kind, payload]);
   const existing = inflight.get(key);
   if (existing) return existing;
+  const writeKey = JSON.stringify([epoch, p.userId, p.id]);
+  if (pendingWrites.has(writeKey)) return Promise.resolve({
+    acknowledged: false, queued: false, reason: "storage_pending", storageState: "unresolved",
+  });
   const promise = run().finally(() => {
     if (inflight.get(key) === promise) inflight.delete(key);
   });
@@ -71,10 +80,26 @@ export function saveGameplay<T extends { ok?: boolean; reason?: string }>(p: {
 
   async function run(): Promise<SaveOutcome<T>> {
     let receipt: OutboxItem | undefined;
+    const cancellation = new AbortController();
+    const writing = enqueueWithId(p.userId, p.id, p.kind, payload, { signal: cancellation.signal });
+    pendingWrites.set(writeKey, writing);
+    const release = () => { if (pendingWrites.get(writeKey) === writing) pendingWrites.delete(writeKey); };
+    void writing.then(release, release);
     try {
-      receipt = await saveDeadline(enqueueWithId(p.userId, p.id, p.kind, payload));
-    } catch {
-      /* A live acknowledgement may still prove persistence. */
+      receipt = await saveDeadline(writing, () => cancellation.abort());
+    } catch (error) {
+      // An obsolete intent must never reach RPC after a CAS/cancellation failure.
+      // Generic storage failures retain the existing live-ack path.
+      let cause: unknown = error;
+      while (cause instanceof Error) {
+        if (cause.message === "save-timeout") return {
+          acknowledged: false, queued: false, reason: "storage_pending", storageState: "unresolved",
+        };
+        if (["outbox-stale-enqueue", "outbox-enqueue-cancelled", "outbox-revision-conflict", "outbox-fallback-changed-during-recovery"].includes(cause.message)) {
+          return { acknowledged: false, queued: false, reason: "storage_conflict" };
+        }
+        cause = cause.cause;
+      }
     }
     const pending = (): SaveOutcome<T> => ({
       acknowledged: false,
