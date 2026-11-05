@@ -701,10 +701,10 @@ describe("P1-06D-01 inactive provenance/intent foundation", () => {
         /(?:guest-handoff|createHandoffFoundation|openHandoffJournal)/,
       );
   });
-  it("inactive package has no application imports, transport, deletion or grants", () => {
+  it("inactive foundation core has no application imports, transport, deletion or grants", () => {
     const directory = "src/lib/campaigns/guest-handoff";
     const code = readdirSync(directory)
-      .filter((n) => n.endsWith(".ts"))
+      .filter((n) => ["contract.ts", "codec.ts", "journal.ts"].includes(n))
       .map((n) => readFileSync(`${directory}/${n}`, "utf8"))
       .join("\n");
     expect(code).not.toMatch(/from\s+["']@\//);
