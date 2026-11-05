@@ -1,4 +1,4 @@
-import { getIdentityEpoch } from "@/lib/identity/owner";
+import { getActiveOwner, getIdentityEpoch } from "@/lib/identity/owner";
 import { saveUserId } from "@/lib/offline/gameplay-write";
 import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -57,6 +57,8 @@ function GamePlayPage() {
   const completionActive = useRef(true);
   useEffect(() => { completionActive.current = true; return () => { completionActive.current = false; }; }, []);
   const [finalScore, setFinalScore] = useState<number | null>(null);
+  const [ledgerError, setLedgerError] = useState<string | null>(null);
+  const [ledgerRetry, setLedgerRetry] = useState(0);
   // Permanently completed (discovered) — blocks replay. Null = unknown yet.
   const [alreadyCompleted, setAlreadyCompleted] = useState<boolean | null>(null);
 
@@ -81,13 +83,22 @@ function GamePlayPage() {
 
   useEffect(() => {
     if (!slug) { setGame(null); return; }
+    let alive = true;
+    const epoch = getIdentityEpoch();
+    const current = () => alive && getIdentityEpoch() === epoch;
+    setLedgerError(null);
+    setAlreadyCompleted(null);
     (async () => {
+      try {
       const g = await getGameBySlug(slug);
+      if (!current()) return;
       setGame(g);
       if (g) {
         const { data } = await supabase.auth.getUser();
+        if (!current()) return;
         if (data.user?.id) {
           const p = await getMyProgress(g.id);
+          if (!current()) return;
           setAlreadyCompleted(!!p?.completed);
         } else {
           // Guest reward guard mirrors the ledger — if a guest has already
@@ -96,13 +107,18 @@ function GamePlayPage() {
           const { readGuestCompletedIds } = await import(
             "@/lib/games/guestCompletions"
           );
+          if (!current()) return;
           setAlreadyCompleted(readGuestCompletedIds().has(g.id));
         }
       } else {
         setAlreadyCompleted(false);
       }
+      } catch {
+        if (current()) setLedgerError("تعذر قراءة سجل إكمال التحديات. تحقق من التخزين ثم أعد المحاولة.");
+      }
     })();
-  }, [slug]);
+    return () => { alive = false; };
+  }, [slug, profile.loggedIn, ledgerRetry]);
 
 
   const stages = useMemo(() => {
@@ -150,7 +166,7 @@ function GamePlayPage() {
     // Timeout / attempts failure must block any reward pipeline.
     if (failed || stageDone || completionPending.current) return;
     completionPending.current = true;
-    const epoch = getIdentityEpoch();
+    const epoch = getIdentityEpoch(), owner = getActiveOwner();
     try {
     setSaving(true);
     if (!isLast) setStageDone(true);
@@ -174,9 +190,13 @@ function GamePlayPage() {
         if (!completionActive.current || getIdentityEpoch() !== epoch) return;
         firstTime = res.firstTime;
       } else {
-        firstTime = addGuestCompletion(game.id).firstTime;
+        const saved = await addGuestCompletion(game.id);
+        if (!completionActive.current || getIdentityEpoch() !== epoch || getActiveOwner() !== owner) return;
+        if (!saved.saved) throw new Error("guest save not confirmed");
+        firstTime = saved.firstTime;
       }
 
+      if (!uid && !firstTime) { setAlreadyCompleted(true); setFinalScore(null); return; }
       if (firstTime) {
         // Economy cap — mini-games contribute XP but must not dwarf campaign work.
         if (game.xp_reward > 0) addPoints(Math.min(game.xp_reward, 40));
@@ -334,6 +354,12 @@ function GamePlayPage() {
   // Permanently completed — once discovered, a challenge cannot be replayed.
   // Wait until the progress fetch resolves so we don't briefly mount the
   // playable UI for a completed game (which would also restart the timer).
+  if (ledgerError) {
+    return <AppShell><Screen title="سجل الإكمال غير متاح"><div role="alert"><p>{ledgerError}</p>
+      <button type="button" onClick={() => setLedgerRetry(n => n + 1)}>إعادة المحاولة</button>
+    </div></Screen></AppShell>;
+  }
+
   if (alreadyCompleted === null) {
     return (
       <AppShell>

@@ -16,43 +16,23 @@
 // account's server profile).
 // ============================================================
 
+import {
+  localScope,
+  readCompletionSet,
+  saveCompletion,
+  type GuestSaveResult,
+} from "@/lib/guest/storage";
 const STORAGE_KEY = "irth.guest.storyCompletions.v1";
-
-function read(): Set<string> {
-  if (typeof window === "undefined") return new Set();
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return new Set();
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return new Set();
-    return new Set(parsed.filter((x): x is string => typeof x === "string"));
-  } catch { return new Set(); }
-}
-
-function write(set: Set<string>): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify([...set]));
-  } catch { /* quota / private mode — non-fatal */ }
-}
-
+/** Throws on unavailable/corrupt history; absence alone is an empty ledger. */
 export function guestHasCompleted(storyId: string): boolean {
-  return read().has(storyId);
+  return guestCompletionsSnapshot().has(storyId);
 }
-
-/** Idempotent. Returns true when this call was the first-time completion. */
-export function guestMarkCompleted(storyId: string): boolean {
-  const s = read();
-  if (s.has(storyId)) return false;
-  s.add(storyId);
-  write(s);
-  if (typeof window !== "undefined") {
-    try { window.dispatchEvent(new CustomEvent("irth:guest-story-completed", { detail: { storyId } })); } catch { /* ignore */ }
-    try { window.dispatchEvent(new CustomEvent("irth:story-completions:changed")); } catch { /* ignore */ }
-  }
-  return true;
+export function guestMarkCompleted(storyId: string): Promise<GuestSaveResult> {
+  return saveCompletion(STORAGE_KEY, storyId, [
+    "irth:guest-story-completed",
+    "irth:story-completions:changed",
+  ]);
 }
-
 export function guestCompletionsSnapshot(): Set<string> {
-  return read();
+  return readCompletionSet(localScope(STORAGE_KEY));
 }

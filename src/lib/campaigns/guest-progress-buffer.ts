@@ -35,123 +35,201 @@ interface BufferFile {
   entries: Record<string, BufferedChapterProgress>;
 }
 
-function isBrowser(): boolean {
-  return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
-}
+import {
+  localScope,
+  withStorageLock,
+  GuestStorageError,
+  storageReason,
+  type LocalScope,
+  type GuestStorageReason,
+} from "@/lib/guest/storage";
 
-function emptyFile(): BufferFile {
-  return { boundUid: null, entries: {} };
-}
-
-export function readGuestBuffer(): BufferFile {
-  if (!isBrowser()) return emptyFile();
+function readFile(scope: LocalScope): BufferFile {
+  const raw = scope.read();
+  if (raw === null) return { boundUid: null, entries: {} };
+  let value: BufferFile;
   try {
-    const raw = window.localStorage.getItem(GUEST_BUFFER_KEY);
-    if (!raw) return emptyFile();
-    const parsed = JSON.parse(raw) as Partial<BufferFile>;
-    if (!parsed || typeof parsed !== "object") return emptyFile();
-    return {
-      boundUid: typeof parsed.boundUid === "string" ? parsed.boundUid : null,
-      entries: (parsed.entries && typeof parsed.entries === "object" ? parsed.entries : {}) as BufferFile["entries"],
-    };
+    value = JSON.parse(raw);
   } catch {
-    return emptyFile();
+    throw new GuestStorageError("corrupt");
   }
+  if (
+    !value ||
+    typeof value !== "object" ||
+    Array.isArray(value) ||
+    !(value.boundUid === null || (typeof value.boundUid === "string" && value.boundUid.length)) ||
+    !value.entries ||
+    typeof value.entries !== "object" ||
+    Array.isArray(value.entries)
+  )
+    throw new GuestStorageError("corrupt");
+  for (const [address, e] of Object.entries(value.entries)) {
+    if (
+      !e ||
+      typeof e !== "object" ||
+      typeof e.campaignId !== "string" ||
+      !e.campaignId.length ||
+      typeof e.chapterId !== "string" ||
+      !e.chapterId.length ||
+      address !== key(e.campaignId, e.chapterId) ||
+      !["locked", "unlocked", "completed"].includes(e.status) ||
+      typeof e.bufferedAt !== "string" ||
+      !Number.isFinite(Date.parse(e.bufferedAt)) ||
+      (e.completed !== undefined && typeof e.completed !== "boolean") ||
+      [e.score, e.xpEarned, e.coinsEarned].some(
+        (n) => n !== undefined && (typeof n !== "number" || !Number.isFinite(n)),
+      )
+    )
+      throw new GuestStorageError("corrupt");
+  }
+  return value;
 }
-
-function writeGuestBuffer(file: BufferFile): void {
-  if (!isBrowser()) return;
-  try { window.localStorage.setItem(GUEST_BUFFER_KEY, JSON.stringify(file)); } catch { /* quota */ }
+/** Unknown storage throws, never returns a trusted empty buffer. */
+export function readGuestBuffer(): BufferFile {
+  return readFile(localScope(GUEST_BUFFER_KEY, false));
 }
-
-function key(campaignId: string, chapterId: string): string {
+function key(campaignId: string, chapterId: string) {
   return `${campaignId}::${chapterId}`;
 }
-
-/** Sticky/monotonic merge — a completed entry is never downgraded. */
-export function bufferChapterProgress(p: Omit<BufferedChapterProgress, "bufferedAt">): void {
-  const cid = String(p.campaignId ?? "").trim();
-  const chid = String(p.chapterId ?? "").trim();
-  if (!cid || !chid) return;
-  const file = readGuestBuffer();
-  const k = key(cid, chid);
-  const prev = file.entries[k];
-  const completed = Boolean(prev?.completed) || Boolean(p.completed) || p.status === "completed";
-  file.entries[k] = {
-    campaignId: cid,
-    chapterId: chid,
-    status: completed ? "completed" : (prev?.status === "completed" ? "completed" : p.status),
-    score: Math.max(prev?.score ?? 0, p.score ?? 0) || undefined,
-    xpEarned: Math.max(prev?.xpEarned ?? 0, p.xpEarned ?? 0) || undefined,
-    coinsEarned: Math.max(prev?.coinsEarned ?? 0, p.coinsEarned ?? 0) || undefined,
-    completed,
-    bufferedAt: new Date().toISOString(),
-  };
-  writeGuestBuffer(file);
+export type BufferSaveResult =
+  | { saved: true }
+  | { saved: false; reason: GuestStorageReason | "identity_conflict" };
+export async function bufferChapterProgress(
+  p: Omit<BufferedChapterProgress, "bufferedAt">,
+): Promise<BufferSaveResult> {
+  p = { ...p };
+  const cid = String(p.campaignId ?? "").trim(),
+    chid = String(p.chapterId ?? "").trim();
+  if (
+    !cid ||
+    !chid ||
+    !["locked", "unlocked", "completed"].includes(p.status) ||
+    [p.score, p.xpEarned, p.coinsEarned].some((n) => n !== undefined && !Number.isFinite(n))
+  )
+    return { saved: false, reason: "invalid_input" };
+  try {
+    const scope = localScope(GUEST_BUFFER_KEY);
+    return await withStorageLock(scope, () => {
+      const file = readFile(scope),
+        address = key(cid, chid),
+        prev = file.entries[address];
+      if (file.boundUid) return { saved: false, reason: "identity_conflict" } as const;
+      const completed = !!prev?.completed || !!p.completed || p.status === "completed";
+      file.entries[address] = {
+        ...prev,
+        campaignId: cid,
+        chapterId: chid,
+        status: completed ? "completed" : p.status,
+        score: Math.max(prev?.score ?? 0, p.score ?? 0) || undefined,
+        xpEarned: Math.max(prev?.xpEarned ?? 0, p.xpEarned ?? 0) || undefined,
+        coinsEarned: Math.max(prev?.coinsEarned ?? 0, p.coinsEarned ?? 0) || undefined,
+        completed,
+        bufferedAt: new Date().toISOString(),
+      };
+      scope.write(JSON.stringify(file));
+      return { saved: true } as const;
+    });
+  } catch (error) {
+    return { saved: false, reason: storageReason(error) };
+  }
 }
-
-export function clearGuestBuffer(): void {
-  if (!isBrowser()) return;
-  try { window.localStorage.removeItem(GUEST_BUFFER_KEY); } catch { /* noop */ }
+/** Explicit caller action only; corrupt/unreadable data is never cleared. */
+export async function clearGuestBuffer(): Promise<BufferSaveResult> {
+  try {
+    const scope = localScope(GUEST_BUFFER_KEY, false);
+    await withStorageLock(scope, () => {
+      readFile(scope);
+      scope.remove();
+    });
+    return { saved: true };
+  } catch (error) {
+    return { saved: false, reason: storageReason(error) };
+  }
 }
-
 export interface PromotionResult {
+  /** Only acknowledged entries whose local removal was also saved. */
   promoted: number;
-  remaining: number;
-  reason?: "no_uid" | "identity_conflict" | "empty";
+  /** null means storage could not be inspected reliably. */
+  remaining: number | null;
+  reason?: GuestStorageReason | "no_uid" | "identity_conflict" | "empty" | "entry_changed";
 }
-
-/**
- * Promote buffered progress to the signed-in account through the canonical
- * verified path. Ambiguous identity (buffer already bound to a different
- * uid) fails safely: nothing is sent and the buffer is left untouched.
- */
 export async function promoteGuestProgress(
   uid: string | null | undefined,
-  send: (p: Omit<BufferedChapterProgress, "bufferedAt">) => Promise<{ acknowledged: boolean; reason?: string }>,
+  send: (
+    p: Omit<BufferedChapterProgress, "bufferedAt">,
+  ) => Promise<{ acknowledged: boolean; reason?: string }>,
 ): Promise<PromotionResult> {
-  const file = readGuestBuffer();
-  const pending = Object.values(file.entries);
-  if (!uid) return { promoted: 0, remaining: pending.length, reason: "no_uid" };
-  if (file.boundUid && file.boundUid !== uid) {
-    return { promoted: 0, remaining: pending.length, reason: "identity_conflict" };
-  }
-  if (!pending.length) {
-    if (file.boundUid !== uid) writeGuestBuffer({ boundUid: uid, entries: {} });
-    return { promoted: 0, remaining: 0, reason: "empty" };
-  }
-
-  // Bind BEFORE sending so a crash mid-flush cannot re-target another account.
-  writeGuestBuffer({ boundUid: uid, entries: file.entries });
-
+  if (!uid) return { promoted: 0, remaining: null, reason: "no_uid" };
   let promoted = 0;
-  for (const entry of pending) {
-    let ok = false;
-    try {
-      const res = await send({
-        campaignId: entry.campaignId,
-        chapterId: entry.chapterId,
-        status: entry.status,
-        score: entry.score,
-        xpEarned: entry.xpEarned,
-        coinsEarned: entry.coinsEarned,
-        completed: entry.completed,
-      });
-      ok = Boolean(res?.acknowledged);
-    } catch { ok = false; }
-    if (ok) {
-      const cur = readGuestBuffer();
-      delete cur.entries[key(entry.campaignId, entry.chapterId)];
-      writeGuestBuffer({ boundUid: uid, entries: cur.entries });
-      promoted += 1;
-    }
+  try {
+    // Preserve existing partition ownership. Do NOT search/import another owner's guest partition.
+    const scope = localScope(GUEST_BUFFER_KEY, false);
+    if (scope.owner !== `user:${uid}`)
+      return { promoted: 0, remaining: null, reason: "identity_conflict" };
+    return await withStorageLock(
+      scope,
+      async () => {
+        const bound = await withStorageLock(scope, () => {
+          const file = readFile(scope);
+          if (file.boundUid && file.boundUid !== uid) return null;
+          if (file.boundUid !== uid) scope.write(JSON.stringify({ ...file, boundUid: uid }));
+          return { ...file, boundUid: uid };
+        });
+        scope.check();
+        if (!bound)
+          return { promoted, remaining: null, reason: "identity_conflict" } as PromotionResult;
+        const pending = Object.values(bound.entries);
+        if (!pending.length) return { promoted, remaining: 0, reason: "empty" } as PromotionResult;
+        for (const entry of pending) {
+          scope.check();
+          let acknowledged = false;
+          try {
+            const { bufferedAt: _time, ...payload } = entry;
+            acknowledged = (await send(payload)).acknowledged === true;
+          } catch {
+            /* retain the entry */
+          }
+          scope.check();
+          if (!acknowledged) continue;
+          const cleaned = await withStorageLock(scope, () => {
+            const current = readFile(scope),
+              address = key(entry.campaignId, entry.chapterId);
+            if (current.boundUid !== uid) throw new GuestStorageError("identity_changed");
+            if (JSON.stringify(current.entries[address]) !== JSON.stringify(entry)) return false;
+            delete current.entries[address];
+            scope.write(JSON.stringify(current));
+            return true;
+          });
+          if (!cleaned)
+            return {
+              promoted,
+              remaining: Object.keys(readFile(scope).entries).length,
+              reason: "entry_changed",
+            } as PromotionResult;
+          promoted++;
+        }
+        return { promoted, remaining: Object.keys(readFile(scope).entries).length };
+      },
+      "promotion",
+    );
+  } catch (error) {
+    return { promoted, remaining: null, reason: storageReason(error) };
   }
-  const remaining = Object.keys(readGuestBuffer().entries).length;
-  return { promoted, remaining };
 }
-
-/** Convenience wrapper used by app startup / auth listeners. */
-export async function promoteGuestProgressForCurrentUser(uid: string | null | undefined): Promise<PromotionResult> {
-  const { recordChapterProgress } = await import("@/lib/offline/record");
-  return promoteGuestProgress(uid, (p) => recordChapterProgress(p));
+export async function promoteGuestProgressForCurrentUser(
+  uid: string | null | undefined,
+): Promise<PromotionResult> {
+  try {
+    const scope = localScope(GUEST_BUFFER_KEY, false);
+    if (!uid || scope.owner !== `user:${uid}`)
+      return { promoted: 0, remaining: null, reason: uid ? "identity_conflict" : "no_uid" };
+    const { recordChapterProgress } = await import("@/lib/offline/record");
+    scope.check();
+    return await promoteGuestProgress(uid, (p) => {
+      scope.check();
+      return recordChapterProgress(p);
+    });
+  } catch (error) {
+    return { promoted: 0, remaining: null, reason: storageReason(error) };
+  }
 }

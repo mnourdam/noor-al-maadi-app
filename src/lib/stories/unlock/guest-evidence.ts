@@ -58,7 +58,7 @@ export function buildGuestEvidence(): GuestUnlockEvidence {
   return {
     discovered,
     atlas,
-    stories: [...safeSet(guestCompletionsSnapshot)],
+    stories: [...guestCompletionsSnapshot()],
     campaigns: [...safeSet(localCompletedIds)],
     investigations: [],
     achievements: [],

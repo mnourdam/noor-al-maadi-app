@@ -19,7 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/lib/profile";
 import type { StoryRow, StorySceneRow } from "@/lib/stories/types";
 import type { StoryMediaRow } from "@/lib/stories/media/dao";
-import { getIdentityEpoch } from "@/lib/identity/owner";
+import { getActiveOwner, getIdentityEpoch } from "@/lib/identity/owner";
 import { saveAccepted } from "@/lib/offline/gameplay-write";
 import { recordStoryProgress, completeStory } from "@/lib/stories/progress";
 import type { StorySummary } from "@/lib/stories/summary";
@@ -158,7 +158,7 @@ export function StoryPlayer({
         return;
       }
       savingRef.current = true;
-      const epoch = getIdentityEpoch();
+      const epoch = getIdentityEpoch(), owner = getActiveOwner();
       setSaveError(null);
       try {
 
@@ -176,7 +176,14 @@ export function StoryPlayer({
       const summaryDin = summary?.dinar_reward ?? story.dinar_reward ?? 0;
 
       if (isGuest) {
-        const firstTime = guestMarkCompleted(story.id);
+        const saved = await guestMarkCompleted(story.id);
+        if (!activeRef.current || getIdentityEpoch() !== epoch || getActiveOwner() !== owner) return;
+        if (!saved.saved) {
+          setSaveError("تعذر تثبيت إكمال القصة على الجهاز. تحقق من مساحة التخزين ثم أعد المحاولة.");
+          return;
+        }
+        const firstTime = saved.firstTime;
+        if (!firstTime) { completionFiredRef.current = true; setPhase("journey"); return; }
         const grantXp = firstTime ? summaryXp : 0;
         const grantDin = firstTime ? summaryDin : 0;
         setGrantedXp(grantXp);

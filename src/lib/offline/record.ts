@@ -8,6 +8,7 @@
 // the driver drains everything in one pass.
 // ============================================================
 
+import { getActiveOwner, getIdentityEpoch } from "@/lib/identity/owner";
 import { supabase } from "@/integrations/supabase/client";
 import { enqueue, enqueueWithId, type OutboxKind } from "./outbox";
 import { saveGameplay, saveUserId, type SaveOutcome } from "./gameplay-write";
@@ -97,13 +98,20 @@ export async function recordChapterProgress(p: {
   };
 }> {
   p = { ...p };
+  const owner = getActiveOwner(), epoch = getIdentityEpoch();
+  const current = () => owner === getActiveOwner() && epoch === getIdentityEpoch();
   let uid: string | null;
   try { uid = await saveUserId(true); }
   catch { return { acknowledged: false, queued: false, reason: "identity_changed" }; }
+  if (!current()) return { acknowledged:false,queued:false,reason:"identity_changed" };
   if (!uid) {
+    if (!owner.startsWith("guest:")) return { acknowledged:false,queued:false,reason:"identity_changed" };
     try {
       const { bufferChapterProgress } = await import("@/lib/campaigns/guest-progress-buffer");
-      bufferChapterProgress(p);
+      if (!current()) return {acknowledged:false,queued:false,reason:"identity_changed"};
+      const buffered = await bufferChapterProgress(p);
+      if (!current()) return {acknowledged:false,queued:false,reason:"identity_changed"};
+      if (!buffered.saved) return {acknowledged:false,queued:false,reason:buffered.reason};
     } catch { return { acknowledged: false, queued: false, reason: "storage_error" }; }
     return { acknowledged: false, queued: false, reason: "buffered_no_session" };
   }

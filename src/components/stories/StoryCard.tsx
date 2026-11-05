@@ -53,13 +53,16 @@ export function StoryCard({
   // guest-completion set so the pill flips to "اكتمل" immediately
   // and on relaunch. Re-check on the guest-completion event so an
   // in-flight completion updates open card grids without a reload.
-  const [guestDone, setGuestDone] = useState<boolean>(() => isGuest && guestHasCompleted(story.id));
+  const readGuestStatus = (): boolean | null => {
+    try { return isGuest && guestHasCompleted(story.id); } catch { return null; }
+  };
+  const [guestDone, setGuestDone] = useState<boolean | null>(readGuestStatus);
   useEffect(() => {
     if (!isGuest) {
       setGuestDone(false);
       return;
     }
-    const check = () => setGuestDone(guestHasCompleted(story.id));
+    const check = () => { try { setGuestDone(guestHasCompleted(story.id)); } catch { setGuestDone(null); } };
     check();
     if (typeof window === "undefined") return;
     const onChange = () => check();
@@ -70,7 +73,9 @@ export function StoryCard({
       window.removeEventListener("irth:story-completions:changed", onChange);
     };
   }, [isGuest, story.id]);
-  const state = guestDone && serverState !== "locked" ? "completed" : serverState;
+  const state = isGuest && guestDone === null && serverState !== "locked"
+    ? "unknown"
+    : guestDone === true && serverState !== "locked" ? "completed" : serverState;
 
   const durationLabel = formatDurationArabic(
     resolveStoryDurationMs({ metadata: null, sceneCount: story.scene_count }),
@@ -172,7 +177,8 @@ export function StoryCard({
               <PlayCircle className="size-3" /> استئناف
             </span>
           )}
-          {state === "new" && (
+          {isGuest && guestDone === null && <span role="status" className="text-xs text-gold">تعذر التحقق من سجل الإكمال</span>}
+          {state === "new" && (!isGuest || guestDone !== null) && (
             <span className="inline-flex items-center gap-1 rounded-full border border-gold/50 bg-black/70 px-2 py-0.5 text-[10px] tracking-wide text-gold backdrop-blur">
               جديدة
             </span>
