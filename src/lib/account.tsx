@@ -25,6 +25,13 @@ import { recordStartupMark } from "./boot/startup-timeline";
 import { resetForIdentityChange } from "./identity/reset";
 import { getActiveOwner, getActiveUserId, guestOwnerKey, userOwnerKey } from "./identity/owner";
 import { waitForAuthReady } from "./identity/guard";
+import {
+  beginEmailObservation,
+  endEmailObservation,
+  failEmailObservation,
+  selectTestEmailObserver,
+  type EmailAuthObserver,
+} from "./auth/transition-observation";
 
 
 interface AccountCtx {
@@ -50,7 +57,11 @@ const Ctx = createContext<AccountCtx | null>(null);
 
 const PUSH_DEBOUNCE_MS = 1500;
 
-export function AccountProvider({ children }: { children: ReactNode }) {
+export function AccountProvider({ children, emailAuthObserverForTests }: {
+  children: ReactNode;
+  emailAuthObserverForTests?: EmailAuthObserver;
+}) {
+  const emailAuthObserver = selectTestEmailObserver(emailAuthObserverForTests);
   const androidStable = isAndroidUltraStableMode();
   const { profile, mergeCloudSave, applyServerStats, addDinars, awardBadge, login, resetProfile, hydrateClaimedStreakRewards, adoptServerAvatar } = useProfile();
   const [user, setUser] = useState<User | null>(null);
@@ -547,7 +558,16 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     const u = username.trim();
     if (u.length < 3) return { ok: false, error: "اسم المستخدم قصير جداً" };
     if (password.length < 8) return { ok: false, error: "كلمة المرور يجب أن تكون ٨ أحرف على الأقل" };
-    const { data, error } = await signUpWithEmail({ email, password, username: u, displayName });
+    const observation = beginEmailObservation(emailAuthObserver, "sign_up");
+    let response: Awaited<ReturnType<typeof signUpWithEmail>>;
+    try {
+      response = await signUpWithEmail({ email, password, username: u, displayName });
+    } catch (error) {
+      failEmailObservation(observation);
+      throw error;
+    }
+    const { data, error } = response;
+    if (observation) endEmailObservation(observation, !!error, !!data?.session);
     if (error) return { ok: false, error: error.message };
     // Client-side fallback: if a session was returned, upsert display_name immediately.
     if (data.session?.user) {
@@ -580,13 +600,22 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       return { ok: true, error: "تحقق من بريدك لتأكيد الحساب." };
     }
     return { ok: true };
-  }, []);
+  }, [emailAuthObserver]);
 
   const signIn = useCallback<AccountCtx["signIn"]>(async (email, password) => {
-    const { error } = await signInWithEmail(email, password);
+    const observation = beginEmailObservation(emailAuthObserver, "sign_in");
+    let response: Awaited<ReturnType<typeof signInWithEmail>>;
+    try {
+      response = await signInWithEmail(email, password);
+    } catch (error) {
+      failEmailObservation(observation);
+      throw error;
+    }
+    const { error } = response;
+    if (observation) endEmailObservation(observation, !!error, !!response.data?.session);
     if (error) return { ok: false, error: error.message };
     return { ok: true };
-  }, []);
+  }, [emailAuthObserver]);
 
   const signOutFn = useCallback(async () => {
     setIsAuthResetting(true);
