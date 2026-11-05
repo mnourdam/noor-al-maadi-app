@@ -209,7 +209,19 @@ export function createHandoffFoundation(d: Dependencies) {
     if (proof.uid !== uid || proof.transitionId !== transition) fail("transition_conflict");
   }
   return {
-    async capture(port: GuestCapturePort, transitionId: string): Promise<Handoff> {
+    async capture(
+      port: GuestCapturePort,
+      transitionId: string,
+      reserved?: { sourceId: string; handoffId: string },
+    ): Promise<Handoff> {
+      if (
+        reserved &&
+        (!text(reserved.sourceId) ||
+          !text(reserved.handoffId) ||
+          reserved.sourceId === reserved.handoffId)
+      )
+        fail("invalid_input");
+      reserved = reserved ? { ...reserved } : undefined;
       const s = identity();
       const a = { ...port.address };
       const address = addressKey(a);
@@ -235,6 +247,8 @@ export function createHandoffFoundation(d: Dependencies) {
               if (existing.boundUid !== null) fail("target_conflict");
               pair(tx, existing.handoffId, guard, (h) => {
                 if (h.transitionId !== transitionId) fail("transition_conflict");
+                if (reserved && (h.id !== reserved.handoffId || h.sourceId !== reserved.sourceId))
+                  fail("source_conflict");
                 if (h.snapshotHash !== snapshotHash || h.snapshot !== raw)
                   fail("snapshot_conflict");
                 if (h.phase !== "awaiting_target") fail("invalid_state");
@@ -251,8 +265,8 @@ export function createHandoffFoundation(d: Dependencies) {
               guard,
               (orphan) => {
                 if (orphan !== undefined) fail("corrupt");
-                const sourceId = id(),
-                  handoffId = id();
+                const sourceId = reserved?.sourceId ?? id(),
+                  handoffId = reserved?.handoffId ?? id();
                 const source: Source = {
                   ...a,
                   schemaVersion: 1,
