@@ -18,6 +18,7 @@ import {
   grantDailyQuestReward,
   isDailyQuestRewardedOnServer,
 } from "@/lib/daily-quest-reward";
+import { getActiveOwner, getIdentityEpoch, onOwnerChange } from "@/lib/identity/owner";
 import { useProfile } from "@/lib/profile";
 import { useAccount } from "@/lib/account";
 import { Reveal } from "@/components/motion/MotionPrimitives";
@@ -85,6 +86,15 @@ export function DailyQuestCard() {
   const { profile, addPoints, addDinars, applyServerStats } = useProfile();
 
   const userKey = user?.id ?? "guest";
+  const [identityEpoch, setIdentityEpoch] = useState(getIdentityEpoch);
+  // Render-time identity also rejects a result before effect cleanup has run.
+  const contextRef = useRef({ userKey, loadingSession, syncing });
+  contextRef.current = { userKey, loadingSession, syncing };
+  useEffect(() => {
+    const off = onOwnerChange(() => setIdentityEpoch(getIdentityEpoch()));
+    setIdentityEpoch(getIdentityEpoch());
+    return off;
+  }, []);
 
   const [state, setState] = useState<QuestState | null>(null);
   const [poolReady, setPoolReady] = useState(false);
@@ -94,7 +104,7 @@ export function DailyQuestCard() {
    *  attempts from the same mount (event + mount reconciliation). Server
    *  idempotency (primary key on delta_id) still guarantees uniqueness
    *  across mounts, tabs, and devices. */
-  const grantInflightRef = useRef<string | null>(null);
+  const grantInflightRef = useRef<{ key: string } | null>(null);
   const floatIdRef = useRef(0);
   const profileRef = useRef(profile);
 
@@ -117,6 +127,22 @@ export function DailyQuestCard() {
 
   useEffect(() => {
     if (!poolReady || loadingSession || syncing) return;
+    let alive = true;
+    const owner = getActiveOwner(), epoch = getIdentityEpoch();
+    const contextCurrent = () => alive && getActiveOwner() === owner &&
+      getIdentityEpoch() === epoch && contextRef.current.userKey === userKey &&
+      !contextRef.current.loadingSession && !contextRef.current.syncing &&
+      (user ? owner === `user:${user.id}` : owner.startsWith("guest:"));
+    const questCurrent = (q: QuestState) => {
+      if (!contextCurrent() || q.date !== localDateKey()) return false;
+      const current = getTodayQuest(userKey);
+      return !!current && current.date === q.date && current.kind === q.kind &&
+        current.target?.entityId === q.target?.entityId && current.xp === q.xp &&
+        current.dinars === q.dinars && current.goal === q.goal && contextCurrent();
+    };
+    const timers: number[] = [];
+    setCelebrate(false);
+    setFloats([]);
     refresh();
     // Reset the in-flight guard when the account changes so a fresh
     // sign-in can attempt its own reward RPC.
@@ -146,6 +172,7 @@ export function DailyQuestCard() {
      *     flush event.
      */
     const playCelebration = (q: QuestState) => {
+      if (!questCurrent(q)) return;
       const reduced = prefersReducedMotion();
       setCelebrate(true);
       vibrateSuccess();
@@ -157,22 +184,28 @@ export function DailyQuestCard() {
           { id: idA, tone: "xp", label: `+${q.xp} خبرة` },
           { id: idB, tone: "dinar", label: `+${q.dinars} دينار` },
         ]);
-        window.setTimeout(() => setFloats([]), 2000);
+        timers.push(window.setTimeout(() => { if (questCurrent(q)) setFloats([]); }, 2000));
       }
-      window.setTimeout(() => setCelebrate(false), reduced ? 600 : 2600);
+      timers.push(window.setTimeout(() => { if (questCurrent(q)) setCelebrate(false); }, reduced ? 600 : 2600));
     };
 
     const grantReward = async (q: QuestState, opts: { force?: boolean } = {}) => {
-      if (!q.completed) return;
-      if (q.rewarded && !opts.force) return;
+      if (!questCurrent(q) || !q.completed) return;
+      const persisted = getTodayQuest(userKey);
+      // Completion events carry no owner: require this owner's persisted completion.
+      if (!persisted?.completed) return;
+      if ((q.rewarded || persisted.rewarded) && !opts.force) return;
       if (!q.target) return;
       // Coalesce concurrent attempts for the same quest from the same
       // mount (event + mount reconciliation). Server idempotency still
       // guards cross-mount/cross-device duplicates.
-      const entityId = q.target.entityId;
-      if (grantInflightRef.current === entityId) return;
-      grantInflightRef.current = entityId;
-      const localDate = q.date || localDateKey();
+      q = { ...q, target: { ...q.target } };
+      const entityId = q.target!.entityId;
+      const localDate = q.date;
+      const key = JSON.stringify([owner, epoch, userKey, localDate, q.kind, entityId]);
+      if (grantInflightRef.current?.key === key) return;
+      const ticket = { key };
+      grantInflightRef.current = ticket;
 
       try {
         // Guest — no cloud account. Grant locally and use the localStorage
@@ -182,9 +215,12 @@ export function DailyQuestCard() {
         // the historical guest grant does not double-credit the account.
         if (!user) {
           if (q.rewarded) return;
+          if (!questCurrent(q)) return;
           addPoints(q.xp);
+          if (!questCurrent(q)) return;
           addDinars(q.dinars);
-          const rewarded = markQuestRewarded(userKey);
+          if (!questCurrent(q)) return;
+          const rewarded = markQuestRewarded(userKey, { date: q.date, entityId, isCurrent: () => questCurrent(q) });
           if (rewarded?.rewarded) playCelebration(q);
           return;
         }
@@ -195,7 +231,10 @@ export function DailyQuestCard() {
           entityId,
           xp: q.xp,
           dinars: q.dinars,
+          isCurrent: () => questCurrent(q),
         });
+        if (!questCurrent(q)) return;
+        const alreadyRewarded = getTodayQuest(userKey)?.rewarded;
 
         if (result.outcome === "granted") {
           // Server confirmed a first-time grant. Prefer the authoritative
@@ -204,6 +243,7 @@ export function DailyQuestCard() {
           // locally as a last-resort visible update; the backend row remains
           // protected by the same delta_id.
           if (result.serverStats) {
+            if (!questCurrent(q)) return;
             applyServerStats({
               xp: result.serverStats.xp,
               dinars: result.serverStats.dinars,
@@ -212,10 +252,16 @@ export function DailyQuestCard() {
               lastStreakDay: result.serverStats.lastStreakDay ?? null,
             });
           } else {
+            if (alreadyRewarded || !questCurrent(q)) return;
             addPoints(q.xp);
+            if (!questCurrent(q)) return;
             addDinars(q.dinars);
           }
-          const rewarded = markQuestRewarded(userKey);
+          if (!questCurrent(q)) return;
+          // A concurrent confirmation probe may already have finalized the flag.
+          // Still accept current authoritative stats, but never repeat additive fallback/celebration.
+          if (alreadyRewarded) return;
+          const rewarded = markQuestRewarded(userKey, { date: q.date, entityId, isCurrent: () => questCurrent(q) });
           if (rewarded?.rewarded) playCelebration(q);
           return;
         }
@@ -223,7 +269,7 @@ export function DailyQuestCard() {
           // Server already had this delta. Re-sync authoritative stats
           // instead of adding locally, otherwise a device that lost its
           // localStorage `rewarded` flag would double-count client-side.
-          if (!result.serverStats) return;
+          if (!result.serverStats || !questCurrent(q)) return;
           applyServerStats({
             xp: result.serverStats.xp,
             dinars: result.serverStats.dinars,
@@ -231,7 +277,8 @@ export function DailyQuestCard() {
             streak: result.serverStats.streak,
             lastStreakDay: result.serverStats.lastStreakDay ?? null,
           });
-          markQuestRewarded(userKey);
+          if (!questCurrent(q)) return;
+          markQuestRewarded(userKey, { date: q.date, entityId, isCurrent: () => questCurrent(q) });
           // No celebration on already_granted — it's a silent reconcile.
           return;
         }
@@ -244,7 +291,7 @@ export function DailyQuestCard() {
         // unauthenticated — the session lapsed between UI check and RPC.
         // Do nothing; next mount re-evaluates.
       } finally {
-        grantInflightRef.current = null;
+        if (grantInflightRef.current === ticket) grantInflightRef.current = null;
       }
     };
 
@@ -269,10 +316,11 @@ export function DailyQuestCard() {
             userId: user.id,
             localDate,
             entityId: target.entityId,
+            isCurrent: () => !cancelledHydrate && questCurrent(initial),
           });
-          if (cancelledHydrate) return;
+          if (cancelledHydrate || !questCurrent(initial)) return;
           if (applied) {
-            markQuestCompletedAndRewardedFromServer(userKey);
+            markQuestCompletedAndRewardedFromServer(userKey, { date: localDate, entityId: target.entityId, isCurrent: () => questCurrent(initial) });
             refresh();
           }
         } catch { /* ignore — next mount / online event retries */ }
@@ -280,11 +328,13 @@ export function DailyQuestCard() {
     }
 
     const onUpdate = () => {
+      if (!contextCurrent()) return;
       refresh();
       const cur = getTodayQuest(userKey);
       if (cur) void grantReward(cur);
     };
     const onCompleted = (e: Event) => {
+      if (!contextCurrent()) return;
       const next = (e as CustomEvent<QuestState>).detail;
       if (!next) return;
       void grantReward(next);
@@ -293,6 +343,7 @@ export function DailyQuestCard() {
     // just succeeded, in which case the server now returns
     // `already_granted` and we finalize local state + rewarded flag.
     const onOutboxFlushed = () => {
+      if (!contextCurrent()) return;
       const cur = getTodayQuest(userKey);
       if (cur && cur.completed && !cur.rewarded) void grantReward(cur);
     };
@@ -306,16 +357,20 @@ export function DailyQuestCard() {
     // Refresh at local midnight so a new mission appears without reload.
     const now = new Date();
     const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 5);
-    const tid = window.setTimeout(refresh, nextMidnight.getTime() - now.getTime());
+    const tid = window.setTimeout(() => { if (contextCurrent()) { setCelebrate(false); setFloats([]); refresh(); } }, nextMidnight.getTime() - now.getTime());
     return () => {
+      alive = false;
       cancelledHydrate = true;
+      for (const timer of timers) window.clearTimeout(timer);
       window.removeEventListener(QUEST_UPDATED_EVENT, onUpdate);
       window.removeEventListener(QUEST_COMPLETED_EVENT, onCompleted as EventListener);
       window.removeEventListener("irth:outbox:flushed", onOutboxFlushed);
       window.removeEventListener("online", onOutboxFlushed);
       window.clearTimeout(tid);
     };
-  }, [user, userKey, poolReady, loadingSession, syncing, refresh, addPoints, addDinars, applyServerStats]);
+  }, [user, userKey, identityEpoch, poolReady, loadingSession, syncing, refresh, addPoints, addDinars, applyServerStats]);
+
+  useEffect(() => { setCelebrate(false); setFloats([]); }, [userKey, state?.date, state?.target?.entityId]);
 
   const target = state?.target ?? null;
   const completed = !!state?.completed;

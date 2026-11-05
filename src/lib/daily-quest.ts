@@ -398,10 +398,21 @@ export function reportEntityRead(userKey: string, entityId: string): QuestAdvanc
   return { state: next, justCompleted: true };
 }
 
+/** Optional exact-operation fence for async reward consumers. */
+export interface QuestRewardExpectation {
+  date: string;
+  entityId: string;
+  isCurrent: () => boolean;
+}
+function matchesRewardExpectation(cur: QuestState, expected?: QuestRewardExpectation): boolean {
+  return !expected || (cur.date === expected.date && cur.target?.entityId === expected.entityId && expected.isCurrent());
+}
+
 /** Idempotently flip the rewarded flag once the profile has been credited. */
-export function markQuestRewarded(userKey: string): QuestState | null {
+export function markQuestRewarded(userKey: string, expected?: QuestRewardExpectation): QuestState | null {
   const cur = getTodayQuest(userKey);
   if (!cur) return null;
+  if (!matchesRewardExpectation(cur, expected)) return null;
   if (cur.rewarded) return cur;
   const next: QuestState = { ...cur, rewarded: true, completed: true };
   writeState(userKey, next);
@@ -421,9 +432,10 @@ export function markQuestRewarded(userKey: string): QuestState | null {
  * re-granting the reward (the stable `delta_id` primary key already
  * prevents double-grant server-side).
  */
-export function markQuestCompletedAndRewardedFromServer(userKey: string): QuestState | null {
+export function markQuestCompletedAndRewardedFromServer(userKey: string, expected?: QuestRewardExpectation): QuestState | null {
   const cur = getTodayQuest(userKey);
   if (!cur) return null;
+  if (!matchesRewardExpectation(cur, expected)) return null;
   if (cur.completed && cur.rewarded) return cur;
   const next: QuestState = { ...cur, progress: cur.goal, completed: true, rewarded: true };
   writeState(userKey, next);

@@ -15,7 +15,8 @@ vi.mock("@/integrations/supabase/client", () => ({
 vi.mock("@/lib/identity/owner", () => ({
   getIdentityEpoch: () => state.epoch,
   getActiveUserId: () => state.uid,
-  getActiveOwner: () => state.uid,
+  getActiveOwner: () => `user:${state.uid}`,
+  onOwnerChange: () => () => {},
 }));
 vi.mock("@/lib/profile", () => ({ useProfile: () => ({ profile: {} }) }));
 vi.mock("@/lib/local-first-store", () => ({
