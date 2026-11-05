@@ -1,8 +1,7 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef, useSyncExternalStore } from "react";
 import { toast } from "sonner";
-import { getIdentityEpoch } from "@/lib/identity/owner";
-import { saveAccepted } from "@/lib/offline/gameplay-write";
+import { getIdentityEpoch, getActiveOwner, getActiveUserId, onOwnerChange } from "@/lib/identity/owner";
 import { Search, Check, X, Trophy, Coins, BookOpen, Heart, Loader2, Lightbulb, Lock } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { ReadingScale } from "@/components/ReadingScale";
@@ -26,7 +25,7 @@ import { CaseClosedCard } from "@/components/investigations/CaseClosedCard";
 import { EntityRefChip } from "@/components/investigations/EntityRefChip";
 import { EvidenceBoard } from "@/components/investigations/EvidenceBoard";
 import { useCaseNumber, registerInvestigationsForNumbering } from "@/lib/investigations/case-number";
-import { recordInvestigationCompletion, useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
+import { recordInvestigationCompletion, useInvestigationProgress, useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
 import { markInvestigationOpened, clearInvestigationOpened } from "@/lib/investigations/recommend";
 import { useStashCurrentAsOrigin } from "@/lib/navigation";
 import { audioManager } from "@/lib/audioManager";
@@ -72,6 +71,13 @@ function InvestigationPage() {
 // Supabase player — renders briefing/evidence/question/decision/conclusion
 // ============================================================
 function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
+  const identity = useSyncExternalStore(onOwnerChange,
+    () => `${getIdentityEpoch()}:${getActiveOwner()}`,
+    () => `${getIdentityEpoch()}:${getActiveOwner()}`);
+  return <ScopedSupabaseInvestigationGame key={JSON.stringify([identity, row.id])} row={row} />;
+}
+
+function ScopedSupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
   const {
     profile, markInvestigationCompletedLocal, awardBadge,
     recoverHeartFromActivity, recordStreakActivity, applyServerStats,
@@ -97,9 +103,11 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
   registerInvestigationsForNumbering([row]);
   const caseNumber = useCaseNumber(row.slug);
 
-  const canonicalProgress = useCanonicalInvestigationProgress();
-  const alreadyDone =
-    canonicalProgress.matches(row.id) || canonicalProgress.matches(row.slug);
+  // The canonical catalog set also contains pending Outbox rows and legacy
+  // hints. Neither is server confirmation for this player's closed card.
+  const serverProgress = useInvestigationProgress();
+  const alreadyDone = serverProgress.uid !== null && serverProgress.uid === getActiveUserId() &&
+    serverProgress.completedIds.has(row.id);
 
   // Phase G1 — legacy migration is now driven globally by
   // <InvestigationLegacyBackfill /> at the app root. Nothing to trigger
@@ -144,7 +152,7 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
   const [grant, setGrant] = useState<
     | null
     | {
-        status: "granted" | "already" | "queued" | "refused";
+        status: "granted" | "already";
         xp: number;
         dinars: number;
         hearts: number;
@@ -158,6 +166,12 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
   const savingRef = useRef(false);
   const activeRef = useRef(true);
   useEffect(() => { activeRef.current = true; return () => { activeRef.current = false; }; }, []);
+
+  const scope = useRef({ owner: getActiveOwner(), epoch: getIdentityEpoch() }).current;
+  const current = () => activeRef.current && getActiveOwner() === scope.owner &&
+    getIdentityEpoch() === scope.epoch;
+  const completedRef = useRef(alreadyDone);
+  const [completionState, setCompletionState] = useState<"pending" | "unresolved" | "failed" | null>(null);
 
   const step = steps[idx];
   const isLast = idx >= steps.length - 1;
@@ -235,7 +249,6 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
     const totalQuestionLike = steps.filter((s) => s.type === "question" || s.type === "decision").length;
     const correctCount = resolvedIndices.size;
 
-    const epoch = getIdentityEpoch();
     const outcome = await recordInvestigationCompletion({
       investigationId: row.id,
       investigationSlug: row.slug,
@@ -243,15 +256,26 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
       correctCount,
     });
 
-    if (!activeRef.current || getIdentityEpoch() !== epoch || !saveAccepted(outcome)) return false;
-    // Local optimistic marker (no economy) — safe to do immediately.
+    if (!current()) return false;
+    if (!outcome.acknowledged) {
+      setCompletionState(outcome.storageState === "unresolved" || outcome.reason === "storage_pending"
+        ? "unresolved" : outcome.queued && (!outcome.reason || outcome.reason === "queued")
+          ? "pending" : "failed");
+      if (!(outcome.storageState === "unresolved" || outcome.reason === "storage_pending") &&
+          !(outcome.queued && (!outcome.reason || outcome.reason === "queued"))) {
+        toast.error("تعذر حفظ التحقيق. أعد المحاولة؛ لم تُمنح مكافآت جديدة.");
+      }
+      return false;
+    }
+    setCompletionState(null);
+    // These completion effects require authoritative acknowledgement.
     markInvestigationCompletedLocal(row.slug);
     clearInvestigationOpened(row.slug);
-    if (reward.badge) awardBadge(reward.badge);
+    if (outcome.applied && reward.badge) awardBadge(reward.badge);
 
     // Heart restoration — respects cooldown so the same investigation
     // can't be farmed back-to-back for hearts.
-    const hearts = Math.max(0, Number(reward.hearts ?? 0));
+    const hearts = outcome.applied ? Math.max(0, Number(outcome.heartsEarned ?? 0)) : 0;
     let gained = 0;
     for (let i = 0; i < hearts; i++) {
       const out = recoverHeartFromActivity({ kind: "investigation", id: `${row.slug}:${i}` });
@@ -263,25 +287,19 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
     // Reward truth. `applied` is the server's own "this call granted the
     // reward" flag; a replay (reinstall, cleared local marker) returns the
     // historical snapshot with applied=false and grants nothing.
-    if (outcome.acknowledged) {
-      setGrant({
-        status: outcome.applied ? "granted" : "already",
-        xp: outcome.applied ? outcome.xpEarned : 0,
-        dinars: outcome.applied ? outcome.dinarsEarned : 0,
-        hearts: outcome.applied ? outcome.heartsEarned : 0,
-      });
-    } else if (outcome.queued) {
-      setGrant({ status: "queued", xp: 0, dinars: 0, hearts: 0 });
-    } else {
-      setGrant({ status: "refused", xp: 0, dinars: 0, hearts: 0 });
-    }
+    setGrant({
+      status: outcome.applied ? "granted" : "already",
+      xp: outcome.applied ? outcome.xpEarned : 0,
+      dinars: outcome.applied ? outcome.dinarsEarned : 0,
+      hearts: outcome.applied ? outcome.heartsEarned : 0,
+    });
 
 
     // Phase 3A — canonical qualifying-activity call (server-authoritative).
     // Runs strictly AFTER the grant so its mirrored totals are post-grant.
     void (async () => {
     await recordStreakActivity("investigation", row.id);
-    if (!activeRef.current || getIdentityEpoch() !== epoch) return;
+    if (!current()) return;
 
     // Final reconciliation against the authoritative profile row. Covers
     // the case where the streak call was a no-op (already recorded today,
@@ -292,7 +310,7 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
         const srv = (data ?? null) as
           | { xp?: number; dinars?: number; hearts?: number; streak?: number; last_streak_day?: string | null }
           | null;
-        if (srv && activeRef.current && getIdentityEpoch() === epoch) {
+        if (srv && current()) {
           applyServerStats({
             xp: srv.xp ?? null,
             dinars: srv.dinars ?? null,
@@ -309,31 +327,34 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
 
 
   const onNext = async () => {
-    if (advancing || savingRef.current) return;
+    if (!current() || advancing || savingRef.current || completedRef.current) return;
     savingRef.current = true;
     setAdvancing(true);
     try {
-    setPicked(null);
-    setAnswerState("unanswered");
-    if (!isLast) {
-      setIdx((i) => i + 1);
-      // Release guard on the next tick so React can commit the index
-      // change before another click is accepted.
-      queueMicrotask(() => setAdvancing(false));
-      return;
-    }
-    if (!alreadyDone) {
-      // Completion fanfare — same asset the campaigns use.
-      audioManager.playSfx("campaign-complete", { dedupeKey: `inv:done:${row.slug}`, dedupeMs: 5000 });
-      const saved = await grantRewards();
-      if (!saved) {
-        if (activeRef.current) toast.error("تعذر حفظ التحقيق. أعد المحاولة؛ لم تُمنح مكافآت جديدة.");
+      if (!isLast) {
+        setPicked(null);
+        setAnswerState("unanswered");
+        setIdx((i) => i + 1);
         return;
       }
+      // Keep the current answers and shuffle intact across pending/retry.
+      if (!alreadyDone) {
+        const saved = await grantRewards();
+        if (!current() || !saved) return;
+      }
+      if (!current()) return;
+      completedRef.current = true;
+      audioManager.playSfx("campaign-complete", { dedupeKey: `inv:done:${row.slug}`, dedupeMs: 5000 });
+      setFinished(true);
+    } catch {
+      if (current()) {
+        setCompletionState("failed");
+        toast.error("تعذر حفظ التحقيق. حاول مجددًا.");
+      }
+    } finally {
+      savingRef.current = false;
+      if (current()) setAdvancing(false);
     }
-    if (activeRef.current) setFinished(true);
-    } catch { if (activeRef.current) toast.error("تعذر حفظ التحقيق. حاول مجددًا."); }
-    finally { savingRef.current = false; if (activeRef.current) setAdvancing(false); }
   };
 
   if (steps.length === 0) {
@@ -388,6 +409,25 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
                 />
               ))}
             </div>
+          </section>
+        )}
+
+        {!finished && completionState && (
+          <section role={completionState === "failed" ? "alert" : "status"} className="mt-6 rounded-3xl border border-gold/30 bg-surface p-5 text-center">
+            <h2 className="font-display text-lg text-gold">
+              {completionState === "pending" ? "بانتظار تأكيد الخادم" :
+                completionState === "unresolved" ? "نتيجة الحفظ غير محسومة" : "لم يتأكد إكمال التحقيق"}
+            </h2>
+            <p className="mt-3 text-sm text-muted-foreground">
+              {completionState === "pending"
+                ? "حُفظت محاولة إنهاء التحقيق على جهازك، وهي بانتظار تأكيد الخادم. لم تُعتمد المكافآت بعد."
+                : completionState === "unresolved"
+                  ? "نتيجة حفظ التحقيق غير محسومة. سنحتفظ بالمحاولة القائمة ونتحقق من حالتها دون احتساب إنجاز جديد."
+                  : "تعذر تأكيد حفظ التحقيق. يمكنك إعادة المحاولة دون فقد إجاباتك."}
+            </p>
+            <button type="button" disabled={advancing} onClick={() => { void onNext(); }}
+              className="mt-4 rounded-full border border-gold/40 px-5 py-2 text-gold">إعادة التحقق</button>
+            <Link to="/investigations" className="ms-4 text-sm text-gold">العودة للتحقيقات</Link>
           </section>
         )}
 

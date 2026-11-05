@@ -17,7 +17,7 @@ export function CaseClosedCard({
   correct: number;
   total: number;
   grant: null | {
-    status: "granted" | "already" | "queued" | "refused";
+    status: "granted" | "already";
     xp: number;
     dinars: number;
     hearts: number;
@@ -73,11 +73,6 @@ export function CaseClosedCard({
         {grant?.status === "already" && (
           <p className="mt-3 text-center text-[11px] text-muted-foreground">
             سُجِّل هذا الملف سابقًا — لا مكافآت مكرّرة.
-          </p>
-        )}
-        {grant?.status === "queued" && (
-          <p className="mt-3 text-center text-[11px] text-muted-foreground">
-            تم حفظ الإنجاز — ستُضاف المكافأة عند عودة الاتصال.
           </p>
         )}
 

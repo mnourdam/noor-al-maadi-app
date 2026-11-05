@@ -25,6 +25,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { InvestigationRow } from "@/lib/investigations-source";
 import { enqueueWithId } from "@/lib/offline/outbox";
 import { saveGameplay, saveUserId } from "@/lib/offline/gameplay-write";
+import { getActiveOwner, getIdentityEpoch, getActiveUserId } from "@/lib/identity/owner";
 import { flushOutbox } from "@/lib/offline/flush";
 
 // ------------------------------------------------------------
@@ -85,6 +86,7 @@ export interface InvestigationCompletionOutcome {
   heartsEarned: number;
   /** Queued for later flush (offline / signed-out / transient failure). */
   queued: boolean;
+  storageState?: "unresolved";
   reason?: string;
 }
 
@@ -110,14 +112,22 @@ export async function recordInvestigationCompletion(
     acknowledged: false, applied: false,
     xpEarned: 0, dinarsEarned: 0, heartsEarned: 0, queued: false,
   };
+  const owner = getActiveOwner(), epoch = getIdentityEpoch();
+  const current = () => getActiveOwner() === owner && getIdentityEpoch() === epoch;
   const uid = await saveUserId();
+  if (!current()) return { ...none, reason: "identity_changed" };
   if (!uid) return none;
+  if (getActiveUserId() !== uid) return { ...none, reason: "identity_changed" };
   const investigationId = input.investigationId;
   if (!investigationId) return none;
   const deltaId = await stableDeltaId(uid, investigationId);
+  if (!current()) return { ...none, reason: "identity_changed" };
+  const sessionUid = await saveUserId();
+  if (!current() || sessionUid !== uid) return { ...none, reason: "identity_changed" };
   const payload = { investigationId, score: Math.max(0, input.score ?? 0), correctCount: Math.max(0, input.correctCount ?? 0) };
   const outcome = await saveGameplay<{
     ok?: boolean; reason?: string; applied?: boolean; reward_granted?: boolean;
+    already_granted?: boolean; already_completed?: boolean;
     xp_earned?: number; dinars_earned?: number; hearts_earned?: number;
   }>({
     userId: uid, id: deltaId, kind: "investigation_complete", payload,
@@ -126,12 +136,14 @@ export async function recordInvestigationCompletion(
       p_score: payload.score, p_correct_count: payload.correctCount,
     }),
   });
-  if (!outcome.acknowledged) return { ...none, queued: outcome.queued, reason: outcome.reason };
-  if (await saveUserId() !== uid) return { ...none, queued: outcome.queued, reason: "identity_changed" };
+  if (!outcome.acknowledged) return { ...none, queued: outcome.queued, reason: outcome.reason, storageState: outcome.storageState };
+  if (!current()) return { ...none, queued: outcome.queued, reason: "identity_changed" };
+  const confirmedUid = await saveUserId();
+  if (!current() || confirmedUid !== uid) return { ...none, queued: outcome.queued, reason: "identity_changed" };
   try { window.dispatchEvent(new CustomEvent("irth:investigation-progress:changed")); } catch { /* observer */ }
   const result = outcome.result!;
   return {
-    acknowledged: true, applied: !!result.applied || !!result.reward_granted,
+    acknowledged: true, applied: !result.already_granted && !result.already_completed && (!!result.applied || !!result.reward_granted),
     xpEarned: Number(result.xp_earned ?? 0), dinarsEarned: Number(result.dinars_earned ?? 0),
     heartsEarned: Number(result.hearts_earned ?? 0), queued: outcome.queued,
   };

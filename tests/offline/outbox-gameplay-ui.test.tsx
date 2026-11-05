@@ -98,6 +98,7 @@ vi.mock("@/lib/investigations-source", () => ({
 vi.mock("@/lib/investigations/progress", async (original) => ({
   ...(await original<object>()),
   useCanonicalInvestigationProgress: () => ({ matches: () => false }),
+  useInvestigationProgress: () => ({ uid: state.uid, completedIds: new Set<string>() }),
 }));
 vi.mock("@/lib/local-first-store", () => ({
   ensureLocalSnapshotLoaded: async () => {},
@@ -369,7 +370,7 @@ it("the actual investigation screen does not close, mark progress or grant heart
   expect(screen.getByRole("button", { name: "إنهاء التحقيق" })).toBeTruthy();
   vi.restoreAllMocks();
   vi.stubGlobal("indexedDB", new IDBFactory());
-  state.rpc.mockResolvedValue({ data: { ok: true, applied: true, xp_earned: 5 }, error: null });
+  state.rpc.mockResolvedValue({ data: { ok: true, applied: true, xp_earned: 5, hearts_earned: 1 }, error: null });
   const button = screen.getByRole("button", { name: "إنهاء التحقيق" });
   fireEvent.click(button);
   fireEvent.click(button);
