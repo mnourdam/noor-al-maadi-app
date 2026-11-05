@@ -59,8 +59,8 @@ export interface TransitionDependencies {
   source(): GuestCapturePort;
   anchor: AnchorPort;
   auth: AuthTransitionAdapter;
-  /** Test-only exact-source capability, held through bind; no namespace search.
-   * A production cross-owner source capability has NOT been implemented. */
+  /** Exact-source capability held through bind; no namespace search.
+   * Browser adapters remain test-namespace-only: production enrollment/auth policy is not enabled. */
   recoveredSnapshot<T>(evidence: TransitionEvidence, work: (raw: string) => Promise<T>): Promise<T>;
 }
 export interface TransitionOutcome {
