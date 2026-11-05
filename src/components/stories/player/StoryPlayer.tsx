@@ -2,25 +2,24 @@
 // StoryPlayer — cinematic fullscreen runtime (Post-Freeze Rev)
 // ------------------------------------------------------------
 // State machine:
-//   playing(sceneIdx) → paused → reward → journey
+//   playing(sceneIdx) → paused → pending/unresolved or confirmed reward → journey
 // Contracts preserved:
 //   * recordStoryProgress on every scene view (monotonic)
-//   * completeStory once when leaving the last scene
+//   * completeStory uses the same stable operation on explicit retry
 //   * Reflection scenes: auto-advance disabled
 // The legacy "intro" cover phase was retired — playback opens
 // directly on Scene 1 because the catalog + landing surfaces
 // already introduce the story with the cover artwork.
 // ============================================================
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { X, Pause, ArrowLeft, RotateCcw } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/lib/profile";
 import type { StoryRow, StorySceneRow } from "@/lib/stories/types";
 import type { StoryMediaRow } from "@/lib/stories/media/dao";
-import { getActiveOwner, getIdentityEpoch } from "@/lib/identity/owner";
-import { saveAccepted } from "@/lib/offline/gameplay-write";
+import { getActiveOwner, getIdentityEpoch, onOwnerChange } from "@/lib/identity/owner";
 import { recordStoryProgress, completeStory } from "@/lib/stories/progress";
 import type { StorySummary } from "@/lib/stories/summary";
 import { SegmentedProgress } from "./SegmentedProgress";
@@ -46,16 +45,27 @@ interface Props {
   onExit: () => void;
 }
 
-type Phase = "playing" | "reward" | "journey";
+type Phase = "playing" | "pending" | "unresolved" | "reward" | "journey";
 
-export function StoryPlayer({
+// Each identity epoch/story owns its UI and single-flight guard. An old
+// request may finish on the server, but cannot resume in the next player.
+export function StoryPlayer(props: Props) {
+  const identity = useSyncExternalStore(
+    onOwnerChange,
+    () => `${getIdentityEpoch()}:${getActiveOwner()}`,
+    () => `${getIdentityEpoch()}:${getActiveOwner()}`,
+  );
+  return <ScopedStoryPlayer key={JSON.stringify([identity, props.story.id])} {...props} />;
+}
+
+function ScopedStoryPlayer({
   story,
   scenes,
   media,
   summary,
   initialSceneIndex,
   alreadyCompleted,
-  onExit,
+  onExit: exit,
 }: Props) {
   const ordered = useMemo(
     () => [...scenes].sort((a, b) => a.scene_index - b.scene_index),
@@ -74,6 +84,10 @@ export function StoryPlayer({
   const activeRef = useRef(true);
   const [saveError, setSaveError] = useState<string | null>(null);
   useEffect(() => { activeRef.current = true; return () => { activeRef.current = false; }; }, []);
+  const scope = useRef({ owner: getActiveOwner(), epoch: getIdentityEpoch() }).current;
+  const isCurrent = useCallback(() => activeRef.current &&
+    getActiveOwner() === scope.owner && getIdentityEpoch() === scope.epoch, [scope]);
+  const onExit = useCallback(() => { activeRef.current = false; exit(); }, [exit]);
   const resumeAfterExportRef = useRef(false);
   const [exportLockScene, setExportLockScene] = useState<number | null>(null);
   const navigate = useNavigate();
@@ -104,11 +118,11 @@ export function StoryPlayer({
     if (phase !== "playing" || !scene) return;
     if (alreadyCompleted) return;
     void recordStoryProgress(story.id, scene.scene_index).then((res) => {
-      if (res.acknowledged) {
+      if (isCurrent() && res.acknowledged) {
         void queryClient.invalidateQueries({ queryKey: ["stories-summary"] });
       }
     }).catch(() => {});
-  }, [phase, scene, story.id, alreadyCompleted]);
+  }, [phase, scene, story.id, alreadyCompleted, isCurrent, queryClient]);
 
 
   // --- Sync long-press halo with pause state ---------------------
@@ -147,7 +161,7 @@ export function StoryPlayer({
   const isLast = idx === ordered.length - 1;
 
   const goNext = useCallback(async () => {
-    if (!scene) return;
+    if (!scene || !isCurrent()) return;
     if (isLast) {
       // Sticky one-shot completion. `completionFiredRef` guarantees at most
       // one grant per mount even if the user double-taps the ending pill
@@ -158,7 +172,6 @@ export function StoryPlayer({
         return;
       }
       savingRef.current = true;
-      const epoch = getIdentityEpoch(), owner = getActiveOwner();
       setSaveError(null);
       try {
 
@@ -177,7 +190,7 @@ export function StoryPlayer({
 
       if (isGuest) {
         const saved = await guestMarkCompleted(story.id);
-        if (!activeRef.current || getIdentityEpoch() !== epoch || getActiveOwner() !== owner) return;
+        if (!isCurrent()) return;
         if (!saved.saved) {
           setSaveError("تعذر تثبيت إكمال القصة على الجهاز. تحقق من مساحة التخزين ثم أعد المحاولة.");
           return;
@@ -192,10 +205,16 @@ export function StoryPlayer({
         if (grantDin > 0) addDinars(grantDin);
       } else {
         const res = await completeStory(story.id);
-        if (!activeRef.current) return;
-        if (getIdentityEpoch() !== epoch) { setSaveError("تغير الحساب أثناء الحفظ. أعد المحاولة بالحساب الحالي."); return; }
-        if (!saveAccepted(res)) {
-          setSaveError("تعذر تأكيد حفظ القصة. حاول مجددًا أو أغلق للعودة لاحقًا.");
+        if (!isCurrent()) return;
+        if (!res.acknowledged) {
+          if (res.storageState === "unresolved" || res.reason === "storage_pending") {
+            setPhase("unresolved");
+          } else if (res.queued && (!res.reason || res.reason === "queued")) {
+            setPhase("pending");
+          } else {
+            setPhase("playing");
+            setSaveError("تعذر تأكيد حفظ القصة. حاول مجددًا أو أغلق للعودة لاحقًا.");
+          }
           return;
         }
         const grantXp = res.result?.reward_granted_xp ?? 0;
@@ -208,11 +227,13 @@ export function StoryPlayer({
         // the recorder enqueues the IRTH activity day before any network call.
         try {
           const { recordStreakActivity } = await import("@/lib/streak-activity");
-          if (res.acknowledged) void recordStreakActivity("story", story.id).catch(() => {});
+          if (!isCurrent()) return;
+          void recordStreakActivity("story", story.id).catch(() => {});
         } catch { /* never block completion UI */ }
       }
 
 
+      if (!isCurrent()) return;
       completionFiredRef.current = true;
       setPhase("reward");
       try {
@@ -221,12 +242,13 @@ export function StoryPlayer({
         /* ignore */
       }
       } catch {
-        if (activeRef.current) setSaveError("تعذر حفظ القصة. حاول مجددًا.");
+        if (isCurrent()) { setPhase("playing"); setSaveError("تعذر حفظ القصة. حاول مجددًا."); }
       } finally { savingRef.current = false; }
       return;
     }
     setIdx((n) => Math.min(n + 1, ordered.length - 1));
   }, [
+    isCurrent,
     isLast,
     ordered.length,
     scene,
@@ -519,6 +541,17 @@ export function StoryPlayer({
         <p>{saveError}</p>
         <button type="button" onClick={(event) => { event.stopPropagation(); void goNext(); }}>إعادة المحاولة</button>
       </div>}
+
+      {(phase === "pending" || phase === "unresolved") && (
+        <section role="status" className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-6 bg-black p-8 text-center">
+          <h2>{phase === "pending" ? "بانتظار تأكيد الخادم" : "نتيجة الحفظ غير محسومة"}</h2>
+          <p>{phase === "pending"
+            ? "حُفظت محاولة إكمال القصة على جهازك، وهي بانتظار تأكيد الخادم. لم تُعتمد المكافأة بعد."
+            : "لم تُحسم نتيجة حفظ المحاولة بعد. لا يمكن تأكيد حفظها أو اعتماد المكافأة الآن."}</p>
+          <button type="button" onClick={() => { void goNext(); }}>إعادة التحقق</button>
+          <button type="button" onClick={onExit}>إغلاق</button>
+        </section>
+      )}
 
       {/* Reward moment — first completion only. Replay path skips
           this block entirely (goNext jumps straight to "journey"). */}

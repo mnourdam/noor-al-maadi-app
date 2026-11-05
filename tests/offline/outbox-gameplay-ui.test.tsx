@@ -1,10 +1,11 @@
 import React from "react";
-import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, cleanup, act } from "@testing-library/react";
 import { beforeEach, afterEach, it, expect, vi } from "vitest";
 import { IDBFactory } from "fake-indexeddb";
 const state = vi.hoisted(() => ({
   uid: "u1",
   epoch: 0,
+  ownerListeners: new Set<() => void>(),
   rpc: vi.fn(),
   points: vi.fn(),
   dinars: vi.fn(),
@@ -37,6 +38,10 @@ vi.mock("@/lib/identity/owner", () => ({
   getIdentityEpoch: () => state.epoch,
   getActiveUserId: () => state.uid,
   getActiveOwner: () => state.uid,
+  onOwnerChange: (listener: () => void) => {
+    state.ownerListeners.add(listener);
+    return () => { state.ownerListeners.delete(listener); };
+  },
 }));
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => vi.fn(),
@@ -319,17 +324,24 @@ it("switching account while StoryPlayer saves cannot credit the new account", as
   await waitFor(() =>
     expect(state.rpc.mock.calls.some(([name]) => name === "complete_story_v2")).toBe(true),
   );
-  state.uid = "u2";
-  state.epoch++;
-  pending.finish({
-    data: { ok: true, reward_granted_xp: 5, reward_granted_dinars: 2 },
-    error: null,
+  await act(async () => {
+    state.uid = "u2";
+    state.epoch++;
+    state.ownerListeners.forEach((listener) => listener());
   });
-  await screen.findByRole("alert");
+  await act(async () => {
+    pending.finish({
+      data: { ok: true, reward_granted_xp: 5, reward_granted_dinars: 2 },
+      error: null,
+    });
+  });
+  // The obsolete request must not put its error into the new owner's UI.
+  expect(screen.queryByRole("alert")).toBeNull();
+  expect(screen.queryByTestId("reward")).toBeNull();
   expect(state.points).not.toHaveBeenCalled();
   expect(state.dinars).not.toHaveBeenCalled();
   const { peekAll } = await import("../../src/lib/offline/outbox");
-  expect(await peekAll("u2")).toEqual([]);
+  await waitFor(async () => expect(await peekAll("u2")).toEqual([]));
 });
 
 async function investigationPlayer() {
