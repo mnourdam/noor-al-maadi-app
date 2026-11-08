@@ -523,7 +523,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     if (next !== p) recordAndroidAction("profile.update");
     androidMeasure("profile.update", started);
     return next;
-  }), []);
+  }), [setProfile]);
 
   const awardBadge = useCallback((id: string) => {
     update((p) => (p.badges.includes(id) ? p : { ...p, badges: [...p.badges, id] }));
@@ -543,10 +543,19 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   // schedules the mutation. The existing `spendDinars` contract is untouched
   // for its other callers (games / crossword help).
   const reservedDinarsRef = useRef(0);
-  useEffect(() => { reservedDinarsRef.current = 0; }, [profile.dinars]);
+  const reservationScopeRef = useRef(capture);
+  useEffect(() => {
+    if (reservationScopeRef.current === capture) reservedDinarsRef.current = 0;
+  }, [profile.dinars, capture]);
   const trySpendDinars = useCallback((n: number): boolean => {
     const write = getPersistence();
     if (!capture()() || write.outcome === "unresolved" || write.outcome === "failed") return false;
+    // Reservations belong to the accepting capability, not a later owner
+    // with the same balance. An obsolete action cannot reset live reservations.
+    if (reservationScopeRef.current !== capture) {
+      reservationScopeRef.current = capture;
+      reservedDinarsRef.current = 0;
+    }
     if (!Number.isFinite(n) || n <= 0) return false;
     const available = (latestProfileRef.current.dinars ?? 0) - reservedDinarsRef.current;
     if (available < n) return false;
@@ -573,6 +582,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   // never accepted. See `@/lib/emblems/avatar-persistence`.
   const ctxSetAvatarDurable = useCallback(async (id: string) => {
     const current = capture();
+    if (!current()) return "failed" as const;
     const previous = latestProfileRef.current.avatarId ?? null;
     if (previous === id) {
       // Re-picking the current emblem must still confirm durability (the
@@ -580,7 +590,8 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       try {
         const { persistAvatarSelection } = await import("@/lib/emblems/avatar-persistence");
         if (!(await sessionCurrent(current))) return "failed" as const;
-        return await persistAvatarSelection(id);
+        const result = await persistAvatarSelection(id);
+        return current() ? result : "failed" as const;
       } catch {
         return "failed" as const;
       }
@@ -597,7 +608,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     if ((await sessionCurrent(current)) && result === "failed") {
       update((p) => (!current() ? p : p.avatarId === id ? { ...p, avatarId: previous ?? p.avatarId } : p));
     }
-    return result;
+    return current() ? result : "failed" as const;
   }, [update, capture, sessionCurrent]);
 
   const ctx = useMemo<Ctx>(() => ({
@@ -606,8 +617,10 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     getPersistence,
     login: (name) => update((p) => ({ ...p, name: name.trim() || "صديق التاريخ", loggedIn: true })),
     logout: () => {
+      const current = capture();
+      if (!current()) return;
       import("@/lib/identity/reset").then(({ resetForIdentityChange }) => {
-        resetForIdentityChange({ nextUserId: null, reason: "sign-out" });
+        if (current()) void resetForIdentityChange({ nextUserId: null, reason: "sign-out" });
       });
     },
     userId: profileOwner.startsWith("user:") ? profileOwner.slice(5) : null,
@@ -741,6 +754,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     setAvatar: (id) => { void ctxSetAvatarDurable(id); },
     setAvatarDurable: (id) => ctxSetAvatarDurable(id),
     setNotificationPrefs: (patch) => {
+      if (!capture()()) return;
       update((p) => ({
         ...p,
         settings: {
@@ -760,6 +774,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
     // ============= Engagement v1 =============
     loseHeart: () => {
+      if (!capture()()) return 0;
       let result = HEART_MAX;
       update((p) => {
         const now = Date.now();
@@ -775,6 +790,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       return result;
     },
     loseHeartOnce: (attemptKey: string) => {
+      if (!capture()()) return 0;
       if (!attemptKey) return getEffectiveHearts(profile);
       if (heartPenaltyDedup.has(attemptKey)) {
         return getEffectiveHearts(profile);
@@ -895,6 +911,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     recordStreakActivity: async (source, sourceId) => {
       const current = capture();
       const unchanged = capture(true);
+      if (!current()) return;
       const { recordStreakActivity: rpc } = await import("./streak-activity");
       if (!(await sessionCurrent(current)) || !unchanged()) return;
       const outcome = await rpc(source, sourceId ?? null);
