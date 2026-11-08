@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { accountOperation } from "./account-operation";
 import type { ProfileState } from "./profile";
 import { levelFor } from "./app-constants";
 
@@ -201,12 +202,26 @@ export function derivePublicStats(p: ProfileState, canonicalCompletionsCount?: n
 
 
 
-export async function pushPublicStats(userId: string, p: ProfileState): Promise<void> {
+export async function pushPublicStats(
+  userId: string, p: ProfileState, mayContinue: () => boolean = () => true,
+): Promise<void> {
+  const request = accountOperation(userId, mayContinue);
+  const snapshot = JSON.parse(JSON.stringify(p)) as ProfileState;
+  const current = async () => {
+    if (!request.current()) return false;
+    try {
+      const { data, error } = await supabase.auth.getSession();
+      return !error && request.current() && data.session?.user.id === userId;
+    } catch { return false; }
+  };
+  if (!(await current())) return;
   // Canonical boundary: resolve the true completion count before derivation.
   let canonicalCount: number | undefined;
   try {
     const { unionCompletedIds } = await import("./campaigns/completions");
-    const union = await unionCompletedIds(p.campaignsCompleted);
+    if (!(await current())) return;
+    const union = await unionCompletedIds(snapshot.campaignsCompleted);
+    if (!(await current())) return;
     // Safety: if union is empty but local profile has data, do NOT downgrade.
     // unionCompletedIds includes profile data, so an empty set implies a failure 
     // or a truly empty account. We only override if we have a positive union.
@@ -217,7 +232,8 @@ export async function pushPublicStats(userId: string, p: ProfileState): Promise<
     console.error("[social] failed to resolve canonical completions", e);
   }
 
-  const stats = derivePublicStats(p, canonicalCount);
+  if (!(await current())) return;
+  const stats = derivePublicStats(snapshot, canonicalCount);
   // Route through SECURITY DEFINER RPC; direct UPDATE on economy columns is revoked.
   await db.rpc("sync_my_public_stats", { p_stats: stats as never });
 }

@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { recordTrace } from "@/lib/diag-trace";
 import { getActiveOwner, getIdentityEpoch } from "./identity/owner";
+import { useProfileWriter, type ProfilePersistence } from "./profile-writer";
 import { irthDayKey, irthYesterdayKey } from "./irth-day";
 
 /**
@@ -171,6 +172,7 @@ const initial: ProfileState = {
 interface Ctx {
   profile: ProfileState;
   hydrated: boolean;
+  getPersistence: () => ProfilePersistence;
   login: (name: string) => void;
   logout: () => void;
   userId: string | null;
@@ -350,7 +352,8 @@ export function readPersistedProfileState(): ProfileState {
 }
 
 /** Read + normalise the persisted profile of the CURRENT owner namespace. */
-function hydrateFromStorage(): ProfileState | null {
+function hydrateFromStorage(reportReadable?: (readable: boolean) => void): ProfileState | null {
+  reportReadable?.(false);
   const ownerAtHydrate = getActiveOwner();
   recordTrace("sync-forensics", "LOCAL_PROFILE_HYDRATE_START", JSON.stringify({ owner: ownerAtHydrate }));
   const start = Date.now();
@@ -398,15 +401,7 @@ function hydrateFromStorage(): ProfileState | null {
             caller: "hydrateFromStorage"
           }));
           
-          if (rawLocal) {
-            localStorage.removeItem(STORAGE_KEY);
-            recordTrace("logout-audit", "PROFILE_GUEST_SANITIZED", JSON.stringify({ key: STORAGE_KEY, store: "localStorage" }));
-          }
-          if (rawSession) {
-            sessionStorage.removeItem(STORAGE_KEY);
-            recordTrace("logout-audit", "PROFILE_GUEST_SANITIZED", JSON.stringify({ key: STORAGE_KEY, store: "sessionStorage" }));
-          }
-          
+          // Preserve quarantined source bytes; never replace them with seed data.
           return null; 
         }
       } catch (e) {}
@@ -424,8 +419,10 @@ function hydrateFromStorage(): ProfileState | null {
 
 
 
-    if (!finalRaw) return null;
+    if (!finalRaw) { reportReadable?.(true); return null; }
     const parsed = JSON.parse(finalRaw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("invalid-profile");
+    reportReadable?.(Number.isFinite(parsed.points) && Number.isFinite(parsed.dinars));
     
     let merged: ProfileState = {
       ...initial,
@@ -449,16 +446,12 @@ function hydrateFromStorage(): ProfileState | null {
 }
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
-  const [profile, setProfile] = useState<ProfileState>(initial);
+  const { profile, owner: profileOwner, epoch: profileEpoch, setProfile, hydrate, getPersistence, capture, reset } = useProfileWriter(initial);
   const [hydrated, setHydrated] = useState(false);
-  const profileOwnerRef = useRef<string>(getActiveOwner());
-
   useEffect(() => {
-    const state = hydrateFromStorage() ?? initial;
-    setProfile(state);
-    profileOwnerRef.current = getActiveOwner();
+    hydrate(hydrateFromStorage);
     setHydrated(true);
-  }, []);
+  }, [hydrate]);
 
   // Identity switch (login / logout / account switch): the storage
   // namespace has already been repointed at the new owner, so the ONLY
@@ -472,12 +465,11 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       // 1) IMMEDIATELY detach the previous owner's React profile state.
       // This prevents stale data (Account A's XP) from remaining visible
       // in the React tree while hydrateFromStorage is working.
-      setProfile(initial);
-      profileOwnerRef.current = nextOwner;
+      // Hydration replaces the entire identity-bound frame atomically.
       
       // 2) Then hydrate the newly active owner's profile from its already-switched partition.
-      const next = hydrateFromStorage() ?? initial;
-      setProfile(next);
+      hydrate(hydrateFromStorage);
+      const next = readPersistedProfileState();
 
       import("@/lib/diag-trace").then(m => {
         m.recordTrace("logout-audit", "ProfileProvider:onIdentityChange:end", JSON.stringify({
@@ -489,56 +481,9 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     };
     window.addEventListener("irth:identity-changed", onIdentityChange);
     return () => window.removeEventListener("irth:identity-changed", onIdentityChange);
-  }, [profile.points, profile.name, profile.loggedIn]);
+  }, [hydrate]);
 
-  // V13 Owner-bound Persistence Effect
-  useEffect(() => {
-    if (!hydrated) return;
-    
-    const intendedOwner = profileOwnerRef.current;
-    const activeOwnerAtFlush = getActiveOwner();
-    
-    // V13 POLLUTION ROOT CAUSE FIX:
-    // If we are about to write but the owner has ALREADY changed, this is a stale 
-    // write from the previous identity's React closure.
-    if (intendedOwner !== activeOwnerAtFlush) {
-      return;
-    }
-
-    // If ProfileProvider is still holding Account A's state but activeOwner is Guest,
-    // this guard stops the write.
-    if (intendedOwner !== activeOwnerAtFlush) {
-      import("@/lib/diag-trace").then(m => {
-        m.recordTrace("logout-audit", "PROFILE_WRITE_QUARANTINED", JSON.stringify({
-          intendedOwner,
-          activeOwner: activeOwnerAtFlush,
-          caller: "ProfileProvider:persistenceEffect",
-          points: profile.points,
-          loggedIn: profile.loggedIn
-        }));
-      }).catch(() => {});
-      return;
-    }
-    
-    import("@/lib/diag-trace").then(m => {
-      m.recordTrace("logout-audit", "PROFILE_WRITE_SOURCE", JSON.stringify({
-        intendedOwner,
-        activeOwner: activeOwnerAtFlush,
-        physicalKey: STORAGE_KEY, // Partitioned internally
-        caller: "ProfileProvider:persistenceEffect",
-        points: profile.points,
-        dinars: profile.dinars,
-        loggedIn: profile.loggedIn
-      }));
-    }).catch(() => {});
-
-    const prev = readPersistedProfileState();
-    if (prev.hearts !== profile.hearts || prev.heartsAt !== profile.heartsAt) {
-    }
-
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
-  }, [profile, hydrated]);
-
+  // Persistence is owned by useProfileWriter's immutable identity frame.
 
   // V16 — day-rollover TICK ONLY.
   // Previously this watcher persisted `streak = 0` whenever the derived
@@ -600,14 +545,26 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   const reservedDinarsRef = useRef(0);
   useEffect(() => { reservedDinarsRef.current = 0; }, [profile.dinars]);
   const trySpendDinars = useCallback((n: number): boolean => {
+    const write = getPersistence();
+    if (!capture()() || write.outcome === "unresolved" || write.outcome === "failed") return false;
     if (!Number.isFinite(n) || n <= 0) return false;
     const available = (latestProfileRef.current.dinars ?? 0) - reservedDinarsRef.current;
     if (available < n) return false;
     reservedDinarsRef.current += n;
     update((p) => ({ ...p, dinars: Math.max(0, (p.dinars ?? 0) - n) }));
     return true;
-  }, [update]);
+  }, [update, capture, getPersistence]);
 
+
+  const sessionCurrent = useCallback(async (current: () => boolean) => {
+    if (!current() || getActiveOwner() !== profileOwner || getIdentityEpoch() !== profileEpoch) return false;
+    try {
+      const { data, error } = await supabase.auth.getSession();
+      const expected = profileOwner.startsWith("user:") ? profileOwner.slice(5) : null;
+      return !error && current() && getActiveOwner() === profileOwner &&
+        getIdentityEpoch() === profileEpoch && (data.session?.user.id ?? null) === expected;
+    } catch { return false; }
+  }, [profileOwner, profileEpoch]);
 
   // Premium Emblem — DURABLE, REVERTIBLE write.
   // Local state flips instantly for responsiveness, but the promise resolves
@@ -615,12 +572,14 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   // restored here, so the UI can never keep an optimistic value the server
   // never accepted. See `@/lib/emblems/avatar-persistence`.
   const ctxSetAvatarDurable = useCallback(async (id: string) => {
+    const current = capture();
     const previous = latestProfileRef.current.avatarId ?? null;
     if (previous === id) {
       // Re-picking the current emblem must still confirm durability (the
       // previous attempt may have been queued or lost).
       try {
         const { persistAvatarSelection } = await import("@/lib/emblems/avatar-persistence");
+        if (!(await sessionCurrent(current))) return "failed" as const;
         return await persistAvatarSelection(id);
       } catch {
         return "failed" as const;
@@ -630,26 +589,28 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     let result: "synced" | "queued" | "local" | "failed" = "failed";
     try {
       const { persistAvatarSelection } = await import("@/lib/emblems/avatar-persistence");
+      if (!(await sessionCurrent(current))) return "failed" as const;
       result = await persistAvatarSelection(id);
     } catch {
       result = "failed";
     }
-    if (result === "failed") {
-      update((p) => (p.avatarId === id ? { ...p, avatarId: previous ?? p.avatarId } : p));
+    if ((await sessionCurrent(current)) && result === "failed") {
+      update((p) => (!current() ? p : p.avatarId === id ? { ...p, avatarId: previous ?? p.avatarId } : p));
     }
     return result;
-  }, [update]);
+  }, [update, capture, sessionCurrent]);
 
   const ctx = useMemo<Ctx>(() => ({
     profile,
     hydrated,
+    getPersistence,
     login: (name) => update((p) => ({ ...p, name: name.trim() || "صديق التاريخ", loggedIn: true })),
     logout: () => {
       import("@/lib/identity/reset").then(({ resetForIdentityChange }) => {
         resetForIdentityChange({ nextUserId: null, reason: "sign-out" });
       });
     },
-    userId: profileOwnerRef.current.startsWith("user:") ? profileOwnerRef.current.slice(5) : null,
+    userId: profileOwner.startsWith("user:") ? profileOwner.slice(5) : null,
     addPoints: (n) => update((p) => addPointsTo(p, n)),
 
     openStory: (id) => update((p) => p.storiesOpened.includes(id) ? p : { ...p, storiesOpened: [...p.storiesOpened, id] }),
@@ -906,8 +867,11 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     availableStreakMilestones: () =>
       STREAK_MILESTONES.filter((m) => profile.streak >= m.days && !(profile.streakMilestonesClaimed ?? []).includes(m.days)),
     hydrateClaimedStreakRewards: async () => {
+      const current = capture();
+      if (!(await sessionCurrent(current))) return;
       try {
         const { data, error } = await supabase.rpc("my_claimed_streak_rewards");
+        if (!(await sessionCurrent(current))) return;
         if (error) {
           console.error("[streak-reward] my_claimed_streak_rewards", error);
           return;
@@ -915,6 +879,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         const list = Array.isArray(data) ? (data as number[]) : [];
         if (list.length === 0) return;
         update((p) => {
+          if (!current()) return p;
           const cur = new Set(p.streakMilestonesClaimed ?? []);
           let changed = false;
           for (const d of list) { if (!cur.has(d)) { cur.add(d); changed = true; } }
@@ -928,11 +893,12 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
     // V16 — durable qualifying-activity call.
     recordStreakActivity: async (source, sourceId) => {
-      const epoch = getIdentityEpoch();
-      const owner = getActiveOwner();
+      const current = capture();
+      const unchanged = capture(true);
       const { recordStreakActivity: rpc } = await import("./streak-activity");
+      if (!(await sessionCurrent(current)) || !unchanged()) return;
       const outcome = await rpc(source, sourceId ?? null);
-      if (getIdentityEpoch() !== epoch || getActiveOwner() !== owner) return;
+      if (!(await sessionCurrent(current)) || !unchanged()) return;
       if (outcome.ok !== true) {
         if (profile.loggedIn && !outcome.queued) return;
         // Guest or confirmed durable queue only. An unpersisted authenticated
@@ -940,6 +906,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         // replay with the original IRTH day, so the local mirror here is
         // purely optimistic UI — it never fabricates server truth.
         update((p) => {
+          if (!current()) return p;
           const today = todayKey();
           if (p.lastActiveDay === today) return p;
           const yesterday = irthYesterdayKey();
@@ -952,6 +919,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
       // Server authoritative — mirror totals into local state.
       update((p) => {
+        if (!current()) return p;
         let np: ProfileState = {
           ...p,
           streak: outcome.current_streak,
@@ -1102,7 +1070,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         settings: { ...initial.settings, ...(p.settings ?? {}), ...(cloud.settings ?? {}) },
       } as ProfileState;
     }),
-    resetProfile: () => setProfile(initial),
+    resetProfile: () => reset(initial),
     applyServerStats: (stats) => update((p) => {
       const now = Date.now();
       let next = p;
@@ -1144,7 +1112,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     grantTitle: (title) => update((p) => p.titlesEarned.includes(title) ? p : { ...p, titlesEarned: [...p.titlesEarned, title] }),
     grantArtifact: (id) => update((p) => p.artifactsFound.includes(id) ? p : { ...p, artifactsFound: [...p.artifactsFound, id] }),
     // `markAchievementEarned` removed - Achievement Engine v2 owns unlocks.
-  }), [profile, hydrated, update, awardBadge, trySpendDinars]);
+  }), [profile, profileOwner, profileEpoch, hydrated, getPersistence, capture, reset, sessionCurrent, update, awardBadge, trySpendDinars]);
 
   return <ProfileContext.Provider value={ctx}>{children}</ProfileContext.Provider>;
 }

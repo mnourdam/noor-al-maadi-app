@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { accountOperation } from "./account-operation";
 import type { ProfileState } from "./profile";
 
 /**
@@ -23,6 +24,14 @@ import type { ProfileState } from "./profile";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db: any = supabase;
+async function sessionMatches(userId: string, request: ReturnType<typeof accountOperation>) {
+  if (!request.current()) return false;
+  try {
+    const { data, error } = await supabase.auth.getSession();
+    return !error && request.current() && data.session?.user.id === userId;
+  } catch { return false; }
+}
+
 
 export interface AccountProfile {
   id: string;
@@ -46,17 +55,20 @@ export async function getCurrentUser() {
   return data.user;
 }
 
-export async function fetchAccountProfile(_userId: string): Promise<AccountProfile | null> {
+export async function fetchAccountProfile(userId: string): Promise<AccountProfile | null> {
+  const request = accountOperation(userId, () => true);
+  if (!(await sessionMatches(userId, request))) return null;
   // Direct SELECT on private profile columns (join_date, last_active) is no
   // longer permitted for authenticated; go through the owner-only RPC.
   const { data, error } = await db.rpc("get_my_profile");
   if (error) {
-    console.error("[cloud-save] fetchAccountProfile", error);
-    return null;
+    throw error;
   }
-  if (!data) return null;
+  if (!request.current() || !data) return null;
   const row = data as { id: string; username: string; display_name: string | null; join_date: string; last_active: string };
+  if (row.id !== userId || !(await sessionMatches(userId, request))) return null;
   const { data: emailVal } = await db.rpc("get_my_email");
+  if (!(await sessionMatches(userId, request))) return null;
   return {
     id: row.id,
     username: row.username,
@@ -72,12 +84,19 @@ export async function fetchAccountProfile(_userId: string): Promise<AccountProfi
 export async function updateDisplayName(name: string): Promise<{ ok: boolean; value?: string; error?: string }> {
   const clean = name.trim();
   if (!clean) return { ok: false, error: "الاسم لا يمكن أن يكون فارغاً" };
+  const request = accountOperation(null, () => true);
+  const session = await supabase.auth.getSession();
+  const uid = session.data.session?.user.id;
+  if (session.error || !uid || request.owner !== `user:${uid}` || !request.current())
+    return { ok: false, error: "identity_changed" };
   const { data, error } = await db.rpc("set_my_display_name", { p_name: clean });
+  if (!(await sessionMatches(uid, request))) return { ok: false, error: "identity_changed" };
   if (error) return { ok: false, error: error.message };
   // Best-effort: also mirror to auth user metadata.
   try {
     await supabase.auth.updateUser({ data: { display_name: clean, full_name: clean } });
   } catch { /* ignore */ }
+  if (!(await sessionMatches(uid, request))) return { ok: false, error: "identity_changed" };
   return { ok: true, value: (data as string) ?? clean };
 }
 
@@ -128,26 +147,35 @@ export async function updateUsername(value: string): Promise<{ ok: boolean; valu
 
 
 export async function touchLastActive(userId: string): Promise<void> {
+  const request = accountOperation(userId, () => true);
+  if (!(await sessionMatches(userId, request))) return;
   await db.from("profiles").update({ last_active: new Date().toISOString() }).eq("id", userId);
 }
 
 export async function fetchCloudSave(userId: string): Promise<CloudSaveRow | null> {
+  const request = accountOperation(userId, () => true);
+  if (!(await sessionMatches(userId, request))) throw new Error("identity_changed");
   const { data, error } = await db
     .from("cloud_saves")
     .select("user_id, data, client_updated_at, updated_at")
     .eq("user_id", userId)
     .maybeSingle();
   if (error) {
-    console.error("[cloud-save] fetchCloudSave", error);
-    return null;
+    // A failed read is not evidence that a cloud row is absent.
+    throw error;
   }
+  if (!(await sessionMatches(userId, request))) throw new Error("identity_changed");
+  if (data && data.user_id !== userId) throw new Error("cloud-owner-mismatch");
   return (data as CloudSaveRow) ?? null;
 }
 
 export async function pushSave(userId: string, profile: ProfileState): Promise<boolean> {
+  const request = accountOperation(userId, () => true);
+  const data = JSON.parse(JSON.stringify(profile)) as ProfileState;
+  if (!(await sessionMatches(userId, request))) return false;
   const payload = {
     user_id: userId,
-    data: profile,
+    data,
     client_updated_at: new Date().toISOString(),
   };
   const { error } = await db.from("cloud_saves").upsert(payload, { onConflict: "user_id" });
@@ -155,7 +183,7 @@ export async function pushSave(userId: string, profile: ProfileState): Promise<b
     console.error("[cloud-save] pushSave", error);
     return false;
   }
-  return true;
+  return sessionMatches(userId, request);
 }
 
 export async function signUpWithEmail(args: { email: string; password: string; username: string; displayName?: string }) {

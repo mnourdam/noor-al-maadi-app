@@ -123,8 +123,12 @@ function mapKey(key: string): string {
   const logMappedKeys = ["hakaya.profile.v2", "irth.campaign_completions.v1", "irth.achievements.v2.guest_unlocks"];
   if (logMappedKeys.includes(key)) {
     import("../diag-trace").then(m => {
-      const exists = typeof window !== "undefined" && window.localStorage.getItem(physical) !== null;
-      const legacyExists = typeof window !== "undefined" && window.localStorage.getItem(key) !== null;
+      // Diagnostic reads must not re-enter mapKey and schedule themselves
+      // forever. This synchronous read-only escape preserves all source bytes.
+      const { exists, legacyExists } = withoutMapping(() => ({
+        exists: typeof window !== "undefined" && window.localStorage.getItem(physical) !== null,
+        legacyExists: typeof window !== "undefined" && window.localStorage.getItem(key) !== null,
+      }));
       
       m.recordTrace("logout-audit", "storage-mapping", JSON.stringify({
         owner,

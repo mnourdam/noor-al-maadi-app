@@ -37,7 +37,7 @@ vi.mock("@/lib/profile", () => ({
 vi.mock("@/lib/identity/owner", () => ({
   getIdentityEpoch: () => state.epoch,
   getActiveUserId: () => state.uid,
-  getActiveOwner: () => state.uid,
+  getActiveOwner: () => `user:${state.uid}`,
   onOwnerChange: (listener: () => void) => {
     state.ownerListeners.add(listener);
     return () => { state.ownerListeners.delete(listener); };

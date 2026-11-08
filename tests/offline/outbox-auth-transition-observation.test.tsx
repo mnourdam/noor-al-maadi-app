@@ -95,6 +95,8 @@ vi.mock("@/lib/identity/reset", () => ({
 }));
 vi.mock("@/lib/identity/owner", () => ({
   getActiveOwner: () => env.owner,
+  getIdentityEpoch: () => 0,
+  onOwnerChange: () => () => {},
   getActiveUserId: () => (env.owner.startsWith("user:") ? env.owner.slice(5) : null),
   guestOwnerKey: () => "guest:fixture",
   userOwnerKey: (uid: string) => `user:${uid}`,
