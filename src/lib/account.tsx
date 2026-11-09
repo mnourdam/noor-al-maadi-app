@@ -26,6 +26,7 @@ import { resetForIdentityChange } from "./identity/reset";
 import { getActiveOwner, getActiveUserId, getIdentityEpoch, onOwnerChange, guestOwnerKey, userOwnerKey } from "./identity/owner";
 import { accountOperation } from "./account-operation";
 import { waitForAuthReady } from "./identity/guard";
+import { DISABLED_PROTOCOL_GATE, readProtocolGate, type ProtocolGateObservation } from "./economy/compatibility-gate";
 import {
   beginEmailObservation,
   endEmailObservation,
@@ -43,6 +44,7 @@ interface AccountCtx {
   syncing: boolean;
   isAuthResetting: boolean;
   lastSyncAt: number | null;
+  protocolGate: ProtocolGateObservation;
   signUp: (args: { email: string; password: string; username: string; displayName?: string }) => Promise<{ ok: boolean; error?: string }>;
   signIn: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   signOut: () => Promise<void>;
@@ -58,13 +60,21 @@ const Ctx = createContext<AccountCtx | null>(null);
 
 const PUSH_DEBOUNCE_MS = 1500;
 
-export function AccountProvider({ children, emailAuthObserverForTests }: {
+export function AccountProvider({ children, emailAuthObserverForTests, compatibilityGateProbeForTests }: {
   children: ReactNode;
   emailAuthObserverForTests?: EmailAuthObserver;
+  /** Ignored outside test builds; there is no production rollout flag. */
+  compatibilityGateProbeForTests?: boolean;
 }) {
   const emailAuthObserver = selectTestEmailObserver(emailAuthObserverForTests);
   const identitySnapshot = () => JSON.stringify([getActiveOwner(), getIdentityEpoch()]);
   const identity = useSyncExternalStore(onOwnerChange, identitySnapshot, identitySnapshot);
+  const gateProbeEnabled = import.meta.env.MODE === "test" && import.meta.env.PROD === false && compatibilityGateProbeForTests === true;
+  const [gateFrame, setGateFrame] = useState<{
+    owner: string; epoch: number; value: ProtocolGateObservation;
+  } | null>(null);
+  const protocolGate = gateProbeEnabled && gateFrame?.owner === getActiveOwner() &&
+    gateFrame.epoch === getIdentityEpoch() ? gateFrame.value : DISABLED_PROTOCOL_GATE;
 
   const androidStable = isAndroidUltraStableMode();
   const { profile, getPersistence, mergeCloudSave, applyServerStats, addDinars, awardBadge, login, hydrateClaimedStreakRewards, adoptServerAvatar } = useProfile();
@@ -236,6 +246,20 @@ export function AccountProvider({ children, emailAuthObserverForTests }: {
       sub.subscription.unsubscribe();
     };
   }, []);
+
+  // Inert diagnostic only. No production RPC, wallet/Cloud mutation or auth dependency.
+  useEffect(() => {
+    if (!gateProbeEnabled || !user) return;
+    let alive = true;
+    const request = operation(user.id, () => alive);
+    void readProtocolGate(user.id, request.current).then(result => {
+      if (!result || !request.current()) return;
+      setGateFrame(previous => request.current()
+        ? { owner: request.owner, epoch: request.epoch, value: result }
+        : previous);
+    });
+    return () => { alive = false; };
+  }, [gateProbeEnabled, user?.id, identity]);
 
   // ============ On user change: hydrate account + reconcile cloud save ============
   useEffect(() => {
@@ -867,6 +891,7 @@ export function AccountProvider({ children, emailAuthObserverForTests }: {
     syncing,
     isAuthResetting,
     lastSyncAt,
+    protocolGate,
     signUp,
     signIn,
     signOut: signOutFn,
@@ -874,7 +899,7 @@ export function AccountProvider({ children, emailAuthObserverForTests }: {
     updateDisplayName: updateDisplayNameFn,
     updateUsername: updateUsernameFn,
     isUsernameAvailable: isUsernameAvailableFn,
-  }), [user, account, displayName, loadingSession, syncing, isAuthResetting, lastSyncAt, signUp, signIn, signOutFn, syncNow, updateDisplayNameFn, updateUsernameFn, isUsernameAvailableFn]);
+  }), [user, account, displayName, loadingSession, syncing, isAuthResetting, lastSyncAt, protocolGate, signUp, signIn, signOutFn, syncNow, updateDisplayNameFn, updateUsernameFn, isUsernameAvailableFn]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
