@@ -1,5 +1,5 @@
--- PREPARED ACCEPTANCE ONLY; NOT EXECUTED IN P1-05B-02.
--- For an independently approved, disposable local Supabase test database only.
+-- Prepared in P1-05B-02; executed only by the disposable P1-05B-03 harness.
+-- For the disposable synthetic PostgreSQL harness; hosted integration requires separate approval.
 -- Apply/review docs/proposals/v18-01a-p1-05b-02-compatibility-gate.sql separately.
 -- Requires four synthetic auth.users (and normal profile fixture rows):
 -- 111... Alice, 222... Bob, 333... existing V17, 444... newly registered.
@@ -79,6 +79,12 @@ SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', '11111111-1111-4111-8111-111111111111', true);
 DO $test$
 BEGIN
+  IF current_user <> 'authenticated' OR
+     (SELECT rolsuper OR rolbypassrls FROM pg_roles WHERE rolname=current_user) OR
+     NOT has_schema_privilege(current_user,'public','USAGE') OR
+     NOT has_schema_privilege(current_user,'auth','USAGE') OR
+     NOT has_table_privilege(current_user,'public.economic_protocol_candidates','SELECT')
+  THEN RAISE EXCEPTION 'user test role/USAGE/SELECT invalid'; END IF;
   IF (SELECT count(*) FROM public.economic_protocol_candidates) <> 1 OR
      EXISTS (SELECT 1 FROM public.economic_protocol_candidates
        WHERE user_id = '22222222-2222-4222-8222-222222222222')
@@ -108,6 +114,11 @@ $test$;
 SELECT set_config('request.jwt.claim.sub', '22222222-2222-4222-8222-222222222222', true);
 DO $test$
 BEGIN
+  IF current_user <> 'authenticated' OR
+     (SELECT rolsuper OR rolbypassrls FROM pg_roles WHERE rolname=current_user) OR
+     (SELECT count(*) FROM public.economic_protocol_candidates) <> 1 OR
+     EXISTS (SELECT 1 FROM public.economic_protocol_candidates WHERE user_id='11111111-1111-4111-8111-111111111111')
+  THEN RAISE EXCEPTION 'Bob isolation/role boundary failed'; END IF;
   IF public.get_economic_protocol_gate_v1() IS DISTINCT FROM
     '{"schema_version":1,"protocol_state":"unresolved","diagnostic_state":"incomplete","economic_authority_enabled":false}'::jsonb
   THEN RAISE EXCEPTION 'incomplete evidence acquired authority'; END IF;
@@ -132,6 +143,15 @@ BEGIN
   EXCEPTION WHEN insufficient_privilege THEN NULL; END;
 END;
 $test$;
+RESET ROLE;
+
+SET LOCAL ROLE service_role;
+DO $test$ BEGIN
+  BEGIN
+    PERFORM public.get_economic_protocol_gate_v1();
+    RAISE EXCEPTION 'service_role RPC execution succeeded';
+  EXCEPTION WHEN SQLSTATE '42501' THEN NULL; END;
+END; $test$;
 RESET ROLE;
 
 DO $test$

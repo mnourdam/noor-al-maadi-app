@@ -1,0 +1,41 @@
+name: P1-05B-03 Isolated PostgreSQL Acceptance
+on:
+  push:
+    branches: [v18-01a-outbox-recovery]
+    paths:
+      - '.github/workflows/p1-05b-03-postgres.yml'
+      - 'tests/sql/**'
+      - 'docs/proposals/v18-01a-p1-05b-02-compatibility-gate.sql'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  postgres-acceptance:
+    if: github.ref == 'refs/heads/v18-01a-outbox-recovery'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17.6-bookworm
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: synthetic-job-only
+          POSTGRES_DB: p105b03
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd 'pg_isready -U postgres -d p105b03'
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Run real SQL against disposable loopback service only
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: postgres
+          PGPASSWORD: synthetic-job-only
+          PGDATABASE: p105b03
+        run: |
+          psql -X --set=ON_ERROR_STOP=1 --file=tests/sql/p1-05b-03/run.sql
+          bash tests/sql/p1-05b-03/check-negative-controls.sh
