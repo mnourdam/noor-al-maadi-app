@@ -1,5 +1,5 @@
 """Actual debug WebView/bridge/lifecycle checks; synthetic transport, no network claim."""
-import json,subprocess,time,urllib.request
+import json,subprocess,time,urllib.request,os
 from urllib.parse import urlparse,urlunparse
 import websocket
 PACKAGE='app.lovable.irth'
@@ -80,6 +80,6 @@ def main():
         assert page.evaluate('runtime.durable()')==durable and page.evaluate('runtime.local().title')=='updated'
         assert page.evaluate('nativeAcceptance.unexpected.length')==0
         checks.append('Android am force-stop and fresh activity process reload preserve committed IndexedDB content')
-        print(json.dumps({'result':'PASS_NATIVE_SELECTED_MODULES','checks':checks,'android_api':adb('shell','getprop','ro.build.version.sdk'),'webview_user_agent':page.evaluate('navigator.userAgent'),'transport':'SYNTHETIC_FETCH_ONLY_INTERNET_PERMISSION_REMOVED','full_app_ui':'NOT_TESTED','hardware_back':'NOT_TESTED'}))
+        print(json.dumps({'result':'PASS_NATIVE_SELECTED_MODULES','checks':checks,'emulator_acceleration':os.environ.get('NATIVE_ACCEL','unspecified'),'android_api':adb('shell','getprop','ro.build.version.sdk'),'webview_user_agent':page.evaluate('navigator.userAgent'),'transport':'SYNTHETIC_FETCH_ONLY_INTERNET_PERMISSION_REMOVED','full_app_ui':'NOT_TESTED','hardware_back':'NOT_TESTED'}))
     finally:page.close()
 if __name__=='__main__':main()

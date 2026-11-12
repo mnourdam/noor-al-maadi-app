@@ -46,8 +46,30 @@ jobs:
           test -f "$ANDROID_HOME/licenses/android-sdk-license"
           # Never accept new license terms automatically; stdin is closed.
           "$manager" 'platforms;android-36' 'build-tools;35.0.0' 'platform-tools' 'emulator' 'system-images;android-35;default;x86_64' </dev/null
-          test -f "$ANDROID_HOME/system-images/android-35/default/x86_64/package.xml"
-          test -r /dev/kvm && test -w /dev/kvm
+          image_metadata="$ANDROID_HOME/system-images/android-35/default/x86_64/package.xml"
+          if [[ ! -f "$image_metadata" ]]; then
+            echo 'NATIVE_PREFLIGHT_FAIL: AOSP35 package.xml missing'
+            exit 1
+          fi
+          echo 'NATIVE_PREFLIGHT_PASS: AOSP35 package.xml present'
+          # Read-only accelerator diagnostics; never alter host permissions.
+          set +e
+          "$ANDROID_HOME/emulator/emulator" -accel-check
+          accel_status=$?
+          set -e
+          echo "NATIVE_PREFLIGHT_DIAGNOSTIC: emulator accel-check exit=$accel_status"
+          kvm_present=false; kvm_readable=false; kvm_writable=false
+          [[ ! -e /dev/kvm ]] || kvm_present=true
+          [[ ! -r /dev/kvm ]] || kvm_readable=true
+          [[ ! -w /dev/kvm ]] || kvm_writable=true
+          echo "NATIVE_PREFLIGHT_DIAGNOSTIC: kvm present=$kvm_present readable=$kvm_readable writable=$kvm_writable"
+          if [[ "$kvm_present" == true && "$kvm_readable" == true && "$kvm_writable" == true && "$accel_status" == 0 ]]; then
+            echo 'NATIVE_ACCEL=on' >> "$GITHUB_ENV"
+            echo 'NATIVE_PREFLIGHT_MODE: verified usable KVM; hardware acceleration on'
+          else
+            echo 'NATIVE_ACCEL=off' >> "$GITHUB_ENV"
+            echo 'NATIVE_PREFLIGHT_MODE: software emulation; hardware acceleration off'
+          fi
       - name: Prepare disposable app copy and ephemeral debug key
         run: python tests/offline/browser/prepare-native-content.py "$RUNNER_TEMP/irth-native-acceptance"
       - name: Package debug only and verify absence of INTERNET before install
@@ -75,10 +97,10 @@ jobs:
           mkdir -p "$ANDROID_AVD_HOME"
           # 'no' declines optional custom hardware profile; this is not license consent.
           printf 'no\n' | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd -n irth-acceptance -k 'system-images;android-35;default;x86_64'
-          "$ANDROID_HOME/emulator/emulator" -avd irth-acceptance -no-window -no-audio -no-snapshot -no-boot-anim -gpu swiftshader_indirect > "$RUNNER_TEMP/native-emulator.log" 2>&1 &
+          "$ANDROID_HOME/emulator/emulator" -avd irth-acceptance -accel "$NATIVE_ACCEL" -no-window -no-audio -no-snapshot -no-boot-anim -gpu swiftshader_indirect > "$RUNNER_TEMP/native-emulator.log" 2>&1 &
           trap 'adb emu kill >/dev/null 2>&1 || true' EXIT
-          timeout 180 adb wait-for-device
-          for i in $(seq 1 120); do
+          timeout 300 adb wait-for-device
+          for i in $(seq 1 300); do
             if [[ "$(adb shell getprop sys.boot_completed | tr -d '\r')" == 1 ]]; then break; fi
             sleep 2
           done
