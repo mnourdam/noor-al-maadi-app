@@ -13,6 +13,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import type { NotificationPayload } from "./deepLink";
+import { getActiveOwner, getIdentityEpoch, ownerUserId } from "@/lib/identity/owner";
 
 export interface ServerNotification {
   id: string;
@@ -46,10 +47,11 @@ function readCache(): ServerNotification[] {
   }
 }
 
-function writeCache(rows: ServerNotification[]) {
+function writeCache(rows: ServerNotification[], current: () => boolean = () => true) {
   if (typeof localStorage === "undefined") return;
   try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify(rows.slice(0, 200)));
+    const serialized = JSON.stringify(rows.slice(0, 200));
+    if (current()) localStorage.setItem(CACHE_KEY, serialized);
   } catch { /* quota — ignore */ }
 }
 
@@ -63,23 +65,68 @@ function emit() {
  * Fetch the user's notification list. Falls back to the offline cache if
  * the network is unreachable or the user is not signed in.
  */
-export async function fetchMyNotifications(limit = 100): Promise<ServerNotification[]> {
-  try {
-    // Guests have no inbox — the RPC is signed-in only.
-    const { data: sess } = await supabase.auth.getSession();
-    if (!sess.session) return readCache();
-    const { data, error } = await supabase.rpc("list_my_notifications" as never, {
-      p_limit: limit,
-      p_before: null,
-    } as never);
-    if (error) throw error;
-    const rows = (data as ServerNotification[] | null) ?? [];
-    writeCache(rows);
-    return rows;
-  } catch (err) {
-    console.warn("[notifications] fetch failed, using cache", err);
-    return readCache();
-  }
+// In-flight sharing only: no result cache, paging normalization or cross-limit reuse.
+export const NOTIFICATION_LIST_WAIT_MS = 10_000;
+let listGeneration = 0;
+const listFlights = new Map<string, Map<number, Promise<ServerNotification[]>>>();
+function identityScope() {
+  const owner = getActiveOwner(), epoch = getIdentityEpoch();
+  return { owner, current: () => getActiveOwner() === owner && getIdentityEpoch() === epoch };
+}
+function invalidateLists() { listGeneration += 1; }
+export function fetchMyNotifications(limit = 100): Promise<ServerNotification[]> {
+  const scope = identityScope(), generation = listGeneration;
+  const key = JSON.stringify([scope.owner, getIdentityEpoch(), generation]);
+  let flights = listFlights.get(key);
+  if (!flights) { flights = new Map(); listFlights.set(key, flights); }
+  const existing = flights.get(limit);
+  if (existing) return existing;
+  let retired = false;
+  const current = () => !retired && scope.current() && listGeneration === generation;
+  const fallback = () => {
+    if (!current()) return [];
+    const rows = readCache();
+    return current() ? rows : [];
+  };
+  let timer: ReturnType<typeof setTimeout>;
+  const deadline = new Promise<ServerNotification[]>((resolve) => {
+    timer = setTimeout(() => {
+      const rows = fallback();
+      retired = true;
+      resolve(rows);
+    }, NOTIFICATION_LIST_WAIT_MS);
+  });
+  const work = Promise.resolve().then(async () => {
+    try {
+      if (!current()) return [];
+      const { data: sess } = await supabase.auth.getSession();
+      if (!current()) return [];
+      // Preserve current-owner offline fallback when auth is unavailable.
+      if (!sess.session) return fallback();
+      if (sess.session.user.id !== ownerUserId(scope.owner)) return [];
+      const { data, error } = await supabase.rpc("list_my_notifications" as never, {
+        p_limit: limit, p_before: null,
+      } as never);
+      if (!current()) return [];
+      if (error) throw error;
+      const rows = (data as ServerNotification[] | null) ?? [];
+      if (!current()) return [];
+      writeCache(rows, current);
+      return current() ? rows : [];
+    } catch {
+      return fallback();
+    }
+  });
+  const result = Promise.race([work, deadline]);
+  flights.set(limit, result);
+  const cleanup = () => {
+    retired = true;
+    clearTimeout(timer);
+    if (flights!.get(limit) === result) flights!.delete(limit);
+    if (!flights!.size && listFlights.get(key) === flights) listFlights.delete(key);
+  };
+  void result.then(cleanup, cleanup);
+  return result;
 }
 
 
@@ -98,6 +145,8 @@ export async function fetchMyUnreadCount(): Promise<number> {
 
 
 export async function markNotificationRead(notificationId: string): Promise<void> {
+  const scope = identityScope();
+  invalidateLists();
   // NOTE: `mark_notification_read` belongs to the *personal* inbox
   // (personal_notifications). The Notification Center is backed by
   // notification_deliveries — it must use the delivery-scoped RPCs, or the
@@ -110,52 +159,71 @@ export async function markNotificationRead(notificationId: string): Promise<void
   } catch (err) {
     console.warn("[notifications] mark read failed", err);
   }
+  if (!scope.current()) return;
+  invalidateLists();
   const next = readCache().map((n) => (n.id === notificationId ? { ...n, read_at: n.read_at ?? new Date().toISOString() } : n));
-  writeCache(next);
-  emit();
+  writeCache(next, scope.current);
+  if (scope.current()) emit();
 }
 
 export async function markAllNotificationsRead(): Promise<void> {
+  const scope = identityScope();
+  invalidateLists();
   const now = new Date().toISOString();
   // Write cache first so the badge clears instantly, then persist.
-  writeCache(readCache().map((n) => ({ ...n, read_at: n.read_at ?? now })));
+  writeCache(readCache().map((n) => ({ ...n, read_at: n.read_at ?? now })), scope.current);
+  if (!scope.current()) return;
   emit();
+  if (!scope.current()) return;
   try {
     const { error } = await supabase.rpc("mark_all_my_notifications_read" as never);
     if (error) throw error;
   } catch (err) {
     console.warn("[notifications] mark all read failed", err);
   }
+  if (!scope.current()) return;
+  invalidateLists();
   // Re-sync from the server so the cache reflects the durable truth.
   await fetchMyNotifications(200);
-  emit();
+  if (scope.current()) emit();
 }
 
 
 export async function deleteMyNotification(notificationId: string): Promise<void> {
+  const scope = identityScope();
+  invalidateLists();
   try {
     await supabase.rpc("delete_my_notification" as never, { p_notification_id: notificationId } as never);
   } catch (err) {
     console.warn("[notifications] delete failed", err);
   }
-  writeCache(readCache().filter((n) => n.id !== notificationId));
-  emit();
+  if (!scope.current()) return;
+  invalidateLists();
+  writeCache(readCache().filter((n) => n.id !== notificationId), scope.current);
+  if (scope.current()) emit();
 }
 
 export async function clearMyNotifications(): Promise<void> {
+  const scope = identityScope();
+  invalidateLists();
   try {
     await supabase.rpc("clear_my_notifications" as never);
   } catch (err) {
     console.warn("[notifications] clear failed", err);
   }
-  writeCache([]);
-  emit();
+  if (!scope.current()) return;
+  invalidateLists();
+  writeCache([], scope.current);
+  if (scope.current()) emit();
 }
 
 export async function recordDismissed(notificationId: string): Promise<void> {
+  const scope = identityScope();
+  invalidateLists();
   try {
     await supabase.rpc("record_notification_dismissed" as never, { p_notification_id: notificationId } as never);
   } catch { /* analytics only — non-fatal */ }
+  if (scope.current()) invalidateLists();
 }
 
 export interface NotificationPreferences {
