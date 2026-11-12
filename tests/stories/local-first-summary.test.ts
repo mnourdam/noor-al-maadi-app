@@ -6,7 +6,7 @@
 // • a rejected RPC never empties the rail
 // ============================================================
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const BASELINE_STORIES = Array.from({ length: 116 }, (_, i) => ({
   id: `story_${i}`,
@@ -41,15 +41,33 @@ vi.mock("@/integrations/supabase/client", () => ({
   },
 }));
 
-vi.mock("@/lib/identity/owner", () => ({ getActiveUserId: () => null }));
+import { __resetIdentityForTests, setActiveOwnerInternal } from "@/lib/identity/owner";
+import { installIdentityPartition, __uninstallPartitionForTests } from "@/lib/identity/partition";
+const onlineDescriptor = Object.getOwnPropertyDescriptor(navigator, "onLine");
 
 import { buildLocalStorySummaries, listStoriesSummary, STORY_SUMMARY_RPC_TIMEOUT_MS } from "@/lib/stories/summary";
 
 describe("Home Stories — local first", () => {
   beforeEach(() => {
+    __uninstallPartitionForTests();
+    localStorage.clear();
+    sessionStorage.clear();
+    __resetIdentityForTests();
+    setActiveOwnerInternal("guest:local-first-fixture");
+    installIdentityPartition();
     rpc.mockReset();
     localReady = false;
     Object.defineProperty(globalThis.navigator, "onLine", { value: true, configurable: true });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    __uninstallPartitionForTests();
+    localStorage.clear();
+    sessionStorage.clear();
+    __resetIdentityForTests();
+    if (onlineDescriptor) Object.defineProperty(navigator, "onLine", onlineDescriptor);
+    else Reflect.deleteProperty(navigator, "onLine");
   });
 
   it("returns every library story from the baseline with an empty IndexedDB", async () => {
