@@ -1021,6 +1021,12 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       if ([captured.points, captured.dinars, captured.streak].some(
         (value) => typeof value === "number" && !Number.isFinite(value),
       )) return;
+      // Normalize scalar map entries once before a deferred/replayed updater.
+      // Preserve Number(value) || 0 compatibility; validate final maxima below.
+      const incomingCooldowns = Object.entries(captured.activityCooldowns ?? {})
+        .map(([key, value]) => [key, Number(value) || 0] as const);
+      const incomingHints = Object.entries(captured.hintsPurchased ?? {})
+        .map(([key, value]) => [key, Number(value) || 0] as const);
       setProfile((p) => {
         const union = (a: readonly string[] | undefined, b: readonly string[] | undefined): string[] => {
           const s = new Set<string>();
@@ -1031,13 +1037,17 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         const numMax = (a: number | undefined, b: number | undefined, fallback = 0): number =>
           Math.max(fallback, Math.floor(a ?? fallback), Math.floor(b ?? fallback));
         const cooldowns: Record<string, number> = { ...(p.activityCooldowns ?? {}) };
-        for (const [k, v] of Object.entries(captured.activityCooldowns ?? {})) {
-          cooldowns[k] = Math.max(cooldowns[k] ?? 0, Number(v) || 0);
+        for (const [k, v] of incomingCooldowns) {
+          cooldowns[k] = Math.max(cooldowns[k] ?? 0, v);
         }
         const hints: Record<string, number> = { ...(p.hintsPurchased ?? {}) };
-        for (const [k, v] of Object.entries(captured.hintsPurchased ?? {})) {
-          hints[k] = Math.max(hints[k] ?? 0, Number(v) || 0);
+        for (const [k, v] of incomingHints) {
+          hints[k] = Math.max(hints[k] ?? 0, v);
         }
+        // Reject the whole merge, including unrelated progression, if either
+        // final map would persist a nonfinite value (also inspect local entries).
+        if (Object.values(cooldowns).some((value) => !Number.isFinite(value)) ||
+            Object.values(hints).some((value) => !Number.isFinite(value))) return p;
         // V16 — Streak: cloud/server value is authoritative and is adopted
         // verbatim (max with local so an in-flight local activity is not
         // regressed). A client-side "expired" derivation NEVER zeroes it;

@@ -21,3 +21,8 @@ After change: 14/14 pass. Combined with unchanged historical capability tests: 8
 Independent review **CLEAR**, independently rerun **14/14 PASS**. Full local
 validation: **1403/1403 tests across 55 files PASS**, both TypeScript projects PASS,
 and client/SSR build PASS. Remote CI pending for this source commit. No deployment.
+
+Remote runtime CI **SUCCESS**: [43190268479](https://github.com/mnourdam/noor-al-maadi-app/actions/runs/43190268479), tested commit `8af451b953793647783b65cf900e863adc8d196d`.
+Verified job `131087494710` passed every step, including regressions, scheduler,
+typecheck and client/SSR build. No deployment. These checks use npm, not Bun or
+an Android release build.
