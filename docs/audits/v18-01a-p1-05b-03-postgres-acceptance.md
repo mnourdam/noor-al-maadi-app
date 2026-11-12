@@ -2,9 +2,30 @@
 
 ## القرار
 
-**A: PostgreSQL Engine Acceptance محليًا PASS. GitHub Actions execution غير متحقق؛ Database Acceptance الكلية تبقى PENDING. B: Supabase Integration Acceptance PENDING. C: Production Deployment Approval غير مأذونة / NO-GO.**
+**A: PostgreSQL Engine Acceptance PASS محليًا وفي GitHub Actions (تحقق 2026-11-12). B: Supabase Integration Acceptance PENDING. C: Production Deployment Approval غير مأذونة / NO-GO. Database acceptance الشاملة ليست مكتملة قبل B.**
 
 المرجع عند البدء: `v18-01a-outbox-recovery`، `829c17d039aeb922fb07a8eee82df1b90d0714ac`، دون تعديلات متتبعة. الأدلة العشرة المحلية السابقة بقيت دون تغيير وخارج Commit. قُرئت B-02 والمسودة والقبول والـadapter وAndroid workflow وB-01 المحلية. لا تغيير بسلوك التطبيق أو الاقتصاد أو SQL proposal الأصلية.
+
+
+## متابعة GitHub Actions الموثقة — 2026-11-12
+
+بدأت المتابعة من HEAD الفعلية `95343a75806b8663727ca8f0559d550c9ede858f`، لا من المرجع التاريخي `829c17d`. كانت أدوات P1-05B-03 موجودة بالفعل؛ لم نكرر إنشاؤها أو نعدّل SQL/tests/fixtures.
+
+- التشغيل السابق [42621655004](https://github.com/mnourdam/noor-al-maadi-app/actions/runs/42621655004)، job `129175074369`، فشل في Initialize containers قبل تشغيل SQL. السجل الفعلي: `unknown shorthand flag: 'U' in -U`، exit 125. سبب ذلك single quotes حول health-cmd عند تحليل arguments بواسطة Actions runner.
+- الإصلاح الوحيد في workflow: استبدال single quotes بـdouble quotes حول `pg_isready -U postgres -d p105b03`. Commit: `13beecc4fac71b45fcef02415c3547f1f53991f4`.
+- التشغيل الجديد [43166702858](https://github.com/mnourdam/noor-al-maadi-app/actions/runs/43166702858)، [job 131010150636](https://github.com/mnourdam/noor-al-maadi-app/actions/runs/43166702858/job/131010150636)، على ذلك commit بالضبط: **completed / success**، 2026-11-12 06:14:13–06:14:41 UTC. جميع الخطوات نجحت، بما فيها PostgreSQL initialization وSQL والـnegative controls وإزالة الحاوية.
+- قُرئت job logs الفعلية، لا status وحدها. المحرك PostgreSQL 17.6 (Debian 17.6-2.pgdg12+1). الدليل عند 06:14:37 UTC:
+
+```text
+P105B03 ENGINE ACCEPTANCE PASS; economic snapshots unchanged; NOT Supabase integration acceptance
+PASS negative control: auth-write rejected with unexpected write/execute privilege
+PASS negative control: cross-owner rejected with Alice can read Bob or has lost her own row
+PASS negative control: uid-overload rejected with RPC accepted a destination UID
+```
+
+ERROR في server logs لكل negative control متوقعة ومقصودة؛ shell تحققت من رسالة الرفض الصحيحة ونجحت. لم تُخفف assertions. لم يتغير أي ملف app أو SQL proposal أو migration أو economy أو default-off gate. لم تُنفذ أوامر على Supabase أو الإنتاج، ولا merge/deploy. ملفات P1-06B الخمسة وأعمال التكلفة خارج هذه المتابعة. التحقق المحلي الجديد يقتصر على `git diff --check` و`bash -n tests/sql/p1-05b-03/check-negative-controls.sh` (PASS)؛ أرقام JS/build أدناه تاريخية ولم يُعد تشغيلها لهذه المعالجة ذات السطر الواحد.
+
+**A فقط PASS. B PENDING، C NO-GO. P1-04/P1-05/P1-06 OPEN؛ V18 HOLD.** بقية التقرير أدناه تحفظ أدلة الجولة الأصلية وحدودها.
 
 ## AUDIT → RISK → MINIMUM FIX
 
@@ -82,7 +103,7 @@ shell تتطلب nonzero وظهور الرسالة المتوقعة معًا. إ
 
 snapshot JSONB لجميع أعمدة وصفوف profiles/applied_profile_deltas/cloud_saves **قبل تطبيق المسودة**، ثم مقارنة IS DISTINCT FROM بعد القبول. توجد مقارنة ثانية داخل BEGIN/ROLLBACK الخاصة بقبول B-02. كل المقارنات ناجحة، وenrollment الاختبار لم تتسرب خارج rollback. عدد public tables بعد التشغيل 4 فقط: الثلاث الأصلية وجدول gate؛ لا entitlement/delivered/baseline جديدة. لا تستعمل الدالة أي financial writer أو balance. هذه مساواة صفوف كاملة في النموذج الاصطناعي، لا برهان مطابقة مخططات الإنتاج أو تسليم ProfileProvider بعد crash.
 
-## GitHub Actions — غير متحقق
+## GitHub Actions — حالة الجولة الأصلية قبل متابعة 2026-11-12
 
 أُعدت workflow مستقلة بservice `postgres:17.6-bookworm` وhealth check، اتصال ثابت loopback إلى p105b03، permissions contents:read فقط، ولا `${{ secrets.* }}` أو SUPABASE credentials. تعمل على push الخاص بملفات SQL/هذه workflow على فرع V18 فقط، أو manual dispatch على الفرع نفسه. لا jobs أخرى أو reusable Android invocation أو artifact release أو deploy.
 
@@ -105,7 +126,7 @@ gh api repos/mnourdam/noor-al-maadi-app/actions/permissions --jq '.enabled'
 | git diff --check | PASS |
 | PostgreSQL المحلي الحقيقي | PASS منفصل عن أعداد JS |
 | Negative controls | 3/3 اكتشفت المخالفة الصحيحة |
-| GitHub Actions logs | PENDING؛ API Forbidden |
+| GitHub Actions logs | PASS في متابعة 2026-11-12؛ run 43166702858 أعلاه |
 
 سجلات التطبيق المحلية `/tmp/p105b03-root.log` و`/tmp/p105b03-official.log` و`/tmp/p105b03-types.log` و`/tmp/p105b03-build.log` تخص هذه الجلسة.
 
@@ -113,7 +134,7 @@ gh api repos/mnourdam/noor-al-maadi-app/actions/permissions --jq '.enabled'
 
 ## حدود الاعتماد والخطوات اللاحقة
 
-- **A محلي PASS فقط؛ Actions PENDING** كما سبق. يحفظ هذا Commit أدوات اختبار حقيقية ومسودة workflow، لا يفعّل backend أو feature للاعب.
+- **A محلي وActions PASS** كما وثقت متابعة 2026-11-12 أعلاه. يحفظ هذا Commit أدوات اختبار حقيقية ومسودة workflow، لا يفعّل backend أو feature للاعب.
 - **B PENDING**: يلزم staging مستقلة مصرح بها، مراجعة catalog/role membership/default ACL/schema ownership/auth.uid/PostgREST الحقيقي، واختبار ACL عبر API المستخدم، ثم مقارنة grants مع النموذج. BYPASSRLS لا تتجاوز ACL لكن العضويات قد تورث EXECUTE، ولا يدّعي هذا النموذج تغطية جميع عضويات Supabase.
 - **C غير مأذونة**: لا Production ولا نشر backend أو نقل المسودة إلى migrations في هذه الجولة. أي migration مستقبلية تحتاج مراجعة مستقلة ونجاح Actions موثق وB؛ لا تغيير migration تاريخية. لا تجعل row candidate baseline أو wallet ownership.
 - V17 الوهمية تثبت absent→legacy وبقاء bytes الاصطناعية؛ ليست اختبار ترقية V17 حقيقية أو سماحًا باستيراد بيانات أو منح تعويض. APIs الاقتصادية القديمة تبقى مفتوحة كما وثقت B-01/B-02؛ لا authoritative activation قبل enforcement خادمية مستقلة.
