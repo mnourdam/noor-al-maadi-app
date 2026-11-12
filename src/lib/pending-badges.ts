@@ -9,6 +9,7 @@
 // snapshot — no per-component refetching.
 // ============================================================
 
+import { getActiveOwner, getIdentityEpoch, onOwnerChange } from "@/lib/identity/owner";
 import { useEffect, useSyncExternalStore } from "react";
 import { fetchPendingBadges, type PendingBadges } from "@/lib/social";
 
@@ -17,25 +18,49 @@ const EMPTY: PendingBadges = { friend_requests: 0, notifications: 0, total: 0 };
 let snapshot: PendingBadges = EMPTY;
 let inflight: Promise<void> | null = null;
 let booted = false;
+let identitySubscribed = false;
+let scope: string | null = null;
+const identityScope = () => JSON.stringify([getActiveOwner(), getIdentityEpoch()]);
+function alignIdentity(): boolean {
+  const next = identityScope();
+  if (scope === next) return false;
+  scope = next;
+  snapshot = EMPTY;
+  inflight = null;
+  return true;
+}
+function observeIdentity() {
+  if (identitySubscribed) return;
+  identitySubscribed = true;
+  // A preceding owner listener may already have aligned via the getter.
+  // Always notify here, never from a render-time snapshot read.
+  onOwnerChange(() => { alignIdentity(); emit(); });
+}
 const listeners = new Set<() => void>();
 
 function emit() { listeners.forEach((l) => l()); }
 
 export async function refreshPendingBadges(): Promise<PendingBadges> {
-  if (inflight) { await inflight; return snapshot; }
-  inflight = (async () => {
+  observeIdentity();
+  alignIdentity();
+  const startedScope = scope;
+  const current = () => identityScope() === startedScope;
+  if (inflight) { await inflight; return current() ? snapshot : EMPTY; }
+  const work = (async () => {
     try {
       const next = await fetchPendingBadges();
+      if (!current()) return;
       snapshot = next;
       emit();
     } catch {
-      // Keep previous snapshot on failure (offline / unauthenticated).
-    } finally {
-      inflight = null;
+      // Preserve this owner's previous snapshot on failure, never another owner's.
     }
   })();
-  await inflight;
-  return snapshot;
+  inflight = work;
+  const clear = () => { if (inflight === work) inflight = null; };
+  void work.then(clear, clear);
+  await work;
+  return current() ? snapshot : EMPTY;
 }
 
 function ensureBoot() {
@@ -49,6 +74,7 @@ function ensureBoot() {
 }
 
 export function getPendingBadgesSnapshot(): PendingBadges {
+  alignIdentity();
   return snapshot;
 }
 
