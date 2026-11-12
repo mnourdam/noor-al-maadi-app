@@ -1,0 +1,31 @@
+name: V18 Reviewed Economic Ingress Source Drift
+on:
+  push:
+    branches: [v18-01a-outbox-recovery]
+    paths:
+      - '.github/workflows/v18-economic-ingress-drift.yml'
+      - 'supabase/migrations/**'
+      - 'src/**'
+      - 'tests/economic-ingress/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: v18-economic-ingress-drift-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  reviewed-source-drift-only:
+    if: github.ref == 'refs/heads/v18-01a-outbox-recovery'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test read-only source drift detector (standard library only)
+        run: python3 -m unittest discover -s tests/economic-ingress -p 'test_*.py' -v
+      - name: Check pinned evidence unchanged (not authority acceptance)
+        run: python3 tests/economic-ingress/check_drift.py
