@@ -28,6 +28,11 @@ export function getIdentityEpochSafe(): number {
 }
 
 async function handleItem(item: OutboxItem, expectedEpoch: number): Promise<{ ok: boolean; error?: string }> {
+  const current = () => getIdentityEpochSafe() === expectedEpoch;
+  const stale = () => ({ ok: false, error: "identity-changed" });
+  const publish = (event: Event) => {
+    if (current() && typeof window !== "undefined") window.dispatchEvent(event);
+  };
   // Sanity: never sync one user's item into another user's session.
   const { data } = await supabase.auth.getSession();
   // A session snapshot may have been captured before an identity change while
@@ -57,6 +62,7 @@ async function handleItem(item: OutboxItem, expectedEpoch: number): Promise<{ ok
             },
             { onConflict: "user_id,item_id", ignoreDuplicates: true },
           );
+        if (!current()) return stale();
         if (error) return { ok: false, error: error.message };
         return { ok: true };
       }
@@ -82,6 +88,7 @@ async function handleItem(item: OutboxItem, expectedEpoch: number): Promise<{ ok
             },
             { onConflict: "user_id,entity_id", ignoreDuplicates: false },
           );
+        if (!current()) return stale();
         if (error) return { ok: false, error: error.message };
         return { ok: true };
       }
@@ -99,6 +106,7 @@ async function handleItem(item: OutboxItem, expectedEpoch: number): Promise<{ ok
           },
           { onConflict: "user_id,game_id" },
         );
+        if (!current()) return stale();
         if (error) return { ok: false, error: error.message };
         return { ok: true };
       }
@@ -128,13 +136,14 @@ async function handleItem(item: OutboxItem, expectedEpoch: number): Promise<{ ok
             p_coins_earned: p.coinsEarned ?? null,
           },
         );
+        if (!current()) return stale();
         if (error) return { ok: false, error: error.message };
         const payload = (res ?? {}) as { ok?: boolean; reason?: string };
         if (!payload.ok) return { ok: false, error: payload.reason ?? "rpc-not-ok" };
         try {
           if (typeof window !== "undefined") {
-            window.dispatchEvent(new CustomEvent("irth:campaign-progress:changed"));
-            window.dispatchEvent(new CustomEvent("irth:campaign-completions:changed"));
+            publish(new CustomEvent("irth:campaign-progress:changed"));
+            publish(new CustomEvent("irth:campaign-completions:changed"));
           }
         } catch { /* ignore */ }
         return { ok: true };
@@ -150,6 +159,7 @@ async function handleItem(item: OutboxItem, expectedEpoch: number): Promise<{ ok
           p_hearts: p.hearts ?? 0,
           p_source: p.source ?? item.kind,
         });
+        if (!current()) return stale();
         if (error) return { ok: false, error: error.message };
         const receipt = classifyProfileDeltaReceipt(res);
         if (receipt !== "granted" && receipt !== "already_granted") {
@@ -169,6 +179,7 @@ async function handleItem(item: OutboxItem, expectedEpoch: number): Promise<{ ok
           p_score: Math.max(0, p.score ?? 0),
           p_correct_count: Math.max(0, p.correctCount ?? 0),
         });
+        if (!current()) return stale();
         if (error) return { ok: false, error: error.message };
         const payload = (res ?? {}) as { ok?: boolean; reason?: string };
         if (!payload.ok) {
@@ -176,7 +187,7 @@ async function handleItem(item: OutboxItem, expectedEpoch: number): Promise<{ ok
         }
         try {
           if (typeof window !== "undefined") {
-            window.dispatchEvent(new CustomEvent("irth:investigation-progress:changed"));
+            publish(new CustomEvent("irth:investigation-progress:changed"));
           }
         } catch { /* ignore */ }
         return { ok: true };
@@ -187,12 +198,13 @@ async function handleItem(item: OutboxItem, expectedEpoch: number): Promise<{ ok
         const { data: res, error } = await supabase.rpc("backfill_investigation_completion" as any, {
           p_legacy_key: p.legacyKey,
         });
+        if (!current()) return stale();
         if (error) return { ok: false, error: error.message };
         const payload = (res ?? {}) as { ok?: boolean };
         if (!payload.ok) return { ok: false, error: "rpc-not-ok" };
         try {
           if (typeof window !== "undefined") {
-            window.dispatchEvent(new CustomEvent("irth:investigation-progress:changed"));
+            publish(new CustomEvent("irth:investigation-progress:changed"));
           }
         } catch { /* ignore */ }
         return { ok: true };
@@ -208,6 +220,7 @@ async function handleItem(item: OutboxItem, expectedEpoch: number): Promise<{ ok
           "backfill_investigation_completions" as any,
           { p_legacy_keys: keys },
         );
+        if (!current()) return stale();
         if (error) return { ok: false, error: error.message };
         const payload = (res ?? {}) as { ok?: boolean; reason?: string };
         if (!payload.ok) {
@@ -218,7 +231,7 @@ async function handleItem(item: OutboxItem, expectedEpoch: number): Promise<{ ok
         }
         try {
           if (typeof window !== "undefined") {
-            window.dispatchEvent(new CustomEvent("irth:investigation-progress:changed"));
+            publish(new CustomEvent("irth:investigation-progress:changed"));
           }
         } catch { /* ignore */ }
         return { ok: true };
@@ -243,12 +256,13 @@ async function handleItem(item: OutboxItem, expectedEpoch: number): Promise<{ ok
             p_source: p.source ?? "gameplay",
           },
         );
+        if (!current()) return stale();
         if (error) return { ok: false, error: error.message };
         const payload = (res ?? {}) as { ok?: boolean; reason?: string };
         if (!payload.ok) return { ok: false, error: payload.reason ?? "rpc-not-ok" };
         try {
           if (typeof window !== "undefined") {
-            window.dispatchEvent(new CustomEvent("irth:campaign-completions:changed"));
+            publish(new CustomEvent("irth:campaign-completions:changed"));
           }
         } catch { /* ignore */ }
         return { ok: true };
@@ -263,12 +277,13 @@ async function handleItem(item: OutboxItem, expectedEpoch: number): Promise<{ ok
           "record_tutorial_completion" as any,
           { p_tutorial_id: p.tutorialId, p_version: p.version },
         );
+        if (!current()) return stale();
         if (error) return { ok: false, error: error.message };
         const payload = (res ?? {}) as { ok?: boolean; reason?: string };
         if (!payload.ok) return { ok: false, error: payload.reason ?? "rpc-not-ok" };
         try {
           if (typeof window !== "undefined") {
-            window.dispatchEvent(new CustomEvent("irth:onboarding:changed"));
+            publish(new CustomEvent("irth:onboarding:changed"));
           }
         } catch { /* ignore */ }
         return { ok: true };
@@ -284,12 +299,13 @@ async function handleItem(item: OutboxItem, expectedEpoch: number): Promise<{ ok
           "record_story_progress_v2" as any,
           { p_story_id: p.storyId, p_scene_index: p.sceneIndex },
         );
+        if (!current()) return stale();
         if (error) return { ok: false, error: error.message };
         const payload = (res ?? {}) as { ok?: boolean; reason?: string };
         if (!payload.ok) return { ok: false, error: payload.reason ?? "rpc-not-ok" };
         try {
           if (typeof window !== "undefined") {
-            window.dispatchEvent(new CustomEvent("irth:story-progress:changed"));
+            publish(new CustomEvent("irth:story-progress:changed"));
           }
         } catch { /* ignore */ }
         return { ok: true };
@@ -305,16 +321,18 @@ async function handleItem(item: OutboxItem, expectedEpoch: number): Promise<{ ok
         };
         if (!p?.activityDay) return { ok: false, error: "invalid_activity_day" };
         const { callRecordStreakActivityV16 } = await import("@/lib/streak-activity");
+        if (!current()) return stale();
         const res = await callRecordStreakActivityV16({
           source: (p.source ?? "unknown") as never,
           sourceId: p.sourceId ?? null,
           activityDay: p.activityDay,
           clientKey: p.clientKey ?? item.id,
         });
+        if (!current()) return stale();
         if (!res.ok) return { ok: false, error: res.error ?? "rpc-not-ok" };
         try {
           if (typeof window !== "undefined") {
-            window.dispatchEvent(new CustomEvent("irth:streak:changed", { detail: res.data }));
+            publish(new CustomEvent("irth:streak:changed", { detail: res.data }));
           }
         } catch { /* ignore */ }
         return { ok: true };
@@ -328,12 +346,13 @@ async function handleItem(item: OutboxItem, expectedEpoch: number): Promise<{ ok
           "complete_story_v2" as any,
           { p_story_id: p.storyId },
         );
+        if (!current()) return stale();
         if (error) return { ok: false, error: error.message };
         const payload = (res ?? {}) as { ok?: boolean; reason?: string };
         if (!payload.ok) return { ok: false, error: payload.reason ?? "rpc-not-ok" };
         try {
           if (typeof window !== "undefined") {
-            window.dispatchEvent(new CustomEvent("irth:story-completions:changed"));
+            publish(new CustomEvent("irth:story-completions:changed"));
           }
         } catch { /* ignore */ }
         return { ok: true };
@@ -351,6 +370,7 @@ async function handleItem(item: OutboxItem, expectedEpoch: number): Promise<{ ok
           import("@/lib/social"),
           import("@/lib/campaigns/completions"),
         ]);
+        if (!current()) return stale();
         const p = readPersistedProfileState();
         let canonicalCount: number | undefined;
         try {
@@ -361,20 +381,24 @@ async function handleItem(item: OutboxItem, expectedEpoch: number): Promise<{ ok
         } catch (e) {
           console.error("[flush] failed to resolve canonical completions for avatar sync", e);
         }
+        if (!current()) return stale();
         // Force the avatar_id from the outbox item payload so we don't accidentally
         // sync a newer/older local state than what was queued.
         const stats = { ...derivePublicStats(p, canonicalCount), avatar_id: payload.avatarId };
 
 
+        if (!current()) return stale();
         const { error } = await supabase.rpc("sync_my_public_stats" as any, {
           p_stats: stats as any,
         });
+        if (!current()) return stale();
         if (error) return { ok: false, error: error.message };
         try {
           const { clearPendingAvatar } = await import("@/lib/emblems/avatar-persistence");
+          if (!current()) return stale();
           clearPendingAvatar(item.userId);
           if (typeof window !== "undefined") {
-            window.dispatchEvent(new CustomEvent("irth:avatar:synced"));
+            publish(new CustomEvent("irth:avatar:synced"));
           }
         } catch { /* ignore */ }
         return { ok: true };
@@ -393,15 +417,17 @@ async function handleItem(item: OutboxItem, expectedEpoch: number): Promise<{ ok
           return { ok: false, error: "invalid_reflection_payload" };
         }
         const { reflectionUpsertRow } = await import("@/lib/reflections");
+        if (!current()) return stale();
         const { error } = await supabase
           .from("user_reflections")
           .upsert(reflectionUpsertRow(item.userId, p.campaignId, p.activityId, p.rec as any) as any, {
             onConflict: "user_id,campaign_id,activity_id",
           });
+        if (!current()) return stale();
         if (error) return { ok: false, error: error.message };
         try {
           if (typeof window !== "undefined") {
-            window.dispatchEvent(new CustomEvent("irth:reflections-changed"));
+            publish(new CustomEvent("irth:reflections-changed"));
           }
         } catch { /* ignore */ }
         return { ok: true };
@@ -420,12 +446,14 @@ async function handleItem(item: OutboxItem, expectedEpoch: number): Promise<{ ok
           .eq("user_id", item.userId)
           .eq("campaign_id", p.campaignId)
           .eq("activity_id", p.activityId);
+        if (!current()) return stale();
         if (error) return { ok: false, error: error.message };
         try {
           const { clearReflectionTombstone } = await import("@/lib/reflections");
+          if (!current()) return stale();
           clearReflectionTombstone(p.campaignId, p.activityId);
           if (typeof window !== "undefined") {
-            window.dispatchEvent(new CustomEvent("irth:reflections-changed"));
+            publish(new CustomEvent("irth:reflections-changed"));
           }
         } catch { /* ignore */ }
         return { ok: true };
@@ -453,6 +481,7 @@ async function handleItem(item: OutboxItem, expectedEpoch: number): Promise<{ ok
             p_last_scene_index: Math.max(0, Math.trunc(Number(p.lastSceneIndex) || 0)),
           },
         );
+        if (!current()) return stale();
         if (error) return { ok: false, error: error.message };
         const payload = (res ?? {}) as { ok?: boolean; reason?: string };
         if (!payload.ok) return { ok: false, error: payload.reason ?? "rpc-not-ok" };
@@ -531,7 +560,7 @@ export async function flushOutbox(userId: string): Promise<{ flushed: number; fa
       }
       lastFlushAt = Date.now();
       try {
-        if (typeof window !== "undefined") {
+        if (getIdentityEpochSafe() === startEpoch && typeof window !== "undefined") {
           window.dispatchEvent(new CustomEvent("irth:outbox:flushed", { detail: { flushed, failed } }));
         }
       } catch { /* ignore */ }

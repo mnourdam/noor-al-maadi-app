@@ -199,7 +199,15 @@ async function fetchDeltaRowExists(
   );
   scope.assert();
   if (error) return { error: error.message };
-  return { exists: !!data, error: null };
+  if (data === null) return { exists: false, error: null };
+  // Query success/truthiness is not evidence of the requested operation.
+  // This checks receipt identity only, not grant terms or ledger authenticity.
+  if (typeof data !== "object" || Array.isArray(data) ||
+      typeof (data as { delta_id?: unknown }).delta_id !== "string" ||
+      (data as { delta_id: string }).delta_id !== deltaId) {
+    return { error: "invalid-delta-receipt" };
+  }
+  return { exists: true, error: null };
 }
 
 /**
@@ -223,6 +231,7 @@ export async function isDailyQuestRewardedOnServer(params: {
     scope.assert();
     const row = await fetchDeltaRowExists(deltaId, scope);
     scope.assert();
+    if (row.error === "invalid-delta-receipt") throw new Error(row.error);
     return row.exists === true;
   } finally {
     scope.close();

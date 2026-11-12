@@ -19,7 +19,7 @@ vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     auth: { getSession: (...a: unknown[]) => env.auth(...a) },
     rpc: (...a: unknown[]) => env.rpc(...a),
-    from: () => ({ select: () => ({ eq: () => ({ maybeSingle: () => env.row() }) }) }),
+    from: () => ({ select: () => ({ eq: (_column: string, deltaId: string) => ({ maybeSingle: () => env.row(deltaId) }) }) }),
   },
 }));
 vi.mock("@/lib/offline/outbox", () => ({ enqueueWithId: (...a: unknown[]) => env.enqueue(...a) }));
@@ -270,7 +270,7 @@ describe("P1-07 canonical grant sensitive waits (real identity + real reward pat
     const pending = reward.grantDailyQuestReward(params());
     await started.promise;
     swap();
-    gate.resolve({ data: { delta_id: "old" }, error: null });
+    gate.resolve({ data: { delta_id: env.row.mock.calls[0][0] }, error: null });
     expect((await pending).outcome).toBe("stale_context");
     expect(env.enqueue).not.toHaveBeenCalled();
   });
@@ -498,7 +498,7 @@ describe("P1-07 real DailyQuestCard + real grant/probe controlled races", () => 
       swap();
       ui.rerender(<DailyQuestCard />);
     });
-    gate.resolve({ data: { delta_id: "old" }, error: null });
+    gate.resolve({ data: { delta_id: env.row.mock.calls[0][0] }, error: null });
     await drain();
     expect(quest.getTodayQuest("alice")?.rewarded).toBe(false);
     expect(quest.getTodayQuest("bob")?.rewarded).toBe(false);
@@ -523,7 +523,7 @@ describe("P1-07 real DailyQuestCard + real grant/probe controlled races", () => 
           vi.useFakeTimers({ toFake: ["Date"] }).setSystemTime(new Date(Date.now() + 86400000));
         seed("alice", false, false, "e2");
       }
-      gate.resolve({ data: { delta_id: "old" }, error: null });
+      gate.resolve({ data: { delta_id: env.row.mock.calls[0][0] }, error: null });
       await drain();
       expect(quest.getTodayQuest("alice")?.rewarded).toBe(false);
       expect(deltaCalls()).toHaveLength(0);
@@ -596,10 +596,10 @@ describe("P1-07 real DailyQuestCard + real grant/probe controlled races", () => 
     });
     env.row
       .mockReturnValueOnce(probe.promise)
-      .mockResolvedValue({ data: { delta_id: "same" }, error: null });
+      .mockImplementation(async (deltaId: string) => ({ data: { delta_id: deltaId }, error: null }));
     render(<DailyQuestCard />);
     await started.promise;
-    probe.resolve({ data: { delta_id: "same" }, error: null });
+    probe.resolve({ data: { delta_id: env.row.mock.calls[0][0] }, error: null });
     await drain();
     expect(quest.getTodayQuest("alice")?.rewarded).toBe(true);
     grant.resolve(ok);
@@ -611,7 +611,7 @@ describe("P1-07 real DailyQuestCard + real grant/probe controlled races", () => 
   });
   it("current hydrator restores completed/rewarded without granting again", async () => {
     seed("alice", false);
-    env.row.mockResolvedValue({ data: { delta_id: "confirmed" }, error: null });
+    env.row.mockImplementation(async (deltaId: string) => ({ data: { delta_id: deltaId }, error: null }));
     render(<DailyQuestCard />);
     await drain();
     expect(quest.getTodayQuest("alice")).toMatchObject({ completed: true, rewarded: true });
@@ -751,4 +751,37 @@ it("remount retries an unresolved receipt with the same delta and reconciles val
   expect(navigator.vibrate).not.toHaveBeenCalled();
   expect(env.enqueue).not.toHaveBeenCalled();
   expect(env.flush).not.toHaveBeenCalled();
+});
+
+const invalidDeltaRows: [string, unknown][] = [
+  ["empty object", {}], ["array", []], ["string", "receipt"],
+  ["wrong id", { delta_id: "other-operation" }],
+  ["nonstring id", { delta_id: 1 }], ["boolean", true],
+];
+describe("daily quest exact row hydration evidence", () => {
+  it.each(invalidDeltaRows)("rejects %s as unresolved, not a receipt", async (_label, data) => {
+    env.row.mockResolvedValue({ data, error: null });
+    await expect(reward.isDailyQuestRewardedOnServer(params())).rejects.toThrow("invalid-delta-receipt");
+    expect(deltaCalls()).toHaveLength(0);
+    expect(env.enqueue).not.toHaveBeenCalled();
+  });
+  it.each(invalidDeltaRows)("mounted hydration never rewards %s", async (_label, data) => {
+    seed("alice", false);
+    env.row.mockResolvedValue({ data, error: null });
+    render(<DailyQuestCard />);
+    await drain();
+    expect(quest.getTodayQuest("alice")).toMatchObject({ completed: false, rewarded: false });
+    expect(deltaCalls()).toHaveLength(0);
+    expect(env.stats).not.toHaveBeenCalled();
+    expect(env.points).not.toHaveBeenCalled();
+    expect(env.dinars).not.toHaveBeenCalled();
+    expect(navigator.vibrate).not.toHaveBeenCalled();
+  });
+  it("distinguishes no row from an exact matching row", async () => {
+    env.row.mockResolvedValueOnce({ data: null, error: null });
+    expect(await reward.isDailyQuestRewardedOnServer(params())).toBe(false);
+    env.row.mockImplementation(async (deltaId: string) => ({ data: { delta_id: deltaId }, error: null }));
+    expect(await reward.isDailyQuestRewardedOnServer(params())).toBe(true);
+    expect(env.row.mock.calls[1][0]).toBe(await reward.deriveStableDeltaId(reward.buildDailyQuestRewardKey(params())));
+  });
 });
