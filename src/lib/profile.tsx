@@ -287,6 +287,7 @@ interface Ctx {
   captureHeartPurchase: () => {
     current: () => boolean;
     apply: (receipt: { dinars: number; hearts?: number }) => Promise<boolean>;
+    purchaseGuest: () => Promise<boolean>;
   };
   /**
    * Merge authoritative server-side stats (admin edits, cloud reconciliation)
@@ -1147,6 +1148,19 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       const current = () => operation.current() && latestProfileRef.current === profile;
       return {
         current,
+        purchaseGuest: () => {
+          if (!current() || profile.loggedIn) return Promise.resolve(false);
+          const purchasedAt = Date.now();
+          const hearts = getEffectiveHearts(profile, purchasedAt);
+          const remaining = profile.dinars - HEART_COST_DINARS;
+          if (hearts >= HEART_MAX || !Number.isFinite(hearts) ||
+              (profile.dinars ?? 0) < HEART_COST_DINARS || !Number.isFinite(remaining)) {
+            return Promise.resolve(false);
+          }
+          return operation.apply((p) => ({
+            ...p, ...commitHearts(p, hearts + 1, purchasedAt), dinars: remaining,
+          }));
+        },
         apply: ({ dinars, hearts }) => {
           if (!current() || !Number.isSafeInteger(dinars) || dinars < 0 ||
               (hearts !== undefined && (!Number.isInteger(hearts) || hearts < 0 || hearts > HEART_MAX))) {

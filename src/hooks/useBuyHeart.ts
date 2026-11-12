@@ -1,6 +1,6 @@
 // Authenticated heart purchase: server owns pricing; local application requires
 // a persisted conditional profile receipt. Uncertainty never authorizes another
-// RPC. Guest behavior retains its existing immediate reducer/boolean contract.
+// RPC. Guest fixed-price purchases also require a persisted conditional receipt.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useProfile } from "@/lib/profile";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,7 +37,7 @@ function receipt(value: unknown): PurchaseResult | undefined {
   return { status: p.status as PurchaseStatus, hearts: p.hearts, dinars: p.dinars };
 }
 export function useBuyHeart() {
-  const { profile, userId, spendDinarsForHeart, captureHeartPurchase } = useProfile();
+  const { profile, userId, captureHeartPurchase } = useProfile();
   const [inFlight, setInFlight] = useState(false);
   const [needsReconciliation, setNeedsReconciliation] = useState(false);
   const uncertain = useRef(false),
@@ -114,14 +114,17 @@ export function useBuyHeart() {
       if ((profile.dinars ?? 0) < HEART_COST_DINARS)
         return { status: "insufficient_dinars", hearts: eff, dinars: profile.dinars };
       if (!current() || !operation.current()) return { status: "failed" };
-      const ok = spendDinarsForHeart();
-      if (!ok) return { status: "failed", hearts: eff, dinars: profile.dinars };
+      // An admitted local write can outlive this call; uncertainty is not failure
+      // permission to debit again. The legacy synchronous API remains unchanged.
+      dispatched = true;
+      const ok = await operation.purchaseGuest();
+      if (!current() || !ok) return unresolved();
       try {
         if (current()) window.dispatchEvent(new CustomEvent("irth:heart-purchased"));
       } catch {
         /* observer */
       }
-      return current() ? { status: "purchased" } : { status: "unresolved" };
+      return current() ? { status: "purchased" } : unresolved();
     } catch {
       return dispatched ? unresolved() : { status: "failed" };
     } finally {
@@ -132,7 +135,7 @@ export function useBuyHeart() {
         }, 300);
       }
     }
-  }, [profile, userId, spendDinarsForHeart, captureHeartPurchase]);
+  }, [profile, userId, captureHeartPurchase]);
   // This mount-local latch is not a durable/cross-tab idempotency guarantee.
   return { buy, inFlight, needsReconciliation };
 }

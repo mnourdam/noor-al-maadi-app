@@ -296,9 +296,11 @@ it("preserves guest local price and never calls authenticated RPC", async () => 
   localStorage.setItem(key, JSON.stringify(raw));
   setActiveOwnerInternal("guest:synthetic");
   const h = mount();
+  let pending!: ReturnType<typeof h.heart.buy>;
   await act(async () => {
-    await h.heart.buy();
+    pending = h.heart.buy();
   });
+  await pending;
   expect(h.api.profile).toMatchObject({ dinars: 80, hearts: 3 });
   expect(env.rpc).not.toHaveBeenCalled();
 });
