@@ -283,6 +283,11 @@ interface Ctx {
     extras?: { stickyCampaignIds?: readonly string[] },
   ) => void;
   resetProfile: () => void;
+  /** Single-use local receipt application, not server idempotency or authority. */
+  captureHeartPurchase: () => {
+    current: () => boolean;
+    apply: (receipt: { dinars: number; hearts?: number }) => Promise<boolean>;
+  };
   /**
    * Merge authoritative server-side stats (admin edits, cloud reconciliation)
    * into the local profile WITHOUT discarding local-only fields. Mirrors
@@ -446,7 +451,7 @@ function hydrateFromStorage(reportReadable?: (readable: boolean) => void): Profi
 }
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
-  const { profile, owner: profileOwner, epoch: profileEpoch, setProfile, hydrate, getPersistence, capture, reset } = useProfileWriter(initial);
+  const { profile, owner: profileOwner, epoch: profileEpoch, setProfile, hydrate, getPersistence, capture, reset, prepareConditional } = useProfileWriter(initial);
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
     hydrate(hydrateFromStorage);
@@ -1103,6 +1108,25 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         } as ProfileState;
       });
     },
+    captureHeartPurchase: () => {
+      const operation = prepareConditional();
+      const current = () => operation.current() && latestProfileRef.current === profile;
+      return {
+        current,
+        apply: ({ dinars, hearts }) => {
+          if (!current() || !Number.isSafeInteger(dinars) || dinars < 0 ||
+              (hearts !== undefined && (!Number.isInteger(hearts) || hearts < 0 || hearts > HEART_MAX))) {
+            return Promise.resolve(false);
+          }
+          const appliedAt = Date.now();
+          return operation.apply((p) => ({
+            ...p,
+            dinars,
+            ...(hearts === undefined ? {} : commitHearts(p, hearts, appliedAt)),
+          }));
+        },
+      };
+    },
     resetProfile: () => reset(initial),
     applyServerStats: (stats) => {
       // Capture before React can defer the updater. Invalid snapshots must not
@@ -1152,7 +1176,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     grantTitle: (title) => update((p) => p.titlesEarned.includes(title) ? p : { ...p, titlesEarned: [...p.titlesEarned, title] }),
     grantArtifact: (id) => update((p) => p.artifactsFound.includes(id) ? p : { ...p, artifactsFound: [...p.artifactsFound, id] }),
     // `markAchievementEarned` removed - Achievement Engine v2 owns unlocks.
-  }), [profile, profileOwner, profileEpoch, hydrated, getPersistence, capture, reset, sessionCurrent, update, awardBadge, trySpendDinars]);
+  }), [profile, profileOwner, profileEpoch, hydrated, getPersistence, capture, reset, prepareConditional, sessionCurrent, update, awardBadge, trySpendDinars]);
 
   return <ProfileContext.Provider value={ctx}>{children}</ProfileContext.Provider>;
 }

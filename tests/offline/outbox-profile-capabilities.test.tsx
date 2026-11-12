@@ -161,6 +161,8 @@ const reads = [
   "hintsRevealed",
   "availableStreakMilestones",
 ];
+// Factories return scoped capabilities; their returned actions are tested separately.
+const factories = ["captureHeartPurchase"];
 const mutations: [keyof Api, (api: Api) => any[]][] = [
   ["login", () => ["Old Alice"]],
   ["logout", () => []],
@@ -215,7 +217,7 @@ it("explicitly classifies all public Profile APIs", () => {
       .filter(([, v]) => typeof v === "function")
       .map(([k]) => k)
       .sort(),
-  ).toEqual([...reads, ...mutations.map(([key]) => key)].sort());
+  ).toEqual([...reads, ...factories, ...mutations.map(([key]) => key)].sort());
 });
 for (const [key, argsFor] of mutations)
   it("retained " + key + " cannot mutate Bob or emit side effects", async () => {
@@ -473,4 +475,17 @@ it("reload preserves V17 bytes and does not replay an old action or initialize S
   expect(Object.keys(saved())).not.toContain("delivered");
   expect(next.api.profile.points).toBe(100);
   expect(open).not.toHaveBeenCalled();
+});
+
+it("retained heart factory and prepared capability cannot mutate a later owner", async () => {
+  const h = harness(),
+    factory = h.api.captureHeartPurchase,
+    prepared = factory();
+  await switchOwner("user:bob");
+  const bytes = localStorage.getItem("hakaya.profile.v2");
+  expect(prepared.current()).toBe(false);
+  expect(factory().current()).toBe(false);
+  expect(await prepared.apply({ hearts: 3, dinars: 1 })).toBe(false);
+  expect(await factory().apply({ hearts: 3, dinars: 1 })).toBe(false);
+  expect(localStorage.getItem("hakaya.profile.v2")).toBe(bytes);
 });

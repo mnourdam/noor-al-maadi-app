@@ -1,6 +1,6 @@
 /** Per-provider write lifecycle, not a cross-tab CAS or economic authority. */
 import { useCallback, useEffect, useMemo, useRef, useState, type SetStateAction } from "react";
-import { getActiveOwner, getIdentityEpoch } from "./identity/owner";
+import { getActiveOwner, getIdentityEpoch, onOwnerChange } from "./identity/owner";
 import type { ProfileState } from "./profile";
 
 interface Frame {
@@ -13,6 +13,7 @@ interface Frame {
   value: ProfileState;
   readable: boolean;
   requested: boolean;
+  conditional?: { token: symbol; applied: boolean };
 }
 export interface ProfilePersistence {
   owner: string;
@@ -21,11 +22,28 @@ export interface ProfilePersistence {
   snapshot: symbol;
   outcome: "unwritten" | "written" | "failed" | "unresolved";
 }
+export const CONDITIONAL_WRITE_TIMEOUT_MS = 10_000;
+/** False means unresolved, not proof that a remote operation rolled back. */
+export interface ConditionalProfileWrite {
+  current(): boolean;
+  apply(change: (profile: ProfileState) => ProfileState): Promise<boolean>;
+}
 export function useProfileWriter(initial: ProfileState) {
   const source = useRef(Symbol("profile-provider"));
   const generation = useRef(0);
   const admitted = useRef(0);
   const active = useRef(true);
+  const pending = useRef<{
+    token: symbol; ticket: number; resolve: (written: boolean) => void;
+    timer: ReturnType<typeof setTimeout>;
+  } | null>(null);
+  const settleConditional = useCallback((written: boolean, token?: symbol) => {
+    const attempt = pending.current;
+    if (!attempt || (token !== undefined && attempt.token !== token)) return;
+    pending.current = null;
+    clearTimeout(attempt.timer);
+    attempt.resolve(written);
+  }, []);
   const [frame, commit] = useState<Frame>(() => ({
     source: source.current,
     owner: getActiveOwner(),
@@ -48,9 +66,12 @@ export function useProfileWriter(initial: ProfileState) {
   });
   useEffect(() => {
     active.current = true;
+    const unsubscribe = onOwnerChange(() => settleConditional(false));
     return () => {
       active.current = false;
       generation.current++;
+      unsubscribe();
+      settleConditional(false);
     };
   }, []);
   const matches = (scope: Pick<Frame, "owner" | "epoch" | "generation" | "source">) =>
@@ -81,6 +102,7 @@ export function useProfileWriter(initial: ProfileState) {
         latest.current.generation !== scope.generation
       )
         return;
+      settleConditional(false);
       admitted.current++;
       commit((previous) => {
         if (
@@ -106,6 +128,7 @@ export function useProfileWriter(initial: ProfileState) {
   );
   const hydrate = useCallback(
     (read: (report: (readable: boolean) => void) => ProfileState | null) => {
+      settleConditional(false);
       const scope = {
         source: source.current,
         owner: getActiveOwner(),
@@ -137,7 +160,12 @@ export function useProfileWriter(initial: ProfileState) {
     [initial],
   );
   useEffect(() => {
-    if (!frame.requested || latest.current !== frame || !matches(frame)) return;
+    const attempt = frame.conditional;
+    if (attempt && !attempt.applied) settleConditional(false, attempt.token);
+    if (!frame.requested || latest.current !== frame || !matches(frame)) {
+      if (attempt) settleConditional(false, attempt.token);
+      return;
+    }
     const evidence = {
       owner: frame.owner,
       epoch: frame.epoch,
@@ -146,13 +174,25 @@ export function useProfileWriter(initial: ProfileState) {
     };
     if (!frame.readable) {
       result.current = { ...evidence, outcome: "unresolved" };
+      if (attempt) settleConditional(false, attempt.token);
       return;
     }
     try {
-      localStorage.setItem("hakaya.profile.v2", JSON.stringify(frame.value));
-      result.current = { ...evidence, outcome: matches(frame) ? "written" : "unresolved" };
+      const serialized = JSON.stringify(frame.value);
+      localStorage.setItem("hakaya.profile.v2", serialized);
+      // The partition adapter can silently quarantine a write. Conditional
+      // receipts require exact readback, not merely a nonthrowing setItem.
+      const conditionalFrame = attempt?.applied && frame.snapshot === attempt.token;
+      const verified = !conditionalFrame || localStorage.getItem("hakaya.profile.v2") === serialized;
+      result.current = { ...evidence, outcome: matches(frame) && verified ? "written" : "unresolved" };
+      if (attempt) settleConditional(
+        attempt.applied && result.current.outcome === "written" &&
+          pending.current?.ticket === admitted.current,
+        attempt.token,
+      );
     } catch (error) {
       result.current = { ...evidence, outcome: "failed" };
+      if (attempt) settleConditional(false, attempt.token);
       // Preserve existing React error-boundary behavior; never report durability.
       throw error;
     }
@@ -169,6 +209,7 @@ export function useProfileWriter(initial: ProfileState) {
       )
         return;
       const nextScope = { ...scope, generation: ++generation.current };
+      settleConditional(false);
       admitted.current++;
       commit((previous) => {
         if (
@@ -190,6 +231,51 @@ export function useProfileWriter(initial: ProfileState) {
     },
     [scope],
   );
+  const prepareConditional = useCallback((): ConditionalProfileWrite => {
+    const baseline = latest.current;
+    const sequence = admitted.current;
+    let used = false;
+    const current = () => !used && matches(scope) && baseline.readable &&
+      latest.current.snapshot === baseline.snapshot &&
+      baseline.owner === scope.owner && baseline.epoch === scope.epoch &&
+      baseline.generation === scope.generation && admitted.current === sequence;
+    return {
+      current,
+      apply(change) {
+        if (!current()) { used = true; return Promise.resolve(false); }
+        used = true;
+        settleConditional(false);
+        const ticket = ++admitted.current;
+        const token = Symbol("conditional-profile-write");
+        return new Promise<boolean>((resolve) => {
+          const timer = setTimeout(() => {
+            if (pending.current?.token !== token) return;
+            // Revoke only this admission, never overwrite an intervening ticket.
+            if (admitted.current === ticket) admitted.current++;
+            settleConditional(false, token);
+          }, CONDITIONAL_WRITE_TIMEOUT_MS);
+          pending.current = { token, ticket, resolve, timer };
+          commit((previous) => {
+            const rejected = () => ({ ...previous, conditional: { token, applied: false } });
+            if (!matches(scope) || !previous.readable ||
+                previous.owner !== scope.owner || previous.epoch !== scope.epoch ||
+                previous.generation !== scope.generation ||
+                previous.snapshot !== baseline.snapshot || admitted.current !== ticket)
+              return rejected();
+            try {
+              const value = change(previous.value);
+              return {
+                ...previous, value, revision: previous.revision + 1,
+                snapshot: token, requested: true, conditional: { token, applied: true },
+              };
+            } catch {
+              return rejected();
+            }
+          });
+        });
+      },
+    };
+  }, [scope]);
   const capture = useCallback(
     (unchanged = false) => {
       const sequence = admitted.current;
@@ -223,6 +309,7 @@ export function useProfileWriter(initial: ProfileState) {
     hydrate,
     getPersistence,
     capture,
+    prepareConditional,
     reset,
   };
 }

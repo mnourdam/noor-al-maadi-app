@@ -67,15 +67,17 @@ export function HeartsPopover({ profile }: { profile: ProfileState }) {
   const next = msUntilNextHeart(profile, now);
   const dinars = profile.dinars ?? 0;
   const canAfford = dinars >= HEART_COST_DINARS;
-  const { buy, inFlight } = useBuyHeart();
+  const { buy, inFlight, needsReconciliation } = useBuyHeart();
   const navigate = useNavigate();
   const recommendation = useRecommendedInvestigation();
 
   const onBuy = async () => {
-    if (inFlight || full) return;
+    if (inFlight || full || needsReconciliation) return;
     const res = await buy();
     if (res.status === "purchased") {
       toast.success("تمت استعادة قلب");
+    } else if (res.status === "unresolved") {
+      toast.message("قد تكون العملية تمت. تحقّق من الرصيد قبل شراء قلب آخر.");
     } else if (res.status === "insufficient_dinars") {
       toast.error("رصيدك غير كافٍ", { description: `رصيدك الحالي: ${(res.dinars ?? dinars).toLocaleString("en-US")} دينارًا` });
     } else if (res.status === "hearts_full") {
@@ -115,7 +117,7 @@ export function HeartsPopover({ profile }: { profile: ProfileState }) {
             <button
               type="button"
               onClick={onBuy}
-              disabled={inFlight || !canAfford}
+              disabled={inFlight || needsReconciliation || !canAfford}
               aria-label={`شراء قلب مقابل ${HEART_COST_DINARS} دينارًا`}
               className="motion-tap inline-flex min-h-[48px] flex-col items-center justify-center gap-0.5 rounded-lg bg-gradient-to-l from-amber-500 to-yellow-600 px-2 py-2 text-[12.5px] font-bold text-navy shadow-sm transition hover:brightness-110 active:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -143,6 +145,9 @@ export function HeartsPopover({ profile }: { profile: ProfileState }) {
               </span>
             </button>
           </div>
+          {needsReconciliation && (
+            <p className="mt-1.5 text-[10.5px] text-amber-200">قد تكون العملية تمت. لا تكرر الشراء قبل التحقق من الرصيد.</p>
+          )}
           {!canAfford && (
             <p className="mt-1.5 text-[10.5px] text-red-300/80">رصيدك غير كافٍ لشراء قلب الآن.</p>
           )}
