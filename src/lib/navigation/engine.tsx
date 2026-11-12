@@ -645,13 +645,25 @@ function HardwareBackListener() {
     const cap = (window as unknown as { Capacitor?: { getPlatform?: () => string } })
       .Capacitor;
     if (!cap || cap.getPlatform?.() !== "android") return;
-    let handle: { remove: () => void } | undefined;
+    let handle: { remove: () => void | Promise<void> } | undefined;
     let cancelled = false;
+    const removeListener = (listener: { remove: () => void | Promise<void> }) => {
+      // Native removal may reject or finish later. The callback fence below
+      // revokes navigation synchronously, independent of bridge cleanup.
+      try {
+        void Promise.resolve(listener.remove()).catch(() => {});
+      } catch {
+        /* best-effort native cleanup; callback remains revoked */
+      }
+    };
     (async () => {
       try {
         const { App } = await import("@capacitor/app");
-        const h = await App.addListener("backButton", () => back());
-        if (cancelled) h.remove();
+        if (cancelled) return;
+        const h = await App.addListener("backButton", () => {
+          if (!cancelled) back();
+        });
+        if (cancelled) removeListener(h);
         else handle = h;
       } catch (err) {
         // eslint-disable-next-line no-console
@@ -660,7 +672,7 @@ function HardwareBackListener() {
     })();
     return () => {
       cancelled = true;
-      handle?.remove();
+      if (handle) removeListener(handle);
     };
   }, [back]);
   return null;
