@@ -29,6 +29,11 @@ vi.mock("@/lib/profile", () => ({
     markInvestigationCompletedLocal: state.marker,
     awardBadge: vi.fn(),
     recoverHeartFromActivity: state.heart,
+    recoverHeartsFromActivities: async (activities: Iterable<unknown>) => {
+      let gained = 0;
+      for (const activity of activities) if (state.heart(activity)?.ok) gained++;
+      return { status: gained ? "written" : "unchanged", gained };
+    },
     recordStreakActivity: async () => {},
     applyServerStats: vi.fn(),
     loseHeartOnce: vi.fn(),

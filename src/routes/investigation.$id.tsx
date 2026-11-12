@@ -80,7 +80,7 @@ function SupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
 function ScopedSupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
   const {
     profile, markInvestigationCompletedLocal, awardBadge,
-    recoverHeartFromActivity, recordStreakActivity, applyServerStats,
+    recoverHeartsFromActivities, recordStreakActivity, applyServerStats,
   } = useProfile();
   const stashOrigin = useStashCurrentAsOrigin();
 
@@ -268,20 +268,22 @@ function ScopedSupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
       return false;
     }
     setCompletionState(null);
-    // These completion effects require authoritative acknowledgement.
+    // Resolve local recovery before queuing completion/badge profile writes.
+    // Unresolved recovery must not replay an already-acknowledged server grant.
+    const hearts = outcome.applied ? Math.max(0, Number(outcome.heartsEarned ?? 0)) : 0;
+    const recovery = Number.isFinite(hearts)
+      ? await recoverHeartsFromActivities((function* () {
+          for (let i = 0; i < hearts; i++) yield { kind: "investigation" as const, id: `${row.slug}:${i}` };
+        })())
+      : { status: "unresolved" as const, gained: 0 };
+    if (!current()) return false;
     markInvestigationCompletedLocal(row.slug);
     clearInvestigationOpened(row.slug);
     if (outcome.applied && reward.badge) awardBadge(reward.badge);
-
-    // Heart restoration — respects cooldown so the same investigation
-    // can't be farmed back-to-back for hearts.
-    const hearts = outcome.applied ? Math.max(0, Number(outcome.heartsEarned ?? 0)) : 0;
-    let gained = 0;
-    for (let i = 0; i < hearts; i++) {
-      const out = recoverHeartFromActivity({ kind: "investigation", id: `${row.slug}:${i}` });
-      if (out.ok) gained++;
+    setHeartGain(recovery.gained);
+    if (recovery.status === "unresolved") {
+      toast.error("تأكد إكمال التحقيق، لكن لم يتأكد حفظ القلوب محليًا.");
     }
-    setHeartGain(gained);
     void totalQuestionLike;
 
     // Reward truth. `applied` is the server's own "this call granted the

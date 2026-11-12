@@ -234,6 +234,7 @@ interface Ctx {
   loseHeartOnce: (attemptKey: string) => number;
   hasHearts: () => boolean;
   recoverHeartFromActivity: (a: HeartActivity) => { ok: boolean; reason?: "full" | "cooldown" };
+  recoverHeartsFromActivities: (activities: Iterable<HeartActivity>) => Promise<{ status: "written" | "unchanged" | "unresolved"; gained: number }>;
   spendDinarsForHeart: () => boolean;
   addDinars: (n: number) => void;
   spendDinars: (n: number) => boolean;
@@ -859,6 +860,30 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         };
       });
       return outcome;
+    },
+    recoverHeartsFromActivities: async (activities) => {
+      const lifecycleCurrent = capture();
+      const operation = prepareConditional();
+      const baseline = latestProfileRef.current;
+      if (!operation.current()) return { status: "unresolved", gained: 0 };
+      const now = Date.now();
+      let next = baseline;
+      let gained = 0;
+      // Project the existing sequential cooldown/cap rules before admission.
+      for (const activity of activities) {
+        const eff = getEffectiveHearts(next, now);
+        const key = activityKey(activity);
+        if (eff >= HEART_MAX) break;
+        if ((next.activityCooldowns?.[key] ?? 0) > now) continue;
+        if (!Number.isFinite(eff)) return { status: "unresolved", gained: 0 };
+        next = { ...next, ...commitHearts(next, eff + 1, now),
+          activityCooldowns: { ...(next.activityCooldowns ?? {}), [key]: now + ACTIVITY_COOLDOWN_MS } };
+        gained++;
+      }
+      if (!operation.current()) return { status: "unresolved", gained: 0 };
+      if (!gained) return { status: "unchanged", gained: 0 };
+      const written = await operation.apply(() => next);
+      return written && lifecycleCurrent() ? { status: "written", gained } : { status: "unresolved", gained: 0 };
     },
     spendDinarsForHeart: () => {
       let ok = false;

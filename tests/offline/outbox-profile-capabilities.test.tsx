@@ -195,6 +195,7 @@ const mutations: [keyof Api, (api: Api) => any[]][] = [
   ["setNotificationPrefs", () => [{ dailyChallenge: false }]],
   ["loseHeart", () => []],
   ["loseHeartOnce", () => ["old-attempt"]],
+  ["recoverHeartsFromActivities", () => [[{ kind: "investigation", id: "old" }]]],
   ["recoverHeartFromActivity", () => [{ kind: "document", id: "old" }]],
   ["spendDinarsForHeart", () => []],
   ["spendDinars", () => [10]],
