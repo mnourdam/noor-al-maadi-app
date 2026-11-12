@@ -1,12 +1,12 @@
 import {it,expect,vi,beforeEach} from 'vitest';
-const e=vi.hoisted(()=>({fetch:vi.fn(),hasPrevious:true}));
+const e=vi.hoisted(()=>({fetch:vi.fn(),hasPrevious:true,updatedAt:null as string|null}));
 vi.mock('@/integrations/supabase/client',async()=>{const {createClient}=await import('@supabase/supabase-js');return {supabase:createClient('http://127.0.0.1:1','synthetic-public-key',{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},global:{fetch:(...args:any[])=>e.fetch(...args)}})}});
 vi.mock('@/lib/local-first-store',()=>({isLocalReady:()=>false,localDataVersion:()=>0}));
-vi.mock('@/lib/offline-storage',()=>({loadSnapshot:async()=>e.hasPrevious?({snapshot_version:1,generated_at:'2020-01-01T00:00:00Z',collections:{encyclopedia_entities:[{id:'kept'}]},content_counts:{encyclopedia_entities:1}}):null,saveSnapshot:vi.fn(),mergeSnapshots:vi.fn(),MIN_PUBLIC_ENCYCLOPEDIA_ROWS:1500,SNAPSHOT_SCHEMA_VERSION:5}));
+vi.mock('@/lib/offline-storage',()=>({loadSnapshot:async()=>e.hasPrevious?({snapshot_version:1,generated_at:'2020-01-01T00:00:00Z',collections:{encyclopedia_entities:[{id:'kept',...(e.updatedAt?{updated_at:e.updatedAt}:{})}]},content_counts:{encyclopedia_entities:1}}):null,saveSnapshot:vi.fn(),mergeSnapshots:vi.fn(),MIN_PUBLIC_ENCYCLOPEDIA_ROWS:1500,SNAPSHOT_SCHEMA_VERSION:5}));
 vi.mock('@/lib/offline-manifest',()=>({fetchContentManifest:async()=>null,isManifestCountComparable:()=>true}));
 import {refreshSnapshotIncremental} from '@/lib/offline-snapshot';
 const refresh=refreshSnapshotIncremental as (options?:{signal?:AbortSignal;strictComplete?:boolean})=>ReturnType<typeof refreshSnapshotIncremental>;
-beforeEach(()=>{vi.resetAllMocks();e.hasPrevious=true;e.fetch.mockImplementation(async()=>new Response(JSON.stringify({message:'synthetic unavailable',code:'TEST'}),{status:400,headers:{'Content-Type':'application/json'}}))});
+beforeEach(()=>{vi.resetAllMocks();e.hasPrevious=true;e.updatedAt=null;e.fetch.mockImplementation(async()=>new Response(JSON.stringify({message:'synthetic unavailable',code:'TEST'}),{status:400,headers:{'Content-Type':'application/json'}}))});
 it('strict controller refresh rejects unavailable collections instead of stamping success',async()=>{await expect(refresh({strictComplete:true})).rejects.toBeDefined()});
 it('legacy refresh still retains cached collections on failure',async()=>{expect((await refresh()).collections.encyclopedia_entities).toEqual([{id:'kept'}])});
 it('pre-aborted refresh rejects before issuing any request',async()=>{const c=new AbortController();c.abort();const result=await refresh({signal:c.signal,strictComplete:true}).then(()=> 'resolved',e=>e.name);expect(e.fetch).not.toHaveBeenCalled();expect(result).toBe('AbortError')});
@@ -57,4 +57,37 @@ it('no-cache generation fallback forwards cancellation and rejects instead of re
  e.fetch.mockImplementation(async(_url:any,init:any)=>{expect(init.signal).toBe(c.signal);c.abort();throw new DOMException('retired','AbortError')});
  await expect(refresh({signal:c.signal,strictComplete:true})).rejects.toMatchObject({name:'AbortError'});
  expect(e.fetch).toHaveBeenCalled();
+});
+
+it('pending actual delta request retires without full-fetch fallback and a later delta retry succeeds',async()=>{
+ e.updatedAt='2019-12-01T00:00:00Z';
+ const retired=new AbortController();const retry=new AbortController();
+ let ready!:()=>void;const entered=new Promise<void>(r=>ready=r);
+ let pending=false;
+ e.fetch.mockImplementation(async(url:any,init:any)=>{
+  const request=new URL(String(url));
+  if(request.pathname.endsWith('/encyclopedia_entities')){
+   expect(init.method).not.toBe('HEAD');
+   expect(request.searchParams.get('updated_at')).toBe('gt.'+e.updatedAt);
+   if(init.signal===retired.signal){
+    pending=true;ready();
+    return new Promise((_resolve,reject)=>init.signal.addEventListener('abort',()=>{
+     pending=false;reject(new DOMException('retired delta','AbortError'));
+    },{once:true}));
+   }
+   expect(init.signal).toBe(retry.signal);
+   return new Response(JSON.stringify([{id:'new-delta',updated_at:'2020-01-02T00:00:00Z'}]),{headers:{'Content-Type':'application/json'}});
+  }
+  expect(init.signal).toBe(retry.signal);
+  return successResponse(url,init);
+ });
+ const first=refresh({signal:retired.signal,strictComplete:true}).then(()=> 'unexpected success',error=>error.name);
+ await entered;expect(pending).toBe(true);expect(e.fetch).toHaveBeenCalledTimes(1);
+ retired.abort();expect(await first).toBe('AbortError');expect(pending).toBe(false);
+ expect(e.fetch).toHaveBeenCalledTimes(1); // No count/full-fetch fallback or later collection request.
+ const result=await refresh({signal:retry.signal,strictComplete:true});
+ expect(result.collections.encyclopedia_entities).toEqual([
+  {id:'kept',updated_at:e.updatedAt},{id:'new-delta',updated_at:'2020-01-02T00:00:00Z'},
+ ]);
+ expect(e.fetch.mock.calls.filter(([,init])=>init.signal===retired.signal)).toHaveLength(1);
 });
