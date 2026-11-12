@@ -67,7 +67,7 @@ import { supabase } from "@/integrations/supabase/client";
 const STORAGE_KEY = "hakaya.profile.v2";
 
 /**
- * Per-page dedup set for `loseHeartOnce`. Survives across re-renders /
+ * Per-page owner/attempt dedup set for `loseHeartOnce`. Survives across re-renders /
  * provider remounts inside a single tab but is intentionally NOT
  * persisted — heart loss for the same attempt should only be skipped
  * for the immediate rapid-tap window, not forever.
@@ -819,10 +819,11 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     loseHeartOnce: (attemptKey: string) => {
       if (!capture()()) return 0;
       if (!attemptKey) return getEffectiveHearts(profile);
-      if (heartPenaltyDedup.has(attemptKey)) {
+      const penaltyKey = JSON.stringify([profileOwner, attemptKey]);
+      if (heartPenaltyDedup.has(penaltyKey)) {
         return getEffectiveHearts(profile);
       }
-      heartPenaltyDedup.add(attemptKey);
+      heartPenaltyDedup.add(penaltyKey);
       if (heartPenaltyDedup.size > 500) {
         const first = heartPenaltyDedup.values().next().value;
         if (first) heartPenaltyDedup.delete(first);
