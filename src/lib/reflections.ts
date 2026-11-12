@@ -27,12 +27,13 @@
 //     ...
 //   }
 //
-// Written data NEVER leaves the device — the parent chapter route
-// still emits its normal `onResolve(true)` and the standard
-// server-side progress ledger records completion. This adapter
-// only shapes the *view* on resume.
+// Guest reflections stay local. Signed-in reflections use the existing
+// server mirror, bound to the matching originating owner and identity epoch.
+// No guest-to-account transfer is performed by this adapter. The chapter
+// route separately records normal completion progress.
 // ============================================================
 
+import { getActiveOwner, getIdentityEpoch, ownerUserId } from "@/lib/identity/owner";
 import type { CampaignActivity } from "@/types/campaign";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -199,10 +200,19 @@ export function clearReflectionTombstone(campaignId: string, activityId: string)
   writeTombstones(map);
 }
 
-async function currentUid(): Promise<string | null> {
+type ReflectionScope = { uid: string | null; current: () => boolean };
+function captureScope(): ReflectionScope {
+  const owner = getActiveOwner();
+  const epoch = getIdentityEpoch();
+  return { uid: ownerUserId(owner), current: () => getActiveOwner() === owner && getIdentityEpoch() === epoch };
+}
+
+async function currentUid(scope: ReflectionScope): Promise<string | null> {
+  if (!scope.current() || !scope.uid) return null;
   try {
     const { data } = await supabase.auth.getSession();
-    return data.session?.user?.id ?? null;
+    const uid = data.session?.user?.id;
+    return scope.current() && uid === scope.uid ? uid : null;
   } catch {
     return null;
   }
@@ -241,12 +251,14 @@ async function syncReflectionToServer(
   campaignId: string,
   activityId: string,
   rec: ReflectionRecord,
+  scope: ReflectionScope,
 ): Promise<"synced" | "queued" | "local"> {
-  const uid = await currentUid();
-  if (!uid) return "local";
+  const uid = await currentUid(scope);
+  if (!uid || !scope.current()) return "local";
   let queued = false;
   try {
     const { enqueueWithId } = await import("@/lib/offline/outbox");
+    if (!scope.current()) return "local";
     await enqueueWithId(uid, `reflection:${campaignId}:${activityId}`, "reflection_save", {
       campaignId,
       activityId,
@@ -254,17 +266,21 @@ async function syncReflectionToServer(
     });
     queued = true;
   } catch { /* fall through to the direct attempt */ }
+  if (!scope.current()) return "local";
   try {
     const { flushOutbox } = await import("@/lib/offline/flush");
+    if (!scope.current()) return "local";
     await flushOutbox(uid);
     // A completed flush is not proof that this revision reached the server.
   } catch { /* ignore */ }
+  if (!scope.current()) return "local";
   try {
     const { error } = await supabase
       .from("user_reflections")
       .upsert(reflectionUpsertRow(uid, campaignId, activityId, rec), {
         onConflict: "user_id,campaign_id,activity_id",
       });
+    if (!scope.current()) return "local";
     if (!error) return "synced";
   } catch { /* offline / transient */ }
   return queued ? "queued" : "local";
@@ -275,6 +291,7 @@ export function saveReflection(
   activityId: string,
   patch: Omit<ReflectionRecord, "at"> & { at?: string },
 ): ReflectionRecord {
+  const scope = captureScope();
   const store = readAll();
   const k = keyOf(campaignId, activityId);
   const prev = store[k];
@@ -288,11 +305,13 @@ export function saveReflection(
     at: patch.at ?? new Date().toISOString(),
   };
   store[k] = next;
+  if (!scope.current()) return next;
   writeAll(store);
+  if (!scope.current()) return next;
   // A re-save revives a previously deleted reflection.
   clearReflectionTombstone(campaignId, activityId);
   // Durable mirror; stable outbox key + upsert make duplicate rows impossible.
-  void syncReflectionToServer(campaignId, activityId, next);
+  void syncReflectionToServer(campaignId, activityId, next, scope);
   return next;
 }
 
@@ -303,21 +322,24 @@ export function saveReflection(
  */
 export async function hydrateReflectionsFromServer(): Promise<void> {
   if (!isBrowser()) return;
+  const scope = captureScope();
+  if (!scope.uid) return;
   try {
     const { data: u } = await supabase.auth.getUser();
     const uid = u.user?.id;
-    if (!uid) return;
+    if (!scope.current() || uid !== scope.uid) return;
     const { data, error } = await supabase
       .from("user_reflections")
       .select("campaign_id, activity_id, mode, choice_index, choice_value, note, updated_at, source_type, source_id")
       .eq("user_id", uid);
-    if (error || !data) return;
+    if (!scope.current() || error || !data) return;
     const local = readAll();
     const tombstones = readTombstones();
     const merged: ReflectionStore = { ...local };
     const stale: Array<{ campaignId: string; activityId: string; rec: ReflectionRecord }> = [];
     const seen = new Set<string>();
     for (const row of data) {
+      if (!scope.current()) return;
       const cid = String(row.campaign_id ?? "");
       const aid = String(row.activity_id ?? "");
       if (!cid || !aid) continue;
@@ -326,6 +348,7 @@ export async function hydrateReflectionsFromServer(): Promise<void> {
       // A pending local delete must never be resurrected by hydration.
       if (k in tombstones) {
         delete merged[k];
+        if (!scope.current()) return;
         void deleteReflection(cid, aid);
         continue;
       }
@@ -352,8 +375,12 @@ export async function hydrateReflectionsFromServer(): Promise<void> {
       const parsed = parseKey(k);
       if (parsed) stale.push({ campaignId: parsed.campaignId, activityId: parsed.activityId, rec });
     }
+    if (!scope.current()) return;
     writeAll(merged);
-    for (const s of stale) void syncReflectionToServer(s.campaignId, s.activityId, s.rec);
+    for (const s of stale) {
+      if (!scope.current()) return;
+      void syncReflectionToServer(s.campaignId, s.activityId, s.rec, scope);
+    }
   } catch {
     // Journal continues to render from local mirror.
   }
@@ -367,27 +394,34 @@ export async function hydrateReflectionsFromServer(): Promise<void> {
  * resurrect a reflection the player removed.
  */
 export async function deleteReflection(campaignId: string, activityId: string): Promise<void> {
+  const scope = captureScope();
   const store = readAll();
   const k = keyOf(campaignId, activityId);
   if (store[k]) {
     delete store[k];
+    if (!scope.current()) return;
     writeAll(store);
   }
-  const uid = await currentUid();
-  if (!uid) return;
+  const uid = await currentUid(scope);
+  if (!uid || !scope.current()) return;
   addTombstone(k);
   try {
     const { enqueueWithId } = await import("@/lib/offline/outbox");
+    if (!scope.current()) return;
     await enqueueWithId(uid, `reflection:${campaignId}:${activityId}`, "reflection_delete", {
       campaignId,
       activityId,
     });
   } catch { /* direct attempt below */ }
+  if (!scope.current()) return;
   try {
     const { flushOutbox } = await import("@/lib/offline/flush");
+    if (!scope.current()) return;
     await flushOutbox(uid);
   } catch { /* ignore */ }
+  if (!scope.current()) return;
   if (!(keyOf(campaignId, activityId) in readTombstones())) return;
+  if (!scope.current()) return;
   try {
     const { error } = await supabase
       .from("user_reflections")
@@ -395,7 +429,7 @@ export async function deleteReflection(campaignId: string, activityId: string): 
       .eq("user_id", uid)
       .eq("campaign_id", campaignId)
       .eq("activity_id", activityId);
-    if (!error) clearReflectionTombstone(campaignId, activityId);
+    if (scope.current() && !error) clearReflectionTombstone(campaignId, activityId);
   } catch {
     /* silent */
   }
