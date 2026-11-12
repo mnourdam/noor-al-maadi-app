@@ -1,0 +1,60 @@
+name: V18 Frozen Bun Dependency Verification
+on:
+  push:
+    branches: [v18-01a-outbox-recovery]
+    paths:
+      - '.github/workflows/v18-bun-dependency-verification.yml'
+      - 'src/**'
+      - 'tests/**'
+      - 'scripts/**'
+      - 'package.json'
+      - 'bun.lock'
+      - 'bunfig.toml'
+      - 'package-lock.json'
+      - 'tsconfig*.json'
+      - 'vite*.ts'
+      - 'vitest.outbox.config.ts'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: v18-bun-dependency-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  frozen-bun-graph:
+    if: github.ref == 'refs/heads/v18-01a-outbox-recovery'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      NODE_OPTIONS: --max-old-space-size=3072
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      # Official oven-sh/setup-bun v2 tag, resolved and pinned for this verification lane.
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: '1.4.4'
+      - name: Install existing frozen Bun graph without lifecycle scripts
+        run: bun install --frozen-lockfile --ignore-scripts
+      - name: Verify manifests and both locks remain unchanged
+        run: git diff --exit-code -- package.json package-lock.json bun.lock
+      - name: Node runtime versions and dependency evidence
+        run: |
+          node --version
+          bun --version
+          node -e 'for (const p of ["react", "vite", "vitest", "typescript", "@tanstack/react-start"]) console.log(p, require(p + "/package.json").version)'
+      - name: Existing isolated regressions under Node with Bun-installed dependencies
+        run: npm run test:outbox
+      - name: Existing mocked scheduler contract under Node
+        run: npm run test:daily-challenge-scheduler
+      - name: Application and regression typechecks
+        run: npm run typecheck:outbox
+      - name: Client and SSR build only
+        run: npm run build
+      - name: Final unchanged dependency inputs
+        if: always()
+        run: git diff --exit-code -- package.json package-lock.json bun.lock

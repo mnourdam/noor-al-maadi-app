@@ -142,6 +142,8 @@ it("superseding conditional owns its token and old expiry cannot revoke it", asy
   expect(await fresh).toBe(true);
   expect(h.writer.profile.points).toBe(300);
   expect(JSON.parse(localStorage.getItem(key)!).points).toBe(300);
+  // jsdom may queue a zero-delay storage event; writer expiry timers are 10 seconds.
+  await act(async () => { vi.advanceTimersByTime(0); });
   expect(vi.getTimerCount()).toBe(0);
   await act(async () => { vi.advanceTimersByTime(CONDITIONAL_WRITE_TIMEOUT_MS); });
   expect(h.writer.prepareConditional().current()).toBe(true);
