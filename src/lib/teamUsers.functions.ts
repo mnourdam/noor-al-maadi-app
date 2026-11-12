@@ -25,7 +25,7 @@ async function assertManager(supabase: any): Promise<void> {
 
 export const createTeamUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => createUserSchema.parse(input))
+  .validator((input: unknown) => createUserSchema.parse(input))
   .handler(async ({ data, context }) => {
     await assertManager(context.supabase);
 
@@ -80,7 +80,7 @@ const deletePlayerSchema = z.object({
 
 export const deletePlayer = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => deletePlayerSchema.parse(input))
+  .validator((input: unknown) => deletePlayerSchema.parse(input))
   .handler(async ({ data, context }) => {
     await assertManager(context.supabase);
 

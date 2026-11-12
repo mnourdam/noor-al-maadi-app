@@ -3,7 +3,7 @@ import { z } from "zod";
 import { recordTrace } from "./diag-trace";
 
 export const logDiagnostic = createServerFn({ method: "POST" })
-  .inputValidator((d) => z.object({
+  .validator((d) => z.object({
     stage: z.string(),
     detail: z.string().optional()
   }).parse(d))

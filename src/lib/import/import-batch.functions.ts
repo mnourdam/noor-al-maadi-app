@@ -42,7 +42,7 @@ const runInput = z.object({
 /** Run an approved plan in dry-run or commit mode. */
 export const runImportBatch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => runInput.parse(input))
+  .validator((input: unknown) => runInput.parse(input))
   .handler(async ({ data, context }) => {
     const { data: result, error } = await context.supabase.rpc("admin_run_import_batch" as any, {
       plan: data.plan as any,
@@ -55,7 +55,7 @@ export const runImportBatch = createServerFn({ method: "POST" })
 /** Phase 5.5c — dedicated campaign transactional RPC. Same envelope, different function. */
 export const runCampaignBatch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => runInput.parse(input))
+  .validator((input: unknown) => runInput.parse(input))
   .handler(async ({ data, context }) => {
     const { data: result, error } = await context.supabase.rpc("admin_run_campaign_batch" as any, {
       plan: data.plan as any,
@@ -71,7 +71,7 @@ const rollbackCampaignInput = z.object({
 });
 export const rollbackCampaignBatch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => rollbackCampaignInput.parse(input))
+  .validator((input: unknown) => rollbackCampaignInput.parse(input))
   .handler(async ({ data, context }): Promise<Record<string, any>> => {
     const { data: result, error } = await context.supabase.rpc("admin_rollback_campaign_batch" as any, {
       p_batch: data.batch_id,
@@ -89,7 +89,7 @@ const rollbackInput = z.object({
 
 export const rollbackImportBatch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => rollbackInput.parse(input))
+  .validator((input: unknown) => rollbackInput.parse(input))
   .handler(async ({ data, context }): Promise<Record<string, any>> => {
     const { data: result, error } = await context.supabase.rpc("admin_rollback_import_batch" as any, {
       p_batch: data.batch_id,
@@ -110,7 +110,7 @@ const listInput = z.object({
 
 export const listImportBatches = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => listInput.parse(input ?? {}))
+  .validator((input: unknown) => listInput.parse(input ?? {}))
   .handler(async ({ data, context }) => {
     let q = context.supabase
       .from("admin_import_batches" as any)
@@ -131,7 +131,7 @@ const getInput = z.object({ batch_id: z.string().uuid() });
 
 export const getImportBatch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => getInput.parse(input))
+  .validator((input: unknown) => getInput.parse(input))
   .handler(async ({ data, context }) => {
     const { data: batch, error } = await context.supabase
       .from("admin_import_batches" as any).select("*").eq("id", data.batch_id).maybeSingle();

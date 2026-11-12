@@ -43,7 +43,7 @@ export interface HistoricalRepairResult {
 
 export const claimAchievements = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => claimSchema.parse(data))
+  .validator((data: unknown) => claimSchema.parse(data))
   .handler(async ({ data, context }): Promise<ClaimResult> => {
     const { ids } = data;
     const { supabase } = context;
@@ -105,7 +105,7 @@ export const fetchUserAchievements = createServerFn({ method: "GET" })
 
 export const markAchievementsPresented = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => presentationSchema.parse(data))
+  .validator((data: unknown) => presentationSchema.parse(data))
   .handler(async ({ data, context }) => {
     if (data.ids.length === 0) return { updated: [] as string[] };
     const { data: updated, error } = await (context.supabase.rpc as any)(
@@ -122,7 +122,7 @@ export const markAchievementsPresented = createServerFn({ method: "POST" })
 
 export const repairHistoricalAchievements = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => repairSchema.parse(data))
+  .validator((data: unknown) => repairSchema.parse(data))
   .handler(async ({ data, context }): Promise<HistoricalRepairResult> => {
     if (data.ids.length === 0) return { repaired: [], existing: [], rejected: [] };
     const { data: rows, error } = await (context.supabase.rpc as any)(

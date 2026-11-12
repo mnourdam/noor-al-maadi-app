@@ -8,7 +8,7 @@
 import { createServerFn } from "@tanstack/react-start";
 
 export const writeBundledSnapshotFile = createServerFn({ method: "POST" })
-  .inputValidator((input: { json: string }) => {
+  .validator((input: { json: string }) => {
     if (!input || typeof input.json !== "string" || input.json.length === 0) {
       throw new Error("invalid_payload");
     }

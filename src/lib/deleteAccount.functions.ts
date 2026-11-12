@@ -16,7 +16,7 @@ const schema = z.object({
 
 export const deleteMyAccount = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => schema.parse(input))
+  .validator((input: unknown) => schema.parse(input))
   .handler(async ({ data, context }) => {
     if (data.confirm.trim() !== DELETE_ACCOUNT_CONFIRM_PHRASE) {
       throw new Error("عبارة التأكيد غير صحيحة");

@@ -49,7 +49,7 @@ function createVerificationAdminClient() {
 
 export const verifyStoryMedia = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((raw) => InputSchema.parse(raw))
+  .validator((raw) => InputSchema.parse(raw))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
 
