@@ -22,7 +22,7 @@ export function FatalRecoveryScreen({
   reset,
   boundary,
 }: {
-  error: Error;
+  error: unknown;
   reset: () => void;
   boundary: string;
 }) {

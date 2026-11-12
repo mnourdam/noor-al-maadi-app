@@ -9,7 +9,7 @@ import { FatalRecoveryScreen } from "./components/FatalRecoveryScreen";
 import { noteResolvedRoute } from "./lib/diagnostics/crash-report";
 import { registerIdentityQueryClient } from "./lib/identity/reset";
 
-function DefaultRouteError({ error, reset }: { error: Error; reset: () => void }) {
+function DefaultRouteError({ error, reset }: { error: unknown; reset: () => void }) {
   return <FatalRecoveryScreen error={error} reset={reset} boundary="tanstack_default_error_component" />;
 }
 

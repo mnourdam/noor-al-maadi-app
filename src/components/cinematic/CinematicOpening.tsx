@@ -17,7 +17,7 @@
 // Emits `irth:opening-completed` when done (played through or skipped).
 // ============================================================
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { CINEMATIC_OPENING_DATA, CINEMATIC_LOGO_URL } from "@/lib/cinematic-opening/data";
 import {
@@ -169,26 +169,25 @@ function preloadSoundtrack(url: string | undefined, timeoutMs: number): Promise<
   });
 }
 
-// Sync decision — runs before any paint. If the opening should not
-// play at all, we mount nothing and Home boots normally.
+// Called after hydration commits, never during the server/first-client render.
 function decideShouldPlay(): CinematicOpeningConfig | null {
-  if (typeof window === "undefined") return null;
   const cfg = CINEMATIC_OPENING_DATA;
   if (!cfg.replayForAllUsers && hasCompleted(cfg.version)) return null;
   return cfg;
 }
 
 export function CinematicOpening() {
-  // Sync decision — computed on the very first render so a full-screen
-  // black portal can cover Home before the browser paints anything else.
-  const initialConfig = useMemo(() => decideShouldPlay(), []);
-  const [config] = useState<CinematicOpeningConfig | null>(initialConfig);
-  // "gate"     — pre-playback: black screen, permission + preload in flight
-  // "playing"  — scenes are on screen
-  // "done"     — sequence completed and portal has unmounted
-  const [phase, setPhase] = useState<"gate" | "playing" | "done">(
-    initialConfig ? "gate" : "done",
-  );
+  // undefined means the client-only decision has not run. Both SSR and the
+  // first hydration render are empty. Layout effect installs the black gate
+  // before the next client paint, without a mismatched hydration portal.
+  const [config, setConfig] = useState<CinematicOpeningConfig | null>();
+  const [phase, setPhase] = useState<"gate" | "playing" | "done">("done");
+  const noPlaybackCompletedRef = useRef(false);
+  useLayoutEffect(() => {
+    const next = decideShouldPlay();
+    setConfig(next);
+    setPhase(next ? "gate" : "done");
+  }, []);
   const [index, setIndex] = useState(0);
   const [fadingOut, setFadingOut] = useState(false);
   const [paused, setPaused] = useState(false);
@@ -204,7 +203,14 @@ export function CinematicOpening() {
   // The black gate stays on screen the entire time; Home never becomes
   // visible because the portal covers the whole viewport at z-[2000].
   useEffect(() => {
-    if (!initialConfig) { dispatchCompleted(); return; }
+    if (config === undefined) return;
+    if (config === null) {
+      if (!noPlaybackCompletedRef.current) {
+        noPlaybackCompletedRef.current = true;
+        dispatchCompleted();
+      }
+      return;
+    }
 
     let cancelled = false;
     (async () => {
@@ -217,7 +223,7 @@ export function CinematicOpening() {
 
       // 2. Decode every scene image + the final-scene logo. Locally
       //    bundled — finishes in a few hundred ms on a real device.
-      const sceneUrls = initialConfig.scenes
+      const sceneUrls = config.scenes
         .map((s) => s.image)
         .filter((x): x is string => !!x);
       const urls = Array.from(new Set([...sceneUrls, CINEMATIC_LOGO_URL]));
@@ -226,7 +232,7 @@ export function CinematicOpening() {
       imageCacheRef.current = decoded;
 
       // 3. Warm the soundtrack cache so Scene 1 starts with audio ready.
-      await preloadSoundtrack(initialConfig.soundtrack?.url, SOUNDTRACK_PRELOAD_TIMEOUT_MS);
+      await preloadSoundtrack(config.soundtrack?.url, SOUNDTRACK_PRELOAD_TIMEOUT_MS);
       if (cancelled) return;
 
       // 4. Only now do we hand the canvas over from the black gate to
@@ -237,7 +243,7 @@ export function CinematicOpening() {
       setPhase("playing");
     })();
     return () => { cancelled = true; };
-  }, [initialConfig]);
+  }, [config]);
 
 
   const scenes = config?.scenes ?? [];
