@@ -1,0 +1,41 @@
+name: V18 Offline Runtime Regressions
+on:
+  push:
+    branches: [v18-01a-outbox-recovery]
+    paths:
+      - '.github/workflows/v18-runtime-regressions.yml'
+      - 'src/**'
+      - 'tests/**'
+      - 'scripts/test-daily-challenge-scheduler.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig*.json'
+      - 'vitest.outbox.config.ts'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  runtime-regressions:
+    if: github.ref == 'refs/heads/v18-01a-outbox-recovery'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NODE_OPTIONS: --max-old-space-size=3072
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Reproducible dependency install
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Isolated outbox and startup regressions
+        run: npm run test:outbox
+      - name: Mocked notification scheduler contract
+        run: npm run test:daily-challenge-scheduler
+      - name: Application and regression typecheck
+        run: npm run typecheck:outbox
+      - name: Offline snapshot and client/SSR build only
+        run: npm run build

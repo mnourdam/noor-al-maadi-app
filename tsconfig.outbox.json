@@ -1,5 +1,5 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": { "types": ["vite/client", "node"] },
-  "include": ["tests/offline/outbox-*.test.ts", "tests/offline/outbox-*.test.tsx", "vitest.outbox.config.ts", "src/routeTree.gen.ts"]
+  "include": ["tests/offline/outbox-*.test.ts", "tests/offline/outbox-*.test.tsx", "tests/startup/reconciliation.test.ts", "vitest.outbox.config.ts", "src/routeTree.gen.ts"]
 }

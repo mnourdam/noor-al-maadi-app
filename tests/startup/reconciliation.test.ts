@@ -27,12 +27,28 @@ describe("withBoundedTimeout", () => {
     expect(late).toEqual({ kind: "success", value: "done" });
   });
 
-  it("classifies network rejections as offline", async () => {
+  it("keeps ambiguous Failed to fetch errors as failed, not confirmed offline", async () => {
     const out = await withBoundedTimeout(
       Promise.reject(new TypeError("Failed to fetch")),
       1000,
     );
-    expect(out.kind).toBe("offline");
+    expect(out.kind).toBe("failed");
+  });
+
+  it.each(["network request failed", "offline", "NetworkError"])(
+    "classifies explicit transport error %s as offline", async (message) => {
+      const error = new Error(message);
+      await expect(withBoundedTimeout(Promise.reject(error), 1000))
+        .resolves.toEqual({ kind: "offline", error });
+    },
+  );
+
+  it.each([
+    ["boom", "failed"], ["Failed to fetch", "failed"], ["offline", "offline"],
+  ])("normalizes synchronous work throws: %s", async (message, kind) => {
+    const error = new Error(message);
+    await expect(withBoundedTimeout(() => { throw error; }, 1000))
+      .resolves.toEqual({ kind, error });
   });
 
   it("classifies non-network errors as failed", async () => {

@@ -4,7 +4,7 @@
 // This suite exercises the pure helpers and the injectable
 // suppression/invariant surface of
 // src/lib/notifications/dailyChallengeScheduler.ts. It intentionally
-// does NOT mock the Capacitor plugin: every "runtime" assertion is
+// never loads the real Capacitor plugin: every "runtime" assertion is
 // driven by a fake plugin harness bound to the real
 // `rescheduleDailyChallenge` code path.
 //
@@ -14,7 +14,17 @@
 import { register } from "node:module";
 import { pathToFileURL } from "node:url";
 
-try { register("tsx/esm", pathToFileURL("./")); } catch { /* optional */ }
+// The loader below transpiles only the two tested TS modules. Do not preload
+// `tsx` with --import: its alternate resolver path bypasses fake-module hooks.
+
+const dependencyReads = { prefs: 0, daily: 0, auth: 0 };
+globalThis.__schedulerDependencyReads = dependencyReads;
+let networkAttempts = 0;
+globalThis.fetch = async () => {
+  networkAttempts++;
+  throw new Error("Network is forbidden in the scheduler harness");
+};
+let permissionPrompts = 0;
 
 // ─── Minimal shims ─────────────────────────────────────────────
 // The scheduler references `localStorage` (via readCanonicalNotificationPrefs
@@ -36,24 +46,16 @@ globalThis.Capacitor = {
   getPlatform: () => "android",
 };
 
-// Fake @capacitor/local-notifications module — installed via a Node
-// loader trick: intercept via a resolver hook. Simpler: pre-populate
-// the ES module cache using `import.meta.resolve` is not portable, so
-// instead we install a global bag and require the scheduler to call
-// into it. The scheduler already uses `await import(...)`, so we
-// substitute the specifier via an import map override on
-// `globalThis.__fakeLocalNotifications`.
-//
-// To keep things simple and avoid patching Node's module resolver, we
-// spy on the plugin by patching the resolved module after first load:
-// dynamic import returns the cached module, so we can mutate its
-// `LocalNotifications` methods.
-
+// Fake plugin state; real notification APIs are never loaded.
 const pendingIds = new Set();
 const calls = { schedule: [], cancel: [], checkPermissions: [] };
 let permissionState = "granted";
 
 const fakePlugin = {
+  async requestPermissions() {
+    permissionPrompts++;
+    throw new Error("Permission prompts are forbidden in the scheduler harness");
+  },
   async checkPermissions() {
     calls.checkPermissions.push(Date.now());
     return { display: permissionState };
@@ -73,24 +75,30 @@ const fakePlugin = {
   addListener() { return { remove: async () => {} }; },
 };
 
-// Register a loader that resolves the plugin module to our fake. We
-// use Node's `--experimental-loader` friendly approach: define a
-// custom hook file OR — simpler — pre-populate the module cache via
-// `import.meta.resolve` is unreliable, so we short-circuit by
-// installing an alias in `node_modules` at test time.
-//
-// Practical path: patch `require.cache` won't work in ESM. Instead,
-// use a resolve/load loader registered at startup. Register it now.
-
+// Transpile only the tested modules and resolve the native plugin to a fake.
+// This uses TypeScript already installed by the project, not tsx's separate
+// resolution pipeline, so every application dependency crosses our hooks.
 register(
   new URL("data:text/javascript;base64," + Buffer.from(`
+    import ts from ${JSON.stringify(import.meta.resolve("typescript"))};
+    import { readFile } from "node:fs/promises";
     export async function resolve(specifier, context, next) {
+      if (specifier === "./dailyChallengeCatalog") {
+        return next(new URL("./dailyChallengeCatalog.ts", context.parentURL).href, context);
+      }
       if (specifier === "@capacitor/local-notifications") {
         return { url: "fake-cap-local-notif:///", format: "module", shortCircuit: true };
       }
       return next(specifier, context);
     }
     export async function load(url, context, next) {
+      if (/\\/dailyChallenge(?:Scheduler|Catalog)\\.ts$/.test(url)) {
+        const source = await readFile(new URL(url), "utf8");
+        return { format: "module", shortCircuit: true,
+          source: ts.transpileModule(source, { compilerOptions: {
+            target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext,
+          } }).outputText };
+      }
       if (url === "fake-cap-local-notif:///") {
         return {
           format: "module",
@@ -124,15 +132,15 @@ register(
     }
     export async function load(url, context, next) {
       if (url === "fake-supabase-client:///") {
-        return { format: "module", source: "export const supabase = globalThis.__fakeSupabase;", shortCircuit: true };
+        return { format: "module", source: "export const supabase = { auth: { getUser: (...args) => { globalThis.__schedulerDependencyReads.auth++; return globalThis.__fakeSupabase.auth.getUser(...args); } } };", shortCircuit: true };
       }
       if (url === "fake-daily-challenge-service:///") {
-        return { format: "module", source: "export const loadDailyChallengeState = () => globalThis.__fakeDailyState();", shortCircuit: true };
+        return { format: "module", source: "export const loadDailyChallengeState = () => { globalThis.__schedulerDependencyReads.daily++; return globalThis.__fakeDailyState(); };", shortCircuit: true };
       }
       if (url === "fake-notifications-lib:///") {
         return {
           format: "module",
-          source: "export const DEFAULT_NOTIFICATION_PREFS = { master: true, daily: true, reengagement: true, season: false, campaign: true, friend: true, dailyChallenge: true };\\nexport function readCanonicalNotificationPrefs() { return globalThis.__fakePrefs(); }",
+          source: "export const DEFAULT_NOTIFICATION_PREFS = { master: true, daily: true, reengagement: true, season: false, campaign: true, friend: true, dailyChallenge: true };\\nexport function readCanonicalNotificationPrefs() { globalThis.__schedulerDependencyReads.prefs++; return globalThis.__fakePrefs(); }",
           shortCircuit: true,
         };
       }
@@ -198,6 +206,7 @@ function resetHarness() {
   calls.cancel.length = 0;
   calls.checkPermissions.length = 0;
   storage.clear();
+  dependencyReads.prefs = dependencyReads.daily = dependencyReads.auth = 0;
   permissionState = "granted";
   globalThis.__fakeDailyState = () => ({ totalPublished: 5, allEligibleExhausted: false, todaysPicksDone: false });
   globalThis.__fakePrefs = () => ({ master: true, daily: true, reengagement: true, season: false, campaign: true, friend: true, dailyChallenge: true });
@@ -365,6 +374,14 @@ check("\"1\" → disabled", fcmEnabled("1") === false);
 check("\"TRUE\" (wrong case) → disabled", fcmEnabled("TRUE") === false);
 check("\"yes\" → disabled", fcmEnabled("yes") === false);
 check("literal \"true\" → enabled (only positive case)", fcmEnabled("true") === true);
+
+// Wiring is itself an invariant: passing pure tests must not hide a loader
+// failure that silently reads real prefs/services or falls back to guest.
+check("runtime consumed injected prefs, daily state and identity",
+  dependencyReads.prefs > 0 && dependencyReads.daily > 0 && dependencyReads.auth > 0,
+  dependencyReads);
+check("no network or permission prompts", networkAttempts === 0 && permissionPrompts === 0,
+  { networkAttempts, permissionPrompts });
 
 // ─── Report ────────────────────────────────────────────────────
 console.log(`\nTotal: ${total}   Passed: ${total - failed}   Failed: ${failed}`);

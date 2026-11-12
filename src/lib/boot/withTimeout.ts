@@ -33,7 +33,14 @@ export async function withBoundedTimeout<T>(
   onLate?: (outcome: BoundedOutcome<T>) => void,
   label?: string
 ): Promise<BoundedOutcome<T>> {
-  const p = typeof work === "function" ? (work as () => Promise<T>)() : work;
+  // A work factory may throw before returning its promise. Normalize it through
+  // the same outcome path as an asynchronous rejection instead of escaping boot.
+  let p: Promise<T>;
+  try {
+    p = typeof work === "function" ? work() : work;
+  } catch (error) {
+    p = Promise.reject(error);
+  }
   let settled = false;
   let timer: ReturnType<typeof setTimeout> | null = null;
 
