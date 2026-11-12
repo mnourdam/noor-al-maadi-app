@@ -1,0 +1,19 @@
+{
+  "result": "NATIVE PRIMITIVE ACCEPTANCE PASS",
+  "chromium_version": "151.0.0.0",
+  "checks": [
+    "native two-tab stale-snapshot CAS: exactly one winner",
+    "full snapshot compared, not revision alone",
+    "fresh-base retry after stale rejection advances durable revision",
+    "abort after three successful native puts rolls back all three writable stores",
+    "two native tabs keep distinct owner records",
+    "restricted confirmation and three synthetic companions commit together; not delivered",
+    "abort after four successful native puts preserves pending entitlement and absent companions",
+    "independent tabs cannot confirm competing decisions from the same full snapshot",
+    "page reload recovers committed snapshot",
+    "clean browser process restart preserves both owners",
+    "clean restart retains committed confirmation and rollback evidence",
+    "NEGATIVE CONTROL: raw same-origin writer bypasses primitive; global exclusion UNPROVEN"
+  ],
+  "limits": "Dormant API only. No economic admission, idempotency coordinator, global writer exclusion, V17 cutover, production or Android acceptance."
+}

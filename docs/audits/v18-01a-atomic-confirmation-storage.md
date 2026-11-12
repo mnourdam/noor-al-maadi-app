@@ -68,9 +68,9 @@ An orderly restart is not Android force-stop, disk-fsync or power-loss acceptanc
 
 The native fixture bundles and typechecks. Local Chromium launch remains blocked
 before assertions by process singleton socket restrictions, including the permitted
-escalated invocation. Therefore new native behavioral acceptance is **PENDING CI**,
-not a local PASS. The existing dedicated repair-branch workflow will run all twelve
-checks and upload only synthetic result JSON. No user browser profile is used.
+escalated invocation. Native behavioral acceptance subsequently **PASSED on CI, all twelve checks**,
+not locally. The dedicated repair-branch workflow used synthetic records and a
+temporary profile. No user browser profile was used.
 
 The full-row JSON contract conservatively rejects explicit undefined optional
 fields in the new CAS API; this does not alter existing settle behavior.
@@ -80,3 +80,19 @@ An initial new test-helper parameter inferred the confirmed-only subtype; its
 explicit SettlementDecision union annotation was corrected before these final
 checks. No application behavior changed for that correction. Locked npm install
 also passed (695 packages) after restoring the replaced temporary workspace.
+
+## Verified remote evidence
+
+Tested commit: `3c8b193791f626649ce0e316f4de856d7d97347d`.
+
+- Native browser run [43178171758](https://github.com/mnourdam/noor-al-maadi-app/actions/runs/43178171758): **SUCCESS**, 12 checks.
+- Full runtime run [43178171628](https://github.com/mnourdam/noor-al-maadi-app/actions/runs/43178171628): **SUCCESS**, including locked install, offline regressions, scheduler, typecheck and build.
+- Downloaded artifact `13924957676`, verified archive SHA-256
+  `34494134a9c1cc67e4409fdb6f7ebde1c0122210382ff2b56eabc5757a0c2119`.
+- Inspected JSON saved at [v18-atomic-confirmation-43178171758.json](evidence/v18-atomic-confirmation-43178171758.json).
+  Chromium version `151.0.0.0` is the browser's reduced user-agent value,
+  not an exact binary patch version.
+
+The raw-IDB negative control still successfully bypasses the cooperating API.
+No assertion of universal admission, atomic reward delivery, baseline import,
+hosted-staging acceptance, Android release, or production readiness follows.
