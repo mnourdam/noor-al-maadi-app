@@ -58,3 +58,6 @@ suite **10/10 PASS**. Full final suite **1,185/1,185 PASS** across 47 files and
 final typecheck **PASS**. Offline client/SSR build of the unchanged final source
 also **PASS** (before only the extra test was appended). Diff check **PASS**.
 Remote CI on this corrective commit is pending at publication.
+
+
+Corrective full runtime CI **SUCCESS**: [43182614532](https://github.com/mnourdam/noor-al-maadi-app/actions/runs/43182614532), tested commit `20519f209bb4cb3b80d3a3aef15184423968186c`. Verified job `131062026464` completed every step successfully: locked install, complete offline/startup regressions, scheduler, application/regression typecheck and client/SSR build. This descendant includes the auth guard and investigation preparation fix; the original failed run remains documented above. No deployment occurred.

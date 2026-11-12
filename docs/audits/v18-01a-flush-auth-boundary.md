@@ -53,3 +53,6 @@ singleflight assertion (1,174 passed, 1 failed). Therefore this initial overall
 CI result is **FAIL**, not remote acceptance. The separate preparation-lifetime
 race is investigated in `v18-01a-investigation-entry-singleflight.md` without
 weakening the assertion or claiming a successful rerun prematurely.
+
+
+Corrective full runtime CI **SUCCESS**: [43182614532](https://github.com/mnourdam/noor-al-maadi-app/actions/runs/43182614532), tested commit `20519f209bb4cb3b80d3a3aef15184423968186c`. Verified job `131062026464` completed every step successfully: locked install, complete offline/startup regressions, scheduler, application/regression typecheck and client/SSR build. This descendant includes the auth guard and investigation preparation fix; the original failed run remains documented above. No deployment occurred.
