@@ -37,6 +37,26 @@ Therefore neither summing snapshots, treating completion flags as paid grants, n
 
 A future migration needs an independently trustworthy eligibility/evidence source, immutable entitlement lineage and inclusion records, atomic conflict handling, and exclusion of competing writers. The current completion RPC's caller-supplied completion assertion is not independent proof of gameplay. The separate isolated authority prototype does not supply missing historical evidence. No baseline is inferred, imported or activated here.
 
+## Subsequent isolated counterfactual outcome
+
+Run [43212060229](https://github.com/mnourdam/noor-al-maadi-app/actions/runs/43212060229), job `131161908208`, source `2fe0956a14c605c53403f049c45bba4c9e3449b6`, passed on PostgreSQL 17.6 with **72 assertion records**. The original eleven reproduction checks execute and pass before the guarded counterfactual is installed. This is not 72 independent end-to-end scenarios: the count includes individual privilege, unchanged-state and control assertions.
+
+Artifact `13941457776` ZIP SHA-256:
+
+```text
+51b98b93eb850e9608ad8dde4900c21c48a351ae683c6336bcac5f094d3bc3c1
+```
+
+Saved evidence: [v18-investigation-counterfactual-43212060229.json](evidence/v18-investigation-counterfactual-43212060229.json). Independent reconciliation confirmed all 72 labels and matched the pinned migration/extracted-function/fixture hashes and guarded SQL hash against the reviewed source. The guarded SQL hash is `c2892ee56707002289806ec87504e357ce29f19eea04814803079a90c9c5085f`.
+
+The isolated guarded producer requires a protected, admin-issued **synthetic approval** with frozen reward terms. It rejects absent approval, existing unverified completion, and both conflicting and exact-looking legacy ledger rows without adopting them. Valid issuance and exact replay pass; editing current content afterward does not rewrite the prior receipt or regrant.
+
+Concurrency evidence is actual overlapping PostgreSQL transactions: the first call retains its profile-row lock while a second connection starts. The harness observes the second backend waiting on a lock with the first backend identified by `pg_blocking_pids` before releasing the first transaction. Both calls return identical receipts; assertions verify exactly **+10 XP, +3 dinars, unchanged hearts**, and one delta, completion, collectible and protected issuance record. This is not merely two sequential calls or a sleep-based race assumption.
+
+Admin-only fault triggers after delta insertion and after protected issuance insertion each force transaction failure. The later fault occurs after a non-null collectible has been inserted. Before/after snapshots of profiles, progress, deltas, collection, approvals and issuance remain identical, demonstrating rollback across those six fixture tables. Authenticated mutation privileges and direct-delete attempts are denied on the loaded economic/evidence tables; execution of the two loaded legacy producers is disabled.
+
+**Boundaries remain unchanged:** the approval issuer is synthetic, and a trustworthy production gameplay-eligibility issuer is still unknown. Owner binding uses the forgeable SQL claims shim, not verified JWTs. Writer exclusion covers only the tables and producers loaded in this fixture, not every production RPC, trigger, service role, local/offline writer or deployed schema. No legacy balances are imported, no live vulnerability status is established, and no app repair, production migration or activation follows from this counterfactual PASS.
+
 ## Status
 
 **Reproduction verified; production repair and migration remain unimplemented.** Any proposed producer hardening needs its own review, negative controls, concurrency/rollback evidence and explicit cutover decisions. This audit is an evidence milestone, not release approval.
