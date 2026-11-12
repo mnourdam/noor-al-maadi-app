@@ -1,3 +1,4 @@
+import { startForegroundPoller } from "./foreground-poller";
 /**
  * Encyclopedia "content update available" detector.
  *
@@ -111,15 +112,13 @@ export function useEncyclopediaUpdateAvailable(): EncyclopediaUpdateState {
     void getLocalEncyclopediaMaxUpdatedAt().then((v) => {
       localMaxRef.current = v;
     });
-    const first = window.setTimeout(() => { void check(); }, FIRST_CHECK_DELAY_MS);
-    const interval = window.setInterval(() => { void check(); }, CHECK_INTERVAL_MS);
-    const onOnline = () => { void check(); };
-    window.addEventListener("online", onOnline);
+    const stop = startForegroundPoller(check, CHECK_INTERVAL_MS, {
+      initialDelayMs: FIRST_CHECK_DELAY_MS,
+      focus: false,
+    });
     return () => {
       cancelledRef.current = true;
-      window.clearTimeout(first);
-      window.clearInterval(interval);
-      window.removeEventListener("online", onOnline);
+      stop();
     };
   }, [check]);
 

@@ -9,12 +9,11 @@
  *     1. Memory Cache (current session object URLs)
  *     2. Persistent Storage (Cache Storage API via stable keys)
  *     3. Network (only if not in storage, then persist for next time)
- *   - Stable Keys: Supabase storage URLs are mapped to `irth://storage/bucket/path`
+ *   - Stable Keys: Supabase storage URLs are mapped to token-free HTTPS keys
  *     to prevent re-downloads when signed tokens rotate.
  *   - When offline and not cached, return `null`.
- *   - Cross-origin fetches use `no-cors` mode when needed so the response
- *     can be stored even without CORS headers (opaque responses are fine
- *     for `<img>` display).
+ *   - Cross-origin fetches use CORS so cached bodies can become blob URLs.
+ *     If a host disallows CORS, display falls back to its original URL.
  *
  * Public entry points:
  *   - `resolveImageUrl(url)` — async, returns a usable URL string (either
@@ -49,20 +48,25 @@ function isLikelyImage(url) {
         return true;
     return IMAGE_EXT.test(url);
 }
-/**
- * Extract a stable cache key from a Supabase storage URL.
- * Converts: https://.../storage/v1/object/public/bucket/path/to/img.png?token=...
- * To: irth://storage/bucket/path/to/img.png
- */
+/** Token-free HTTP(S) key accepted by Cache Storage; preserve content versions. */
 export function getStableStorageKey(url) {
-    if (!url || typeof url !== "string")
-        return null;
-    const match = url.match(/\/storage\/v1\/object\/(?:public\/|sign\/)?([^\/?]+)\/([^?]+)/);
-    if (match) {
-        const [, bucket, path] = match;
-        return `irth://storage/${bucket}/${path}`;
+    try {
+        const parsed = new URL(url);
+        if (!/^https?:$/.test(parsed.protocol))
+            return null;
+        const match = parsed.pathname.match(/^\/storage\/v1\/object\/(?:public\/|sign\/)?([^/]+)\/(.+)$/);
+        if (!match)
+            return null;
+        // Include the project origin to avoid collisions across environments.
+        parsed.pathname = `/storage/v1/object/${match[1]}/${match[2]}`;
+        parsed.searchParams.delete("token");
+        parsed.searchParams.sort();
+        parsed.hash = "";
+        return parsed.toString();
     }
-    return null;
+    catch {
+        return null;
+    }
 }
 async function openCache() {
     if (!hasCaches())
@@ -85,10 +89,37 @@ async function toObjectUrl(response) {
         return null;
     }
 }
-/** Try to fetch + store an image. Uses `no-cors` for cross-origin.
+/** Try to fetch + store a readable image response. Uses CORS for cross-origin.
  *  `cacheKey` lets callers store transient URLs (e.g. signed storage URLs
  *  whose token rotates every hour) under a STABLE key. */
+// Share concurrent prefetch/display requests using the stable content key.
+const imageFetches = new Map();
 async function fetchAndCache(url, cache, cacheKey = url) {
+    let pending = imageFetches.get(cacheKey);
+    if (!pending) {
+        pending = (async () => {
+            // Another queued worker may have completed since the prefetch scan.
+            try {
+                const hit = await cache.match(cacheKey);
+                if (hit?.ok && hit.type !== "opaque")
+                    return hit;
+            }
+            catch { /* cache unavailable: continue online */ }
+            return downloadAndCache(url, cache, cacheKey);
+        })();
+        imageFetches.set(cacheKey, pending);
+    }
+    try {
+        const response = await pending;
+        // Each reader needs its own body, even when sharing one network fetch.
+        return response?.clone() ?? null;
+    }
+    finally {
+        if (imageFetches.get(cacheKey) === pending)
+            imageFetches.delete(cacheKey);
+    }
+}
+async function downloadAndCache(url, cache, cacheKey = url) {
     const sameOrigin = (() => {
         try {
             if (typeof window === "undefined")
@@ -100,10 +131,10 @@ async function fetchAndCache(url, cache, cacheKey = url) {
         }
     })();
     try {
-        const init = sameOrigin ? {} : { mode: "no-cors", credentials: "omit" };
+        const init = sameOrigin ? {} : { mode: "cors", credentials: "omit" };
         const res = await fetch(url, init);
-        // `no-cors` yields an opaque response (status 0); still cacheable.
-        if (!res || (res.status !== 0 && !res.ok))
+        // Opaque responses have unreadable bodies and cannot serve our blob URL path.
+        if (!res || !res.ok || res.type === "opaque")
             return null;
         try {
             await cache.put(cacheKey, res.clone());
