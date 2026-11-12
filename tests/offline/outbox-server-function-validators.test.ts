@@ -64,7 +64,13 @@ it.each(cases)("%s retains real builder validation and middleware", (_name, fn, 
   expect(typeof options.validator).toBe("function");
   expect(() => options.validator(valid)).not.toThrow();
   expect(() => options.validator(invalid)).toThrow();
-  expect(options.middleware ?? []).toEqual(authenticated ? [requireSupabaseAuth] : []);
+  if (fn === writeBundledSnapshotFile) {
+    expect(options.middleware).toHaveLength(2);
+    expect(typeof options.middleware[0].options.server).toBe("function");
+    expect(options.middleware[1]).toBe(requireSupabaseAuth);
+  } else {
+    expect(options.middleware ?? []).toEqual(authenticated ? [requireSupabaseAuth] : []);
+  }
   expect(capture.backend).not.toHaveBeenCalled();
 });
 
