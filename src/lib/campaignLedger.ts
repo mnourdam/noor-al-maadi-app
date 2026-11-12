@@ -27,7 +27,7 @@
 
 import { ACTIVITY_DEFAULTS, type Campaign, type CampaignActivity, type CampaignChapter, type CampaignReward } from "@/types/campaign";
 import { upsertChapterProgress, addCollectionItems, type CollectionItemInsert } from "@/lib/progressSync";
-import { getIdentityEpoch } from "@/lib/identity/owner";
+import { getActiveOwner, ownerUserId, getIdentityEpoch } from "@/lib/identity/owner";
 import { saveAccepted } from "@/lib/offline/gameplay-write";
 import { parseUnlockId } from "@/lib/campaignUnlocks";
 
@@ -383,27 +383,36 @@ export function backfillLedgerFromLegacyProgress(): { keysAdded: number } {
  */
 export async function hydrateLedgerFromCloud(): Promise<{ keysAdded: number } | null> {
   if (!isBrowser()) return null;
+  const owner = getActiveOwner();
+  const epoch = getIdentityEpoch();
+  const expectedUid = ownerUserId(owner);
+  const current = () => getActiveOwner() === owner && getIdentityEpoch() === epoch;
+  if (!expectedUid) return null;
   try {
     const { supabase } = await import("@/integrations/supabase/client");
+    if (!current()) return null;
     const { data: sessionData } = await supabase.auth.getSession();
     const uid = sessionData.session?.user?.id;
-    if (!uid) return null;
+    if (!current() || uid !== expectedUid) return null;
 
     const { data: rows, error } = await supabase
       .from("user_campaign_progress")
       .select("campaign_id, chapter_id, completed_at")
       .eq("user_id", uid);
-    if (error || !rows) return null;
+    if (!current() || error || !rows) return null;
 
     // Local campaign cache lets us expand a completed chapter into its
     // activity ids. Missing campaigns are skipped silently — the chapter
     // key alone is still seeded so future correct answers cannot re-grant
     // chapter/campaign rewards.
     const { listCampaigns } = await import("@/lib/campaignStorage");
+    if (!current()) return null;
     const campaigns = listCampaigns();
+    if (!current()) return null;
     const campaignById = new Map(campaigns.map(c => [c.id, c] as const));
 
     const s = read();
+    if (!current()) return null;
     const now = new Date().toISOString();
     let added = 0;
     const addIfMissing = (k: string) => {
@@ -442,8 +451,9 @@ export async function hydrateLedgerFromCloud(): Promise<{ keysAdded: number } | 
       if (allDone) addIfMissing(campaignKey(cid));
     }
 
+    if (!current()) return null;
     if (added > 0) write(s);
-    return { keysAdded: added };
+    return current() ? { keysAdded: added } : null;
   } catch {
     return null;
   }

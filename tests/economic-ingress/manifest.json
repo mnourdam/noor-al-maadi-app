@@ -3922,7 +3922,7 @@
     },
     {
       "path": "src/lib/campaignLedger.ts",
-      "sha256": "52520badde24a55664c413e3bda579269c218e4521059409608d2c5b7336132d",
+      "sha256": "e8cca09d91fba35587d9f0a74063f4353b352200bf134db3831f81afa68fbcc2",
       "rpc_candidates": [],
       "table_candidates": [
         "user_campaign_progress"
