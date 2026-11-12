@@ -93,6 +93,9 @@ jobs:
       - name: Start disposable AOSP emulator and verify native runtime
         run: |
           set -euo pipefail
+          test -x "$ANDROID_HOME/platform-tools/adb"
+          export PATH="$ANDROID_HOME/platform-tools:$PATH"
+          adb version
           export ANDROID_AVD_HOME="$RUNNER_TEMP/native-avd"
           mkdir -p "$ANDROID_AVD_HOME"
           # 'no' declines optional custom hardware profile; this is not license consent.
