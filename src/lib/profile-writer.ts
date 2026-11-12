@@ -180,10 +180,15 @@ export function useProfileWriter(initial: ProfileState) {
     try {
       const serialized = JSON.stringify(frame.value);
       localStorage.setItem("hakaya.profile.v2", serialized);
-      // The partition adapter can silently quarantine a write. Conditional
-      // receipts require exact readback, not merely a nonthrowing setItem.
-      const conditionalFrame = attempt?.applied && frame.snapshot === attempt.token;
-      const verified = !conditionalFrame || localStorage.getItem("hakaya.profile.v2") === serialized;
+      // The partition adapter can silently quarantine any requested write.
+      // Nonthrowing setItem is not proof; unavailable readback is unresolved,
+      // not a new write failure, retry instruction, or reason to revert React state.
+      let verified = false;
+      try {
+        verified = localStorage.getItem("hakaya.profile.v2") === serialized;
+      } catch {
+        // Serialization/setItem failures retain the existing outer error path.
+      }
       result.current = { ...evidence, outcome: matches(frame) && verified ? "written" : "unresolved" };
       if (attempt) settleConditional(
         attempt.applied && result.current.outcome === "written" &&
