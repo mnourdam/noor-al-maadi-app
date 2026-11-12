@@ -1,0 +1,95 @@
+name: V18 Android Debug Compilation Verification
+on:
+  push:
+    branches: [v18-01a-outbox-recovery]
+    paths:
+      - '.github/workflows/v18-android-verification.yml'
+      - 'android/**'
+      - 'android-web/**'
+      - 'branding/android/**'
+      - 'src/**'
+      - 'public/**'
+      - 'scripts/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'capacitor.config.ts'
+      - 'vite.android.config.ts'
+      - 'tsconfig*.json'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: v18-android-verification-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  android-debug-verification:
+    if: github.ref == 'refs/heads/v18-01a-outbox-recovery'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: bash
+    env:
+      NODE_OPTIONS: --max-old-space-size=3072
+      ANDROID_BUILD_TYPE: debug
+      SKIP_SNAPSHOT_GEN: '1'
+      REQUIRE_LIVE_CONTENT: '0'
+      SUPABASE_SERVICE_ROLE_KEY: ''
+      SUPABASE_URL: 'http://127.0.0.1:9'
+      VITE_SUPABASE_URL: 'http://127.0.0.1:9'
+      VITE_SUPABASE_PUBLISHABLE_KEY: 'synthetic-build-verification-no-access'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Validate task graph safety predicate
+        run: node --test scripts/test-android-compilation-task-graph.mjs
+      - name: Reproducible dependencies without install scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify toolchain and provision Android compile SDK
+        run: |
+          set -euo pipefail
+          mkdir -p verification-logs
+          node --version
+          java -version
+          test -n "${ANDROID_HOME:-}"
+          sdkmanager "platforms;android-36" "build-tools;35.0.0"
+          bash android/gradlew --version | tee verification-logs/gradle-version.txt
+      - name: Build and sync committed offline assets only
+        run: |
+          set -euo pipefail
+          # sync:android already includes build:android:web; do not build twice.
+          # No live content key: existing validators verify the committed pack.
+          npm run sync:android 2>&1 | tee verification-logs/android-sync.txt
+          npm run verify:no-secrets
+      - name: Compile debug variant and run JVM unit tests only
+        working-directory: android
+        run: |
+          set -euo pipefail
+          # Fail before execution if this graph would sign or package an APK.
+          bash ./gradlew --no-daemon --console=plain :app:compileDebugSources :app:testDebugUnitTest --dry-run 2>&1 | tee ../verification-logs/gradle-task-graph.txt
+          node ../scripts/verify-android-compilation-task-graph.mjs ../verification-logs/gradle-task-graph.txt
+          bash ./gradlew --no-daemon --console=plain :app:compileDebugSources :app:testDebugUnitTest 2>&1 | tee ../verification-logs/gradle-debug.txt
+          if find . -type f \( -name '*.apk' -o -name '*.aab' -o -name '*.jks' -o -name '*.keystore' \) -print -quit | grep -q .; then
+            echo "Unexpected packaged app or signing material"
+            exit 1
+          fi
+      - name: Upload verification logs and unit-test reports only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v18-android-verification-evidence
+          retention-days: 7
+          if-no-files-found: warn
+          path: |
+            verification-logs/*.txt
+            android/app/build/test-results/testDebugUnitTest/*.xml
+            android/app/build/reports/tests/testDebugUnitTest/**

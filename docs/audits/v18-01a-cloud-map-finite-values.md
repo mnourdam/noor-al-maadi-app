@@ -27,3 +27,8 @@ projects PASS, client/SSR build PASS. The initial typecheck identified partial
 wire-fixture typing in the new tests; explicit casts preserved exact runtime
 inputs and assertions, then the full sequence was rerun. Remote npm CI pending
 for this commit; no Bun/Android release parity or deployment is claimed.
+
+Remote npm runtime CI **SUCCESS**: [43191353623](https://github.com/mnourdam/noor-al-maadi-app/actions/runs/43191353623), tested commit `3d9ac5602db8f4355349e184d3999be9c7577eec`.
+Verified job `131091171786` passed every step, including regressions, scheduler,
+typecheck and client/SSR build. No deployment; Bun and Android acceptance are
+tracked separately.
