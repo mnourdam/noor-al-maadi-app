@@ -46,3 +46,10 @@ Independent review approved the narrow boundary and reran **22/22** focused test
 Final local suite: **1,175/1,175 PASS** across 46 files. Application/regression
 typecheck, offline client/SSR build and diff check: **PASS**. Branch CI is pending
 at publication. No old assertions or receipt semantics were changed.
+
+Initial remote run [43181238594](https://github.com/mnourdam/noor-al-maadi-app/actions/runs/43181238594)
+passed the new auth tests but failed the existing investigation double-completion
+singleflight assertion (1,174 passed, 1 failed). Therefore this initial overall
+CI result is **FAIL**, not remote acceptance. The separate preparation-lifetime
+race is investigated in `v18-01a-investigation-entry-singleflight.md` without
+weakening the assertion or claiming a successful rerun prematurely.

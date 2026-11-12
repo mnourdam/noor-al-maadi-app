@@ -90,6 +90,10 @@ export interface InvestigationCompletionOutcome {
   reason?: string;
 }
 
+// Cover preparation (including asynchronous auth/hash), not only the live RPC.
+// Completed outcomes are never cached; different account epochs never share work.
+const completionInflight = new Map<string, Promise<InvestigationCompletionOutcome>>();
+
 /**
  * Record a server-authoritative investigation completion.
  *
@@ -104,16 +108,54 @@ export interface InvestigationCompletionOutcome {
  * Safe to call more than once — the outbox and the RPC both dedupe.
  * Signed-out users are a no-op.
  */
-export async function recordInvestigationCompletion(
+export function recordInvestigationCompletion(
   input: InvestigationCompletionInput,
 ): Promise<InvestigationCompletionOutcome> {
-  input = { ...input };
+  try {
+    return startInvestigationCompletion(input);
+  } catch (error) {
+    // Preserve the historical async API even when input access throws.
+    return Promise.reject(error);
+  }
+}
+
+function startInvestigationCompletion(input: InvestigationCompletionInput): Promise<InvestigationCompletionOutcome> {
+  const captured = { ...input };
+  captured.score = Math.max(0, captured.score ?? 0);
+  captured.correctCount = Math.max(0, captured.correctCount ?? 0);
+  const owner = getActiveOwner(), epoch = getIdentityEpoch();
+  // String numeric components preserve NaN/Infinity distinctions rather than
+  // silently merging them through JSON's null serialization.
+  const key = JSON.stringify([owner, epoch, captured.investigationId,
+    String(captured.score), String(captured.correctCount)]);
+  const existing = completionInflight.get(key);
+  if (existing) return existing;
+  // Publish the slot before any auth hook or other asynchronous work starts.
+  let resolve!: (outcome: InvestigationCompletionOutcome) => void;
+  let reject!: (reason: unknown) => void;
+  const work = new Promise<InvestigationCompletionOutcome>((yes, no) => {
+    resolve = yes;
+    reject = no;
+  });
+  const promise = work.finally(() => {
+    if (completionInflight.get(key) === promise) completionInflight.delete(key);
+  });
+  completionInflight.set(key, promise);
+  // Preserve immediate auth lookup while the already-published slot also
+  // protects synchronous reentry from an auth hook.
+  void runInvestigationCompletion(captured, owner, epoch).then(resolve, reject);
+  return promise;
+}
+
+async function runInvestigationCompletion(
+  input: InvestigationCompletionInput, owner: string, epoch: number,
+): Promise<InvestigationCompletionOutcome> {
   const none: InvestigationCompletionOutcome = {
     acknowledged: false, applied: false,
     xpEarned: 0, dinarsEarned: 0, heartsEarned: 0, queued: false,
   };
-  const owner = getActiveOwner(), epoch = getIdentityEpoch();
   const current = () => getActiveOwner() === owner && getIdentityEpoch() === epoch;
+  if (!current()) return { ...none, reason: "identity_changed" };
   const uid = await saveUserId();
   if (!current()) return { ...none, reason: "identity_changed" };
   if (!uid) return none;
