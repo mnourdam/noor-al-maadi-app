@@ -77,3 +77,5 @@ does not make their package versions equal or establish hosted Lovable/Android
 release runtime acceptance. No lock regeneration or production deployment.
 
 Subsequent frozen-Bun run [43194053317](https://github.com/mnourdam/noor-al-maadi-app/actions/runs/43194053317), source `c13de66c6b6445d81e99174d172ff9dafd18dbcb`, also **SUCCESS**. Verified job `131100328231` passed every step, including final unchanged-lock checks. Android compilation has separate evidence and was not successful in the paired Android attempt.
+
+Latest frozen-Bun verification at `b824b06ffa52622af3f3c3ddc2987b4a22ddb869`: [43194997385](https://github.com/mnourdam/noor-al-maadi-app/actions/runs/43194997385) **SUCCESS**, verified job `131103545704`, every step including both unchanged-lock checks. The separate Android compilation success and its narrow limits are recorded in `v18-01a-android-compilation-verification.md`.

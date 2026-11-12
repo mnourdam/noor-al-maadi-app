@@ -59,3 +59,13 @@ New static configuration/security regressions (`scripts/test-android-build-confi
 BuildConfig-generation correction independently reviewed **CLEAR**; reviewer
 reran **30/30** combined static configuration and task-graph tests. This does not
 itself prove Java compilation or release behavior; corrected CI is still required.
+
+## Verified Android compilation success
+
+Run [43194997390](https://github.com/mnourdam/noor-al-maadi-app/actions/runs/43194997390), source `b824b06ffa52622af3f3c3ddc2987b4a22ddb869`, job `131103545613`: **SUCCESS**. Every step passed with Node 24.22.2, JDK 21.0.13 and Gradle 8.14.3. Offline content generation/validation and Capacitor sync completed; the corrected **187-task** graph passed the safety predicate. Actual `generateDebugBuildConfig`, app Java compilation and `compileDebugSources` executed successfully. Gradle reported **151 actionable tasks, 151 executed**. The post-build no-APK/AAB/keystore check passed.
+
+The JVM report contains exactly **one existing template test**, `addition_isCorrect`, with zero failures/errors/skips. This is not player-behavior, authentication, WebView, device or economic-inclusion testing. The meaningful new evidence is native debug compilation with the committed offline inputs, without signing or application packaging.
+
+Artifact `13932546919` was downloaded and independently hash-checked: SHA-256 `7dd69df75086a28c72ff79792cdc21c8ff9a9e507bc72cbebfbebe4d7aa83a5e`. Its entries contain only verification logs and JVM test reports, no APK/AAB/signing material. Sanitized durable evidence, task names and the actual unit-test count are in [evidence/v18-android-compilation-43194997390.json](evidence/v18-android-compilation-43194997390.json).
+
+The existing APK/release workflow remains untouched and unverified; this new lane does not prove its toolchain or signing behavior. No emulator/device execution, release APK, production content freshness, hosted staging, trusted legacy balance baseline or global writer exclusion has been established. **V18 HOLD and production NO-GO remain.**
