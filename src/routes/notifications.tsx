@@ -2,7 +2,7 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useEffect, useState, useCallback } from "react";
 import { Trash2, ChevronLeft, MailOpen, CheckCheck, Image as ImageIcon } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
-import { CachedImage } from "@/components/CachedImage";
+import { NotificationThumbnail } from "@/components/notifications/NotificationThumbnail";
 import { resolveCategory } from "@/lib/notifications/categories";
 import { resolveNotificationAction, openExternalUrl } from "@/lib/notifications/action";
 import { isInformationalNotification, type NotificationPayload } from "@/lib/notifications/deepLink";
@@ -235,7 +235,7 @@ function Row({
         {isHigh && <span className="absolute inset-y-0 right-0 w-[3px] bg-gradient-to-b from-gold via-amber-300 to-gold" />}
         <button onClick={() => onOpen(n)} className="flex flex-1 items-start gap-3 text-right">
           {n.image_url ? (
-            <CachedImage src={n.image_url} alt="" className="size-14 shrink-0 rounded-xl object-cover ring-1 ring-gold/20" loading="lazy" />
+            <NotificationThumbnail src={n.image_url} notificationId={n.id} />
           ) : (
             <div className={`grid size-14 shrink-0 place-items-center rounded-xl ${cat.accentBg} ring-1 ring-white/10`}>
               <Icon className={`size-5 ${cat.accent}`} strokeWidth={1.7} />
