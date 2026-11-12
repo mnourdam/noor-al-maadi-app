@@ -19,7 +19,7 @@
 import { recordTrace } from "@/lib/diag-trace";
 import { supabase } from "@/integrations/supabase/client";
 import { saveGameplay, saveUserId, saveAccepted, type SaveOutcome } from "@/lib/offline/gameplay-write";
-import { getActiveOwner, getActiveUserId } from "@/lib/identity/owner";
+import { getActiveOwner, getActiveUserId, getIdentityEpoch } from "@/lib/identity/owner";
 
 const inflightFetch = new Map<string, Promise<{ userId: string | null; ids: Set<string> }>>();
 const LOCAL_STICKY_KEY = "irth.campaign_completions.v1";
@@ -172,23 +172,27 @@ export async function recordCampaignCompletion(p: {
  * V13: Returns the userId that produced this result to allow ownership validation.
  */
 export async function fetchServerCompletedIds(): Promise<{ userId: string | null; ids: Set<string> }> {
+  const owner = getActiveOwner(), epoch = getIdentityEpoch();
+  const current = () => getActiveOwner() === owner && getIdentityEpoch() === epoch;
   const uid = await getActiveUserId();
+  if (!current()) return { userId: uid, ids: new Set<string>() };
   if (!uid) return { userId: null, ids: new Set<string>() };
 
-  // SINGLE-FLIGHT: Reuse in-flight promise for the same user.
-  const existing = inflightFetch.get(uid);
+  // Reuse only within the same identity lifetime.
+  const key = JSON.stringify([owner, epoch, uid]);
+  const existing = inflightFetch.get(key);
   if (existing) return existing;
 
   const promise = (async (): Promise<{ userId: string | null; ids: Set<string> }> => {
     const started = performance.now();
     try {
       const { data, error } = await supabase
-        .from("user_campaign_progress")
+        .from("user_campaign_completions")
         .select("campaign_id")
         .eq("user_id", uid);
       
       // STALE CHECK: If identity switched during the request, discard result.
-      if (getActiveUserId() !== uid) {
+      if (!current() || getActiveUserId() !== uid) {
         return { userId: uid, ids: new Set<string>() };
       }
 
@@ -200,16 +204,18 @@ export async function fetchServerCompletedIds(): Promise<{ userId: string | null
         }
       }
       const duration = Math.round(performance.now() - started);
-      return { userId: uid, ids };
+      return { userId: uid, ids: current() ? ids : new Set<string>() };
     } catch {
       const duration = Math.round(performance.now() - started);
       return { userId: uid, ids: new Set<string>() };
-    } finally {
-      inflightFetch.delete(uid);
     }
   })();
 
-  inflightFetch.set(uid, promise);
+  inflightFetch.set(key, promise);
+  const clear = () => {
+    if (inflightFetch.get(key) === promise) inflightFetch.delete(key);
+  };
+  void promise.then(clear, clear);
   return promise;
 }
 
@@ -236,6 +242,8 @@ function normalizeIdentifier(id: string | null | undefined): string[] {
 export async function unionCompletedIds(
   profileCompleted: readonly string[] | undefined,
 ): Promise<Set<string>> {
+  const owner = getActiveOwner(), epoch = getIdentityEpoch();
+  const current = () => getActiveOwner() === owner && getIdentityEpoch() === epoch;
   const started = performance.now();
   const out = new Set<string>();
   
@@ -262,7 +270,7 @@ export async function unionCompletedIds(
   }
   
   const totalDuration = Math.round(performance.now() - started);
-  return out;
+  return current() ? out : new Set<string>();
 }
 
 /**

@@ -3950,12 +3950,12 @@
     },
     {
       "path": "src/lib/campaigns/completions.ts",
-      "sha256": "6f92be658af2a298f06402917bb42c33c7780600ad049f1181095bf1ca39d100",
+      "sha256": "d5d9935c300316058f61994f2b7caab119aba61fa7f41613f77b6e4d0c320b05",
       "rpc_candidates": [
         "record_campaign_completion"
       ],
       "table_candidates": [
-        "user_campaign_progress"
+        "user_campaign_completions"
       ],
       "limit": "lexical literal calls only; wrapper/dynamic/local writers require manual coverage"
     },
