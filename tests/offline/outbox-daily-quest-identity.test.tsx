@@ -671,3 +671,84 @@ describe("P1-07 real DailyQuestCard + real grant/probe controlled races", () => 
     expect(screen.getByText("e1")).toBeTruthy();
   });
 });
+
+const invalidReceipts: [string, unknown][] = [
+  ["null", null], ["empty", {}], ["array", []], ["string", "ok"],
+  ["missing ok", { applied: true }], ["missing applied", { ok: true }],
+  ["truthy applied", { ok: true, applied: "yes" }],
+  ["falsey applied", { ok: true, applied: 0 }],
+  ["denied", { ok: false, reason: "denied" }],
+  ["contradictory applied", { ok: false, applied: true }],
+  ["contradictory duplicate", { ok: true, applied: false, reason: "denied" }],
+  ["contradictory grant", { ok: true, applied: true, reason: "already_applied" }],
+];
+describe("daily quest receipt evidence boundary", () => {
+  it.each(invalidReceipts)("keeps %s RPC receipt unresolved without publishing or retrying", async (_label, data) => {
+    env.rpc.mockImplementation(async (name) => name === "get_my_profile" ? profile : { data, error: null });
+    const result = await reward.grantDailyQuestReward(params());
+    expect(result).toMatchObject({ outcome: "unresolved", rpcStatus: "unresolved", rpcMayHaveApplied: true });
+    expect(result.deltaId).not.toBe("");
+    expect(result.serverStats).toBeUndefined();
+    expect(result.serverStatsBefore).toBeUndefined();
+    expect(result.serverStatsAfter).toBeUndefined();
+    expect(env.rpc.mock.calls.filter(([name]) => name === "get_my_profile")).toHaveLength(1);
+    expect(env.row).not.toHaveBeenCalled();
+    expect(env.enqueue).not.toHaveBeenCalled();
+    expect(env.flush).not.toHaveBeenCalled();
+  });
+  it.each(invalidReceipts)("mounted card does not reward %s receipt", async (_label, data) => {
+    seed();
+    env.rpc.mockImplementation(async (name) => name === "get_my_profile" ? profile : { data, error: null });
+    render(<DailyQuestCard />);
+    await drain();
+    expect(deltaCalls()).toHaveLength(1);
+    expect(quest.getTodayQuest("alice")?.rewarded).toBe(false);
+    expect(env.stats).not.toHaveBeenCalled();
+    expect(env.points).not.toHaveBeenCalled();
+    expect(env.dinars).not.toHaveBeenCalled();
+    expect(navigator.vibrate).not.toHaveBeenCalled();
+    expect(env.enqueue).not.toHaveBeenCalled();
+    expect(env.flush).not.toHaveBeenCalled();
+  });
+  it.each([
+    [{ ok: true, applied: true }, "granted"],
+    [{ ok: true, applied: false }, "already_granted"],
+    [{ ok: true, applied: false, reason: "already_applied" }, "already_granted"],
+    [{ ok: false, reason: "unauthenticated" }, "unauthenticated"],
+  ] as const)("preserves valid receipt %j", async (data, outcome) => {
+    env.rpc.mockImplementation(async (name) => name === "get_my_profile" ? profile : { data, error: null });
+    expect((await reward.grantDailyQuestReward(params())).outcome).toBe(outcome);
+  });
+});
+
+it("remount retries an unresolved receipt with the same delta and reconciles valid duplicate", async () => {
+  seed();
+  env.rpc.mockImplementation(async (name) =>
+    name === "get_my_profile" ? profile : { data: null, error: null },
+  );
+  const first = render(<DailyQuestCard />);
+  await drain();
+  expect(deltaCalls()).toHaveLength(1);
+  expect(quest.getTodayQuest("alice")?.rewarded).toBe(false);
+  expect(env.stats).not.toHaveBeenCalled();
+  expect(env.enqueue).not.toHaveBeenCalled();
+  expect(env.flush).not.toHaveBeenCalled();
+  const firstDelta = deltaCalls()[0][1].p_delta_id;
+  first.unmount();
+  env.rpc.mockImplementation(async (name) =>
+    name === "get_my_profile"
+      ? profile
+      : { data: { ok: true, applied: false, reason: "already_applied" }, error: null },
+  );
+  render(<DailyQuestCard />);
+  await drain();
+  expect(deltaCalls()).toHaveLength(2);
+  expect(deltaCalls()[1][1].p_delta_id).toBe(firstDelta);
+  expect(quest.getTodayQuest("alice")?.rewarded).toBe(true);
+  expect(env.stats).toHaveBeenCalledTimes(1);
+  expect(env.points).not.toHaveBeenCalled();
+  expect(env.dinars).not.toHaveBeenCalled();
+  expect(navigator.vibrate).not.toHaveBeenCalled();
+  expect(env.enqueue).not.toHaveBeenCalled();
+  expect(env.flush).not.toHaveBeenCalled();
+});

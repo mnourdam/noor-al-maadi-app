@@ -41,6 +41,7 @@ import { flushOutbox } from "@/lib/offline/flush";
 import { getActiveOwner, getIdentityEpoch, onOwnerChange } from "@/lib/identity/owner";
 
 export type GrantOutcome =
+  | "unresolved" // RPC receipt is not usable confirmation; server may have applied
   | "stale_context" // no local publication; an already-started RPC may have committed
 
   | "granted"          // RPC returned applied=true this call
@@ -227,6 +228,20 @@ export async function isDailyQuestRewardedOnServer(params: {
   }
 }
 
+/** Validate receipt semantics, never infer confirmation from HTTP success or totals. */
+function classifyGrantReceipt(data: unknown): "granted" | "already_granted" | "unauthenticated" | undefined {
+  if (!data || typeof data !== "object" || Array.isArray(data)) return undefined;
+  const receipt = data as Record<string, unknown>;
+  if (receipt.ok === false && receipt.reason === "unauthenticated" && receipt.applied === undefined)
+    return "unauthenticated";
+  if (receipt.ok !== true) return undefined;
+  if (receipt.applied === true && receipt.reason === undefined) return "granted";
+  // Older adapters omit the optional duplicate reason; retain that established shape.
+  if (receipt.applied === false && (receipt.reason === undefined || receipt.reason === "already_applied"))
+    return "already_granted";
+  return undefined;
+}
+
 /** Identity-scoped canonical grant. Stale results never carry usable stats.
  * A stale/failed response is NOT proof that an in-flight server grant rolled back.
  */
@@ -311,18 +326,19 @@ export async function grantDailyQuestReward(params: {
     const { data, error } = response;
     rpcStatus = error ? "error" : "success";
     if (error) return await queue(error.message);
-    const payload = (data ?? {}) as { ok?: boolean; applied?: boolean; reason?: string };
+    const outcome = classifyGrantReceipt(data);
+    if (outcome === undefined) {
+      // An unrecognized receipt does not prove rollback or permission to retry.
+      // Do not attach unrelated profile totals as grant evidence or auto-enqueue.
+      return { outcome: "unresolved", deltaId, rpcStatus: "unresolved", rpcMayHaveApplied: rpcStarted };
+    }
+    const payload = data as { ok?: boolean; applied?: boolean; reason?: string };
     const serverStatsAfter = await fetchAuthoritativeProfileStats(scope);
     scope.assert();
     const deltaRow = await fetchDeltaRowExists(deltaId, scope);
     scope.assert();
     return {
-      outcome:
-        payload.ok === false && payload.reason === "unauthenticated"
-          ? "unauthenticated"
-          : payload.applied
-            ? "granted"
-            : "already_granted",
+      outcome,
       deltaId,
       rpcStatus,
       rpcBody: payload,
