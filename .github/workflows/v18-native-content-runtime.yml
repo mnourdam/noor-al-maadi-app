@@ -1,0 +1,101 @@
+name: V18 Disposable Native Content Runtime
+on:
+  push:
+    branches: [v18-01a-outbox-recovery]
+    paths:
+      - '.github/workflows/v18-native-content-runtime.yml'
+      - 'tests/offline/browser/*native-content*'
+      - 'tests/offline/browser/content-runtime-fixture.ts'
+      - 'android/**'
+      - 'src/lib/offline-*'
+      - 'src/lib/local-first-store.ts'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-content:
+    if: github.ref == 'refs/heads/v18-01a-outbox-recovery'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: python -m pip install websocket-client==1.8.0
+      - name: Provision official tools using existing accepted licenses only
+        run: |
+          set -euo pipefail
+          manager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          test -x "$manager"
+          test -f "$ANDROID_HOME/licenses/android-sdk-license"
+          # Never accept new license terms automatically; stdin is closed.
+          "$manager" 'platforms;android-36' 'build-tools;35.0.0' 'platform-tools' 'emulator' 'system-images;android-35;default;x86_64' </dev/null
+          test -f "$ANDROID_HOME/system-images/android-35/default/x86_64/package.xml"
+          test -r /dev/kvm && test -w /dev/kvm
+      - name: Prepare disposable app copy and ephemeral debug key
+        run: python tests/offline/browser/prepare-native-content.py "$RUNNER_TEMP/irth-native-acceptance"
+      - name: Package debug only and verify absence of INTERNET before install
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/irth-native-acceptance/android"
+          ./gradlew --no-daemon --console=plain :app:assembleDebug
+          apk=app/build/outputs/apk/debug/app-debug.apk
+          test -f "$apk"
+          python - <<'PY'
+          import pathlib,xml.etree.ElementTree as ET
+          files=list(pathlib.Path('app/build/intermediates/merged_manifests').rglob('AndroidManifest.xml'))
+          assert files, 'Merged manifests missing'
+          for file in files:
+              permissions=[e.get('{http://schemas.android.com/apk/res/android}name') for e in ET.parse(file).getroot().findall('uses-permission')]
+              assert 'android.permission.INTERNET' not in permissions, 'Merged INTERNET forbidden'
+          PY
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump permissions "$apk" > "$RUNNER_TEMP/native-permissions.txt"
+          if grep -q 'android.permission.INTERNET' "$RUNNER_TEMP/native-permissions.txt"; then echo 'INTERNET permission forbidden'; exit 1; fi
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify "$apk"
+      - name: Start disposable AOSP emulator and verify native runtime
+        run: |
+          set -euo pipefail
+          export ANDROID_AVD_HOME="$RUNNER_TEMP/native-avd"
+          mkdir -p "$ANDROID_AVD_HOME"
+          # 'no' declines optional custom hardware profile; this is not license consent.
+          printf 'no\n' | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd -n irth-acceptance -k 'system-images;android-35;default;x86_64'
+          "$ANDROID_HOME/emulator/emulator" -avd irth-acceptance -no-window -no-audio -no-snapshot -no-boot-anim -gpu swiftshader_indirect > "$RUNNER_TEMP/native-emulator.log" 2>&1 &
+          trap 'adb emu kill >/dev/null 2>&1 || true' EXIT
+          timeout 180 adb wait-for-device
+          for i in $(seq 1 120); do
+            if [[ "$(adb shell getprop sys.boot_completed | tr -d '\r')" == 1 ]]; then break; fi
+            sleep 2
+          done
+          test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = 1
+          mapfile -t devices < <(adb devices | awk '$2=="device" {print $1}')
+          test "${#devices[@]}" = 1
+          [[ "${devices[0]}" =~ ^emulator-[0-9]+$ ]]
+          export ANDROID_SERIAL="${devices[0]}"
+          adb install "$RUNNER_TEMP/irth-native-acceptance/android/app/build/outputs/apk/debug/app-debug.apk"
+          python tests/offline/browser/native-content-device.py > native-content-result.json
+          cat native-content-result.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-content-sanitized-evidence
+          path: native-content-result.json
+          if-no-files-found: error
+          retention-days: 7
+      - name: Discard isolated app, key and emulator data
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/irth-native-acceptance" "$RUNNER_TEMP/native-avd"
