@@ -331,6 +331,15 @@ function dinarsForReward(xp: number): number {
   return Math.max(1, Math.floor(xp / 4));
 }
 
+/** Validate the entire variable reward before accepting any completion metadata. */
+function localRewardTotals(p: ProfileState, reward: number): Pick<ProfileState, "points" | "dinars"> | undefined {
+  if (!Number.isFinite(reward)) return undefined;
+  const points = p.points + reward;
+  const dinars = Math.max(0, (p.dinars ?? 0) + dinarsForReward(reward));
+  if (!Number.isFinite(points) || !Number.isFinite(dinars)) return undefined;
+  return { points, dinars };
+}
+
 /**
  * Read the persisted profile snapshot outside React.
  *
@@ -629,7 +638,10 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       });
     },
     userId: profileOwner.startsWith("user:") ? profileOwner.slice(5) : null,
-    addPoints: (n) => update((p) => addPointsTo(p, n)),
+    addPoints: (n) => {
+      if (!Number.isFinite(n)) return;
+      update((p) => Number.isFinite(p.points + n) ? addPointsTo(p, n) : p);
+    },
 
     openStory: (id) => update((p) => p.storiesOpened.includes(id) ? p : { ...p, storiesOpened: [...p.storiesOpened, id] }),
     finishStory: (id, missionId) => update((p) => {
@@ -674,6 +686,8 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     awardBadge,
     completeInvestigation: (id, reward) => update((p) => {
       if (p.investigationsCompleted.includes(id)) return p;
+      const totals = localRewardTotals(p, reward);
+      if (!totals) return p;
       // Qualifying streak activity: investigation completion.
       const today = todayKey();
       let streak = p.streak;
@@ -684,13 +698,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         streak = lastActiveDay === yesterday ? streak + 1 : 1;
         lastActiveDay = today;
       }
-      return addDinarsTo(
-        addPointsTo(
-          { ...p, investigationsCompleted: [...p.investigationsCompleted, id], streak, lastActiveDay },
-          reward,
-        ),
-        dinarsForReward(reward),
-      );
+      return { ...p, ...totals, investigationsCompleted: [...p.investigationsCompleted, id], streak, lastActiveDay };
     }),
     /**
      * Phase G — Marks completion locally without granting XP/dinars.
@@ -709,15 +717,25 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       }
       return { ...p, investigationsCompleted: [...p.investigationsCompleted, id], streak, lastActiveDay };
     }),
-    completeTimeline: (id, reward) => update((p) => p.timelinesCompleted.includes(id) ? p
-      : addDinarsTo(addPointsTo({ ...p, timelinesCompleted: [...p.timelinesCompleted, id] }, reward), dinarsForReward(reward))),
-    completeDecision: (id, reward) => update((p) => p.decisionsCompleted.includes(id) ? p
-      : addDinarsTo(addPointsTo({ ...p, decisionsCompleted: [...p.decisionsCompleted, id] }, reward), dinarsForReward(reward))),
-    completeMission: (id, reward) => update((p) => p.missionsCompleted.includes(id) ? p
-      : addDinarsTo(addPointsTo({ ...p, missionsCompleted: [...p.missionsCompleted, id] }, reward), dinarsForReward(reward))),
+    completeTimeline: (id, reward) => update((p) => {
+      if (p.timelinesCompleted.includes(id)) return p;
+      const totals = localRewardTotals(p, reward);
+      return totals ? { ...p, ...totals, timelinesCompleted: [...p.timelinesCompleted, id] } : p;
+    }),
+    completeDecision: (id, reward) => update((p) => {
+      if (p.decisionsCompleted.includes(id)) return p;
+      const totals = localRewardTotals(p, reward);
+      return totals ? { ...p, ...totals, decisionsCompleted: [...p.decisionsCompleted, id] } : p;
+    }),
+    completeMission: (id, reward) => update((p) => {
+      if (p.missionsCompleted.includes(id)) return p;
+      const totals = localRewardTotals(p, reward);
+      return totals ? { ...p, ...totals, missionsCompleted: [...p.missionsCompleted, id] } : p;
+    }),
     completeCampaign: (id, reward) => update((p) => {
       if (p.campaignsCompleted.includes(id)) return p;
-      return addDinarsTo(addPointsTo({ ...p, campaignsCompleted: [...p.campaignsCompleted, id] }, reward), dinarsForReward(reward));
+      const totals = localRewardTotals(p, reward);
+      return totals ? { ...p, ...totals, campaignsCompleted: [...p.campaignsCompleted, id] } : p;
     }),
     findArtifact: (id) => update((p) => p.artifactsFound.includes(id) ? p
       : addPointsTo({ ...p, artifactsFound: [...p.artifactsFound, id] }, 15)),
@@ -739,9 +757,10 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         const today = todayKey();
         const dc = p.dailyClaimed.day === today ? p.dailyClaimed : { day: today, ids: [] };
         if (dc.ids.includes(id)) return p;
+        const totals = localRewardTotals(p, reward);
+        if (!totals) return p;
         ok = true;
-        const next = addDinarsTo(addPointsTo({ ...p, dailyClaimed: { day: today, ids: [...dc.ids, id] } }, reward), dinarsForReward(reward));
-        return next;
+        return { ...p, ...totals, dailyClaimed: { day: today, ids: [...dc.ids, id] } };
       });
       return ok;
     },
@@ -849,7 +868,10 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       });
       return ok;
     },
-    addDinars: (n) => update((p) => addDinarsTo(p, n)),
+    addDinars: (n) => {
+      if (!Number.isFinite(n)) return;
+      update((p) => Number.isFinite(Math.max(0, (p.dinars ?? 0) + n)) ? addDinarsTo(p, n) : p);
+    },
     spendDinars: (n) => {
       if (!Number.isFinite(n)) return false;
       let ok = false;

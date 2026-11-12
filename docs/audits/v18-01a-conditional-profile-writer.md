@@ -63,3 +63,7 @@ projects PASS, client/SSR build PASS. Initial typecheck caught five new test-onl
 implicit-any annotations; these were corrected and the full sequence rerun.
 No production-source change or removed assertion was needed. Remote branch CI
 is pending for this source commit. This is not release/deployment approval.
+
+Remote runtime CI **SUCCESS**: [43188945069](https://github.com/mnourdam/noor-al-maadi-app/actions/runs/43188945069), tested commit `cd1c25a7e9de78843d6bc8ec2833b4fff8dc752e`.
+Verified job `131083078790` passed every step, including regressions, scheduler,
+typecheck and client/SSR build. No deployment.
