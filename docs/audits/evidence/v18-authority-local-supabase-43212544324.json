@@ -1,0 +1,321 @@
+{
+  "run_id": 43212544324,
+  "job_id": 131163545156,
+  "source_commit": "b24cb784d6f64661c6e26d4456fe53cbca3a6ac0",
+  "artifact_id": 13942566409,
+  "artifact_zip_sha256": "5ccb5a16e96fb4fb324f79f233ea4f8f9090f15a84e13a231e56d3419d90359b",
+  "acceptance": {
+    "scope": "LOCAL SUPABASE STACK ONLY; NOT hosted staging or production approval",
+    "cli_version": "2.122.1",
+    "source_sha": "b24cb784d6f64661c6e26d4456fe53cbca3a6ac0",
+    "cases": [
+      "exact pinned CLI version",
+      "actual isolated database",
+      "empty Auth before installation",
+      "empty public before installation",
+      "actual roles effective schema table column function and membership boundaries",
+      "dedicated creator default ACL v18_proto_issuer",
+      "dedicated creator default ACL v18_proto_executor",
+      "database-specific API-only configuration recorded",
+      "real Auth creates alice",
+      "real Auth password grant alice",
+      "real Auth creates bob",
+      "real Auth password grant bob",
+      "API schema active and public schema excluded",
+      "own bootstrap through verified JWT",
+      "bootstrap exact replay no additional effect",
+      "cross-owner bootstrap",
+      "cross-owner bootstrap: complete protected state unchanged",
+      "second owner concurrent bootstrap identical receipt",
+      "tampered valid-token signature denied",
+      "tampered valid-token signature denied: complete protected state unchanged",
+      "tampered subject without signature denied",
+      "tampered subject without signature denied: complete protected state unchanged",
+      "no bearer denied",
+      "no bearer denied: complete protected state unchanged",
+      "anon denied",
+      "anon denied: complete protected state unchanged",
+      "service BYPASSRLS denied",
+      "service BYPASSRLS denied: complete protected state unchanged",
+      "invalid JWT denied",
+      "invalid JWT denied: complete protected state unchanged",
+      "no caller owner overload",
+      "no caller owner overload: complete protected state unchanged",
+      "cross-owner apply",
+      "cross-owner apply: complete protected state unchanged",
+      "negative revision rejected",
+      "negative revision rejected: complete protected state unchanged",
+      "tampered immutable journal lineage rejected",
+      "tampered immutable journal lineage rejected: complete protected state unchanged",
+      "synthetic journal corruption restored byte-for-byte",
+      "journal mutation guard restored",
+      "own fact apply receipt and totals",
+      "exact retry returns identical receipt without writes",
+      "new request alias cannot consume fact twice",
+      "new request alias cannot consume fact twice: complete protected state unchanged",
+      "request ID binding",
+      "request ID binding: complete protected state unchanged",
+      "stale revision",
+      "stale revision: complete protected state unchanged",
+      "CAS contenders belong to distinct sealed sources",
+      "parallel HTTP distinct-source CAS exactly one winner",
+      "CAS one committed delta",
+      "concurrent identical request returns one receipt",
+      "concurrent retry exactly one purchase",
+      "same request identifier scoped independently to second owner",
+      "late write failure rolls back account operation and consumption",
+      "late write failure rolls back account operation and consumption: complete protected state unchanged",
+      "same failed request succeeds after fault removed",
+      "negative control catches column-only privilege leak",
+      "column ACL control restored without data change",
+      "negative owner-overload control reaches real HTTP",
+      "no-owner overload detector demonstrably fails when weakened",
+      "catalog detector catches extra API function",
+      "owner overload removed and no data changed",
+      "final restored effective ACLs",
+      "auth.uid definition unchanged across all tests",
+      "final original replay clean after controls"
+    ],
+    "result": "LOCAL STACK PASS; HOSTED AND PRODUCTION NOT ACCEPTED",
+    "stage": "acceptance complete",
+    "containers": [
+      {
+        "component": "db",
+        "image": "public.ecr.aws/supabase/postgres:17.11.0.006",
+        "image_id": "sha256:75e157ef7b7e35e286a2df56e2fb1be697bbf0b07fae0565f3c1da0b33f4629a",
+        "repo_digests": [
+          "public.ecr.aws/supabase/postgres@sha256:c141fd17ac6a76c4323e90b3aee8ff1a23d2e89e547c2b963cfadc309c079cc2"
+        ]
+      },
+      {
+        "component": "kong",
+        "image": "public.ecr.aws/supabase/kong:2.8.1",
+        "image_id": "sha256:3cefb958bcd694597b65adc00053a762b1f9a6df3c6031af528d052d75a64e1a",
+        "repo_digests": [
+          "public.ecr.aws/supabase/kong@sha256:1b53405d8680a09d6f44494b7990bf7da2ea43f84a258c59717d4539abf09f6d"
+        ]
+      },
+      {
+        "component": "auth",
+        "image": "public.ecr.aws/supabase/gotrue:v2.197.0",
+        "image_id": "sha256:1181bff5ba4ce440013a63cef9f4cf13024c432d705c9b1fbc9e5b949e852f48",
+        "repo_digests": [
+          "public.ecr.aws/supabase/gotrue@sha256:1736a63078f5922b198c4cbe50f80ab9a2d3b54fe8b7b6cfb2e9dc5dbbc12c6b"
+        ]
+      },
+      {
+        "component": "rest",
+        "image": "public.ecr.aws/supabase/postgrest:v16.5",
+        "image_id": "sha256:f9bffe857637b7f388451218ce8f10d8718b91952a4585c79a9f3c7c701df508",
+        "repo_digests": [
+          "public.ecr.aws/supabase/postgrest@sha256:1347d7552b88f17832912c06afbf7c43209af6eeeb60834b04aae12c9bd9d5cc"
+        ]
+      }
+    ],
+    "local_admin": {
+      "superuser": false,
+      "create_role": true
+    },
+    "admin_route": "verified pinned-container supabase_admin local socket",
+    "admin_session": {
+      "role": "supabase_admin",
+      "socket": true,
+      "session": "supabase_admin",
+      "database": "postgres",
+      "superuser": true
+    },
+    "admin_socket": "/var/run/postgresql",
+    "adapter": {
+      "engine_sha256": "236b2f313ecf1861d54ae07ad18dd4c297a27b853b32f70637d536e1f2fd19f8",
+      "transformed_engine_sha256": "aee2e46bd2bccfe0d68e760357b55e7ae3f9d7c1ca24a50aa42a6f6e7b04257d",
+      "adapter_sha256": "f4bbd44609585b0cc3acb0a1e70c650e2ec8ecf5e388e7d6d88a1adc1f95fd01",
+      "transaction_sha256": "1e1671d0b392dde2c207754bc1bb8e4e2b0f60b0cb02e4ebac9d50f8ebe99341",
+      "exact_transformations": [
+        "disposable_database_guard",
+        "existing_pgcrypto_facade"
+      ]
+    },
+    "schema_configuration": {
+      "global_setting_exact": false,
+      "database_setting_exact": true,
+      "global_preconfig_present": false,
+      "database_preconfig_present": false
+    },
+    "schema_readiness": {
+      "attempt": 1,
+      "api": {
+        "status": 400,
+        "code": "P0001",
+        "class": "known_engine_unknown_seal"
+      },
+      "public": {
+        "status": 406,
+        "code": "PGRST106",
+        "class": "schema_not_exposed"
+      }
+    },
+    "final_state_sha256": "fa1e0c27a49432663ace01377bf806ec8a93fcf5905fee858a65db2e6e2d75dd",
+    "concurrency_scope": "Parallel HTTP submission; no forced lock-overlap claim. Separate PostgreSQL engine fixture covers forced overlap.",
+    "numeric_scope": "HTTP negative revision tested; overflow and underflow matrix remains separate PostgreSQL engine evidence.",
+    "default_acl_scope": "Dedicated issuer/executor future objects checked; future postgres/supabase_admin-created objects require explicit cleanup and are not certified.",
+    "default_acls": [
+      {
+        "acl": "{postgres=arwdDxtm/postgres,anon=arwdDxtm/postgres,authenticated=arwdDxtm/postgres,service_role=arwdDxtm/postgres}",
+        "type": "r",
+        "owner": "postgres",
+        "schema": "public"
+      },
+      {
+        "acl": "{postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+        "type": "f",
+        "owner": "postgres",
+        "schema": "public"
+      },
+      {
+        "acl": "{postgres=rwU/postgres,anon=rwU/postgres,authenticated=rwU/postgres,service_role=rwU/postgres}",
+        "type": "S",
+        "owner": "postgres",
+        "schema": "public"
+      },
+      {
+        "acl": "{postgres=rwU/supabase_admin,anon=rwU/supabase_admin,authenticated=rwU/supabase_admin,service_role=rwU/supabase_admin}",
+        "type": "S",
+        "owner": "supabase_admin",
+        "schema": "public"
+      },
+      {
+        "acl": "{postgres=arwdDxtm/supabase_admin,anon=arwdDxtm/supabase_admin,authenticated=arwdDxtm/supabase_admin,service_role=arwdDxtm/supabase_admin}",
+        "type": "r",
+        "owner": "supabase_admin",
+        "schema": "public"
+      },
+      {
+        "acl": "{postgres=X/supabase_admin,anon=X/supabase_admin,authenticated=X/supabase_admin,service_role=X/supabase_admin}",
+        "type": "f",
+        "owner": "supabase_admin",
+        "schema": "public"
+      },
+      {
+        "acl": "{postgres=arwdDxtm/postgres,anon=arwdDxtm/postgres,authenticated=arwdDxtm/postgres,service_role=arwdDxtm/postgres}",
+        "type": "r",
+        "owner": "postgres",
+        "schema": "storage"
+      },
+      {
+        "acl": "{postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+        "type": "f",
+        "owner": "postgres",
+        "schema": "storage"
+      },
+      {
+        "acl": "{postgres=rwU/postgres,anon=rwU/postgres,authenticated=rwU/postgres,service_role=rwU/postgres}",
+        "type": "S",
+        "owner": "postgres",
+        "schema": "storage"
+      },
+      {
+        "acl": "{postgres=rwU/supabase_admin,anon=rwU/supabase_admin,authenticated=rwU/supabase_admin,service_role=rwU/supabase_admin}",
+        "type": "S",
+        "owner": "supabase_admin",
+        "schema": "graphql_public"
+      },
+      {
+        "acl": "{postgres=arwdDxtm/supabase_admin,anon=arwdDxtm/supabase_admin,authenticated=arwdDxtm/supabase_admin,service_role=arwdDxtm/supabase_admin}",
+        "type": "r",
+        "owner": "supabase_admin",
+        "schema": "graphql_public"
+      },
+      {
+        "acl": "{postgres=X/supabase_admin,anon=X/supabase_admin,authenticated=X/supabase_admin,service_role=X/supabase_admin}",
+        "type": "f",
+        "owner": "supabase_admin",
+        "schema": "graphql_public"
+      },
+      {
+        "acl": "{postgres=a*r*w*d*D*x*t*m*/supabase_admin}",
+        "type": "r",
+        "owner": "supabase_admin",
+        "schema": "extensions"
+      },
+      {
+        "acl": "{postgres=X*/supabase_admin}",
+        "type": "f",
+        "owner": "supabase_admin",
+        "schema": "extensions"
+      },
+      {
+        "acl": "{postgres=r*w*U*/supabase_admin}",
+        "type": "S",
+        "owner": "supabase_admin",
+        "schema": "extensions"
+      },
+      {
+        "acl": "{postgres=arwdDxtm/supabase_admin,anon=arwdDxtm/supabase_admin,authenticated=arwdDxtm/supabase_admin,service_role=arwdDxtm/supabase_admin}",
+        "type": "r",
+        "owner": "supabase_admin",
+        "schema": "graphql"
+      },
+      {
+        "acl": "{postgres=X/supabase_admin,anon=X/supabase_admin,authenticated=X/supabase_admin,service_role=X/supabase_admin}",
+        "type": "f",
+        "owner": "supabase_admin",
+        "schema": "graphql"
+      },
+      {
+        "acl": "{postgres=rwU/supabase_admin,anon=rwU/supabase_admin,authenticated=rwU/supabase_admin,service_role=rwU/supabase_admin}",
+        "type": "S",
+        "owner": "supabase_admin",
+        "schema": "graphql"
+      },
+      {
+        "acl": "{postgres=arwdDxtm/supabase_admin,anon=arwdDxtm/supabase_admin,authenticated=arwdDxtm/supabase_admin,service_role=arwdDxtm/supabase_admin}",
+        "type": "r",
+        "owner": "supabase_admin",
+        "schema": "supabase_functions"
+      },
+      {
+        "acl": "{postgres=X/supabase_admin,anon=X/supabase_admin,authenticated=X/supabase_admin,service_role=X/supabase_admin}",
+        "type": "f",
+        "owner": "supabase_admin",
+        "schema": "supabase_functions"
+      },
+      {
+        "acl": "{postgres=rwU/supabase_admin,anon=rwU/supabase_admin,authenticated=rwU/supabase_admin,service_role=rwU/supabase_admin}",
+        "type": "S",
+        "owner": "supabase_admin",
+        "schema": "supabase_functions"
+      },
+      {
+        "acl": "{postgres=rwU/supabase_admin,dashboard_user=rwU/supabase_admin}",
+        "type": "S",
+        "owner": "supabase_admin",
+        "schema": "realtime"
+      },
+      {
+        "acl": "{postgres=X/supabase_admin,dashboard_user=X/supabase_admin}",
+        "type": "f",
+        "owner": "supabase_admin",
+        "schema": "realtime"
+      },
+      {
+        "acl": "{postgres=a*r*wdDxtm/supabase_admin,dashboard_user=arwdDxtm/supabase_admin}",
+        "type": "r",
+        "owner": "supabase_admin",
+        "schema": "realtime"
+      },
+      {
+        "acl": "{v18_proto_issuer=X/v18_proto_issuer}",
+        "type": "f",
+        "owner": "v18_proto_issuer",
+        "schema": null
+      },
+      {
+        "acl": "{v18_proto_executor=X/v18_proto_executor}",
+        "type": "f",
+        "owner": "v18_proto_executor",
+        "schema": null
+      }
+    ],
+    "cleanup": "unique project stopped without backups"
+  }
+}
