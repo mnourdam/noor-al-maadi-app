@@ -60,9 +60,22 @@ is made. Hosted staging and real Android acceptance remain separate gates.
   PyPI Playwright 1.62.0 and its installed Chromium, with no project secrets,
   deployed origin, backend access, or deployment step. npm dependencies use the
   existing lock. It uploads only the result JSON, not the temporary profile.
-- Remote native acceptance: **PENDING** until the workflow result is inspected.
+- Remote native acceptance: **PASS, all eight checks**, run
+  [43176320739](https://github.com/mnourdam/noor-al-maadi-app/actions/runs/43176320739),
+  tested commit `a0947aaa27133d05c848eb3906e5ab3c791a91a1`.
+- Native artifact `13924347669` was downloaded, its SHA-256 verified as
+  `add84b833fe61c5adbc35e4d8873617f67d1d663464242cac328f91dbfbb2749`,
+  and the result JSON inspected. Durable copy:
+  [v18-native-settlement-43176320739.json](evidence/v18-native-settlement-43176320739.json).
+  The fixture reports Chromium's reduced user-agent version `151.0.0.0`,
+  not an exact browser binary patch version.
+- Full offline regression CI also **PASS** at the same tested commit:
+  [43176320492](https://github.com/mnourdam/noor-al-maadi-app/actions/runs/43176320492),
+  including locked install, 1,107 tests, scheduler, typecheck, and build.
+- No production deployment occurred. Native success does not close the
+  authority admission conditions above.
 
-Eight intended checks are: two-tab stale-base race, full-snapshot comparison,
+The eight passing checks are: two-tab stale-base race, full-snapshot comparison,
 fresh-base retry, abort after three successful native puts across all three writable
 stores, distinct-owner records, page reload, orderly browser-process reopen,
 and an explicit raw-IDB overwrite negative control. The final negative control
