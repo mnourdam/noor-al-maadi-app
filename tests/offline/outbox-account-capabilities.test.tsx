@@ -172,7 +172,7 @@ beforeEach(() => {
   env.fetchAccount.mockImplementation(async (id) => ({ id, username: id, display_name: id }));
   env.fetchCloud.mockImplementation(async (id) => ({ user_id: id, data: profile.profile }));
   env.push.mockResolvedValue(true);
-  env.stats.mockResolvedValue(undefined);
+  env.stats.mockResolvedValue(true);
   env.flush.mockResolvedValue({ flushed: 0, failed: 0 });
   env.rpc.mockResolvedValue({ data: null, error: null });
   env.onboard.mockResolvedValue({ kind: "success" });

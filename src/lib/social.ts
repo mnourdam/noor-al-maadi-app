@@ -204,7 +204,7 @@ export function derivePublicStats(p: ProfileState, canonicalCompletionsCount?: n
 
 export async function pushPublicStats(
   userId: string, p: ProfileState, mayContinue: () => boolean = () => true,
-): Promise<void> {
+): Promise<boolean> {
   const request = accountOperation(userId, mayContinue);
   const snapshot = JSON.parse(JSON.stringify(p)) as ProfileState;
   const current = async () => {
@@ -214,14 +214,14 @@ export async function pushPublicStats(
       return !error && request.current() && data.session?.user.id === userId;
     } catch { return false; }
   };
-  if (!(await current())) return;
+  if (!(await current())) return false;
   // Canonical boundary: resolve the true completion count before derivation.
   let canonicalCount: number | undefined;
   try {
     const { unionCompletedIds } = await import("./campaigns/completions");
-    if (!(await current())) return;
+    if (!(await current())) return false;
     const union = await unionCompletedIds(snapshot.campaignsCompleted);
-    if (!(await current())) return;
+    if (!(await current())) return false;
     // Safety: if union is empty but local profile has data, do NOT downgrade.
     // unionCompletedIds includes profile data, so an empty set implies a failure 
     // or a truly empty account. We only override if we have a positive union.
@@ -232,10 +232,18 @@ export async function pushPublicStats(
     console.error("[social] failed to resolve canonical completions", e);
   }
 
-  if (!(await current())) return;
+  if (!(await current())) return false;
   const stats = derivePublicStats(snapshot, canonicalCount);
   // Route through SECURITY DEFINER RPC; direct UPDATE on economy columns is revoked.
-  await db.rpc("sync_my_public_stats", { p_stats: stats as never });
+  const response: unknown = await db.rpc("sync_my_public_stats", { p_stats: stats as never });
+  // The SQL function returns void. This acknowledges only a completed,
+  // error-free transport response in the still-current local request scope,
+  // not field equality, balance authority, or grant inclusion.
+  if (!request.current() || !response || typeof response !== "object" || Array.isArray(response))
+    return false;
+  const receipt = response as { data?: unknown; error?: unknown };
+  const error = receipt.error, data = receipt.data;
+  return error === null && data === null && request.current();
 }
 
 
