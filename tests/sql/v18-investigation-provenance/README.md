@@ -1,7 +1,9 @@
 # Investigation reward evidence: isolated actual-source repro
 
-Status: **unexecuted PostgreSQL fixture**. Pure safety tests are not evidence that
-the vulnerabilities have been reproduced on an engine. No migration, application
+Original reproduction status: **11 checks PASS_REPRODUCED** in isolated PostgreSQL
+CI run `43211006217`, source `5f4bf49f`, artifact `13941286664` (reported and verified
+by the coordinator). Counterfactual extension status: **engine execution pending**.
+Pure safety tests are not evidence that the guarded producer works on an engine. No migration, application
 caller, published authority prototype, hosted service or real player is changed.
 
 `fixture.py` pins complete migration bytes and extracts the latest
@@ -35,7 +37,7 @@ Hash evidence and static check labels only are emitted. No raw database error or
 connection data is logged. PASS_REPRODUCED means the expected defects were
 observed in this fixture, never that the application is safe.
 
-## Counterfactual producer design, not implemented
+## Counterfactual guarded producer, implemented but not executed
 
 A prospective protected producer would revoke client INSERT/UPDATE/DELETE on
 reward evidence, derive canonical entitlement identity server-side, and append
@@ -53,3 +55,18 @@ client-writable history cannot become trusted by revoking writes today. No legac
 baseline is imported, guessed, repaired or reconstructed from current content.
 A bridge to authority also requires explicit once-only/version lineage policy,
 proof of inclusion, and exclusion of all competing balance writers.
+
+`guarded.sql` is installed only after the original eleven repro checks pass. Its
+admin-only approvals freeze catalog version and amounts, selected by the fixture
+admin from synthetic content. This is a test eligibility issuer, not a production
+issuer. No end-user can create approvals. Once-only identity is owner/investigation,
+not content version. SHA256-derived UUIDs are backed by the complete composite
+issuance key; any pre-existing ledger row without protected issuance, even an
+exact-looking one, fails closed. The original insecure granting RPCs and direct
+loaded-fixture evidence/economic writes are revoked before guarded checks.
+
+`counterfactual.py` asserts unchanged snapshots on rejection and injected faults,
+content-edit replay immutability, and actual overlapping PostgreSQL transactions
+with observed lock blocking. No concurrency acceptance is claimed before engine
+execution. This boundary does not exclude other production writers omitted from
+the fixture and does not turn old rows into verified economic history.

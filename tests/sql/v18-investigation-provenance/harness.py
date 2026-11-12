@@ -75,6 +75,10 @@ def run():
         except psycopg.Error as e:
             check(e.sqlstate=='42501','cross-owner progress insert remains denied')
         else: raise AssertionError('cross-owner insert accepted')
+        from counterfactual import run as guarded_checks
+        original_count=len(checks)
+        evidence['counterfactual']=guarded_checks(c,lambda:psycopg.connect(**options(),autocommit=True),check)
+        check(original_count==11,'original eleven reproduction checks preserved before counterfactual')
         return {'result':'PASS_REPRODUCED','scope':'synthetic dependencies with exact source function/policies; SQL claims NOT JWT; no production proof','checks':checks,'source_evidence':evidence}
 
 if __name__=='__main__':
