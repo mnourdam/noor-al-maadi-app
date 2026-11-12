@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "@tanstack/react-router";
+import { getActiveOwner, getIdentityEpoch, onOwnerChange } from "@/lib/identity/owner";
 import { X } from "lucide-react";
 import { resolveCategory } from "@/lib/notifications/categories";
 import { type NotificationLike, type NotificationPayload } from "@/lib/notifications/deepLink";
@@ -36,35 +37,66 @@ export interface BannerInput extends NotificationLike {
 
 const AUTO_DISMISS_MS = 5000;
 
+const bannerScope = () => JSON.stringify([getActiveOwner(), getIdentityEpoch()]);
 export function InAppBanner() {
+  const scope = useSyncExternalStore(onOwnerChange, bannerScope, () => "server");
+  return <ScopedBanner key={scope} scope={scope} />;
+}
+function ScopedBanner({ scope }: { scope: string }) {
   const router = useRouter();
   const [current, setCurrent] = useState<BannerInput | null>(null);
   const [leaving, setLeaving] = useState(false);
   const queueRef = useRef<BannerInput[]>([]);
   const timerRef = useRef<number | null>(null);
   const lastIdsRef = useRef<Set<string>>(new Set());
+  const alive = useRef(false);
+  const delayed = useRef<Set<number>>(new Set());
+  const isCurrent = () => alive.current && bannerScope() === scope;
+  const schedule = (callback: () => void, delay: number) => {
+    const timer = window.setTimeout(() => {
+      delayed.current.delete(timer);
+      if (isCurrent()) callback();
+    }, delay);
+    delayed.current.add(timer);
+    return timer;
+  };
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+      for (const timer of delayed.current) window.clearTimeout(timer);
+      delayed.current.clear();
+      timerRef.current = null;
+      queueRef.current = [];
+      lastIdsRef.current.clear();
+    };
+  }, []);
+
 
   const dequeue = () => {
+    if (!isCurrent()) return;
     const next = queueRef.current.shift() ?? null;
     setLeaving(false);
     setCurrent(next);
     if (next) {
       clearTimer();
-      timerRef.current = window.setTimeout(() => dismiss(false), AUTO_DISMISS_MS);
+      timerRef.current = schedule(() => dismiss(false), AUTO_DISMISS_MS);
     }
   };
 
   const clearTimer = () => {
     if (timerRef.current) {
       window.clearTimeout(timerRef.current);
+      delayed.current.delete(timerRef.current);
       timerRef.current = null;
     }
   };
 
   const dismiss = (recordAnalytics: boolean) => {
+    if (!isCurrent()) return;
     setLeaving(true);
     const dismissedId = current?.id ?? null;
-    window.setTimeout(() => {
+    schedule(() => {
       if (dismissedId && recordAnalytics) {
         recordDismissed(dismissedId).catch(() => {});
       }
@@ -73,6 +105,7 @@ export function InAppBanner() {
   };
 
   const enqueue = (b: BannerInput) => {
+    if (!isCurrent()) return;
     if (!b || !b.id || lastIdsRef.current.has(b.id)) return;
     lastIdsRef.current.add(b.id);
     if (lastIdsRef.current.size > 200) {
@@ -81,7 +114,7 @@ export function InAppBanner() {
     if (!current) {
       setCurrent(b);
       clearTimer();
-      timerRef.current = window.setTimeout(() => dismiss(false), AUTO_DISMISS_MS);
+      timerRef.current = schedule(() => dismiss(false), AUTO_DISMISS_MS);
     } else {
       queueRef.current.push(b);
     }
@@ -100,9 +133,12 @@ export function InAppBanner() {
 
   // 2. Realtime deliveries.
   useEffect(() => {
+    let subscribed = true;
     let lastSeen = new Date().toISOString();
     const unsub = subscribeToMyNotifications(async () => {
+      if (!subscribed || !isCurrent()) return;
       const rows = await fetchMyNotifications(20);
+      if (!subscribed || !isCurrent()) return;
       const fresh = rows.find(
         (r: ServerNotification) =>
           r.created_at > lastSeen && !r.read_at && !r.dismissed_at,
@@ -122,7 +158,7 @@ export function InAppBanner() {
         });
       }
     });
-    return () => unsub();
+    return () => { subscribed = false; unsub(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -132,15 +168,18 @@ export function InAppBanner() {
   const Icon = cat.icon;
 
   const onTap = () => {
+    if (!isCurrent()) return;
     clearTimer();
     void markNotificationRead(current.id);
+    if (!isCurrent()) return;
     // V16: canonical action contract — external links open a browser,
     // unsafe/ambiguous actions fail closed and only dismiss the banner.
     const action = resolveNotificationAction(current);
+    if (!isCurrent()) return;
     if (action.kind !== "internal") {
       setLeaving(true);
       const url = action.kind === "external" ? action.url : null;
-      window.setTimeout(() => {
+      schedule(() => {
         dequeue();
         if (url) void openExternalUrl(url);
       }, 200);
@@ -149,10 +188,10 @@ export function InAppBanner() {
     const to = action.path;
     const [path, hashPart] = to.split("#");
     setLeaving(true);
-    window.setTimeout(() => {
+    schedule(() => {
       dequeue();
       router.navigate({ to: (path || "/") as "/", hash: hashPart || undefined }).catch(() => {
-        if (typeof window !== "undefined") window.location.href = to;
+        if (isCurrent() && typeof window !== "undefined") window.location.href = to;
       });
     }, 200);
   };
