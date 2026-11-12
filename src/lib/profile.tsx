@@ -846,11 +846,14 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     },
     addDinars: (n) => update((p) => addDinarsTo(p, n)),
     spendDinars: (n) => {
+      if (!Number.isFinite(n)) return false;
       let ok = false;
       update((p) => {
         if ((p.dinars ?? 0) < n) return p;
+        const remaining = p.dinars - n;
+        if (!Number.isFinite(remaining)) return p;
         ok = true;
-        return { ...p, dinars: p.dinars - n };
+        return { ...p, dinars: remaining };
       });
       return ok;
     },
@@ -862,11 +865,16 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         const already = p.hintsPurchased?.[scopeKey] ?? 0;
         if (hintIndex < already) { ok = true; return p; } // already revealed
         if (hintIndex !== already) return p;              // must buy in order
+        // Keep already-revealed and ordering behavior above unchanged.
+        // This guard prevents a new malformed purchase, not write admission.
+        if (!Number.isFinite(cost)) return p;
         if ((p.dinars ?? 0) < cost) return p;
+        const remaining = p.dinars - cost;
+        if (!Number.isFinite(remaining)) return p;
         ok = true;
         return {
           ...p,
-          dinars: p.dinars - cost,
+          dinars: remaining,
           hintsPurchased: { ...(p.hintsPurchased ?? {}), [scopeKey]: already + 1 },
         };
       });

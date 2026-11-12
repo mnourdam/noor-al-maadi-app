@@ -47,3 +47,7 @@ not a deep snapshot or comprehensive schema/authority validation.
 Full local validation: **1260/1260 tests across 50 files PASS**, both TypeScript
 projects PASS, and client/SSR build PASS. Remote CI is pending for this commit.
 V18 HOLD and production NO-GO remain unchanged.
+
+Remote runtime CI **SUCCESS**: [43186222782](https://github.com/mnourdam/noor-al-maadi-app/actions/runs/43186222782), tested commit `dbea4073755683ef65dcc79bb4beb5b59d99599c`.
+Verified job `131073929925` passed every step, including regressions, scheduler,
+typecheck and client/SSR build. No deployment.
