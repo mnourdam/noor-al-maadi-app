@@ -1,12 +1,13 @@
 /** Internal schema access only. Opening this database activates no economic authority. */
 export const SETTLEMENT_DB = "irth-reward-settlement-v1";
-export const SETTLEMENT_VERSION = 2;
+export const SETTLEMENT_VERSION = 3;
 export const SETTLEMENT_STORES = [
   "entitlements",
   "economy",
   "appliedGrants",
   "migrationState",
 ] as const;
+export const JOURNAL_STORES = [...SETTLEMENT_STORES, "intents"] as const;
 
 export function openSettlementDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -26,13 +27,18 @@ export function openSettlementDatabase(): Promise<IDBDatabase> {
         if (!db.objectStoreNames.contains("entitlements"))
           throw new Error("settlement:invalid-schema");
         for (const name of SETTLEMENT_STORES.slice(1)) {
-          if (!db.objectStoreNames.contains(name)) db.createObjectStore(name);
+          if (!db.objectStoreNames.contains(name)) {
+            if (event.oldVersion >= 2) throw new Error("settlement:invalid-schema");
+            db.createObjectStore(name);
+          }
         }
         for (const name of SETTLEMENT_STORES) {
           const store = request.transaction!.objectStore(name);
           if (store.keyPath !== null || store.autoIncrement)
             throw new Error("settlement:invalid-schema");
         }
+        if (db.objectStoreNames.contains("intents")) throw new Error("settlement:invalid-schema");
+        db.createObjectStore("intents");
       } catch (error) {
         upgradeError = error;
         request.transaction!.abort();
@@ -48,8 +54,8 @@ export function openSettlementDatabase(): Promise<IDBDatabase> {
         return;
       }
       try {
-        const tx = db.transaction([...SETTLEMENT_STORES], "readonly");
-        for (const name of SETTLEMENT_STORES) {
+        const tx = db.transaction([...JOURNAL_STORES], "readonly");
+        for (const name of JOURNAL_STORES) {
           const store = tx.objectStore(name);
           if (store.keyPath !== null || store.autoIncrement)
             throw new Error("settlement:invalid-schema");

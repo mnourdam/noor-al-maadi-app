@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { IDBFactory, IDBObjectStore, IDBTransaction } from "fake-indexeddb";
-import { openSettlementDatabase, SETTLEMENT_DB, SETTLEMENT_STORES } from "@/lib/rewards/database";
+import { openSettlementDatabase, SETTLEMENT_DB, SETTLEMENT_STORES, JOURNAL_STORES } from "@/lib/rewards/database";
 import { transactionsForOwner, type SettlementRecord } from "@/lib/rewards/transaction";
 import { settlementForOwner } from "@/lib/rewards/settlement";
 import { setActiveOwnerInternal } from "@/lib/identity/owner";
@@ -89,10 +89,10 @@ afterEach(() => {
 });
 
 describe("Stage 3A inactive schema and shared transactions", () => {
-  it("creates exactly four empty stores; schema existence is not migration readiness", async () => {
+  it("creates the versioned journal schema; schema existence is not migration readiness", async () => {
     const db = await openSettlementDatabase();
-    expect(db.version).toBe(2);
-    expect(Array.from(db.objectStoreNames).sort()).toEqual([...SETTLEMENT_STORES].sort());
+    expect(db.version).toBe(3);
+    expect(Array.from(db.objectStoreNames).sort()).toEqual([...JOURNAL_STORES].sort());
     db.close();
     expect(await read()).toBeUndefined();
     expect(await read("state", "migrationState")).toBeUndefined();
@@ -343,7 +343,7 @@ describe("Stage 3A inactive schema and shared transactions", () => {
   });
   it("closes idle connections on versionchange and exposes VersionError to old code", async () => {
     const db = await openSettlementDatabase();
-    const next = await openVersion(3);
+    const next = await openVersion(4);
     next.close();
     expect(() => db.transaction("entitlements")).toThrow();
     await expect(openVersion(1)).rejects.toMatchObject({ name: "VersionError" });
@@ -356,7 +356,7 @@ describe("Stage 3A inactive schema and shared transactions", () => {
     old.close();
     // The abandoned open's upgrade is aborted; the explicit retry is the only accepted success.
     const db = await openSettlementDatabase();
-    expect(db.version).toBe(2);
+    expect(db.version).toBe(3);
     db.close();
     expect(await readRaw("entitlements", physical(legacy.key))).toEqual(legacy);
   });

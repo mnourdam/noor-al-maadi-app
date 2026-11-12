@@ -161,3 +161,47 @@ async function confirmAtomic(
 Object.assign(window, {
   confirmationNative: { prepareConfirmation, confirmationState, confirmAtomic },
 });
+
+// Pending-only journal API. Synthetic descriptions do not establish eligibility.
+import { journalIntentsForOwner, type JournalCommandInput } from '@/lib/rewards/journal-intents';
+function journalCommand(id: string, variant = 'a'): JournalCommandInput {
+  return {commandId:id,commandType:'chapter-progress-attempt',protocol:1,
+    campaignId:'synthetic-campaign',chapterId:'synthetic-chapter',activityId:'synthetic-activity',
+    payload:{campaignId:'synthetic-campaign',chapterId:'synthetic-chapter',variant},
+    targets:[{key:id+':activity',terms:'synthetic-v1',level:'activity'},
+      {key:id+':chapter',terms:'synthetic-v1',level:'chapter'}]};
+}
+async function journalPrepare(id: string, variant = 'a', abortAll = false) {
+  const original=IDBObjectStore.prototype.add;
+  const reached:string[]=[];
+  if(abortAll) IDBObjectStore.prototype.add=function(this:IDBObjectStore,...args:Parameters<IDBObjectStore['add']>) {
+    const request=original.apply(this,args);
+    if(['intents','entitlements'].includes(this.name)) {
+      const tx=this.transaction, store=this.name;
+      request.addEventListener('success',()=>{reached.push(store);if(reached.length===3)tx.abort();},{once:true});
+    }
+    return request;
+  };
+  try {return {status:'committed',row:await journalIntentsForOwner(getActiveOwner()).prepare(journalCommand(id,variant)),reached};}
+  catch(error){return {status:'rejected',reason:error instanceof Error?error.message:'unknown',reached};}
+  finally{IDBObjectStore.prototype.add=original;}
+}
+async function journalRead(id:string) {
+  try{return {status:'read',row:await journalIntentsForOwner(getActiveOwner()).readCommitted(id)??null};}
+  catch(error){return {status:'rejected',reason:error instanceof Error?error.message:'unknown'};}
+}
+async function journalRaw(id:string,remove=false) {
+  const db=await openSettlementDatabase();
+  const who=getActiveOwner();
+  try{return await new Promise<Record<string,unknown>>((resolve,reject)=>{
+    const tx=db.transaction(['intents','entitlements'],remove?'readwrite':'readonly');
+    const result:Record<string,unknown>={};
+    if(remove)tx.objectStore('entitlements').delete(JSON.stringify([who,id+':chapter']));
+    for(const [label,store,key] of [['intent','intents',id],['activity','entitlements',id+':activity'],['chapter','entitlements',id+':chapter']]) {
+      const req=tx.objectStore(store).get(JSON.stringify([who,key]));
+      req.onsuccess=()=>{result[label]=req.result??null;};
+    }
+    tx.oncomplete=()=>resolve(result);tx.onabort=()=>reject(tx.error);
+  });}finally{db.close();}
+}
+Object.assign(window,{journalNative:{prepare:journalPrepare,read:journalRead,raw:journalRaw}});

@@ -132,6 +132,30 @@ async def acceptance(directory, origin):
             check(race["entitlement"]["attempts"][-1]["evidence"] == ["winner-a", "winner-b"][index], "entitlement winner evidence mismatch")
             check(race["entitlement"]["attempts"][-1]["reward"] == "delivery_pending", "race delivered a reward")
             passed.append("independent tabs cannot confirm competing decisions from the same full snapshot")
+            # Native pending intent + references; no dispatcher or earning authority.
+            journal = await a.evaluate("journalNative.prepare('journal-commit')")
+            check(journal["status"] == "committed", "journal commit failed")
+            journal_state = await a.evaluate("journalNative.raw('journal-commit')")
+            check(journal_state["intent"] == journal["row"], "journal durable command differs")
+            for label in ["activity", "chapter"]:
+                ref = journal_state[label]
+                check(ref["version"] == 2 and ref["progress"] == "pending" and ref["reward"] == "awaiting_confirmation", "journal reference improperly settled")
+                check(ref["binding"]["commandCanonical"] == journal["row"]["commandCanonical"], "journal full binding differs")
+            passed.append("native journal intent and both pending references commit together")
+
+            aborted_journal = await a.evaluate("journalNative.prepare('journal-abort','a',true)")
+            check(aborted_journal["status"] == "rejected" and sorted(aborted_journal["reached"]) == ["entitlements", "entitlements", "intents"], "journal abort did not follow three successful adds")
+            check(await a.evaluate("journalNative.raw('journal-abort')") == {"intent": None, "activity": None, "chapter": None}, "journal abort left partial rows")
+            passed.append("native abort after successful intent and both reference adds leaves no rows")
+
+            # Independent tabs launched together; do not claim observed lock overlap.
+            contenders = await asyncio.gather(a.evaluate("journalNative.prepare('journal-race','a')"), b.evaluate("journalNative.prepare('journal-race','b')"))
+            check(sum(x["status"] == "committed" for x in contenders) == 1, "conflicting journal commands did not yield one winner")
+            journal_winner = next(x["row"] for x in contenders if x["status"] == "committed")
+            check((await a.evaluate("journalNative.read('journal-race')"))["row"] == journal_winner, "journal winner mismatch")
+            replay = await asyncio.gather(a.evaluate("journalNative.prepare('journal-replay')"), b.evaluate("journalNative.prepare('journal-replay')"))
+            check(all(x["status"] == "committed" for x in replay) and replay[0]["row"] == replay[1]["row"], "compatible journal replay diverged")
+            passed.append("two native tabs: conflicting commands reject and compatible exact replay agrees (overlap not asserted)")
             await b.evaluate("settlementNative.owner('user:synthetic-bob')")
 
             await a.reload()
@@ -154,6 +178,17 @@ async def acceptance(directory, origin):
             check(await a.evaluate("confirmationNative.confirmationState('atomic-abort')") == rolled, "aborted confirmation changed on restart")
             check(await a.evaluate("confirmationNative.confirmationState('atomic-race')") == race, "winning confirmation lost on restart")
             passed.append("clean restart retains committed confirmation and rollback evidence")
+
+            check((await a.evaluate("journalNative.read('journal-commit')"))["row"] == journal["row"], "journal intent lost on restart")
+            check(await a.evaluate("journalNative.raw('journal-commit')") == journal_state, "journal references lost on restart")
+            check((await a.evaluate("journalNative.prepare('journal-commit')"))["row"] == journal["row"], "restart exact replay differs")
+            passed.append("clean browser restart preserves journal intent, all references and exact replay")
+            damaged = await a.evaluate("journalNative.raw('journal-commit',true)")
+            check(damaged["chapter"] is None, "missing-reference negative control did not execute")
+            check((await a.evaluate("journalNative.read('journal-commit')"))["status"] == "rejected", "missing reference accepted on read")
+            check((await a.evaluate("journalNative.prepare('journal-commit')"))["status"] == "rejected", "missing reference silently repaired")
+            check(await a.evaluate("journalNative.raw('journal-commit')") == damaged, "rejected journal request changed damaged rows")
+            passed.append("missing native journal reference rejects read/replay without repair")
 
             stale = {**winner, "revision": 1, "value": {"synthetic": "raw-writer-overwrite"}}
             await a.evaluate("row=>settlementNative.rawOverwrite(row)", stale)
