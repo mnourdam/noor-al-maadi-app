@@ -257,7 +257,7 @@ export async function applyContentUpdate(timeoutMs: number = APPLY_TIMEOUT_MS): 
     if (!isCurrent()) return false;
     const { refreshSnapshotIncremental } = await import("./offline-snapshot");
     if (!isCurrent()) return false;
-    const candidate = await refreshSnapshotIncremental();
+    const candidate = await refreshSnapshotIncremental({ signal: controller.signal, strictComplete: true });
     if (!isCurrent()) return false;
 
     const { validateSnapshot } = await import("./offline-snapshot-validate");

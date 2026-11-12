@@ -253,7 +253,7 @@ describe("runtime update detection", () => {
 
   it("count mismatch triggers an authoritative full replacement, not a merge", () => {
     expect(SNAPSHOT_SRC).toContain("const countMismatch = serverItem && countComparable ? serverItem.total_count !== localCount : false;");
-    expect(SNAPSHOT_SRC).toMatch(/if \(countMismatch \|\| FULL_REFRESH_KEYS\.has\(def\.key\)\) \{[\s\S]{0,400}?merged = await fetchCollection\(def\);/);
+    expect(SNAPSHOT_SRC).toMatch(/if \(countMismatch \|\| FULL_REFRESH_KEYS\.has\(def\.key\)\) \{[\s\S]{0,400}?merged = await fetchCollection\(def, scope\);/);
   });
 
   it("never touches player progress, outbox, auth or streaks", () => {

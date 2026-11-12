@@ -72,7 +72,22 @@ let _manifestPromise: Promise<ContentManifestItem[] | null> | null = null;
  * Fetch the latest content manifest from the server.
  * Returns counts and max(updated_at) for all collections.
  */
-export async function fetchContentManifest(): Promise<ContentManifestItem[] | null> {
+export async function fetchContentManifest(signal?: AbortSignal): Promise<ContentManifestItem[] | null> {
+  // Attempt-scoped requests must not share a promise with background callers:
+  // retiring one update cannot poison the next update or cancel background work.
+  if (signal) {
+    const check = () => { if (signal.aborted) throw new DOMException("Manifest request retired", "AbortError"); };
+    check();
+    if (typeof navigator !== "undefined" && navigator.onLine === false) return null;
+    try {
+      const { data, error } = await supabase.rpc("get_content_manifest").abortSignal(signal);
+      check();
+      return error ? null : _readyManifest((data as any[]) ?? []);
+    } catch {
+      check();
+      return null;
+    }
+  }
   if (typeof navigator !== "undefined" && navigator.onLine === false) return null;
   if (_manifestPromise) return _manifestPromise;
 

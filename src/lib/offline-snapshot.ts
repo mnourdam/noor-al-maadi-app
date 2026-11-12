@@ -170,15 +170,32 @@ interface StoryManifestPayload {
   story_media?: any[];
   story_collections?: any[];
 }
+export interface SnapshotRefreshOptions {
+  signal?: AbortSignal;
+  strictComplete?: boolean;
+}
+interface RefreshScope extends SnapshotRefreshOptions {
+  storyManifest?: Promise<StoryManifestPayload>;
+}
+function checkRefresh(scope?: RefreshScope): void {
+  if (scope?.signal?.aborted) throw new DOMException("Snapshot refresh retired", "AbortError");
+}
+function scopedQuery<T extends { abortSignal(signal: AbortSignal): T }>(query: T, scope?: RefreshScope): T {
+  checkRefresh(scope);
+  return scope?.signal ? query.abortSignal(scope.signal) : query;
+}
 let _manifestPromise: Promise<StoryManifestPayload> | null = null;
-async function fetchStoryManifest(): Promise<StoryManifestPayload> {
-  if (_manifestPromise) return _manifestPromise;
-  _manifestPromise = (async () => {
+async function fetchStoryManifest(scope?: RefreshScope): Promise<StoryManifestPayload> {
+  checkRefresh(scope);
+  const cached = scope ? scope.storyManifest : _manifestPromise;
+  if (cached) return cached;
+  const pending = (async () => {
     try {
-      const { data, error } = await supabase.rpc(
+      const { data, error } = await scopedQuery(supabase.rpc(
         "stories_snapshot_manifest_v2" as never,
         { p_include_on_demand: false } as never,
-      );
+      ), scope);
+      checkRefresh(scope);
       if (error) {
         console.warn("[snapshot] stories_snapshot_manifest_v2 failed:", error.message);
         return { ok: false };
@@ -187,11 +204,14 @@ async function fetchStoryManifest(): Promise<StoryManifestPayload> {
       if (!p.ok) return { ok: false };
       return p;
     } catch (e) {
+      checkRefresh(scope);
       console.warn("[snapshot] stories_snapshot_manifest_v2 threw:", e);
       return { ok: false };
     }
   })();
-  return _manifestPromise;
+  if (scope) scope.storyManifest = pending;
+  else _manifestPromise = pending;
+  return pending;
 }
 function resetStoryManifestCache() { _manifestPromise = null; }
 function pickManifestSlice(key: OfflineCollectionKey, m: StoryManifestPayload): any[] {
@@ -203,12 +223,14 @@ function pickManifestSlice(key: OfflineCollectionKey, m: StoryManifestPayload): 
   return [];
 }
 
-async function fetchCollection(def: CollectionDef): Promise<any[]> {
+async function fetchCollection(def: CollectionDef, scope?: RefreshScope): Promise<any[]> {
+  checkRefresh(scope);
   // Local-only collections (games baseline pack) have no network source.
   if (def.localOnly) return [];
   // Story collections come from the M7A visibility-enforcing manifest RPC.
   if (STORY_MANIFEST_KEYS.has(def.key)) {
-    const manifest = await fetchStoryManifest();
+    const manifest = await fetchStoryManifest(scope);
+    checkRefresh(scope);
     if (!manifest.ok) {
       throw new Error(`[snapshot] stories_snapshot_manifest_v2 unavailable for ${def.key}`);
     }
@@ -225,7 +247,8 @@ async function fetchCollection(def: CollectionDef): Promise<any[]> {
   // Ask PostgREST for the exact count BEFORE reading any row data. The count
   // request is tiny and independent of heavy JSON payloads, so we can fail
   // closed if pagination later returns 923/1000 rows without an error.
-  const expectedTotal = await fetchCollectionExpectedCount(def);
+  const expectedTotal = await fetchCollectionExpectedCount(def, scope);
+  checkRefresh(scope);
   if (def.key === "encyclopedia_entities") {
     if (typeof expectedTotal !== "number") {
       throw new Error("[snapshot] encyclopedia_entities: expected count unavailable; refusing full fetch");
@@ -250,7 +273,8 @@ async function fetchCollection(def: CollectionDef): Promise<any[]> {
       .order("id", { ascending: true })
       .range(from, from + PAGE - 1);
     if (def.filter) query = def.filter(query);
-    const { data, error } = await query;
+    const { data, error } = await scopedQuery(query, scope);
+    checkRefresh(scope);
     if (error) {
       console.warn(`[snapshot] failed to read ${def.table}:`, error.message);
       throw error;
@@ -288,7 +312,7 @@ async function fetchCollection(def: CollectionDef): Promise<any[]> {
  * Returns `null` when the collection has no `updated_at` column and the
  * caller must fall back to a full fetch.
  */
-async function fetchCollectionSince(def: CollectionDef, since: string): Promise<any[] | null> {
+async function fetchCollectionSince(def: CollectionDef, since: string, scope?: RefreshScope): Promise<any[] | null> {
   if (NO_UPDATED_AT.has(def.key)) return null;
   const PAGE = 500;
   const out: any[] = [];
@@ -305,7 +329,8 @@ async function fetchCollectionSince(def: CollectionDef, since: string): Promise<
       .order("id", { ascending: true })
       .range(from, from + PAGE - 1);
     if (def.filter) query = def.filter(query);
-    const { data, error } = await query;
+    const { data, error } = await scopedQuery(query, scope);
+    checkRefresh(scope);
     if (error) {
       console.warn(`[snapshot] incremental fetch failed for ${def.table}:`, error.message);
       return null;
@@ -323,7 +348,7 @@ async function fetchCollectionSince(def: CollectionDef, since: string): Promise<
  * the current auth context, i.e. anon RLS in production). Used to detect
  * caches that trail behind the live source and trigger a true-up.
  */
-async function fetchCollectionExpectedCount(def: CollectionDef): Promise<number | null> {
+async function fetchCollectionExpectedCount(def: CollectionDef, scope?: RefreshScope): Promise<number | null> {
   // Story collections are served by the manifest RPC — there is no
   // countable underlying table endpoint. Skip the true-up check.
   if (STORY_MANIFEST_KEYS.has(def.key) || def.localOnly) return null;
@@ -331,7 +356,8 @@ async function fetchCollectionExpectedCount(def: CollectionDef): Promise<number 
     .from(def.table as any)
     .select("id", { count: "exact", head: true });
   if (def.filter) query = def.filter(query);
-  const { count, error } = await query;
+  const { count, error } = await scopedQuery(query, scope);
+  checkRefresh(scope);
 
   if (error) {
     console.warn(`[snapshot] count query failed for ${def.table}:`, error.message);
@@ -485,9 +511,12 @@ function canonicalJSON(value: any): string {
   return JSON.stringify(value);
 }
 
-export async function generateSnapshot(): Promise<OfflineSnapshot> {
-  resetStoryManifestCache();
-  const results = await Promise.all(COLLECTIONS.map((def) => fetchCollection(def)));
+export async function generateSnapshot(options?: SnapshotRefreshOptions): Promise<OfflineSnapshot> {
+  const scope: RefreshScope | undefined = options ? { ...options } : undefined;
+  checkRefresh(scope);
+  if (!scope) resetStoryManifestCache();
+  const results = await Promise.all(COLLECTIONS.map((def) => fetchCollection(def, scope)));
+  checkRefresh(scope);
 
   const collections: Record<string, any[]> = {};
   const content_counts: Record<string, number> = {};
@@ -504,6 +533,7 @@ export async function generateSnapshot(): Promise<OfflineSnapshot> {
     });
   }
   const checksum = await sha256Hex(canonicalJSON(collections));
+  checkRefresh(scope);
   return {
     snapshot_version: Date.now(),
     schema_version: SNAPSHOT_SCHEMA_VERSION,
@@ -657,16 +687,21 @@ async function warmSnapshotImageCache(collections: Record<string, any[]>): Promi
  * Incremental refresh: for each collection, fetch only required deltas
  * based on the server manifest and merge by ID.
  */
-export async function refreshSnapshotIncremental(): Promise<OfflineSnapshot> {
-  resetStoryManifestCache();
+export async function refreshSnapshotIncremental(options?: SnapshotRefreshOptions): Promise<OfflineSnapshot> {
+  const scope: RefreshScope | undefined = options ? { ...options } : undefined;
+  checkRefresh(scope);
+  if (!scope) resetStoryManifestCache();
   const previous = await loadSnapshot();
+  checkRefresh(scope);
 
   if (!previous?.collections) {
-    return generateSnapshot();
+    return generateSnapshot(options);
   }
 
   const { fetchContentManifest, isManifestCountComparable } = await import("./offline-manifest");
-  const serverManifest = await fetchContentManifest();
+  checkRefresh(scope);
+  const serverManifest = await fetchContentManifest(scope?.signal);
+  checkRefresh(scope);
   
   const nextCollections: Record<string, any[]> = { ...previous.collections };
   const nextCounts: Record<string, number> = { ...previous.content_counts };
@@ -674,6 +709,7 @@ export async function refreshSnapshotIncremental(): Promise<OfflineSnapshot> {
   let totalDeltas = 0;
 
   for (const def of COLLECTIONS) {
+    checkRefresh(scope);
     const prevRows = previous.collections[def.key] ?? [];
     const since = maxUpdatedAt(prevRows);
     let merged: any[] = prevRows;
@@ -715,27 +751,29 @@ export async function refreshSnapshotIncremental(): Promise<OfflineSnapshot> {
         if (STORY_MANIFEST_KEYS.has(def.key)) {
           // Story collections come from the visibility-redacting manifest
           // RPC — merge, never replace (V16 regression fix #2).
-          const fetched = await fetchCollection(def);
+          const fetched = await fetchCollection(def, scope);
           merged = mergeStoryCollection(def.key, prevRows, fetched);
         } else if (countMismatch || FULL_REFRESH_KEYS.has(def.key)) {
           // V16: campaigns always take the authoritative full fetch of
           // `campaigns_public`. An upsert-only delta merge cannot drop a
           // campaign that was unpublished/retired upstream, and the manifest
           // count is not comparable for this collection (it counts drafts).
-          merged = await fetchCollection(def);
+          merged = await fetchCollection(def, scope);
         } else if (since && !NO_UPDATED_AT.has(def.key)) {
-          const deltas = await fetchCollectionSince(def, since);
+          const deltas = await fetchCollectionSince(def, since, scope);
           if (deltas === null) {
-            merged = await fetchCollection(def);
+            merged = await fetchCollection(def, scope);
           } else {
             merged = mergeRows(prevRows, deltas);
             totalDeltas += deltas.length;
           }
         } else {
-          merged = await fetchCollection(def);
+          merged = await fetchCollection(def, scope);
         }
       }
     } catch (e) {
+      checkRefresh(scope);
+      if (scope?.strictComplete) throw e;
       console.warn(`[snapshot] incremental sync failed for ${def.table}, keeping cache:`, e);
       merged = prevRows;
     }
@@ -763,6 +801,7 @@ export async function refreshSnapshotIncremental(): Promise<OfflineSnapshot> {
     collections: nextCollections,
   };
 
+  checkRefresh(scope);
   return snap;
 }
 
