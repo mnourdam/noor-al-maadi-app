@@ -171,6 +171,37 @@ class Safety(unittest.TestCase):
             exact={'role':'supabase_admin','session':'supabase_admin','database':'postgres','superuser':True,'socket':True}
             with patch.object(obj,'sql',side_effect=[json.dumps({'superuser':False}),'t','/tmp']),patch.object(obj,'socket_admin_sql',return_value=json.dumps(exact)):obj.select_local_admin()
             self.assertTrue(obj.socket_admin);self.assertEqual(obj.report['admin_session'],exact)
+    def test_schema_exclusion_requires_exact_http_status_and_code(self):
+        correct=(406,{'code':'PGRST106'})
+        self.assertTrue(h.Harness.schema_excluded(correct))
+        # This was the impossible-readiness bug: the generic predicate excludes 406.
+        self.assertFalse(h.Harness.rejection(correct,codes=('PGRST106',)))
+        for result in ((400,{'code':'PGRST106'}),(403,{'code':'PGRST106'}),(406,{'code':'42501'}),(406,{}),(406,'raw')):
+            self.assertFalse(h.Harness.schema_excluded(result))
+    def test_readiness_uses_same_rpc_and_records_only_safe_classes(self):
+        obj=h.Harness.__new__(h.Harness);obj.report={'cases':[]}
+        positive=(400,{'code':'P0001','message':'prototype:unknown-seal','details':'SECRET'})
+        with patch.object(obj,'rpc',return_value=positive),patch.object(obj,'request',return_value=(406,{'code':'PGRST106','message':'SECRET'})) as request:
+            obj.ready('PRIVATE-JWT')
+        self.assertEqual(request.call_args.args[0],'/rest/v1/rpc/bootstrap')
+        self.assertEqual(request.call_args.args[3],'POST')
+        self.assertEqual(request.call_args.kwargs,{'profile':'public'})
+        self.assertEqual(obj.report['schema_readiness']['public'],{'status':406,'code':'PGRST106','class':'schema_not_exposed'})
+        self.assertNotIn('SECRET',json.dumps(obj.report));self.assertNotIn('PRIVATE-JWT',json.dumps(obj.report))
+    def test_readiness_still_requires_api_positive_control(self):
+        obj=h.Harness.__new__(h.Harness);obj.report={'cases':[]}
+        with patch.object(obj,'rpc',return_value=(403,{'code':'42501','message':'SECRET'})),patch.object(obj,'request',return_value=(406,{'code':'PGRST106'})),patch.object(h.time,'sleep'),self.assertRaises(h.Failure):obj.ready('PRIVATE-JWT')
+        self.assertEqual(obj.report['cases'],[])
+        self.assertEqual(obj.report['schema_readiness']['attempt'],30)
+        self.assertNotIn('SECRET',json.dumps(obj.report))
+    def test_readiness_error_summary_never_copies_unknown_fields(self):
+        for body in ({'code':'SECRET','message':'SECRET','details':'SECRET'},{'code':{'SECRET':True}},'SECRET'):
+            summary=h.Harness.response_class((500,body))
+            self.assertEqual(summary,{'status':500,'code':'other_or_missing','class':'other_or_missing'})
+    def test_schema_configuration_is_database_scoped_and_not_broadened(self):
+        source=Path(h.__file__).read_text()
+        self.assertIn("ALTER ROLE authenticator IN DATABASE postgres SET pgrst.db_schemas='v18_proto_api'",source)
+        self.assertNotIn("pgrst.db_schemas='public,v18_proto_api'",source)
     def test_mode_is_required_and_source_has_no_claim_fixtures(self):
         source=Path(h.__file__).read_text()
         self.assertIn('choices=("run", "cleanup")',source)

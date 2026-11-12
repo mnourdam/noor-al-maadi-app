@@ -376,12 +376,38 @@ class Harness:
             users.append(user_id); tokens.append(session['access_token'])
         return users, tokens
 
+    @staticmethod
+    def schema_excluded(response):
+        # PGRST106 is specifically HTTP 406, not a generic RPC permission error.
+        status, body = response
+        return status == 406 and isinstance(body, dict) and body.get('code') == 'PGRST106'
+
+    @staticmethod
+    def response_class(response):
+        # Never serialize raw bodies/messages/details: an error can echo a token.
+        status, body = response
+        allowed = {'PGRST106','PGRST202','PGRST301','PGRST302','PGRST303','PGRST000','PGRST001','PGRST002','P0001','42501'}
+        code = body.get('code') if isinstance(body,dict) else None
+        code = code if isinstance(code,str) and code in allowed else 'other_or_missing'
+        known = 'other_or_missing'
+        if isinstance(body,dict) and body.get('message') == 'prototype:unknown-seal':
+            known = 'known_engine_unknown_seal'
+        elif code == 'PGRST106': known = 'schema_not_exposed'
+        elif code == '42501': known = 'permission_denied'
+        elif code in ('PGRST301','PGRST302','PGRST303'): known = 'authentication_rejected'
+        return {'status':status if type(status) is int and 100<=status<=599 else None,
+                'code':code, 'class':known}
+
     def ready(self, token):
         # Actual PostgREST db-config precedence is verified, not assumed.
-        for _ in range(30):
-            result = self.rpc('bootstrap', token, {'p_seal':str(uuid.uuid4())})
-            public = self.request('/rest/v1/', token, profile='public')
-            if self.rejection(result, 'prototype:unknown-seal') and self.rejection(public, codes=('PGRST106',)):
+        for attempt in range(30):
+            payload = {'p_seal':str(uuid.uuid4())}
+            result = self.rpc('bootstrap', token, payload)
+            # Probe the same RPC path, not OpenAPI root routing behavior.
+            public = self.request('/rest/v1/rpc/bootstrap', token, payload, 'POST', profile='public')
+            self.report['schema_readiness'] = {'attempt':attempt+1,
+                'api':self.response_class(result), 'public':self.response_class(public)}
+            if self.rejection(result, 'prototype:unknown-seal') and self.schema_excluded(public):
                 self.check(True, 'API schema active and public schema excluded')
                 return
             time.sleep(1)
@@ -406,7 +432,19 @@ class Harness:
         self.report['stage'] = 'effective ACL and dedicated default probes'
         self.check(self.acl_safe(), 'actual roles effective schema table column function and membership boundaries')
         self.role_default_probe()
-        self.sql("ALTER ROLE authenticator SET pgrst.db_schemas='v18_proto_api'; NOTIFY pgrst,'reload config'; NOTIFY pgrst,'reload schema';")
+        self.sql("ALTER ROLE authenticator IN DATABASE postgres SET pgrst.db_schemas='v18_proto_api'; NOTIFY pgrst,'reload config'; NOTIFY pgrst,'reload schema';")
+        self.report['schema_configuration'] = json.loads(self.sql("""SELECT jsonb_build_object(
+          'database_setting_exact',EXISTS(SELECT 1 FROM pg_db_role_setting s WHERE s.setrole='authenticator'::regrole
+             AND s.setdatabase=(SELECT oid FROM pg_database WHERE datname='postgres')
+             AND s.setconfig @> ARRAY['pgrst.db_schemas=v18_proto_api']),
+          'global_setting_exact',EXISTS(SELECT 1 FROM pg_db_role_setting s WHERE s.setrole='authenticator'::regrole
+             AND s.setdatabase=0 AND s.setconfig @> ARRAY['pgrst.db_schemas=v18_proto_api']),
+          'database_preconfig_present',EXISTS(SELECT 1 FROM pg_db_role_setting s,unnest(s.setconfig) c
+             WHERE s.setrole='authenticator'::regrole AND s.setdatabase=(SELECT oid FROM pg_database WHERE datname='postgres')
+             AND c LIKE 'pgrst.db_pre_config=%'),
+          'global_preconfig_present',EXISTS(SELECT 1 FROM pg_db_role_setting s,unnest(s.setconfig) c
+             WHERE s.setrole='authenticator'::regrole AND s.setdatabase=0 AND c LIKE 'pgrst.db_pre_config=%'))::text;"""))
+        self.check(self.report['schema_configuration']['database_setting_exact'] is True, 'database-specific API-only configuration recorded')
         self.report["stage"] = "real Auth users and HTTP schema readiness"
         users, tokens = self.auth_users()
         alice, bob = users

@@ -75,7 +75,7 @@ CI execution must verify the precise committed adapter/harness before any local
 Supabase PASS claim. Even that result leaves hosted integration, production,
 application authority activation and device acceptance pending.
 
-## Verified disposable admin route (not yet executed)
+## Verified disposable admin route (overall acceptance still pending)
 
 The first real run `43209894855` reached the local database but stopped before
 engine installation: local `postgres` had CREATEROLE, not SUPERUSER. Cleanup
@@ -110,8 +110,41 @@ Supporting upstream source inspected for this conditional route:
   The harness therefore does not assume peer/trust authentication or a fixed
   unverified socket path.
 
-These source facts justify a fail-closed probe, not a claim that this particular
-image's admin password path has succeeded. The next isolated CI run must prove
-that capability. Dedicated-owner default ACL tests remain authoritative; future
+Run `43211424659` subsequently verified this pinned-container admin route,
+installed the adapter, passed effective/default ACL checks and created both real
+Auth users with password-grant JWTs. Its 11 completed checks do not establish
+overall acceptance: the run stopped at the HTTP schema-readiness check and cleanup
+succeeded. The remaining acceptance probes must still run successfully. Dedicated-owner default ACL tests remain authoritative; future
 objects created by either postgres or supabase_admin are not certified without
 explicit cleanup and effective ACL inspection.
+
+
+## Schema-readiness correction
+
+The failed readiness check had an impossible-success predicate: it used the
+ordinary RPC rejection helper, which accepts HTTP 400/401/403/404, to recognize
+`PGRST106`. The official PostgREST errors reference specifies **HTTP 406** for
+`PGRST106` (requested schema not exposed). The old predicate therefore rejected
+that valid boundary result. The failed run did not record response codes, so this
+is a proven harness contract defect, not proof that it was the only runtime cause.
+
+Readiness now uses an exact **406 AND PGRST106** predicate. Wrong status or code
+still fails; the generic denial helper is unchanged. The negative probe uses the
+same POST `/rpc/bootstrap` endpoint and payload under explicit `public` profile,
+not the OpenAPI root. The positive API-profile request must independently reach
+the real engine and return its exact unknown-seal error before readiness passes;
+actual successful own bootstrap remains required afterward.
+
+The schema restriction is still only `v18_proto_api`, now set using
+`ALTER ROLE authenticator IN DATABASE postgres SET ...`. Official PostgREST
+configuration documentation says database-specific role configuration overrides
+global role configuration. No schema or privilege is broadened. Catalog evidence
+contains only booleans for exact schema configuration and pre-config presence.
+Each readiness attempt records only HTTP status, an allowlisted error code, and a
+known static error-class label. Raw message/detail/hint/body, credentials and JWTs
+are never copied to evidence. Pure tests cover successful 406 recognition,
+wrong-code/wrong-status refusal, mandatory positive control and diagnostic
+redaction. Actual completion remains for the next reviewed isolated CI run.
+
+References: `https://docs.postgrest.org/en/v14/references/errors.html#pgrst106`
+and `https://docs.postgrest.org/en/v14/references/configuration.html#in-database-configuration`.
