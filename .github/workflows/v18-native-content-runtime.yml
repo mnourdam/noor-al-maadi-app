@@ -16,7 +16,8 @@ permissions:
   contents: read
 jobs:
   native-content:
-    if: github.ref == 'refs/heads/v18-01a-outbox-recovery'
+    if: >-
+      github.ref == 'refs/heads/v18-01a-outbox-recovery' && github.event_name == 'push' && github.run_number == 7 && github.run_attempt == 1 && github.event.head_commit.message == 'test(v18): one-shot KVM acceptance approved 20261112-01'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     defaults:
@@ -98,12 +99,71 @@ jobs:
           test -x "$ANDROID_HOME/platform-tools/adb"
           export PATH="$ANDROID_HOME/platform-tools:$PATH"
           adb version
+          # One approved job only; no permission fallback or retry.
+          test "$GITHUB_RUN_NUMBER" = 7
+          test "$GITHUB_RUN_ATTEMPT" = 1
+          test "$(id -u)" != 0
+          test -c /dev/kvm && test ! -L /dev/kvm
+          command -v getfacl >/dev/null
+          command -v setfacl >/dev/null
+          umask 077
+          lease="$RUNNER_TEMP/native-kvm-lease"
+          test ! -e "$lease"
+          mkdir "$lease"
+          getfacl -n -p /dev/kvm > "$lease/before.acl"
+          stat -Lc '%D:%i:%t:%T' /dev/kvm > "$lease/device.identity"
+          export NATIVE_KVM_LEASE="$lease"
+          # Refuse an existing restrictive mask: never expand anyone else's rights.
+          python - <<'PYACL'
+          import os,pathlib
+          lines=pathlib.Path(os.environ['NATIVE_KVM_LEASE'],'before.acl').read_text().splitlines()
+          entries={':'.join(x.split(':')[:2]):x.split(':')[2] for x in lines if x and not x.startswith('#')}
+          mask=entries.get('mask:',entries.get('group:',''))
+          assert 'r' in mask and 'w' in mask, 'KVM existing mask cannot support narrow rw grant'
+          assert 'user:'+str(os.getuid()) not in entries, 'KVM runner already has named ACL; refuse unreviewed replacement'
+          PYACL
+          cat > "$lease/restore.sh" <<'SHRESTORE'
+          set -euo pipefail
+          lease="$RUNNER_TEMP/native-kvm-lease"
+          if [[ ! -f "$lease/attempted" ]]; then exit 0; fi
+          test -c /dev/kvm && test ! -L /dev/kvm
+          test "$(stat -Lc '%D:%i:%t:%T' /dev/kvm)" = "$(cat "$lease/device.identity")"
+          sudo -n setfacl --restore="$lease/before.acl"
+          getfacl -n -p /dev/kvm > "$lease/after.acl"
+          cmp -s "$lease/before.acl" "$lease/after.acl"
+          echo 'NATIVE_KVM_RESTORE_VERIFIED'
+          SHRESTORE
+          cleanup_native() {
+            status=$?
+            trap - EXIT
+            timeout 10 adb emu kill >/dev/null 2>&1 || true
+            if ! bash "$lease/restore.sh"; then echo 'NATIVE_KVM_RESTORE_FAILED'; status=1; fi
+            exit "$status"
+          }
+          trap cleanup_native EXIT
+          touch "$lease/attempted"
+          sudo -n setfacl -n -m "u:$(id -u):rw" /dev/kvm
+          getfacl -n -p /dev/kvm > "$lease/granted.acl"
+          python - <<'PYACL'
+          import os,pathlib
+          root=pathlib.Path(os.environ['NATIVE_KVM_LEASE'])
+          def entries(name):
+              return {':'.join(x.split(':')[:2]):x.split(':')[2] for x in (root/name).read_text().splitlines() if x and not x.startswith('#')}
+          before=entries('before.acl');expected=dict(before)
+          expected['user:'+str(os.getuid())]='rw-'
+          expected.setdefault('mask:',before['group:'])
+          assert entries('granted.acl')==expected, 'KVM ACL expanded beyond approved current user'
+          PYACL
+          test "$(stat -Lc '%D:%i:%t:%T' /dev/kvm)" = "$(cat "$lease/device.identity")"
+          test -r /dev/kvm && test -w /dev/kvm
+          "$ANDROID_HOME/emulator/emulator" -accel-check
+          export NATIVE_ACCEL=on
+          echo 'NATIVE_KVM_CURRENT_USER_GRANT_VERIFIED'
           export ANDROID_AVD_HOME="$RUNNER_TEMP/native-avd"
           mkdir -p "$ANDROID_AVD_HOME"
           # 'no' declines optional custom hardware profile; this is not license consent.
           printf 'no\n' | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd -n irth-acceptance -k 'system-images;android-35;default;x86_64'
           "$ANDROID_HOME/emulator/emulator" -avd irth-acceptance -accel "$NATIVE_ACCEL" -no-window -no-audio -no-snapshot -no-boot-anim -gpu swiftshader_indirect > "$RUNNER_TEMP/native-emulator.log" 2>&1 &
-          trap 'adb emu kill >/dev/null 2>&1 || true' EXIT
           timeout 300 adb wait-for-device
           for i in $(seq 1 300); do
             if [[ "$(adb shell getprop sys.boot_completed | tr -d '\r')" == 1 ]]; then break; fi
@@ -123,6 +183,17 @@ jobs:
           path: native-content-result.json
           if-no-files-found: error
           retention-days: 7
+      - name: Verify restoration of the one-shot KVM ACL
+        if: always()
+        run: |
+          set -euo pipefail
+          lease="$RUNNER_TEMP/native-kvm-lease"
+          if [[ -f "$lease/attempted" ]]; then
+            test -f "$lease/restore.sh"
+            bash "$lease/restore.sh"
+          else
+            echo 'NATIVE_KVM_NOT_MODIFIED'
+          fi
       - name: Discard isolated app, key and emulator data
         if: always()
         run: rm -rf "$RUNNER_TEMP/irth-native-acceptance" "$RUNNER_TEMP/native-avd"
