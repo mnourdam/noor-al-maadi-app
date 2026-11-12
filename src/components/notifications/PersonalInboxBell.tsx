@@ -11,6 +11,7 @@
 //   * Anon users get nothing rendered.
 // ============================================================
 
+import { startForegroundPoller } from "@/lib/foreground-poller";
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 // Phase B Rev 2 — icon disambiguation: personal inbox uses a sealed
@@ -34,19 +35,13 @@ export function PersonalInboxBell({ className }: Props) {
   useEffect(() => {
     if (!user || !online) return;
     let alive = true;
-    const load = () => {
-      void unreadNotificationCount().then((n) => {
-        if (alive) setCount(n);
-      });
-    };
-    load();
-    const t = setInterval(load, 60_000);
-    const onFocus = () => load();
-    window.addEventListener("focus", onFocus);
+    const stop = startForegroundPoller(async () => {
+      const n = await unreadNotificationCount();
+      if (alive) setCount(n);
+    }, 60_000);
     return () => {
       alive = false;
-      clearInterval(t);
-      window.removeEventListener("focus", onFocus);
+      stop();
     };
   }, [user, online]);
 

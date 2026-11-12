@@ -77,7 +77,31 @@ async function toObjectUrl(response: Response): Promise<string | null> {
 /** Try to fetch + store a readable image response. Uses CORS for cross-origin.
  *  `cacheKey` lets callers store transient URLs (e.g. signed storage URLs
  *  whose token rotates every hour) under a STABLE key. */
+// Share concurrent prefetch/display requests using the stable content key.
+const imageFetches = new Map<string, Promise<Response | null>>();
 async function fetchAndCache(url: string, cache: Cache, cacheKey: string = url): Promise<Response | null> {
+  let pending = imageFetches.get(cacheKey);
+  if (!pending) {
+    pending = (async () => {
+      // Another queued worker may have completed since the prefetch scan.
+      try {
+        const hit = await cache.match(cacheKey);
+        if (hit?.ok && hit.type !== "opaque") return hit;
+      } catch { /* cache unavailable: continue online */ }
+      return downloadAndCache(url, cache, cacheKey);
+    })();
+    imageFetches.set(cacheKey, pending);
+  }
+  try {
+    const response = await pending;
+    // Each reader needs its own body, even when sharing one network fetch.
+    return response?.clone() ?? null;
+  } finally {
+    if (imageFetches.get(cacheKey) === pending) imageFetches.delete(cacheKey);
+  }
+}
+
+async function downloadAndCache(url: string, cache: Cache, cacheKey: string = url): Promise<Response | null> {
   const sameOrigin = (() => {
     try {
       if (typeof window === "undefined") return true;

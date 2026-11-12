@@ -1,3 +1,4 @@
+import { startForegroundPoller } from "@/lib/foreground-poller";
 import { useEffect } from "react";
 import { useAccount } from "@/lib/account";
 import { useProfile } from "@/lib/profile";
@@ -285,14 +286,15 @@ export function FriendNotificationsPoller() {
       });
     }
 
-    tick();
-    const id = setInterval(tick, 60_000);
-    const onFocus = () => tick();
-    if (!disableGlobalFocusBlur) window.addEventListener("focus", onFocus);
+    const stop = startForegroundPoller(tick, 60_000, {
+      focus: !disableGlobalFocusBlur,
+      // Friend delivery also emits browser notifications when authorized.
+      // Preserve timely background alerts for users who enabled them.
+      allowBackground: () => typeof Notification !== "undefined" && Notification.permission === "granted",
+    });
     return () => {
       cancelled = true;
-      clearInterval(id);
-      if (!disableGlobalFocusBlur) window.removeEventListener("focus", onFocus);
+      stop();
     };
   }, [user, profile.settings?.notificationPrefs, androidStable, disableGlobalFocusBlur]);
 

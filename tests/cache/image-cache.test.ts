@@ -39,6 +39,7 @@ describe("persistent image cache", () => {
     vi.stubGlobal("fetch", fetcher);
     const url = "https://project.supabase.co/storage/v1/object/public/images/a.png?v=1";
     const first = await resolveImageUrl(url);
+    vi.stubGlobal("navigator", { onLine: false });
     const second = await resolveImageUrl(url);
     expect(first).toMatch(/^blob:/);
     expect(second).toMatch(/^blob:/);
@@ -60,4 +61,27 @@ describe("persistent image cache", () => {
     const url = "https://external.example/a.png";
     expect(await resolveImageUrl(url)).toBe(url);
   });
+});
+
+it("shares concurrent token-rotated downloads and retries failed attempts", async () => {
+  vi.stubGlobal("caches", {
+    open: async () => ({ match: async () => undefined, put: async () => {} }),
+  });
+  vi.stubGlobal("window", {
+    location: { href: "https://irth.example", origin: "https://irth.example" },
+  });
+  const fetcher = vi
+    .fn()
+    .mockRejectedValueOnce(new Error("network"))
+    .mockImplementation(async () => new Response("bytes"));
+  vi.stubGlobal("fetch", fetcher);
+  const base =
+    "https://project.supabase.co/storage/v1/object/sign/images/concurrent.png?v=1&token=";
+  expect(await resolveImageUrl(base + "old")).toBe(base + "old");
+  const urls = await Promise.all([resolveImageUrl(base + "new1"), resolveImageUrl(base + "new2")]);
+  expect(fetcher).toHaveBeenCalledTimes(2);
+  for (const url of urls) {
+    expect(url).toMatch(/^blob:/);
+    URL.revokeObjectURL(url!);
+  }
 });
