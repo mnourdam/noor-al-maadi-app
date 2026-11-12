@@ -21,9 +21,11 @@ def diagnostic_summary(context,probe=diagnostic_probe):
     app=probe(['logcat','-d','-t','400','--pid='+pid,'-b','main','-b','crash','-v','brief']) if pid else None
     system=probe(['logcat','-d','-t','400','-b','system','-b','crash','-v','brief'])
     stage=context.get('stage')
-    if stage not in ('launch','discovery','initial_ready','content','home_resume','force_stop','relaunch_ready','durable_restart'):stage='unknown'
+    if stage not in ('launch','discovery','protocol_probe','javascript_probe','initial_ready','content','home_resume','force_stop','relaunch_ready','durable_restart'):stage='unknown'
     return {'result':'NATIVE_FAILURE_DIAGNOSTIC','stage':stage,
         'original_pid_observed':pid is not None,
+        **{key:context.get(key) if isinstance(context.get(key),bool) else None for key in ('cdp_matching_response','cdp_detached','cdp_target_crashed','original_target_present')},
+        'system_exact_app_anr_indicator':any(re.search(r'ANR in '+re.escape(PACKAGE)+r' \((?:pid )?'+pid+r'\)',line) for line in system.splitlines()) if system is not None and pid else None,
         'package_process_present':bool(current.split()) if current is not None else None,
         'original_process_still_current':pid in current.split() if pid and current is not None else None,
         'original_debug_socket_present':any(line.split() and line.split()[-1] in ('@webview_devtools_remote_'+pid,'webview_devtools_remote_'+pid) for line in sockets.splitlines()) if pid and sockets is not None else None,
@@ -76,6 +78,14 @@ def wait_packaged_target(port,timeout_seconds=180,opener=urllib.request.urlopen,
         remaining=deadline-clock()
         if remaining<=0:raise AssertionError('packaged local page readiness deadline')
         sleep(min(.2,remaining))
+def target_present(port,target_id,opener=urllib.request.urlopen):
+    if not isinstance(target_id,str) or not target_id:return None
+    try:
+        with opener(f'http://127.0.0.1:{port}/json',timeout=5) as response:targets=json.load(response)
+        if not isinstance(targets,list) or any(not isinstance(t,dict) or not isinstance(t.get('id'),str) for t in targets):return None
+        return any(t['id']==target_id and t.get('type')=='page' and isinstance(t.get('url'),str) and is_packaged_page(t['url']) for t in targets)
+    except (OSError,ValueError):return None
+
 def adb(*args):return subprocess.check_output(['adb',*args],text=True).strip()
 class Page:
     def __init__(self):
@@ -90,18 +100,38 @@ class Page:
         else:raise AssertionError('WebView debug socket unavailable')
         self.port=int(adb('forward','tcp:0','localabstract:'+socket));self.sequence=0
         target=wait_packaged_target(self.port)
+        self.target_id=target.get('id')
+        DIAGNOSTIC_CONTEXT.update(cdp_matching_response=False,cdp_detached=False,cdp_target_crashed=False,original_target_present=None)
         parsed=urlparse(target['webSocketDebuggerUrl'])
         if parsed.scheme!='ws' or parsed.hostname not in ('localhost','127.0.0.1'):raise AssertionError('unexpected debug destination')
         endpoint=urlunparse(parsed._replace(netloc=f'127.0.0.1:{self.port}'))
         self.ws=websocket.create_connection(endpoint,timeout=30,suppress_origin=True)
-    def evaluate(self,expression):
+    def command(self,method,params):
         self.sequence+=1;sequence=self.sequence
-        self.ws.send(json.dumps({'id':sequence,'method':'Runtime.evaluate','params':{'expression':expression,'awaitPromise':True,'returnByValue':True}}))
+        DIAGNOSTIC_CONTEXT['cdp_matching_response']=False
+        self.ws.send(json.dumps({'id':sequence,'method':method,'params':params}))
         while True:
             response=json.loads(self.ws.recv())
+            if not isinstance(response,dict):raise AssertionError('invalid CDP response')
+            event=response.get('method')
+            if event=='Inspector.detached':DIAGNOSTIC_CONTEXT['cdp_detached']=True
+            if event in ('Inspector.targetCrashed','Target.targetCrashed'):DIAGNOSTIC_CONTEXT['cdp_target_crashed']=True
             if response.get('id')!=sequence:continue
-            if 'error' in response or 'exceptionDetails' in response.get('result',{}):raise AssertionError('WebView evaluation failed')
-            return response['result']['result'].get('value')
+            DIAGNOSTIC_CONTEXT['cdp_matching_response']=True
+            if 'error' in response or not isinstance(response.get('result'),dict):raise AssertionError('CDP command failed')
+            return response['result']
+    def controls(self):
+        DIAGNOSTIC_CONTEXT['stage']='protocol_probe'
+        result=self.command('Schema.getDomains',{})
+        if not isinstance(result.get('domains'),list):raise AssertionError('invalid protocol control result')
+        DIAGNOSTIC_CONTEXT['stage']='javascript_probe'
+        result=self.command('Runtime.evaluate',{'expression':'1+1','awaitPromise':False,'returnByValue':True,'timeout':5000})
+        value=result.get('result',{})
+        if 'exceptionDetails' in result or value.get('type')!='number' or type(value.get('value')) not in (int,float) or value['value']!=2:raise AssertionError('invalid JavaScript control result')
+    def evaluate(self,expression):
+        result=self.command('Runtime.evaluate',{'expression':expression,'awaitPromise':True,'returnByValue':True})
+        if 'exceptionDetails' in result:raise AssertionError('WebView evaluation failed')
+        return result['result'].get('value')
     def wait(self,expression):
         deadline=time.monotonic()+30
         while time.monotonic()<deadline:
@@ -109,12 +139,20 @@ class Page:
             time.sleep(.1)
         raise AssertionError('WebView condition deadline')
     def close(self):
-        try:self.ws.close()
-        finally:adb('forward','--remove',f'tcp:{self.port}')
+        failing=sys.exc_info()[0] is not None
+        if failing:
+            try:DIAGNOSTIC_CONTEXT['original_target_present']=target_present(self.port,self.target_id)
+            except Exception:DIAGNOSTIC_CONTEXT['original_target_present']=None
+        try:
+            try:self.ws.close()
+            finally:adb('forward','--remove',f'tcp:{self.port}')
+        except Exception:
+            if not failing:raise
 def start():adb('shell','am','start','-W','-n',PACKAGE+'/.MainActivity')
 def main():
     checks=[];start();page=Page()
     try:
+        page.controls()
         DIAGNOSTIC_CONTEXT['stage']='initial_ready'
         page.wait('window.ready===true')
         assert page.evaluate("Capacitor.getPlatform()==='android' && Capacitor.isNativePlatform()") is True
@@ -144,6 +182,7 @@ def main():
     checks.append('force-stop directly observed absence of package PID before relaunch')
     start();page=Page()
     try:
+        page.controls()
         DIAGNOSTIC_CONTEXT['stage']='relaunch_ready'
         page.wait('window.ready===true')
         DIAGNOSTIC_CONTEXT['stage']='durable_restart'
@@ -214,6 +253,30 @@ def readiness_self_test():
             with self.assertRaises(RuntimeError) as caught:
                 run_with_diagnostics(fail,{},Mock(side_effect=ValueError('probe')),emitted.append)
             self.assertIs(caught.exception,error)
+        def test_controls_exact_two_and_protocol_error(self):
+            page=Page.__new__(Page)
+            page.command=Mock(side_effect=[{'domains':[]},{'result':{'type':'number','value':2}}]);page.controls()
+            self.assertEqual(page.command.call_args[0][1]['timeout'],5000)
+            for value in (True,'2',3,None):
+                page.command=Mock(side_effect=[{'domains':[]},{'result':{'type':'number','value':value}}])
+                with self.assertRaises(AssertionError):page.controls()
+            page.command=Mock(side_effect=AssertionError('CDP command failed'))
+            with self.assertRaises(AssertionError):page.controls()
+            self.assertEqual(page.command.call_count,1)
+        def test_event_flags_and_error_do_not_leak_payload(self):
+            page=Page.__new__(Page);page.sequence=0
+            page.ws=Mock();page.ws.recv=Mock(side_effect=[json.dumps({'method':'Unknown.event','params':{'secret':'SECRET'}}),json.dumps({'method':'Inspector.detached','params':{'reason':'SECRET'}}),json.dumps({'method':'Target.targetCrashed','params':{'targetId':'SECRET'}}),json.dumps({'id':1,'error':{'message':'SECRET'}})])
+            DIAGNOSTIC_CONTEXT.update(cdp_detached=False,cdp_target_crashed=False)
+            with self.assertRaisesRegex(AssertionError,'CDP command failed'):page.command('Schema.getDomains',{})
+            report=diagnostic_summary(DIAGNOSTIC_CONTEXT,lambda args:None)
+            self.assertTrue(report['cdp_detached']);self.assertTrue(report['cdp_target_crashed']);self.assertTrue(report['cdp_matching_response'])
+            self.assertNotIn('SECRET',json.dumps(report))
+        def test_target_negative_and_unknown(self):
+            def opener(value):return Mock(return_value=io.BytesIO(json.dumps(value).encode()))
+            self.assertIs(target_present(9222,'PRIVATE',opener([])),False)
+            self.assertIs(target_present(9222,'PRIVATE',opener([{'id':'PRIVATE','type':'page','url':'https://localhost/'}])),True)
+            self.assertIsNone(target_present(9222,'PRIVATE',opener({})))
+            self.assertIsNone(target_present(9222,'PRIVATE',Mock(side_effect=TimeoutError())))
     result=unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.loadTestsFromTestCase(Tests))
     if not result.wasSuccessful():raise SystemExit(1)
 if __name__=='__main__':
