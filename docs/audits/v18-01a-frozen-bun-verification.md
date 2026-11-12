@@ -64,3 +64,14 @@ changes, not the latest 1431-test source. The same isolated graph/base previousl
 passed both typechecks and client/SSR build. Current npm graph full rerun passed
 **1431/1431 across 56 files** after the portability changes. Remote frozen-Bun
 CI must still verify the latest source. No locks or production code changed.
+
+Remote latest-source dual-graph acceptance: tested commit
+`61d763ecf6e4976b949d8b8d28b3b6de2ebb55bc`.
+- Frozen Bun graph CI [43192680048](https://github.com/mnourdam/noor-al-maadi-app/actions/runs/43192680048): **SUCCESS**, verified job `131095675042`.
+  Bun 1.4.4, Node 24.22.2; **1431/1431 tests across 56 files PASS**, scheduler,
+  both typechecks, client/SSR build, and both unchanged-lock checks passed.
+- npm graph CI [43192679946](https://github.com/mnourdam/noor-al-maadi-app/actions/runs/43192679946): **SUCCESS**, verified job `131095674157`, all steps passed.
+
+This proves both frozen dependency graphs work for this source under Node; it
+does not make their package versions equal or establish hosted Lovable/Android
+release runtime acceptance. No lock regeneration or production deployment.

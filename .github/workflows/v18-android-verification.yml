@@ -61,7 +61,23 @@ jobs:
           node --version
           java -version
           test -n "${ANDROID_HOME:-}"
-          sdkmanager "platforms;android-36" "build-tools;35.0.0"
+          # Hosted runners expose ANDROID_HOME but need not put sdkmanager on PATH.
+          sdkmanager_path="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [[ ! -x "$sdkmanager_path" ]]; then
+            sdkmanager_path=""
+            shopt -s nullglob
+            for candidate in "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager; do
+              if [[ -x "$candidate" ]]; then
+                sdkmanager_path="$candidate"
+                break
+              fi
+            done
+          fi
+          if [[ -z "$sdkmanager_path" || ! -x "$sdkmanager_path" ]]; then
+            echo "No executable sdkmanager in installed ANDROID_HOME cmdline-tools"
+            exit 1
+          fi
+          "$sdkmanager_path" "platforms;android-36" "build-tools;35.0.0"
           bash android/gradlew --version | tee verification-logs/gradle-version.txt
       - name: Build and sync committed offline assets only
         run: |

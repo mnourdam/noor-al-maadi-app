@@ -16,7 +16,7 @@ An empty service-role environment variable and `REQUIRE_LIVE_CONTENT=0` select e
 
 ## Evidence and limits
 
-The new adversarial task-name suite passes 20/20, including root, flavored and test APK tasks plus permitted resource/JAR aggregation. Workflow YAML was parsed and shell run blocks syntax-checked; `git diff --check` passes. No Android task graph, Gradle build, SDK install or CI execution has yet been performed by this author. Those remain pending CI evidence, not a claimed pass. If the actual graph includes signing/packaging, verification fails before executing it rather than silently weakening the boundary.
+The new adversarial task-name suite passes 20/20, including root, flavored and test APK tasks plus permitted resource/JAR aggregation. Workflow YAML was parsed and shell run blocks syntax-checked; `git diff --check` passes. At initial preparation no Android task graph, Gradle build or CI execution had been performed by this author. The first subsequent CI attempt is recorded below; Android compilation remains unverified. If the actual graph includes signing/packaging, verification fails before executing it rather than silently weakening the boundary.
 
 A successful run would prove this committed debug source graph and packaged offline web inputs compile under the selected toolchain, plus whichever JVM unit tests actually exist. It would not prove an APK build, release signing, Android device/WebView behavior, production content freshness, hosted staging acceptance or V18 economic activation. Unit-test tasks may report NO-SOURCE when no tests exist, which must not be presented as executed behavioral tests.
 
@@ -24,3 +24,13 @@ Independent static safety review: **CLEAR** for branch-only verification CI.
 Reviewer reran **20/20** adversarial graph tests and checked the current known
 Gradle source graph. Full existing npm regression suite also passed **1431/1431**.
 Actual Android SDK/Gradle execution remains pending; no APK/device/release claim.
+
+## First CI execution and SDK-path correction
+
+Run `43192555734`, job `131095278240`, selected Node 24.22.2/JDK 21.0.13 and passed npm ci, then failed with exit 127: `sdkmanager: command not found`. ANDROID_HOME was present, but the executable was not on PATH. No Android compilation was reached. The workflow now checks the installed `$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager`, then existing versioned cmdline-tools directories, requiring an executable and failing closed if absent. It does not download a new SDK manager or accept licenses. The existing SDK-package provisioning arguments and compilation/signing guards remain unchanged.
+
+The revised inline resolver was tested using synthetic SDK directory fixtures: latest path, versioned fallback, missing tool failure and latest preference all pass (4/4). Workflow shell syntax and diff checks pass. No real SDK install or license command was executed during these local tests.
+
+SDK-path correction independently reviewed **CLEAR**; coordinator independently
+reran the four synthetic resolver fixtures **4/4 PASS**. Retrying the corrected
+workflow is authorized without relaxing any compilation/task/artifact boundary.
