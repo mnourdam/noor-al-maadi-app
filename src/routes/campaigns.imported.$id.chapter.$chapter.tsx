@@ -27,6 +27,7 @@ import {
   getChapterProgress, getCampaignProgress, recordActivity, isChapterUnlocked,
 } from "@/lib/importedCampaignProgress";
 import { ActivityRenderer } from "@/components/imported-campaign/ActivityRenderer";
+import { ChapterReadingReview } from "@/components/imported-campaign/ChapterReadingReview";
 import { ActivityReviewCard } from "@/components/imported-campaign/ActivityReviewCard";
 import { RichReadingText } from "@/components/imported-campaign/RichReadingText";
 import { CachedImage } from "@/components/CachedImage";
@@ -517,6 +518,14 @@ function ImportedChapterPlayer() {
                 <UnlockList ids={chapter.rewards.unlocks ?? []} locked={!chProgress?.completed} lockedHint={`أكمل فصل «${chapter.title}» لفتح هذه الجائزة.`} />
               )}
             </div>
+          )}
+
+          {!reviewMode && (
+            <ChapterReadingReview
+              key={`${campaign.id}:${chapter.id}`}
+              chapter={chapter}
+              completedActivityIds={chProgress?.completedActivityIds ?? []}
+            />
           )}
 
           {/* Activities */}
