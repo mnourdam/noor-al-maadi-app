@@ -57,11 +57,14 @@ export function validateEntitlement(row: Entitlement, owner: string, key: string
   )
     fail("corrupt-record");
   const seen = new Set<string>();
-  for (const a of row.attempts) {
+  for (const [index, a] of row.attempts.entries()) {
     if (
       !a ||
       !validBinding(a.binding) ||
       seen.has(token(a.binding)) ||
+      // prepare forbids every successor after confirmation, even not_due.
+      // Persisted history must obey that same terminal invariant; never repair it.
+      (a.progress === "confirmed" && index !== row.attempts.length - 1) ||
       !["pending", "confirmed", "rejected", "legacy_unknown"].includes(a.progress) ||
       !["awaiting_confirmation", "delivery_pending", "delivered", "not_due"].includes(a.reward) ||
       (a.progress === "confirmed"
