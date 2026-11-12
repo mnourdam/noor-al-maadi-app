@@ -78,7 +78,17 @@ function read(strict = false): LedgerState {
 }
 function write(s: LedgerState) {
   if (!isBrowser()) return false;
-  try { window.localStorage.setItem(LEDGER_KEY, JSON.stringify(s)); return true; } catch { return false; }
+  const epoch = getIdentityEpoch();
+  try {
+    const serialized = JSON.stringify(s);
+    if (getIdentityEpoch() !== epoch) return false;
+    window.localStorage.setItem(LEDGER_KEY, serialized);
+    // A non-throwing storage adapter may still drop or replace this write.
+    // This acknowledges only immediate exact readback, not atomic reward delivery.
+    if (getIdentityEpoch() !== epoch) return false;
+    const persisted = window.localStorage.getItem(LEDGER_KEY);
+    return getIdentityEpoch() === epoch && persisted === serialized;
+  } catch { return false; }
 }
 
 // -------------------- Keys --------------------
