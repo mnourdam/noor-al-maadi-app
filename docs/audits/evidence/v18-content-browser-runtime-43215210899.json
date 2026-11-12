@@ -1,0 +1,35 @@
+{
+  "run_id": 43215210899,
+  "job_id": 131172594821,
+  "source_commit": "26a434dafd3e9d728800f76f593f35461a40a405",
+  "artifact_id": 13942429464,
+  "artifact_zip_sha256": "95c4ceb94297855863045903d4fad2abcf933a30bae7e47631349550bcef7991",
+  "results": {
+    "content-runtime-result.json": {
+      "result": "PASS_BROWSER_ONLY",
+      "browser": "Chrome/151.0.7922.34",
+      "checks": [
+        "actual local store hydrated baseline",
+        "identified partial GET emits browser requestfailed ERR_ABORTED before retry",
+        "partial HTTP body timeout preserves baseline and releases controller",
+        "same runtime retry persists complete large snapshot",
+        "late stream cannot overwrite retry; ordinary HTTP works without restart",
+        "CDP browser freeze/resume retains local content; not Android lifecycle",
+        "browser offline retains IDB and local reads",
+        "orderly browser close/reopen same profile and origin retains content"
+      ],
+      "externalRequests": 0,
+      "pageErrors": 0,
+      "android": "NOT_TESTED",
+      "forceStop": "NOT_TESTED"
+    },
+    "content-runtime-counterfactual.json": {
+      "result": "EXPECTED_MISSING_TRANSPORT_ABORT",
+      "checks": [
+        "original timeout reached with partial response pending",
+        "no requestfailed for identified held GET after removal of query signal forwarding"
+      ],
+      "android": "NOT_TESTED"
+    }
+  }
+}
