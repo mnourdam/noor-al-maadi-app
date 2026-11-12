@@ -6,7 +6,7 @@ Existing `.github/workflows/build-android.yml` selects Node 20 and Java 17, invo
 
 New `.github/workflows/v18-android-verification.yml` is restricted to the repair branch (push path filters plus job-level ref guard, including manual dispatch). It uses Node 24, Temurin JDK 21, the committed Gradle 8.14.3 wrapper, compile SDK 36 and build tools 35.0.0. Dependency installation uses the lockfile and disables install scripts.
 
-Only `:app:compileDebugSources` and `:app:testDebugUnitTest` execute. A dry-run task graph is checked before task execution by `scripts/verify-android-compilation-task-graph.mjs`. Task basenames beginning with assemble, sign, validateSigning, package or bundle are rejected, except `package*Resources` and `bundleLib*` library aggregation tasks required for compilation. Flavor/test APK packaging is not exempt. Missing/unrecognized task output fails closed. A subsequent check rejects APK/AAB/keystore output. No release credentials, signing material, device/emulator, deployment or app publication is configured. Only verification text logs and JVM unit-test XML/HTML reports are uploaded, never APKs or broad workspace archives.
+Only `:app:compileDebugSources` and `:app:testDebugUnitTest` execute. A dry-run task graph is checked before task execution by `scripts/verify-android-compilation-task-graph.mjs`. Task basenames beginning with assemble, sign, validateSigning, package or bundle are rejected, except `package*Resources`, `bundleLib*` library aggregation and the two exact debug application class-JAR tasks documented below. Flavor/test APK packaging is not exempt. Missing/unrecognized task output fails closed. A subsequent check rejects APK/AAB/keystore output. No release credentials, signing material, device/emulator, deployment or app publication is configured. Only verification text logs and JVM unit-test XML/HTML reports are uploaded, never APKs or broad workspace archives.
 
 ## Offline content boundary
 
@@ -34,3 +34,16 @@ The revised inline resolver was tested using synthetic SDK directory fixtures: l
 SDK-path correction independently reviewed **CLEAR**; coordinator independently
 reran the four synthetic resolver fixtures **4/4 PASS**. Retrying the corrected
 workflow is authorized without relaxing any compilation/task/artifact boundary.
+
+## Second CI execution and exact JVM class-JAR exception
+
+Run `43193285053`, job `131097736071`, passed SDK setup, offline web build and Capacitor sync. The Gradle dry-run succeeded, but the safety predicate rejected `bundleDebugClassesToRuntimeJar` and `bundleDebugClassesToCompileJar` before actual compilation. This is a guarded verification failure, not an Android compilation pass. Evidence artifact `13932415290` contains three logs (reported SHA-256 `ba185f606df0c2cd65d4729f0569d1480fd19b8e0b686ea6211bd729eea8fbf6`).
+
+Android's official [BundleAllClasses implementation/change](https://android.googlesource.com/platform/tools/base/+/c61459899d80d29a921b9dfd99abe8b266cac2cb%5E%21/) identifies these task suffixes as publishing `classes.jar` for API/compile and runtime consumers, including unit tests; they are not APK or Android App Bundle producers. The predicate now allows only those two exact case-sensitive debug task basenames in addition to its previous compilation-resource/library exceptions. Release/flavored variants, extra APK/bundle suffixes and case lookalikes remain denied. No general bundle allowlist was added.
+
+The exact JAR exception passed independent review **CLEAR** and **28/28**
+adversarial guard tests. The coordinator downloaded and verified the artifact's
+SHA-256 and its three text-only entries; the actual **186-task** dry-run graph
+passes the corrected predicate. The reviewer independently rechecked that graph.
+No signing, APK/AAB or assemble task is admitted. Actual compilation remains
+pending a corrected CI execution, not established by this dry-run evidence.

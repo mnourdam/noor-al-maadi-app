@@ -1,10 +1,14 @@
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
+// AGP BundleAllClasses publishes classes.jar for JVM compile/runtime consumers.
+// These exact debug tasks are not Android App Bundle or APK packaging.
+const debugClassJars = new Set(['bundleDebugClassesToCompileJar', 'bundleDebugClassesToRuntimeJar']);
+
 export function prohibitedTask(name) {
   return /^(assemble|sign|validateSigning)/i.test(name) ||
     (/^package/i.test(name) && !/^package.*Resources$/i.test(name)) ||
-    (/^bundle/i.test(name) && !/^bundleLib/i.test(name));
+    (/^bundle/i.test(name) && !/^bundleLib/i.test(name) && !debugClassJars.has(name));
 }
 
 export function verifyTaskGraph(text) {
