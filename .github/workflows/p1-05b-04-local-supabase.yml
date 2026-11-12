@@ -1,0 +1,38 @@
+name: P1-05B-04 Disposable Local Supabase Integration
+on:
+  push:
+    branches: [v18-01a-outbox-recovery]
+    paths:
+      - '.github/workflows/p1-05b-04-local-supabase.yml'
+      - 'tests/sql/p1-05b-04-local-supabase/**'
+      - 'docs/proposals/v18-01a-p1-05b-02-compatibility-gate.sql'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  local-supabase-only:
+    if: github.ref == 'refs/heads/v18-01a-outbox-recovery'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: supabase/setup-cli@689adcfb80d947100a1eab127289b97d1fb07b13 # official v3.2.0
+        with:
+          version: '2.122.1'
+      - name: Validate fail-closed harness without Docker or network
+        run: python3 -m unittest discover -s tests/sql/p1-05b-04-local-supabase -p 'test_*.py' -v
+      - name: Exercise real Auth and PostgREST on disposable local stack only
+        run: python3 tests/sql/p1-05b-04-local-supabase/harness.py run
+      - name: Cleanup only this run's local project
+        if: always()
+        run: python3 tests/sql/p1-05b-04-local-supabase/harness.py cleanup
+      - name: Upload redacted acceptance evidence only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v18-local-supabase-acceptance
+          path: ${{ runner.temp }}/v18-local-supabase-evidence/acceptance.json
+          if-no-files-found: warn
+          retention-days: 7
