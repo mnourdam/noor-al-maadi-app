@@ -13,3 +13,13 @@ The hook awaits that local receipt before publishing purchased. An unconfirmed a
 ## Tests and scope
 
 Eight new actual-provider cases cover persisted successful receipt/remount, silent durable drop, fractional balance, superseding queued admission with no purchase event, full/insufficient no-write results, unresolved retry suppression and guest identity ABA. The historical guest test starts its promise inside act and awaits it after effect flushing, preserving every prior assertion; awaiting a persistence effect inside the same act would deadlock the test harness. Authenticated historical tests remain included. Local focused suite: 32/32 PASS. Full regression/type/build remain coordinator-owned and pending.
+
+## Reviewed ingress pin refresh
+
+The source-drift check correctly rejected the changed `src/hooks/useBuyHeart.ts`
+bytes after this repair. Manual review confirmed its only literal RPC remains
+`purchase_heart`, with no direct table calls; authenticated RPC behavior is
+unchanged. Only that client SHA256 pin and the dependent semantic-review manifest
+SHA256 were refreshed, without regenerating inventory or accepting unrelated
+source drift. All seven economic-ingress integrity tests and the drift checker
+pass. This is evidence maintenance, not broader economic authority acceptance.
