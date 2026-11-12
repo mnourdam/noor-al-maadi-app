@@ -1,0 +1,56 @@
+name: V18 Browser Content Runtime Acceptance
+on:
+  push:
+    branches: [v18-01a-outbox-recovery]
+    paths:
+      - '.github/workflows/v18-content-browser-runtime.yml'
+      - 'tests/offline/browser/*content-runtime*'
+      - 'src/lib/offline-*'
+      - 'src/lib/local-first-store.ts'
+      - 'src/lib/stories/content-identity*'
+      - 'src/integrations/supabase/**'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  content-browser:
+    if: github.ref == 'refs/heads/v18-01a-outbox-recovery'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify fail-closed build target guards
+        run: node --test tests/offline/browser/test-content-runtime-build.mjs
+      - name: Install official pinned browser tooling
+        run: |
+          python -m pip install playwright==1.62.0
+          python -m playwright install --with-deps chromium
+      - name: Actual browser, local server and durable content lifecycle
+        shell: bash
+        run: |
+          set -euo pipefail
+          export CHROMIUM_EXECUTABLE_PATH="$(python -c 'from playwright.sync_api import sync_playwright; p=sync_playwright().start(); print(p.chromium.executable_path); p.stop()')"
+          python tests/offline/browser/content-runtime-native.py > content-runtime-result.json
+          cat content-runtime-result.json
+          python tests/offline/browser/content-runtime-native.py --counterfactual-no-query-abort > content-runtime-counterfactual.json
+          cat content-runtime-counterfactual.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: browser-content-runtime-evidence
+          path: |
+            content-runtime-result.json
+            content-runtime-counterfactual.json
+          if-no-files-found: error
+          retention-days: 7

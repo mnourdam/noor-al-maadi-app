@@ -1,0 +1,20 @@
+import {build} from 'vite';
+import fs from 'node:fs';
+import path from 'node:path';
+const [output,origin,mode]=process.argv.slice(2);
+if(mode && mode!=='--counterfactual-no-query-abort')throw Error('unknown build mode');
+const target=path.resolve('src/lib/offline-snapshot.ts');
+const needle='return scope?.signal ? query.abortSignal(scope.signal) : query;';
+let replacements=0;
+const overlay={name:'isolated-no-query-abort-counterfactual',enforce:'pre',load(id){
+ if(id!==target)return;
+ const source=fs.readFileSync(target,'utf8');
+ if(source.split(needle).length!==2)throw Error('counterfactual source boundary changed');
+ replacements++;return source.replace(needle,'return query; // isolated transport counterfactual');
+}};
+const url=new URL(origin);
+if(url.hostname!=='127.0.0.1'||url.protocol!=='http:'||url.pathname!=='/'||url.username||url.password||url.search||url.hash)throw Error('loopback origin required');
+if(!output||!path.isAbsolute(output))throw Error('absolute temporary output required');
+await build({plugins:mode?[overlay]:[],configFile:false,envFile:false,publicDir:false,resolve:{alias:{'@':path.resolve('src')}},define:{'import.meta.env.VITE_SUPABASE_URL':JSON.stringify(origin+'/api'),'import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY':JSON.stringify('synthetic-content-runtime-only'),'process.env.SUPABASE_URL':JSON.stringify(origin+'/api'),'process.env.SUPABASE_PUBLISHABLE_KEY':JSON.stringify('synthetic-content-runtime-only'),'process.env.NODE_ENV':JSON.stringify('production')},build:{outDir:output,emptyOutDir:false,minify:false,rolldownOptions:{input:path.resolve('tests/offline/browser/content-runtime-fixture.ts'),output:{entryFileNames:'fixture.js'}}}});
+if(mode && replacements!==1)throw Error('counterfactual overlay was not applied exactly once');
+fs.writeFileSync(path.join(output,'index.html'),'<meta charset="utf-8"><script type="module" src="/fixture.js"></script>');
