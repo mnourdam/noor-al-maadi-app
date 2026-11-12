@@ -977,116 +977,124 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       ...next,
       settings: { ...initial.settings, ...(next.settings ?? {}) },
     }),
-    mergeCloudSave: (cloud, extras) => setProfile((p) => {
-      const union = (a: readonly string[] | undefined, b: readonly string[] | undefined): string[] => {
-        const s = new Set<string>();
-        for (const x of a ?? []) if (x) s.add(x);
-        for (const x of b ?? []) if (x) s.add(x);
-        return Array.from(s);
-      };
-      const numMax = (a: number | undefined, b: number | undefined, fallback = 0): number =>
-        Math.max(fallback, Math.floor(a ?? fallback), Math.floor(b ?? fallback));
-      const cooldowns: Record<string, number> = { ...(p.activityCooldowns ?? {}) };
-      for (const [k, v] of Object.entries(cloud.activityCooldowns ?? {})) {
-        cooldowns[k] = Math.max(cooldowns[k] ?? 0, Number(v) || 0);
-      }
-      const hints: Record<string, number> = { ...(p.hintsPurchased ?? {}) };
-      for (const [k, v] of Object.entries(cloud.hintsPurchased ?? {})) {
-        hints[k] = Math.max(hints[k] ?? 0, Number(v) || 0);
-      }
-      // V16 — Streak: cloud/server value is authoritative and is adopted
-      // verbatim (max with local so an in-flight local activity is not
-      // regressed). A client-side "expired" derivation NEVER zeroes it;
-      // expiry is display-only. This stops a stale local `lastActiveDay`
-      // from wiping a valid server streak during hydration.
-      const nextStreak = numMax(p.streak, cloud.streak);
-      // V17-04A — the `...cloud` spread below used to let an OLDER cloud
-      // `lastActiveDay` overwrite a newer local one, producing the
-      // "correct streak + stale day" pair that makes the HUD show 0.
-      // Precedence is now explicit: keep the later of the two days.
-      const nextLastActiveDay = laterDayKey(p.lastActiveDay, cloud.lastActiveDay);
+    mergeCloudSave: (cloud, extras) => {
+      // Snapshot once before React can defer the merge. Reject a malformed
+      // numeric snapshot without admitting any partial progression/balance write.
+      const captured = { ...cloud };
+      if ([captured.points, captured.dinars, captured.streak].some(
+        (value) => typeof value === "number" && !Number.isFinite(value),
+      )) return;
+      setProfile((p) => {
+        const union = (a: readonly string[] | undefined, b: readonly string[] | undefined): string[] => {
+          const s = new Set<string>();
+          for (const x of a ?? []) if (x) s.add(x);
+          for (const x of b ?? []) if (x) s.add(x);
+          return Array.from(s);
+        };
+        const numMax = (a: number | undefined, b: number | undefined, fallback = 0): number =>
+          Math.max(fallback, Math.floor(a ?? fallback), Math.floor(b ?? fallback));
+        const cooldowns: Record<string, number> = { ...(p.activityCooldowns ?? {}) };
+        for (const [k, v] of Object.entries(captured.activityCooldowns ?? {})) {
+          cooldowns[k] = Math.max(cooldowns[k] ?? 0, Number(v) || 0);
+        }
+        const hints: Record<string, number> = { ...(p.hintsPurchased ?? {}) };
+        for (const [k, v] of Object.entries(captured.hintsPurchased ?? {})) {
+          hints[k] = Math.max(hints[k] ?? 0, Number(v) || 0);
+        }
+        // V16 — Streak: cloud/server value is authoritative and is adopted
+        // verbatim (max with local so an in-flight local activity is not
+        // regressed). A client-side "expired" derivation NEVER zeroes it;
+        // expiry is display-only. This stops a stale local `lastActiveDay`
+        // from wiping a valid server streak during hydration.
+        const nextStreak = numMax(p.streak, captured.streak);
+        // V17-04A — the `...cloud` spread below used to let an OLDER cloud
+        // `lastActiveDay` overwrite a newer local one, producing the
+        // "correct streak + stale day" pair that makes the HUD show 0.
+        // Precedence is now explicit: keep the later of the two days.
+        const nextLastActiveDay = laterDayKey(p.lastActiveDay, captured.lastActiveDay);
 
 
-      // Hearts: cloud value wins ONLY when it differs from the local
-      // committed value; preserves regen anchor otherwise.
-      //
-      // Anchor rule (reinstall/second-device safety): on a fresh install
-      // the local `heartsAt` is `Date.now()` (from `initial`) — newer
-      // than the cloud anchor. Adopting the local anchor would silently
-      // wipe accrued regeneration. When cloud carries a numeric anchor
-      // that is OLDER than the local one, use the cloud anchor as the
-      // starting point so the timer resumes at the correct offset.
-      const cloudHearts = Math.max(0, Math.min(HEART_MAX, cloud.hearts ?? HEART_MAX));
-      const localCommitted = Math.max(0, Math.min(HEART_MAX, p.hearts ?? HEART_MAX));
-      const cloudAt = typeof cloud.heartsAt === "number" && Number.isFinite(cloud.heartsAt)
-        ? cloud.heartsAt
-        : null;
-      const now = Date.now();
-      const localEff = getEffectiveHearts(p, now);
-      const cloudEff = cloudAt !== null ? getEffectiveHearts({ ...p, hearts: cloudHearts, heartsAt: cloudAt }, now) : cloudHearts;
+        // Hearts: cloud value wins ONLY when it differs from the local
+        // committed value; preserves regen anchor otherwise.
+        //
+        // Anchor rule (reinstall/second-device safety): on a fresh install
+        // the local `heartsAt` is `Date.now()` (from `initial`) — newer
+        // than the cloud anchor. Adopting the local anchor would silently
+        // wipe accrued regeneration. When cloud carries a numeric anchor
+        // that is OLDER than the local one, use the cloud anchor as the
+        // starting point so the timer resumes at the correct offset.
+        const cloudHearts = Math.max(0, Math.min(HEART_MAX, captured.hearts ?? HEART_MAX));
+        const localCommitted = Math.max(0, Math.min(HEART_MAX, p.hearts ?? HEART_MAX));
+        const cloudAt = typeof captured.heartsAt === "number" && Number.isFinite(captured.heartsAt)
+          ? captured.heartsAt
+          : null;
+        const now = Date.now();
+        const localEff = getEffectiveHearts(p, now);
+        const cloudEff = cloudAt !== null ? getEffectiveHearts({ ...p, hearts: cloudHearts, heartsAt: cloudAt }, now) : cloudHearts;
 
 
-      // V13 MINIMAL SAFE FIX: Reconciliation must compare EFFECTIVE states and preserve the tuple.
-      // Do NOT use commitHearts during hydration as it resets the anchor to 'now'.
-      const useCloud = cloudEff > localEff || (cloudEff === localEff && cloudAt !== null && cloudAt < (p.heartsAt ?? now));
-      
-      const heartsPatch = useCloud && cloudAt !== null
-        ? { hearts: cloudHearts, heartsAt: cloudAt }
-        : { hearts: p.hearts, heartsAt: p.heartsAt };
+        // V13 MINIMAL SAFE FIX: Reconciliation must compare EFFECTIVE states and preserve the tuple.
+        // Do NOT use commitHearts during hydration as it resets the anchor to 'now'.
+        const useCloud = cloudEff > localEff || (cloudEff === localEff && cloudAt !== null && cloudAt < (p.heartsAt ?? now));
+
+        const heartsPatch = useCloud && cloudAt !== null
+          ? { hearts: cloudHearts, heartsAt: cloudAt }
+          : { hearts: p.hearts, heartsAt: p.heartsAt };
 
 
-      const dailyDay = cloud.dailyClaimed?.day && cloud.dailyClaimed.day === p.dailyClaimed?.day
+        const dailyDay = captured.dailyClaimed?.day && captured.dailyClaimed.day === p.dailyClaimed?.day
 
-        ? p.dailyClaimed.day
-        : (cloud.dailyClaimed?.day ?? p.dailyClaimed?.day ?? "");
-      const dailyIds = cloud.dailyClaimed?.day === p.dailyClaimed?.day
-        ? union(p.dailyClaimed?.ids, cloud.dailyClaimed?.ids)
-        : (cloud.dailyClaimed?.ids ?? p.dailyClaimed?.ids ?? []);
+          ? p.dailyClaimed.day
+          : (captured.dailyClaimed?.day ?? p.dailyClaimed?.day ?? "");
+        const dailyIds = captured.dailyClaimed?.day === p.dailyClaimed?.day
+          ? union(p.dailyClaimed?.ids, captured.dailyClaimed?.ids)
+          : (captured.dailyClaimed?.ids ?? p.dailyClaimed?.ids ?? []);
 
-      return {
-        ...initial,
-        ...p,
-        ...cloud,
-        // Scalars: max so a stale cloud push never regresses local.
-        points: numMax(p.points, cloud.points),
-        // seasonPoints removed in Phase 3B
-        dinars: numMax(p.dinars, cloud.dinars, STARTING_DINARS),
-        streak: nextStreak,
-        lastActiveDay: nextLastActiveDay,
-        hearts: heartsPatch.hearts,
-        heartsAt: heartsPatch.heartsAt,
-        // Union all progression arrays. Include the server sticky
-        // campaign completions ledger so a returning device that never
-        // pushed the fact cannot drop it.
-        storiesOpened: union(p.storiesOpened, cloud.storiesOpened),
-        storiesRead: union(p.storiesRead, cloud.storiesRead),
-        savedStories: union(p.savedStories, cloud.savedStories),
-        puzzlesSolved: union(p.puzzlesSolved, cloud.puzzlesSolved),
-        whoSolved: union(p.whoSolved, cloud.whoSolved),
-        badges: union(p.badges, cloud.badges),
-        unlockedEras: union(p.unlockedEras, cloud.unlockedEras),
-        investigationsCompleted: union(p.investigationsCompleted, cloud.investigationsCompleted),
-        timelinesCompleted: union(p.timelinesCompleted, cloud.timelinesCompleted),
-        decisionsCompleted: union(p.decisionsCompleted, cloud.decisionsCompleted),
-        missionsCompleted: union(p.missionsCompleted, cloud.missionsCompleted),
-        campaignsCompleted: union(
-          union(p.campaignsCompleted, cloud.campaignsCompleted),
-          extras?.stickyCampaignIds,
-        ),
-        artifactsFound: union(p.artifactsFound, cloud.artifactsFound),
-        charactersUnlocked: union(p.charactersUnlocked, cloud.charactersUnlocked),
-        regionsUnlocked: union(p.regionsUnlocked, cloud.regionsUnlocked),
-        titlesEarned: union(p.titlesEarned, cloud.titlesEarned),
-        streakMilestonesClaimed: Array.from(new Set([
-          ...(p.streakMilestonesClaimed ?? []),
-          ...(cloud.streakMilestonesClaimed ?? []),
-        ])).sort((a, b) => a - b),
-        activityCooldowns: cooldowns,
-        hintsPurchased: hints,
-        dailyClaimed: { day: dailyDay, ids: dailyIds },
-        settings: { ...initial.settings, ...(p.settings ?? {}), ...(cloud.settings ?? {}) },
-      } as ProfileState;
-    }),
+        return {
+          ...initial,
+          ...p,
+          ...captured,
+          // Scalars: max so a stale cloud push never regresses local.
+          points: numMax(p.points, captured.points),
+          // seasonPoints removed in Phase 3B
+          dinars: numMax(p.dinars, captured.dinars, STARTING_DINARS),
+          streak: nextStreak,
+          lastActiveDay: nextLastActiveDay,
+          hearts: heartsPatch.hearts,
+          heartsAt: heartsPatch.heartsAt,
+          // Union all progression arrays. Include the server sticky
+          // campaign completions ledger so a returning device that never
+          // pushed the fact cannot drop it.
+          storiesOpened: union(p.storiesOpened, captured.storiesOpened),
+          storiesRead: union(p.storiesRead, captured.storiesRead),
+          savedStories: union(p.savedStories, captured.savedStories),
+          puzzlesSolved: union(p.puzzlesSolved, captured.puzzlesSolved),
+          whoSolved: union(p.whoSolved, captured.whoSolved),
+          badges: union(p.badges, captured.badges),
+          unlockedEras: union(p.unlockedEras, captured.unlockedEras),
+          investigationsCompleted: union(p.investigationsCompleted, captured.investigationsCompleted),
+          timelinesCompleted: union(p.timelinesCompleted, captured.timelinesCompleted),
+          decisionsCompleted: union(p.decisionsCompleted, captured.decisionsCompleted),
+          missionsCompleted: union(p.missionsCompleted, captured.missionsCompleted),
+          campaignsCompleted: union(
+            union(p.campaignsCompleted, captured.campaignsCompleted),
+            extras?.stickyCampaignIds,
+          ),
+          artifactsFound: union(p.artifactsFound, captured.artifactsFound),
+          charactersUnlocked: union(p.charactersUnlocked, captured.charactersUnlocked),
+          regionsUnlocked: union(p.regionsUnlocked, captured.regionsUnlocked),
+          titlesEarned: union(p.titlesEarned, captured.titlesEarned),
+          streakMilestonesClaimed: Array.from(new Set([
+            ...(p.streakMilestonesClaimed ?? []),
+            ...(captured.streakMilestonesClaimed ?? []),
+          ])).sort((a, b) => a - b),
+          activityCooldowns: cooldowns,
+          hintsPurchased: hints,
+          dailyClaimed: { day: dailyDay, ids: dailyIds },
+          settings: { ...initial.settings, ...(p.settings ?? {}), ...(captured.settings ?? {}) },
+        } as ProfileState;
+      });
+    },
     resetProfile: () => reset(initial),
     applyServerStats: (stats) => {
       // Capture before React can defer the updater. Invalid snapshots must not

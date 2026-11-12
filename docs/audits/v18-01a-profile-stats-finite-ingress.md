@@ -47,3 +47,7 @@ projects PASS, and production build PASS. A test-only unsupported activity label
 was corrected to the existing `campaign_chapter` union member before this full
 rerun. No historical assertion was removed. Remote CI remains pending for this
 commit; build success is not deployment authorization.
+
+Remote runtime CI **SUCCESS**: [43185681670](https://github.com/mnourdam/noor-al-maadi-app/actions/runs/43185681670), tested commit `5e13b53a4e681eed8bdd1040663f3be4846ab07f`.
+Verified job `131072117313` passed every step, including regressions, scheduler,
+typecheck and client/SSR build. No deployment.
