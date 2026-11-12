@@ -1,5 +1,5 @@
 """Actual debug WebView/bridge/lifecycle checks; synthetic transport, no network claim."""
-import json,subprocess,time,urllib.request,os
+import json,subprocess,time,urllib.request,urllib.error,os
 from urllib.parse import urlparse,urlunparse
 import websocket
 PACKAGE='app.lovable.irth'
@@ -8,6 +8,32 @@ def is_packaged_page(url):
         parsed=urlparse(url)
         return parsed.scheme=='https' and parsed.hostname=='localhost' and parsed.port in (None,443) and parsed.username is None and parsed.password is None
     except ValueError:return False
+def wait_packaged_target(port,timeout_seconds=180,opener=urllib.request.urlopen,clock=time.monotonic,sleep=time.sleep):
+    deadline=clock()+timeout_seconds
+    while True:
+        remaining=deadline-clock()
+        if remaining<=0:raise AssertionError('packaged local page readiness deadline')
+        try:
+            with opener(f'http://127.0.0.1:{port}/json',timeout=min(5,remaining)) as response:
+                targets=json.load(response)
+        except (TimeoutError,ConnectionRefusedError):
+            targets=[]
+        except urllib.error.URLError as error:
+            if not isinstance(error.reason,(TimeoutError,ConnectionRefusedError)):raise
+            targets=[]
+        if not isinstance(targets,list) or any(not isinstance(target,dict) for target in targets):
+            raise AssertionError('invalid debug target schema')
+        for target in targets:
+            if not isinstance(target.get('type'),str):raise AssertionError('invalid debug target type')
+            if target['type']!='page':continue
+            if not isinstance(target.get('url'),str) or not is_packaged_page(target['url']):
+                raise AssertionError('unexpected packaged page origin')
+            if not isinstance(target.get('webSocketDebuggerUrl'),str):raise AssertionError('missing debug socket URL')
+            if clock()>=deadline:raise AssertionError('packaged local page readiness deadline')
+            return target
+        remaining=deadline-clock()
+        if remaining<=0:raise AssertionError('packaged local page readiness deadline')
+        sleep(min(.2,remaining))
 def adb(*args):return subprocess.check_output(['adb',*args],text=True).strip()
 class Page:
     def __init__(self):
@@ -20,13 +46,8 @@ class Page:
             time.sleep(.2)
         else:raise AssertionError('WebView debug socket unavailable')
         self.port=int(adb('forward','tcp:0','localabstract:'+socket));self.sequence=0
-        for _ in range(100):
-            with urllib.request.urlopen(f'http://127.0.0.1:{self.port}/json',timeout=5) as r:targets=json.load(r)
-            targets=[t for t in targets if t.get('type')=='page' and is_packaged_page(t.get('url',''))]
-            if targets:break
-            time.sleep(.1)
-        else:raise AssertionError('packaged local page unavailable')
-        parsed=urlparse(targets[0]['webSocketDebuggerUrl'])
+        target=wait_packaged_target(self.port)
+        parsed=urlparse(target['webSocketDebuggerUrl'])
         if parsed.scheme!='ws' or parsed.hostname not in ('localhost','127.0.0.1'):raise AssertionError('unexpected debug destination')
         endpoint=urlunparse(parsed._replace(netloc=f'127.0.0.1:{self.port}'))
         self.ws=websocket.create_connection(endpoint,timeout=30,suppress_origin=True)
@@ -82,4 +103,48 @@ def main():
         checks.append('Android am force-stop and fresh activity process reload preserve committed IndexedDB content')
         print(json.dumps({'result':'PASS_NATIVE_SELECTED_MODULES','checks':checks,'emulator_acceleration':os.environ.get('NATIVE_ACCEL','unspecified'),'android_api':adb('shell','getprop','ro.build.version.sdk'),'webview_user_agent':page.evaluate('navigator.userAgent'),'transport':'SYNTHETIC_FETCH_ONLY_INTERNET_PERMISSION_REMOVED','full_app_ui':'NOT_TESTED','hardware_back':'NOT_TESTED'}))
     finally:page.close()
-if __name__=='__main__':main()
+def readiness_self_test():
+    import io,unittest
+    from unittest.mock import Mock
+    valid={'type':'page','url':'https://localhost/','webSocketDebuggerUrl':'ws://localhost/devtools/page/1'}
+    class Tests(unittest.TestCase):
+        def invoke(self,opener,seconds=2):
+            now=[0.0]
+            def sleep(value):now[0]+=value
+            result=wait_packaged_target(9222,seconds,opener,lambda:now[0],sleep)
+            return result,now[0]
+        def test_delayed_timeout_then_success(self):
+            opener=Mock(side_effect=[TimeoutError(),io.BytesIO(json.dumps([valid]).encode())])
+            self.assertEqual(self.invoke(opener)[0],valid);self.assertEqual(opener.call_count,2)
+        def test_connection_refusal_then_success(self):
+            opener=Mock(side_effect=[urllib.error.URLError(ConnectionRefusedError()),io.BytesIO(json.dumps([valid]).encode())])
+            self.assertEqual(self.invoke(opener)[0],valid)
+        def test_deadline_caps_each_request(self):
+            now=[0.0];timeouts=[]
+            def opener(url,timeout):timeouts.append(timeout);now[0]+=timeout;raise TimeoutError()
+            with self.assertRaisesRegex(AssertionError,'deadline'):
+                wait_packaged_target(9222,7,opener,lambda:now[0],lambda value:now.__setitem__(0,now[0]+value))
+            self.assertAlmostEqual(now[0],7);self.assertEqual(timeouts,[5,1.7999999999999998])
+        def test_invalid_origin_not_retried(self):
+            target={**valid,'url':'https://localhost.evil/'};opener=Mock(return_value=io.BytesIO(json.dumps([target]).encode()))
+            with self.assertRaisesRegex(AssertionError,'origin'):self.invoke(opener)
+            self.assertEqual(opener.call_count,1)
+        def test_malformed_json_not_retried(self):
+            opener=Mock(return_value=io.BytesIO(b'not-json'))
+            with self.assertRaises(json.JSONDecodeError):self.invoke(opener)
+            self.assertEqual(opener.call_count,1)
+        def test_schema_error_not_retried(self):
+            opener=Mock(return_value=io.BytesIO(b'{}'))
+            with self.assertRaisesRegex(AssertionError,'schema'):self.invoke(opener)
+            self.assertEqual(opener.call_count,1)
+        def test_unexpected_transport_error_not_retried(self):
+            opener=Mock(side_effect=urllib.error.URLError('unexpected TLS or proxy error'))
+            with self.assertRaises(urllib.error.URLError):self.invoke(opener)
+            self.assertEqual(opener.call_count,1)
+    result=unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.loadTestsFromTestCase(Tests))
+    if not result.wasSuccessful():raise SystemExit(1)
+if __name__=='__main__':
+    import sys
+    if sys.argv[1:]==['--self-test-readiness']:readiness_self_test()
+    elif sys.argv[1:]:raise SystemExit('unknown arguments')
+    else:main()

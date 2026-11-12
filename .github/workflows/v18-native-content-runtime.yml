@@ -38,6 +38,8 @@ jobs:
           python-version: '3.12'
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: python -m pip install websocket-client==1.8.0
+      - name: Verify bounded debug-readiness polling
+        run: python tests/offline/browser/native-content-device.py --self-test-readiness
       - name: Provision official tools using existing accepted licenses only
         run: |
           set -euo pipefail
