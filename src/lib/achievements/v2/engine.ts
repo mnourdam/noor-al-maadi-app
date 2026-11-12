@@ -30,6 +30,8 @@ import { registry, ENGINE_VERSION } from "./index";
 import { claimAchievements, fetchUserAchievements, repairHistoricalAchievements } from "./claim.functions";
 import { dispatchAchievementHook, dispatchAchievementTransition } from "./events";
 import { recordTrace } from "@/lib/diag-trace";
+import { captureIdentity, isIdentityCurrent, type IdentityToken } from "@/lib/identity/guard";
+import { ownerUserId } from "@/lib/identity/owner";
 import { shouldEmitAchievementNotification } from "./transition-policy";
 import type {
   AchievementId,
@@ -202,6 +204,15 @@ let bootedForUserId: string | null | undefined = undefined; // undefined = never
 let mirrorReady = false;
 let liveTransitionsReady = false;
 let baselineInFlight: Promise<void> | null = null;
+let engineGeneration = 0;
+type EngineOperation = { generation: number; identity: IdentityToken; userId: string | null };
+function captureEngineOperation(): EngineOperation {
+  return { generation: engineGeneration, identity: captureIdentity(), userId: inputs.profile.userId };
+}
+function operationCurrent(op: EngineOperation): boolean {
+  return op.generation === engineGeneration && isIdentityCurrent(op.identity)
+    && op.userId === inputs.profile.userId && ownerUserId(op.identity.owner) === op.userId;
+}
 
 const NOTIFIED_KEY = "irth.achievements.v2.notified";
 const GUEST_UNLOCKS_KEY = "irth.achievements.v2.guest_unlocks";
@@ -253,8 +264,9 @@ function saveGuestUnlocks(caller: string): void {
   if (typeof window === "undefined") return;
   
   // V13 Safety Invariant: Never save Guest unlocks while an account is logged in.
-  const userId = inputs.profile.userId;
+  const op = captureEngineOperation();
   import("@/lib/diag-trace").then(m => {
+    if (!operationCurrent(op)) return;
     const userId = inputs.profile.userId;
 
     if (userId) {
@@ -317,6 +329,13 @@ export function initAchievementEngine(): void {
  * mirror; on sign-out this clears the mirror and restores guest state.
  */
 export async function resetAchievementEngine(nextUserId: string | null): Promise<void> {
+  // A delayed caller cannot clear the active owner's mirror while requesting
+  // another identity. The accepted lifecycle transition will retry after swap.
+  if (ownerUserId(captureIdentity().owner) !== nextUserId) return;
+  engineGeneration += 1;
+  cycleInFlight = null;
+  queuedDomains = null;
+  queuedOrigin = "historical_reconciliation";
   recordTrace("logout-audit", "achievements:reset:start", nextUserId);
   
   // ATOMIC RESET: Flush all module-level memory belonging to the previous identity.
@@ -328,14 +347,20 @@ export async function resetAchievementEngine(nextUserId: string | null): Promise
   // This prevents the new identity from satisfy achievements based on the 
   // previous identity's stale progression (e.g. Account A's 25 campaigns).
   resetCanonicalInputs();
+  // Incremental snapshot rebuilds carry untouched slices forward. Reset these
+  // views with their input sources, or a new owner can inherit old domains.
+  snapshot = emptySnapshot();
+  evaluation = { unlockedIds: new Set(), progress: new Map(), snapshotVersion: snapshot.version };
 
   bootedForUserId = nextUserId;
   inputs.profile.userId = nextUserId;
+  const op = captureEngineOperation();
   mirrorReady = false;
   liveTransitionsReady = false;
   baselineInFlight = null;
 
 
+  if (!operationCurrent(op)) return;
   if (!nextUserId) {
     persisted = loadGuestUnlocks();
     
@@ -358,6 +383,7 @@ export async function resetAchievementEngine(nextUserId: string | null): Promise
     saveNotified();
     mirrorReady = true;
     await runCycle(allDomains(), "startup_hydration");
+    if (!operationCurrent(op)) return;
     liveTransitionsReady = true;
     recordTrace("logout-audit", "achievements:reset:hydrated", `guest:${persisted.size}`);
     notifyListeners();
@@ -366,6 +392,7 @@ export async function resetAchievementEngine(nextUserId: string | null): Promise
 
   try {
     const rows = await fetchUserAchievements();
+    if (!operationCurrent(op)) return;
     persisted = new Map(
       rows.map((r) => [
         r.achievement_id,
@@ -388,6 +415,7 @@ export async function resetAchievementEngine(nextUserId: string | null): Promise
   } catch (err) {
     console.warn("[achievements] mirror fetch failed; keeping local state", err);
   }
+  if (!operationCurrent(op)) return;
   mirrorReady = true;
   notifyListeners();
 }
@@ -442,13 +470,17 @@ async function runCycle(
   changedDomains: readonly CanonicalDomain[],
   origin: TransitionOrigin = liveTransitionsReady ? "live_gameplay_unlock" : "historical_reconciliation",
 ): Promise<void> {
+  const op = captureEngineOperation();
+  if (!operationCurrent(op)) return;
   if (cycleInFlight) {
     queuedDomains = mergeDomains(queuedDomains, changedDomains);
     if (origin !== "live_gameplay_unlock") queuedOrigin = origin;
     return;
   }
-  cycleInFlight = doCycle(changedDomains, origin).finally(() => {
+  const pending = doCycle(changedDomains, origin, op).finally(() => {
+    if (cycleInFlight !== pending) return;
     cycleInFlight = null;
+    if (!operationCurrent(op)) return;
     if (queuedDomains) {
       const next = queuedDomains;
       const nextOrigin = queuedOrigin;
@@ -457,7 +489,9 @@ async function runCycle(
       void runCycle(next, nextOrigin);
     }
   });
-  await cycleInFlight;
+  // doCycle may synchronously notify a subscriber that resets the engine.
+  if (operationCurrent(op)) cycleInFlight = pending;
+  await pending;
 }
 
 function mergeDomains(
@@ -472,7 +506,9 @@ function mergeDomains(
 async function doCycle(
   changedDomains: readonly CanonicalDomain[],
   origin: TransitionOrigin,
+  op: EngineOperation,
 ): Promise<void> {
+  if (!operationCurrent(op)) return;
   // V13 Diagnostic Trace: Log state before reconciliation
   if (origin === "historical_reconciliation" || changedDomains.includes("campaigns")) {
     recordTrace("logout-audit", "ACHIEVEMENT_CANONICAL_CAMPAIGNS", JSON.stringify({
@@ -561,7 +597,8 @@ async function doCycle(
         });
       }
       if (userId) {
-        await silentlyRepairHistorical(output.newlyUnlocked, origin);
+        await silentlyRepairHistorical(output.newlyUnlocked, origin, op);
+        if (!operationCurrent(op)) return;
       } else {
         for (const id of output.newlyUnlocked) {
           persisted.set(id, buildLocalRecord(id, true));
@@ -578,12 +615,14 @@ async function doCycle(
         const res = await claimAchievements({
           data: { ids: [...output.newlyUnlocked], engineVersion: ENGINE_VERSION },
         });
+        if (!operationCurrent(op)) return;
         const insertedSet = new Set(res.inserted);
         const existingSet = new Set(res.alreadyClaimed);
         for (const id of res.inserted) {
+          if (!operationCurrent(op)) return;
           const rec = buildLocalRecord(id, false);
           persisted.set(id, rec);
-          emitLiveTransition(id, rec, true, false);
+          emitLiveTransition(id, rec, true, false, op);
         }
         for (const id of output.newlyUnlocked) {
           if (!insertedSet.has(id)) {
@@ -608,15 +647,17 @@ async function doCycle(
     } else {
       // Guest: keep unlocks locally so guest→account migration preserves them.
       for (const id of output.newlyUnlocked) {
+        if (!operationCurrent(op)) return;
         const rec = buildLocalRecord(id, false);
         persisted.set(id, rec);
-        emitLiveTransition(id, rec, true, false);
+        emitLiveTransition(id, rec, true, false, op);
       }
+      if (!operationCurrent(op)) return;
       saveGuestUnlocks("doCycle:live_gameplay_unlock");
     }
   }
 
-  notifyListeners();
+  if (operationCurrent(op)) notifyListeners();
 }
 
 // ---------- read views ----------
@@ -649,8 +690,11 @@ export async function establishAchievementLiveBaseline(): Promise<void> {
   if (!mirrorReady) return;
   if (liveTransitionsReady) return;
   if (baselineInFlight) return baselineInFlight;
-  baselineInFlight = (async () => {
+  const op = captureEngineOperation();
+  if (!operationCurrent(op)) return;
+  const pending = (async () => {
     await runCycle(allDomains(), "startup_hydration");
+    if (!operationCurrent(op)) return;
     liveTransitionsReady = true;
     recordAchievementTrace("baseline-ready", {
       user: inputs.profile.userId ? "signed-in" : "guest",
@@ -659,9 +703,10 @@ export async function establishAchievementLiveBaseline(): Promise<void> {
     });
     notifyListeners();
   })().finally(() => {
-    baselineInFlight = null;
+    if (baselineInFlight === pending) baselineInFlight = null;
   });
-  return baselineInFlight;
+  if (operationCurrent(op)) baselineInFlight = pending;
+  return pending;
 }
 
 /**
@@ -670,6 +715,11 @@ export async function establishAchievementLiveBaseline(): Promise<void> {
  * idempotent so already-earned rows are skipped.
  */
 export async function migrateGuestUnlocks(): Promise<void> {
+  // This legacy entrypoint runs before engine hydration on sign-in. Bind only
+  // its continuation, without inventing new migration admission/authority.
+  const identity = captureIdentity();
+  const generation = engineGeneration;
+  const current = () => generation === engineGeneration && isIdentityCurrent(identity);
   if (typeof window === "undefined") return;
   const guest = loadGuestUnlocks();
   if (guest.size === 0) return;
@@ -678,6 +728,7 @@ export async function migrateGuestUnlocks(): Promise<void> {
     await claimAchievements({
       data: { ids, engineVersion: ENGINE_VERSION },
     });
+    if (!current()) return;
     for (const id of ids) {
       recordTransitionTrace(id, {
         origin: "guest_migration",
@@ -746,7 +797,9 @@ function buildLocalRecord(id: AchievementId, silentPresented: boolean): UserAchi
 async function silentlyRepairHistorical(
   ids: readonly AchievementId[],
   origin: TransitionOrigin,
+  op: EngineOperation,
 ): Promise<void> {
+  if (!operationCurrent(op)) return;
   if (ids.length === 0) return;
   try {
     const res = await repairHistoricalAchievements({
@@ -759,6 +812,7 @@ async function silentlyRepairHistorical(
         },
       },
     });
+    if (!operationCurrent(op)) return;
     const repaired = new Set(res.repaired);
     const existing = new Set(res.existing);
     for (const id of ids) {
@@ -787,7 +841,9 @@ function emitLiveTransition(
   rec: UserAchievementRecord | null,
   claimInserted: boolean,
   claimExisting: boolean,
+  op: EngineOperation,
 ): void {
+  if (!operationCurrent(op)) return;
   const decision = shouldEmitAchievementNotification({
     id,
     origin: "live_gameplay_unlock",
@@ -813,6 +869,7 @@ function emitLiveTransition(
   if (!decision.notificationEmitted) return;
   const def = registry.byId.get(id);
   if (def) dispatchAchievementHook("onUnlocked", def);
+  if (!operationCurrent(op)) return;
   dispatchAchievementTransition(id, "live_gameplay_unlock");
 }
 
