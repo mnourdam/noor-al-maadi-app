@@ -745,9 +745,11 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       let ok = false;
       update((p) => {
         if (p.regionsUnlocked.includes(id)) { ok = true; return p; }
-        if (p.points < cost) return p;
+        if (!Number.isFinite(cost) || p.points < cost) return p;
+        const remaining = p.points - cost;
+        if (!Number.isFinite(remaining)) return p;
         ok = true;
-        return { ...p, regionsUnlocked: [...p.regionsUnlocked, id], points: p.points - cost };
+        return { ...p, regionsUnlocked: [...p.regionsUnlocked, id], points: remaining };
       });
       return ok;
     },
