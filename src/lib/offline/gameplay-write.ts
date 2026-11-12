@@ -1,9 +1,39 @@
 import { supabase } from "@/integrations/supabase/client";
-import { getIdentityEpoch } from "@/lib/identity/owner";
-import { enqueueWithId, remove, type OutboxItem, type OutboxKind } from "./outbox";
+import { getActiveOwner, getIdentityEpoch } from "@/lib/identity/owner";
+import { enqueueWithId, peekAll, remove, type OutboxItem, type OutboxKind } from "./outbox";
 import { archiveRejected, isPermanentReason } from "./dead-letter";
 
+/** Evidence of one accepted local enqueue, not current queue membership or server authority. */
+export interface DurableSaveReceipt {
+  readonly owner: string;
+  readonly operationId: string;
+  readonly revision: string;
+  readonly kind: OutboxKind;
+  readonly payloadSnapshot: string;
+}
+const durableReceipts = new WeakMap<DurableSaveReceipt, { owner: string; epoch: number }>();
+/** Dormant adapter boundary: copied/altered objects and retired invocations are rejected. */
+export function readDurableSaveReceipt(receipt: DurableSaveReceipt): DurableSaveReceipt {
+  const scope = durableReceipts.get(receipt);
+  if (!scope || getActiveOwner() !== scope.owner || getIdentityEpoch() !== scope.epoch)
+    throw new Error("save-receipt:invalid-or-retired");
+  return receipt;
+}
+async function acceptedReceipt(item: OutboxItem, epoch: number): Promise<DurableSaveReceipt | undefined> {
+  const owner = `user:${item.userId}`;
+  if (!item.revision || getActiveOwner() !== owner || getIdentityEpoch() !== epoch) return undefined;
+  let rows: OutboxItem[];
+  try { rows = await saveDeadline(peekAll(item.userId)); } catch { return undefined; }
+  if (getActiveOwner() !== owner || getIdentityEpoch() !== epoch ||
+      !rows.some(row => row.id === item.id && JSON.stringify(row) === JSON.stringify(item))) return undefined;
+  const receipt = Object.freeze({ owner, operationId: item.id, revision: item.revision,
+    kind: item.kind, payloadSnapshot: JSON.stringify(item.payload) });
+  durableReceipts.set(receipt, { owner, epoch });
+  return receipt;
+}
+
 export interface SaveOutcome<T = Record<string, unknown>> {
+  durableReceipt?: DurableSaveReceipt;
   acknowledged: boolean;
   queued: boolean;
   dequeued?: boolean;
@@ -50,14 +80,31 @@ export async function saveUserId(strict = false): Promise<string | null> {
 // A timed-out write stays fenced until cancellation/commit has actually settled.
 const pendingWrites = new Map<string, Promise<OutboxItem>>();
 const inflight = new Map<string, Promise<SaveOutcome<any>>>();
+const receiptRequests = new Map<string, { requested: boolean }>();
+const ordinaryViews = new WeakMap<Promise<SaveOutcome<any>>, Promise<SaveOutcome<any>>>();
 /** Small caller adapter: receipt-bound ack, finite waits, and owner fencing. */
 export function saveGameplay<T extends { ok?: boolean; reason?: string }>(p: {
   userId: string;
+  /** Dormant receipt seam; default callers retain their exact result shape. */
+  captureDurableReceipt?: boolean;
   id: string;
   kind: OutboxKind;
   payload: Record<string, unknown>;
   rpc: () => PromiseLike<{ data: unknown; error: { message: string } | null }>;
 }): Promise<SaveOutcome<T>> {
+  const wantsReceipt = p.captureDurableReceipt === true;
+  const view = (work: Promise<SaveOutcome<T>>): Promise<SaveOutcome<T>> => {
+    if (wantsReceipt) return work;
+    const existingView = ordinaryViews.get(work);
+    if (existingView) return existingView;
+    const ordinaryView = work.then(outcome => {
+      if (!outcome.durableReceipt) return outcome;
+      const { durableReceipt: _receipt, ...ordinary } = outcome;
+      return ordinary;
+    });
+    ordinaryViews.set(work, ordinaryView);
+    return ordinaryView;
+  };
   let payload: Record<string, unknown>;
   try {
     payload = JSON.parse(JSON.stringify(p.payload));
@@ -67,16 +114,21 @@ export function saveGameplay<T extends { ok?: boolean; reason?: string }>(p: {
   const epoch = getIdentityEpoch();
   const key = JSON.stringify([epoch, p.userId, p.id, p.kind, payload]);
   const existing = inflight.get(key);
-  if (existing) return existing;
+  if (existing) {
+    if (wantsReceipt) { const request = receiptRequests.get(key); if (request) request.requested = true; }
+    return view(existing);
+  }
   const writeKey = JSON.stringify([epoch, p.userId, p.id]);
   if (pendingWrites.has(writeKey)) return Promise.resolve({
     acknowledged: false, queued: false, reason: "storage_pending", storageState: "unresolved",
   });
+  const receiptRequest = { requested: wantsReceipt };
+  receiptRequests.set(key, receiptRequest);
   const promise = run().finally(() => {
-    if (inflight.get(key) === promise) inflight.delete(key);
+    if (inflight.get(key) === promise) { inflight.delete(key); receiptRequests.delete(key); }
   });
   inflight.set(key, promise);
-  return promise;
+  return view(promise);
 
   async function run(): Promise<SaveOutcome<T>> {
     let receipt: OutboxItem | undefined;
@@ -101,7 +153,10 @@ export function saveGameplay<T extends { ok?: boolean; reason?: string }>(p: {
         cause = cause.cause;
       }
     }
+    const durableReceipt = receipt && receiptRequest.requested ? await acceptedReceipt(receipt, epoch) : undefined;
+    const receiptFields = durableReceipt ? { durableReceipt } : {};
     const pending = (): SaveOutcome<T> => ({
+      ...receiptFields,
       acknowledged: false,
       queued: Boolean(receipt),
       reason: receipt ? "queued" : "storage_error",
@@ -126,7 +181,7 @@ export function saveGameplay<T extends { ok?: boolean; reason?: string }>(p: {
             /* Keep pending unless archive and dequeue both confirmed. */
           }
         }
-        return { acknowledged: false, queued, reason: result.reason ?? "rpc-not-ok" };
+        return { ...receiptFields, acknowledged: false, queued, reason: result.reason ?? "rpc-not-ok" };
       }
       let dequeued = false;
       if (receipt) {
@@ -138,7 +193,7 @@ export function saveGameplay<T extends { ok?: boolean; reason?: string }>(p: {
       }
       // Recheck after storage awaits before exposing account-owned rewards.
       if (!(await ownerMatches())) return { ...pending(), reason: "identity_changed" };
-      return { acknowledged: true, queued: Boolean(receipt) && !dequeued, dequeued, result };
+      return { ...receiptFields, acknowledged: true, queued: Boolean(receipt) && !dequeued, dequeued, result };
     } catch {
       return pending();
     }

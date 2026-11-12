@@ -260,11 +260,15 @@ export function settlementForOwner(owner: string) {
       binding: Binding;
       expected: Binding | null;
       legacy?: boolean;
+      /** Dormant correlation adapter: check history atomically with prepare. */
+      pendingOnly?: boolean;
     }) {
       const p = structuredClone(input);
       if (!validBinding(p.binding) || (p.expected !== null && !validBinding(p.expected)))
         fail("invalid-binding");
       return access(p.key, (row) => {
+        if (p.pendingOnly && (p.legacy || row?.attempts.some(a => a.progress !== "pending")))
+          fail("non-pending-history");
         if (!row) {
           if (p.expected !== null) fail("stale-binding");
           return {

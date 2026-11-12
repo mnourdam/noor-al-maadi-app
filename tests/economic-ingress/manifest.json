@@ -4070,7 +4070,7 @@
     },
     {
       "path": "src/lib/offline/record.ts",
-      "sha256": "3f0b23d992c4d97fdd98f3f4cb71f25906d0bcd3168b5b5aba707bc4549535fc",
+      "sha256": "eff504e17aa455ddf576cff712510e646a9cc96c171cab91b1276587188c0c0d",
       "rpc_candidates": [
         "record_campaign_progress_v2"
       ],

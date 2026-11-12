@@ -11,7 +11,7 @@
 import { getActiveOwner, getIdentityEpoch } from "@/lib/identity/owner";
 import { supabase } from "@/integrations/supabase/client";
 import { enqueue, enqueueWithId, type OutboxKind } from "./outbox";
-import { saveGameplay, saveUserId, type SaveOutcome } from "./gameplay-write";
+import { saveGameplay, saveUserId, type SaveOutcome, type DurableSaveReceipt } from "./gameplay-write";
 import { flushOutbox } from "./flush";
 import { recordTrace } from "@/lib/diag-trace";
 
@@ -80,7 +80,9 @@ export async function recordChapterProgress(p: {
   status: "locked" | "unlocked" | "completed";
   score?: number; xpEarned?: number; coinsEarned?: number;
   completed?: boolean;
-}): Promise<{
+}, options?: { captureDurableReceipt?: boolean }): Promise<{
+  durableReceipt?: DurableSaveReceipt;
+  storageState?: "unresolved";
   acknowledged: boolean;
   queued: boolean;
   dequeued?: boolean;
@@ -97,6 +99,7 @@ export async function recordChapterProgress(p: {
     campaign_version?: number | null;
   };
 }> {
+  const captureDurableReceipt = options?.captureDurableReceipt === true;
   p = { ...p };
   const owner = getActiveOwner(), epoch = getIdentityEpoch();
   const current = () => owner === getActiveOwner() && epoch === getIdentityEpoch();
@@ -118,6 +121,7 @@ export async function recordChapterProgress(p: {
   const outboxId = `chapter_progress:${uid}:${p.campaignId}:${p.chapterId}`;
   const outcome = await saveGameplay({
     userId: uid, id: outboxId, kind: "chapter_progress", payload: p,
+    captureDurableReceipt,
     rpc: () => supabase.rpc("record_campaign_progress_v2" as any, {
       p_campaign_id: p.campaignId, p_chapter_id: p.chapterId, p_completed: !!p.completed,
       p_score: p.score ?? null, p_xp_earned: p.xpEarned ?? null, p_coins_earned: p.coinsEarned ?? null,
