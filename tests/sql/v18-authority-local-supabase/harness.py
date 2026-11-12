@@ -22,6 +22,9 @@ import adapter
 
 CLI_VERSION = "2.122.1"
 API_PORT, DB_PORT = 55531, 55532
+ADMIN_IMAGE_ID = "sha256:75e157ef7b7e35e286a2df56e2fb1be697bbf0b07fae0565f3c1da0b33f4629a"
+ADMIN_IMAGE_REFERENCE = "public.ecr.aws/supabase/postgres:17.11.0.006"
+ADMIN_IMAGE_DIGEST = "public.ecr.aws/supabase/postgres@sha256:c141fd17ac6a76c4323e90b3aee8ff1a23d2e89e547c2b963cfadc309c079cc2"
 EXCLUDE = "realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor"
 PROJECT_RE = re.compile(r"irth-v18-authority-[0-9]+-[0-9]+\Z")
 ROOT = Path(__file__).resolve().parents[3]
@@ -110,6 +113,9 @@ class Harness:
                        "cli_version": CLI_VERSION, "source_sha": source_sha, "cases": [], "result": "FAIL"}
         self.fields = None
         self.endpoints_verified = False
+        self.db_identity = None
+        self.socket_admin = False
+        self.admin_socket = None
         self.env = {k: v for k, v in os.environ.items()
                     if not k.startswith(("SUPABASE_", "PG")) and k not in ("DATABASE_URL", "DB_URL")}
         for key in ("DOCKER_CONTEXT", "DOCKER_TLS_VERIFY", "DOCKER_CERT_PATH", "DOCKER_CONFIG"):
@@ -159,6 +165,9 @@ class Harness:
             if internal:
                 bindings = data["NetworkSettings"]["Ports"].get(internal) or []
                 require(any(x["HostPort"] == str(external) for x in bindings), "container endpoint port mismatch")
+            if component == "db":
+                require(re.fullmatch(r"[0-9a-f]{64}", data.get("Id", "")), "invalid database container ID")
+                self.db_identity = {"id": data["Id"], "image": data["Image"], "name": name}
             image = json.loads(self.command(["docker", "image", "inspect", data["Image"]]))[0]
             records.append({"component": component, "image": data["Config"]["Image"],
                             "image_id": data["Image"], "repo_digests": image.get("RepoDigests", [])})
@@ -168,6 +177,8 @@ class Harness:
     def sql(self, sql):
         require(self.endpoints_verified, "container identity not verified")
         self.isolation()
+        if self.socket_admin:
+            return self.socket_admin_sql(sql)
         url = endpoint(self.fields["db"], "postgresql", DB_PORT, "/postgres", credentials=True)
         env = self.env.copy()
         env["PGPASSWORD"] = urllib.parse.unquote(url.password)
@@ -183,6 +194,63 @@ class Harness:
             self.report["command_failure"] = {"label": "psql_acceptance", "exit_code": result.returncode}
             raise Failure("local SQL acceptance failed; raw output withheld")
         return result.stdout.strip()
+
+    def verify_admin_container(self):
+        require(self.endpoints_verified and self.db_identity is not None, "admin requires verified local container")
+        self.isolation()
+        saved = self.db_identity
+        evidence = next((r for r in self.report.get('containers',[]) if r.get('component')=='db'), None)
+        require(evidence is not None and evidence.get('image_id')==ADMIN_IMAGE_ID
+                and evidence.get('image')==ADMIN_IMAGE_REFERENCE
+                and ADMIN_IMAGE_DIGEST in evidence.get('repo_digests',[])
+                and saved['image']==ADMIN_IMAGE_ID, "admin image is not reviewed disposable build")
+        require(re.fullmatch(r"[0-9a-f]{64}", saved['id']), "invalid pinned container ID")
+        data = json.loads(self.command(['docker','inspect',saved['id']]))[0]
+        require(data.get('Id')==saved['id'] and data.get('Name')=='/'+saved['name']
+                and data['Config']['Labels'].get('com.supabase.cli.project')==self.project
+                and data['Image']==saved['image'] and data['State']['Running'], "admin container identity changed")
+        ports = data['NetworkSettings']['Ports'].get('5432/tcp') or []
+        require(any(p['HostPort']==str(DB_PORT) for p in ports), "admin container port changed")
+        return saved['id']
+
+    def socket_admin_sql(self, sql):
+        container = self.verify_admin_container()
+        require(self.admin_socket in ('/tmp','/var/run/postgresql'), "unreviewed admin socket")
+        # The password stays inside the already-verified disposable container;
+        # it is never read into output, argv, an artifact or a host environment.
+        script = ("set -eu; test -n \"${POSTGRES_PASSWORD:-}\"; "
+                  "unset PGHOSTADDR PGSERVICE PGSERVICEFILE PGOPTIONS PGDATABASE PGUSER PGHOST PGPORT PGPASSFILE PGSSLMODE; "
+                  "export PGPASSWORD=\"$POSTGRES_PASSWORD\"; "
+                  "exec psql -X -qAt -w -h " + self.admin_socket +
+                  " -p 5432 -U supabase_admin -d postgres -v ON_ERROR_STOP=1")
+        guard = """DO $$ BEGIN
+          IF current_user IS DISTINCT FROM 'supabase_admin' OR session_user IS DISTINCT FROM 'supabase_admin'
+             OR current_database() IS DISTINCT FROM 'postgres' OR inet_client_addr() IS NOT NULL
+             OR inet_server_port() IS NOT NULL OR current_setting('port') IS DISTINCT FROM '5432'
+             OR NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname=current_user AND rolsuper AND rolcanlogin)
+          THEN RAISE EXCEPTION 'acceptance:unverified-local-admin'; END IF;
+          END $$;
+        """
+        return self.command(['docker','exec','-i',container,'/bin/sh','-c',script], input=guard+sql, timeout=45).strip()
+
+    def select_local_admin(self):
+        # Read-only inspection first through the independently verified TCP path.
+        current = json.loads(self.sql("SELECT jsonb_build_object('superuser',rolsuper,'create_role',rolcreaterole)::text FROM pg_roles WHERE rolname=current_user;"))
+        self.report['local_admin'] = current
+        if current.get('superuser') is True:
+            self.report['admin_route'] = 'verified loopback postgres superuser'
+            return
+        candidate = self.sql("SELECT coalesce(bool_and(rolsuper AND rolcanlogin),false) FROM pg_roles WHERE rolname='supabase_admin';")
+        require(candidate=='t', "local supabase_admin capability absent")
+        socket = self.sql('SHOW unix_socket_directories;')
+        require(socket in ('/tmp','/var/run/postgresql'), "local admin socket is not reviewed")
+        self.admin_socket = socket
+        result = json.loads(self.socket_admin_sql("SELECT jsonb_build_object('role',current_user,'session',session_user,'database',current_database(),'superuser',(SELECT rolsuper FROM pg_roles WHERE rolname=current_user),'socket',inet_client_addr() IS NULL AND inet_server_port() IS NULL)::text;"))
+        require(result == {'role':'supabase_admin','session':'supabase_admin','database':'postgres','superuser':True,'socket':True}, "local admin session verification failed")
+        self.socket_admin = True
+        self.report['admin_route'] = 'verified pinned-container supabase_admin local socket'
+        self.report['admin_session'] = result
+        self.report['admin_socket'] = socket
 
     def request(self, path, token=None, payload=None, method="GET", apikey=None, profile=None):
         require(self.endpoints_verified, "container identity not verified")
@@ -329,8 +397,8 @@ class Harness:
           CREATE TABLE fixture_boundary.marker(marker text PRIMARY KEY);
           REVOKE ALL ON fixture_boundary.marker FROM PUBLIC,anon,authenticated,service_role;
           INSERT INTO fixture_boundary.marker VALUES('v18-authority-local-supabase-only-v1');""")
-        self.report["local_admin"] = json.loads(self.sql("SELECT jsonb_build_object('superuser',rolsuper,'create_role',rolcreaterole)::text FROM pg_roles WHERE rolname=current_user;"))
-        require(self.report["local_admin"]["superuser"], "unchanged engine requires verified disposable local superuser")
+        self.report["stage"] = "verified disposable admin route"
+        self.select_local_admin()
         self.report["stage"] = "atomic engine and adapter install"
         transaction, evidence = adapter.build(ENGINE.read_bytes())
         self.sql(transaction)
@@ -409,8 +477,8 @@ class Harness:
         self.report['final_state_sha256'] = hashlib.sha256(before.encode()).hexdigest()
         self.report['concurrency_scope'] = 'Parallel HTTP submission; no forced lock-overlap claim. Separate PostgreSQL engine fixture covers forced overlap.'
         self.report['numeric_scope'] = 'HTTP negative revision tested; overflow and underflow matrix remains separate PostgreSQL engine evidence.'
-        self.report['default_acl_scope'] = 'Dedicated issuer/executor future objects checked; future postgres-created objects require explicit cleanup and are not certified.'
-        self.report['default_acls'] = json.loads(self.sql("SELECT coalesce(jsonb_agg(jsonb_build_object('owner',pg_get_userbyid(defaclrole),'schema',n.nspname,'type',defaclobjtype,'acl',defaclacl::text)),'[]'::jsonb)::text FROM pg_default_acl d LEFT JOIN pg_namespace n ON n.oid=d.defaclnamespace WHERE pg_get_userbyid(defaclrole) IN ('postgres','v18_proto_issuer','v18_proto_executor');"))
+        self.report['default_acl_scope'] = 'Dedicated issuer/executor future objects checked; future postgres/supabase_admin-created objects require explicit cleanup and are not certified.'
+        self.report['default_acls'] = json.loads(self.sql("SELECT coalesce(jsonb_agg(jsonb_build_object('owner',pg_get_userbyid(defaclrole),'schema',n.nspname,'type',defaclobjtype,'acl',defaclacl::text)),'[]'::jsonb)::text FROM pg_default_acl d LEFT JOIN pg_namespace n ON n.oid=d.defaclnamespace WHERE pg_get_userbyid(defaclrole) IN ('postgres','supabase_admin','v18_proto_issuer','v18_proto_executor');"))
         self.report['result'] = 'LOCAL STACK PASS; HOSTED AND PRODUCTION NOT ACCEPTED'
 
     def lineage_probe(self, token, payload):

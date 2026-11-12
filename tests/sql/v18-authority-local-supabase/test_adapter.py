@@ -22,6 +22,13 @@ class AdapterSafety(unittest.TestCase):
         self.assertEqual(ENGINE.read_bytes(), original)
         self.assertEqual(evidence['transaction_sha256'], hashlib.sha256(sql.encode()).hexdigest())
 
+    def test_explicit_socket_admin_guard_no_null_port_bypass(self):
+        self.assertIn('inet_server_port() IS NOT DISTINCT FROM 5432 AND inet_client_addr() IS NOT NULL', adapter.NEW_GUARD)
+        self.assertIn('inet_server_port() IS NULL AND inet_client_addr() IS NULL', adapter.NEW_GUARD)
+        self.assertIn("session_user='supabase_admin' AND current_user='supabase_admin'", adapter.NEW_GUARD)
+        self.assertIn('rolname=current_user AND rolsuper', adapter.NEW_GUARD)
+        self.assertNotIn('inet_server_port()<>5432', adapter.NEW_GUARD)
+
     def test_source_drift_refused(self):
         with self.assertRaisesRegex(ValueError, 'source hash'):
             adapter.build(ENGINE.read_bytes() + b'\n')

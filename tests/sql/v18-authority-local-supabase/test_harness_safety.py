@@ -106,6 +106,71 @@ class Safety(unittest.TestCase):
         self.assertTrue(h.Harness.rejection((400,{'message':'prototype:foreign-evidence','code':'P0001'}),'prototype:foreign-evidence'))
         for response in ((200,{}),(500,{'message':'prototype:foreign-evidence'}),(404,{'code':'unrelated'}),(401,'bad')):
             self.assertFalse(h.Harness.rejection(response,codes=('42501',)))
+    def admin_prepared(self, root):
+        obj=self.prepared(root);obj.endpoints_verified=True
+        obj.db_identity={'id':'a'*64,'image':h.ADMIN_IMAGE_ID,'name':'supabase_db_'+obj.project}
+        obj.report['containers']=[{'component':'db','image_id':h.ADMIN_IMAGE_ID,'image':h.ADMIN_IMAGE_REFERENCE,'repo_digests':[h.ADMIN_IMAGE_DIGEST]}]
+        obj.admin_socket='/tmp'
+        return obj
+    def test_admin_refuses_unverified_container(self):
+        with tempfile.TemporaryDirectory() as root:
+            obj=self.prepared(root);obj.admin_socket='/tmp'
+            with patch.object(obj,'command') as command,self.assertRaises(h.Failure):obj.socket_admin_sql('SELECT 1;')
+            command.assert_not_called()
+    def test_admin_container_identity_must_not_change(self):
+        with tempfile.TemporaryDirectory() as root:
+            obj=self.admin_prepared(root)
+            good={'Id':'a'*64,'Name':'/'+obj.db_identity['name'],'Image':obj.db_identity['image'],'Config':{'Labels':{'com.supabase.cli.project':obj.project}},'State':{'Running':True},'NetworkSettings':{'Ports':{'5432/tcp':[{'HostPort':str(h.DB_PORT)}]}}}
+            for field,value in (('Id','c'*64),('Image','sha256:'+'d'*64),('Name','/other')):
+                with patch.object(obj,'command',return_value=json.dumps([dict(good,**{field:value})])) as command,self.assertRaises(h.Failure):obj.socket_admin_sql('SELECT 1;')
+                self.assertEqual(command.call_count,1)
+    def test_admin_command_contains_only_fixed_role_and_private_env_reference(self):
+        with tempfile.TemporaryDirectory() as root:
+            obj=self.admin_prepared(root)
+            with patch.object(obj,'verify_admin_container',return_value='a'*64),patch.object(obj,'command',return_value='t') as command:
+                self.assertEqual(obj.socket_admin_sql('SELECT true;'),'t')
+            args=command.call_args.args[0];script=args[-1];sql=command.call_args.kwargs['input']
+            self.assertEqual(args[:6],['docker','exec','-i','a'*64,'/bin/sh','-c'])
+            self.assertIn('-w -h /tmp -p 5432 -U supabase_admin -d postgres',script)
+            self.assertIn('PGPASSWORD="$POSTGRES_PASSWORD"',script)
+            self.assertIn("session_user IS DISTINCT FROM 'supabase_admin'",sql)
+            self.assertIn('inet_client_addr() IS NOT NULL',sql)
+            self.assertIn('rolsuper AND rolcanlogin',sql)
+            self.assertNotIn('ALTER ROLE',sql)
+    def test_admin_unknown_image_cannot_execute(self):
+        with tempfile.TemporaryDirectory() as root:
+            obj=self.admin_prepared(root);obj.report['containers'][0]['image_id']='unreviewed'
+            with patch.object(obj,'command') as command,self.assertRaises(h.Failure):obj.socket_admin_sql('SELECT 1;')
+            command.assert_not_called()
+    def test_enabled_admin_route_still_guards_every_sql_call(self):
+        with tempfile.TemporaryDirectory() as root:
+            obj=self.admin_prepared(root);obj.socket_admin=True
+            with patch.object(obj,'verify_admin_container',return_value='a'*64) as verify,patch.object(obj,'command',return_value='t') as command:
+                obj.sql('SELECT 1;');obj.sql('SELECT 2;')
+            self.assertEqual(verify.call_count,2)
+            for call in command.call_args_list:
+                sql=call.kwargs['input']
+                self.assertLess(sql.index("current_user IS DISTINCT FROM 'supabase_admin'"),sql.index('END $$;'))
+                self.assertTrue(sql.strip().endswith(('SELECT 1;','SELECT 2;')))
+    def test_admin_wrong_role_session_never_enabled(self):
+        with tempfile.TemporaryDirectory() as root:
+            obj=self.admin_prepared(root)
+            replies=[json.dumps({'superuser':False,'create_role':True}),'t','/tmp']
+            wrong={'role':'postgres','session':'postgres','database':'postgres','superuser':False,'socket':True}
+            with patch.object(obj,'sql',side_effect=replies),patch.object(obj,'socket_admin_sql',return_value=json.dumps(wrong)),self.assertRaises(h.Failure):obj.select_local_admin()
+            self.assertFalse(obj.socket_admin)
+    def test_admin_absent_catalog_or_unknown_socket_never_attempted(self):
+        with tempfile.TemporaryDirectory() as root:
+            obj=self.admin_prepared(root)
+            for replies in ([json.dumps({'superuser':False}),'f'],[json.dumps({'superuser':False}),'t','/unreviewed']):
+                with patch.object(obj,'sql',side_effect=replies),patch.object(obj,'socket_admin_sql') as command,self.assertRaises(h.Failure):obj.select_local_admin()
+                command.assert_not_called();self.assertFalse(obj.socket_admin)
+    def test_admin_exact_session_enables_only_local_route(self):
+        with tempfile.TemporaryDirectory() as root:
+            obj=self.admin_prepared(root)
+            exact={'role':'supabase_admin','session':'supabase_admin','database':'postgres','superuser':True,'socket':True}
+            with patch.object(obj,'sql',side_effect=[json.dumps({'superuser':False}),'t','/tmp']),patch.object(obj,'socket_admin_sql',return_value=json.dumps(exact)):obj.select_local_admin()
+            self.assertTrue(obj.socket_admin);self.assertEqual(obj.report['admin_session'],exact)
     def test_mode_is_required_and_source_has_no_claim_fixtures(self):
         source=Path(h.__file__).read_text()
         self.assertIn('choices=("run", "cleanup")',source)

@@ -25,7 +25,8 @@ domain and generated passwords; only real Auth admin creation/password grants
 produce the JWTs used for owner assertions. Tokens/keys/passwords are never logged.
 
 The admin must be a verified local superuser because the unchanged engine creates
-a synthetic BYPASSRLS role. If unavailable, installation fails; the engine is not
+a synthetic BYPASSRLS role. A bounded existing-role socket path is described below.
+If no verified admin route is available, installation fails; the engine is not
 silently rewritten. Auth users must be absent before adapter installation.
 After atomic installation, local authenticator configuration exposes only the
 API schema. Actual successful schema selection and rejected public-profile access
@@ -73,3 +74,44 @@ Local unit/syntax validation is not actual stack acceptance. The first reviewed
 CI execution must verify the precise committed adapter/harness before any local
 Supabase PASS claim. Even that result leaves hosted integration, production,
 application authority activation and device acceptance pending.
+
+## Verified disposable admin route (not yet executed)
+
+The first real run `43209894855` reached the local database but stopped before
+engine installation: local `postgres` had CREATEROLE, not SUPERUSER. Cleanup
+succeeded. This is a harness compatibility blocker, not a passing Auth result.
+
+The replacement path never elevates `postgres` or changes a real role's attributes.
+Read-only catalog checks require existing `supabase_admin` to have LOGIN and
+SUPERUSER. `SHOW unix_socket_directories` must identify exactly `/tmp` or
+`/var/run/postgresql`. Before each admin command the harness re-inspects the pinned
+container ID, name, project label, running state, image and mapped database port.
+The image must match the observed official `17.11.0.006` reference, image ID and
+repository digest constants. A different image requires review, not fallback.
+
+Only then does `docker exec -i <pinned-id> /bin/sh -c <fixed-script>` run `psql`
+with an explicit approved socket, database `postgres`, user `supabase_admin`,
+port 5432, `-X`, `-w` and `ON_ERROR_STOP`. The script uses the existing container's
+`POSTGRES_PASSWORD` via `PGPASSWORD`; its value never appears in command arguments,
+host environment, output or artifacts. No password fallback or role alternative is
+attempted. Each connection executes a guard **before** supplied SQL requiring
+exact current/session user, superuser/login attributes, database, configured port
+and null network addresses (a Unix socket). The first connection additionally
+returns a non-secret identity record that must match exactly before enabling the
+route. An unavailable password/socket/role remains a failure.
+
+Supporting upstream source inspected for this conditional route:
+- Official CLI `v2.122.1`, `apps/cli-go/internal/db/start/start.go`: local
+  `POSTGRES_PASSWORD` is supplied from the fresh project's database configuration.
+- Official CLI same tag, `apps/cli-go/internal/utils/templates/globals.sql`:
+  `supabase_admin` is an existing LOGIN SUPERUSER role.
+- Official postgres `nix/packages/cli-config/{postgresql.conf,pg_hba.conf}.template`
+  as inspected: Unix sockets may use `/tmp` and require SCRAM authentication.
+  The harness therefore does not assume peer/trust authentication or a fixed
+  unverified socket path.
+
+These source facts justify a fail-closed probe, not a claim that this particular
+image's admin password path has succeeded. The next isolated CI run must prove
+that capability. Dedicated-owner default ACL tests remain authoritative; future
+objects created by either postgres or supabase_admin are not certified without
+explicit cleanup and effective ACL inspection.

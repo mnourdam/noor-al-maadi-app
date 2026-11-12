@@ -16,8 +16,12 @@ OLD_GUARD = """DO $$ BEGIN
   END IF;
 END $$;"""
 NEW_GUARD = """DO $$ BEGIN
-  IF current_database()<>'postgres' OR inet_server_port()<>5432
-     OR to_regclass('fixture_boundary.marker') IS NULL THEN
+  IF current_database()<>'postgres' OR NOT (
+    (inet_server_port() IS NOT DISTINCT FROM 5432 AND inet_client_addr() IS NOT NULL)
+    OR (inet_server_port() IS NULL AND inet_client_addr() IS NULL
+        AND session_user='supabase_admin' AND current_user='supabase_admin'
+        AND EXISTS(SELECT 1 FROM pg_roles WHERE rolname=current_user AND rolsuper))
+  ) OR to_regclass('fixture_boundary.marker') IS NULL THEN
     RAISE EXCEPTION 'adapter:wrong-disposable-database';
   END IF;
   IF (SELECT count(*) FROM fixture_boundary.marker)<>1 OR NOT EXISTS(
