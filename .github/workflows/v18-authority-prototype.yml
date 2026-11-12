@@ -1,0 +1,53 @@
+name: V18 Disposable Server Authority Prototype
+on:
+  push:
+    branches: [v18-01a-outbox-recovery]
+    paths:
+      - '.github/workflows/v18-authority-prototype.yml'
+      - 'tests/sql/v18-authority-prototype/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  isolated-authority:
+    if: github.ref == 'refs/heads/v18-01a-outbox-recovery'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17.6-bookworm
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: synthetic-authority-job-only
+          POSTGRES_DB: v18_authority_fixture
+        ports: ['55432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d v18_authority_fixture"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned PostgreSQL client
+        run: python -m pip install --disable-pip-version-check 'psycopg[binary]==3.2.9'
+      - name: Pure harness safety tests
+        run: python -m unittest discover -s tests/sql/v18-authority-prototype -p 'test_*.py' -v
+      - name: Actual isolated transactions and privilege negatives
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: '55432'
+          PGUSER: postgres
+          PGPASSWORD: synthetic-authority-job-only
+          PGDATABASE: v18_authority_fixture
+        run: python tests/sql/v18-authority-prototype/harness.py
+      - name: Upload redacted acceptance evidence only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v18-authority-prototype-evidence
+          path: tests/sql/v18-authority-prototype/acceptance.json
+          if-no-files-found: warn
+          retention-days: 7
