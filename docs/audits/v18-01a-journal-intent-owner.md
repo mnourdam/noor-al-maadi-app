@@ -32,10 +32,27 @@ Invariant review found that truthiness/get-only reads could confuse malformed pe
 
 Coordinator review required binding the entire immutable command, not payload alone. Both the intent and every v2 reference now carry `commandCanonical`, covering protocol/type, IDs, payload and complete target/terms/level set. Validation recomputes it and compares referenced rows exactly. One-sided target removal, level change or activity-ID change fails; even rewriting the intent's canonical text cannot match old references. This is structural consistency, not cryptographic tamper authenticity or protection against coordinated malicious rewrites of all stores. Four additional controls pass; focused journal suite **31/31**.
 
-## Native browser lane extension (runtime pending)
+## Native browser lane extension (verified browser-only)
 
 The existing isolated Chromium settlement fixture now imports the real journal API. Five additional checks cover intent plus two pending references committing, rollback after all three native add-success events, two-tab conflicting commands and compatible replay, orderly persistent-profile browser restart, and missing-reference read/replay denial without repair. All twelve prior checks, including the raw-writer bypass negative control, remain. Two-tab launches alone do not establish overlapping lock waits; no native overlap claim is made. Native upgrade behavior is not added here; upgrade evidence remains the unit suite above.
 
-Local Vite bundle and Python AST checks passed; no local browser/server was launched. Actual native-IDB execution is pending the existing reviewed CI lane. This is browser-only, synthetic descriptions with no SDK/dispatch or earning authority, not Android, arbitrary process-crash durability or issuer proof. No workflow, environment or security settings changed.
+Local Vite bundle and Python AST checks passed; no local browser/server was launched. Actual native-IDB execution subsequently passed in the existing reviewed CI lane, as recorded below. This is browser-only, synthetic descriptions with no SDK/dispatch or earning authority, not Android, arbitrary process-crash durability or issuer proof. No workflow, environment or security settings changed.
 
-Final local gates: both TypeScript projects PASS; 1,807/1,807 offline regressions across 86 files PASS; seven economic inventory checks and source drift PASS with no pin changes. Independent reviewers cleared 101 focused/historical cases and the bounded existing-browser-lane extension. Actual Chromium execution of the five added journal checks remains pending remote CI; these local results are not runtime native-IDB, Android or live-release acceptance.
+Final local gates: both TypeScript projects PASS; 1,807/1,807 offline regressions across 86 files PASS; seven economic inventory checks and source drift PASS with no pin changes. Independent reviewers cleared 101 focused/historical cases and the bounded existing-browser-lane extension. These local gates alone were not runtime native-IDB acceptance. The separate Chromium result below supplies the bounded native-IDB evidence; neither set of results establishes Android or live-release acceptance.
+
+
+## Verified Chromium execution and artifact reconciliation
+
+[Run 43307459131](https://github.com/mnourdam/noor-al-maadi-app/actions/runs/43307459131), job `131494419053`, passed at source commit `e44e6c45f55bf901d9748c89ee490946aabc36a9`. The coordinator mapped that source to local commit `ae977fcb`; independent review verified the local tree `d1e2da8e810a320d45639700321f2a3a0f7012cf` and that the reviewed journal/database/browser-fixture files have no changes from that commit.
+
+Artifact `13984417184` contains exactly one member, `native-settlement-result.json`. Independent review recomputed the coordinator-downloaded ZIP SHA-256 as `17aab6feae15b5346b60fa6d9b225cd69c686340dec8820f1594aab527617af9`, verified the sole-member list, and compared its parsed contents with the extracted result. The artifact reports **NATIVE PRIMITIVE ACCEPTANCE PASS**, Chromium **151.0.0.0**, and **17 grouped checks**. These are grouped assertions, not 17 independent crash scenarios.
+
+The five added journal groups passed against the actual source and native browser IndexedDB:
+
+1. The immutable journal command and both v2 pending references commit together, with matching full-command binding.
+2. Explicit transaction abort after all three native add-success events leaves neither command nor reference rows committed.
+3. Two tabs submitting conflicting command variants yield one winner; compatible exact replay returns the same committed command. Observed lock overlap is not asserted.
+4. Orderly persistent-profile browser restart preserves the exact command, all references and compatible replay.
+5. Deleting one required reference makes read and replay reject without repairing or otherwise changing the damaged rows.
+
+All twelve previous groups also passed. Crucially, the raw same-origin writer negative control still bypasses the primitive: **global writer exclusion remains UNPROVEN**. The runtime result does not authenticate caller-declared eligibility, authorize balances, implement dispatch/idempotency reconciliation or deliver a reward. Native schema-upgrade behavior remains outside these five groups. Orderly restart and explicit transaction abort are not arbitrary process-crash or OS force-stop proof; this is Chromium, not Android acceptance. Production activation and V18 release remain on HOLD.
