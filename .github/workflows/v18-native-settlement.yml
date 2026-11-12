@@ -1,0 +1,47 @@
+name: V18 Native Settlement Boundary
+on:
+  push:
+    branches: [v18-01a-outbox-recovery]
+    paths:
+      - '.github/workflows/v18-native-settlement.yml'
+      - 'tests/offline/browser/*settlement*'
+      - 'src/lib/rewards/**'
+      - 'src/lib/identity/owner.ts'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-settlement:
+    if: github.ref == 'refs/heads/v18-01a-outbox-recovery'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install locked app build dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Install official isolated browser test tools
+        run: |
+          python -m pip install playwright==1.62.0
+          python -m playwright install --with-deps chromium
+      - name: Actual source and native IndexedDB boundary checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          export CHROMIUM_EXECUTABLE_PATH="$(python -c 'from playwright.sync_api import sync_playwright; p=sync_playwright().start(); print(p.chromium.executable_path); p.stop()')"
+          python tests/offline/browser/settlement-native.py | tee native-settlement-result.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-settlement-boundary
+          path: native-settlement-result.json
+          retention-days: 14
