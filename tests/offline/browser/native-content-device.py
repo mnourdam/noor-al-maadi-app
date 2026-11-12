@@ -1,8 +1,50 @@
 """Actual debug WebView/bridge/lifecycle checks; synthetic transport, no network claim."""
-import json,subprocess,time,urllib.request,urllib.error,os
+import json,subprocess,time,urllib.request,urllib.error,os,re,sys
 from urllib.parse import urlparse,urlunparse
 import websocket
 PACKAGE='app.lovable.irth'
+# Internal identifiers never enter diagnostic output.
+DIAGNOSTIC_CONTEXT={'stage':'launch','pid':None}
+def diagnostic_probe(args):
+    try:
+        result=subprocess.run(['adb',*args],capture_output=True,text=True,timeout=5)
+        if result.returncode!=0:return None
+        return result.stdout[-262144:]
+    except (OSError,subprocess.TimeoutExpired):return None
+
+def diagnostic_summary(context,probe=diagnostic_probe):
+    pid=context.get('pid')
+    if not isinstance(pid,str) or not pid.isdecimal():pid=None
+    current=probe(['shell','pidof',PACKAGE])
+    # pidof exit 1 is also unknown here: do not confuse probe failure with absence.
+    sockets=probe(['shell','cat','/proc/net/unix'])
+    app=probe(['logcat','-d','-t','400','--pid='+pid,'-b','main','-b','crash','-v','brief']) if pid else None
+    system=probe(['logcat','-d','-t','400','-b','system','-b','crash','-v','brief'])
+    stage=context.get('stage')
+    if stage not in ('launch','discovery','initial_ready','content','home_resume','force_stop','relaunch_ready','durable_restart'):stage='unknown'
+    return {'result':'NATIVE_FAILURE_DIAGNOSTIC','stage':stage,
+        'original_pid_observed':pid is not None,
+        'package_process_present':bool(current.split()) if current is not None else None,
+        'original_process_still_current':pid in current.split() if pid and current is not None else None,
+        'original_debug_socket_present':any(line.split() and line.split()[-1] in ('@webview_devtools_remote_'+pid,'webview_devtools_remote_'+pid) for line in sockets.splitlines()) if pid and sockets is not None else None,
+        'app_log_available':app is not None,
+        'app_fatal_indicator':bool(re.search(r'FATAL EXCEPTION|Fatal signal|Abort message:',app)) if app is not None else None,
+        'app_renderer_indicator':bool(re.search(r'renderer.*(?:crash|killed|gone)|RenderProcessGone',app,re.I)) if app is not None else None,
+        'system_log_available':system is not None,
+        'system_exact_app_crash_indicator':any(pid and re.search(r'(?:Process: '+re.escape(PACKAGE)+r', PID: '+pid+r'\b|Process '+re.escape(PACKAGE)+r' \(pid '+pid+r'\)|pid: '+pid+r',[^\n]*>>> '+re.escape(PACKAGE)+r' <<<)',line) and re.search(r'crash|fatal|died',line,re.I) for line in system.splitlines()) if system is not None and pid else None,
+        'system_low_memory_indicator_unattributed':bool(re.search(r'low.?memory|lmkd|lowmemorykiller',system,re.I)) if system is not None else None}
+
+def run_with_diagnostics(operation,context=DIAGNOSTIC_CONTEXT,probe=diagnostic_probe,emit=None):
+    try:return operation()
+    except Exception:
+        try:
+            report=diagnostic_summary(context,probe)
+            (emit or (lambda value:print(value,file=sys.stderr)))(json.dumps(report,sort_keys=True))
+        except Exception:
+            # Diagnostic failure must never replace or swallow the original exception.
+            pass
+        raise
+
 def is_packaged_page(url):
     try:
         parsed=urlparse(url)
@@ -41,6 +83,7 @@ class Page:
         while time.monotonic()<deadline:
             try:pid=adb('shell','pidof',PACKAGE).split()[0]
             except (subprocess.CalledProcessError,IndexError):time.sleep(.2);continue
+            DIAGNOSTIC_CONTEXT.update(stage='discovery',pid=pid)
             socket='webview_devtools_remote_'+pid
             if socket in adb('shell','cat','/proc/net/unix'):break
             time.sleep(.2)
@@ -72,9 +115,11 @@ def start():adb('shell','am','start','-W','-n',PACKAGE+'/.MainActivity')
 def main():
     checks=[];start();page=Page()
     try:
+        DIAGNOSTIC_CONTEXT['stage']='initial_ready'
         page.wait('window.ready===true')
         assert page.evaluate("Capacitor.getPlatform()==='android' && Capacitor.isNativePlatform()") is True
         assert page.evaluate('nativeApp.getState().then(x=>x.isActive)') is True;checks.append('actual Android Capacitor platform and App plugin active')
+        DIAGNOSTIC_CONTEXT['stage']='content'
         assert page.evaluate('runtime.local().title')=='baseline'
         page.evaluate("nativeAcceptance.mode='hang';void(runtime.apply(1200).then(x=>window.firstResult=x))")
         page.wait('window.firstResult===false')
@@ -83,12 +128,14 @@ def main():
         page.evaluate("nativeAcceptance.mode='ok'")
         assert page.evaluate('runtime.apply(20000)') is True
         durable=page.evaluate('runtime.durable()');assert durable['title']=='updated' and durable['count']==1500 and durable['checksum'];checks.append('actual WebView persists complete synthetic content after retry')
+        DIAGNOSTIC_CONTEXT['stage']='home_resume'
         adb('shell','input','keyevent','KEYCODE_HOME');time.sleep(1);start()
         page.wait('nativeLifecycle.includes(false) && nativeLifecycle.at(-1)===true')
         assert page.evaluate('nativeApp.getState().then(x=>x.isActive)') is True
         assert page.evaluate('runtime.durable()')==durable;checks.append('real native Home and resume App lifecycle events preserve content')
         assert page.evaluate('nativeAcceptance.unexpected.length')==0
     finally:page.close()
+    DIAGNOSTIC_CONTEXT['stage']='force_stop'
     old_pid=adb('shell','pidof',PACKAGE)
     assert old_pid
     adb('shell','am','force-stop',PACKAGE)
@@ -97,7 +144,9 @@ def main():
     checks.append('force-stop directly observed absence of package PID before relaunch')
     start();page=Page()
     try:
+        DIAGNOSTIC_CONTEXT['stage']='relaunch_ready'
         page.wait('window.ready===true')
+        DIAGNOSTIC_CONTEXT['stage']='durable_restart'
         assert page.evaluate('runtime.durable()')==durable and page.evaluate('runtime.local().title')=='updated'
         assert page.evaluate('nativeAcceptance.unexpected.length')==0
         checks.append('Android am force-stop and fresh activity process reload preserve committed IndexedDB content')
@@ -141,10 +190,34 @@ def readiness_self_test():
             opener=Mock(side_effect=urllib.error.URLError('unexpected TLS or proxy error'))
             with self.assertRaises(urllib.error.URLError):self.invoke(opener)
             self.assertEqual(opener.call_count,1)
+        def test_diagnostics_redact_identifiers_and_log_content(self):
+            context={'stage':'initial_ready','pid':'12345'}
+            probe=Mock(side_effect=['12345','@webview_devtools_remote_12345',
+                'FATAL EXCEPTION private-token-SECRET',
+                'Process app.lovable.irth (pid 12345) has died private-token-SECRET; lmkd'])
+            report=diagnostic_summary(context,probe);encoded=json.dumps(report)
+            self.assertTrue(report['app_fatal_indicator']);self.assertTrue(report['system_exact_app_crash_indicator'])
+            self.assertNotIn('12345',encoded);self.assertNotIn(PACKAGE,encoded);self.assertNotIn('SECRET',encoded)
+        def test_diagnostic_probe_failures_are_unknown(self):
+            report=diagnostic_summary({'stage':'initial_ready','pid':'12345'},lambda args:None)
+            self.assertIsNone(report['app_fatal_indicator']);self.assertIsNone(report['original_process_still_current'])
+            self.assertIsNone(report['system_low_memory_indicator_unattributed'])
+        def test_unrelated_system_crash_not_attributed(self):
+            report=diagnostic_summary({'stage':'initial_ready','pid':'12345'},Mock(side_effect=['12345','','','Process other.app (pid 12345) has died\nProcess app.lovable.irth (pid 912345) has died']))
+            self.assertFalse(report['system_exact_app_crash_indicator'])
+        def test_original_exception_preserved(self):
+            error=RuntimeError('original');emitted=[]
+            def fail():raise error
+            with self.assertRaises(RuntimeError) as caught:
+                run_with_diagnostics(fail,{'stage':'initial_ready','pid':'12345'},lambda args:None,emitted.append)
+            self.assertIs(caught.exception,error);self.assertEqual(len(emitted),1)
+            with self.assertRaises(RuntimeError) as caught:
+                run_with_diagnostics(fail,{},Mock(side_effect=ValueError('probe')),emitted.append)
+            self.assertIs(caught.exception,error)
     result=unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.loadTestsFromTestCase(Tests))
     if not result.wasSuccessful():raise SystemExit(1)
 if __name__=='__main__':
     import sys
     if sys.argv[1:]==['--self-test-readiness']:readiness_self_test()
     elif sys.argv[1:]:raise SystemExit('unknown arguments')
-    else:main()
+    else:run_with_diagnostics(main)
