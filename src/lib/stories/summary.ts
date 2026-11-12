@@ -13,7 +13,7 @@ import type { PlayerUnlockState } from "./unlock/local";
 import { buildGuestEvidence, guestUnlockState } from "./unlock/guest-evidence";
 
 import { isCampaignIntroRow } from "./library-filter";
-import { getActiveUserId } from "../identity/owner";
+import { getActiveUserId, getActiveOwner, getIdentityEpoch } from "../identity/owner";
 
 const inflightSummary = new Map<string, Promise<StorySummary[]>>();
 
@@ -285,12 +285,20 @@ async function authedEvidenceState(
 export async function listStoriesSummary(
   worldSlug?: string | null,
 ): Promise<StorySummary[]> {
+  const owner = getActiveOwner(), epoch = getIdentityEpoch();
+  const current = () => getActiveOwner() === owner && getIdentityEpoch() === epoch;
   const online = typeof navigator === "undefined" || navigator.onLine !== false;
   const uid = await currentUid();
+  if (!current() || getActiveUserId() !== uid) return [];
+  const local = async () => {
+    if (!current()) return [];
+    const rows = await buildLocalStorySummaries(worldSlug, uid);
+    return current() ? rows : [];
+  };
 
-  if (!online) return buildLocalStorySummaries(worldSlug, uid);
+  if (!online) return local();
 
-  const key = `${uid ?? "guest"}:${worldSlug ?? ""}`;
+  const key = JSON.stringify([owner, epoch, uid, worldSlug ?? ""]);
   const existing = inflightSummary.get(key);
   if (existing) return existing;
 
@@ -322,13 +330,13 @@ export async function listStoriesSummary(
       }
 
       // STALE CHECK: Identity changed while request was in-flight.
-      if (getActiveUserId() !== uid) {
+      if (!current() || getActiveUserId() !== uid) {
         return [];
       }
 
       if (settled === "timeout" || settled?.error || !settled?.data) {
         // Network is unavailable, lying, or slow: local content wins.
-        return buildLocalStorySummaries(worldSlug, uid);
+        return local();
       }
 
       const data = settled.data;
@@ -348,12 +356,14 @@ export async function listStoriesSummary(
           source: "server" as const,
         }));
 
-      if (rows.length === 0) return buildLocalStorySummaries(worldSlug, uid);
+      if (!current()) return [];
+      if (rows.length === 0) return local();
 
       if (!worldSlug) {
         void (async () => {
           try {
             const { pruneStoriesToAuthoritative } = await import("@/lib/local-first-store");
+            if (!current()) return;
             pruneStoriesToAuthoritative(rows.map((r) => r.id));
           } catch { /* ignore */ }
         })();
@@ -363,6 +373,7 @@ export async function listStoriesSummary(
         // response. Never uploaded, never a write path.
         try {
           const { mergeAuthoritativeRows } = await import("./progress-mirror");
+          if (!current()) return [];
           mergeAuthoritativeRows(uid, rows as never);
         } catch { /* cache only */ }
       }
@@ -371,25 +382,29 @@ export async function listStoriesSummary(
         void (async () => {
           try {
             const { loadUnlockedIds, persistUnlockedIds } = await import("./unlock-cache");
+            if (!current()) return;
             const prev = await loadUnlockedIds(uid);
+            if (!current()) return;
             for (const r of rows) if (r.unlocked) prev.add(r.id);
             if (!worldSlug) {
               const authoritative = new Set(rows.filter((r) => r.unlocked).map((r) => r.id));
               for (const id of [...prev]) if (!authoritative.has(id) && rows.find((r) => r.id === id)) prev.delete(id);
             }
-            await persistUnlockedIds(uid, prev);
+            await persistUnlockedIds(uid, prev, current);
           } catch { /* ignore */ }
         })();
       }
-      return rows;
+      return current() ? rows : [];
     } catch {
-      return buildLocalStorySummaries(worldSlug, uid);
-    } finally {
-      inflightSummary.delete(key);
+      return local();
     }
   })();
 
   inflightSummary.set(key, promise);
+  const clear = () => {
+    if (inflightSummary.get(key) === promise) inflightSummary.delete(key);
+  };
+  void promise.then(clear, clear);
   return promise;
 }
 

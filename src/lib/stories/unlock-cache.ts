@@ -92,7 +92,8 @@ function cacheKey(uid: string): string {
 }
 
 /** Overwrite the local unlock set for a user with the authoritative online view. */
-export async function persistUnlockedIds(uid: string, ids: Iterable<string>): Promise<void> {
+export async function persistUnlockedIds(uid: string, ids: Iterable<string>, current: () => boolean = () => true): Promise<void> {
+  if (!current()) return;
   const ls = safeLs();
   if (!ls || !uid) return;
   const payload: UnlockPayload = {
@@ -102,6 +103,7 @@ export async function persistUnlockedIds(uid: string, ids: Iterable<string>): Pr
   };
   try {
     const sig = await hmacSign(payload);
+    if (!current()) return;
     const blob: SignedBlob = { p: payload, sig };
     ls.setItem(cacheKey(uid), JSON.stringify(blob));
   } catch { /* ignore */ }
