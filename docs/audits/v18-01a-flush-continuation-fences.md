@@ -38,3 +38,5 @@ The tests do not certify asynchronous internals of imported helpers or revoke
 already-issued backend requests. Full-package validation and CI follow below.
 
 Final combined local package: **1,225/1,225 tests PASS** across 48 files; application/regression typecheck, offline client/SSR build and diff check **PASS**. Both source changes independently reviewed. Branch CI pending at publication; no deployment.
+
+Remote runtime CI **SUCCESS**: [43184352900](https://github.com/mnourdam/noor-al-maadi-app/actions/runs/43184352900), tested commit `a3bcbf78ff14827d38dea5715ccbf67d54c5d941`; verified job `131067726508` passed every step, including regressions, scheduler, typecheck and build. No deployment.

@@ -1088,44 +1088,51 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       } as ProfileState;
     }),
     resetProfile: () => reset(initial),
-    applyServerStats: (stats) => update((p) => {
-      const now = Date.now();
-      let next = p;
-      let changed = false;
-      if (typeof stats.xp === "number" && stats.xp !== p.points) {
-        next = { ...next, points: Math.max(0, stats.xp) };
-        changed = true;
-      }
-      if (typeof stats.xp === "number" && stats.xp !== p.points) {
-        next = { ...next, points: Math.max(0, stats.xp) };
-        changed = true;
-      }
-      if (typeof stats.dinars === "number" && stats.dinars !== (p.dinars ?? 0)) {
-        next = { ...next, dinars: Math.max(0, stats.dinars) };
-        changed = true;
-      }
-      if (typeof stats.streak === "number") {
-        // V16: server value is authoritative and adopted verbatim. Never
-        // zeroed from a client-side day derivation.
-        const nextStreak = Math.max(0, Math.floor(stats.streak));
-
-        if (nextStreak !== next.streak) {
-          next = { ...next, streak: nextStreak };
+    applyServerStats: (stats) => {
+      // Capture before React can defer the updater. Invalid snapshots must not
+      // consume write admission or overwrite valid persisted numbers with null.
+      const xp = stats.xp, dinars = stats.dinars, streak = stats.streak;
+      if ([xp, dinars, streak].some((value) => typeof value === "number" && !Number.isFinite(value))) return;
+      const lastStreakDay = typeof streak === "number" ? stats.lastStreakDay : undefined;
+      update((p) => {
+        const now = Date.now();
+        let next = p;
+        let changed = false;
+        if (typeof xp === "number" && xp !== p.points) {
+          next = { ...next, points: Math.max(0, xp) };
           changed = true;
         }
-        // V17-04A — the streak mirror and its day travel together. Without
-        // this, a server streak of N could sit next to a stale
-        // `lastActiveDay`, and `deriveStreak` would render 0 in the HUD
-        // while /profile rendered N.
-        const day = laterDayKey(next.lastActiveDay, stats.lastStreakDay ?? null);
-        if (day !== next.lastActiveDay) {
-          next = { ...next, lastActiveDay: day };
+        if (typeof xp === "number" && xp !== p.points) {
+          next = { ...next, points: Math.max(0, xp) };
           changed = true;
         }
-      }
+        if (typeof dinars === "number" && dinars !== (p.dinars ?? 0)) {
+          next = { ...next, dinars: Math.max(0, dinars) };
+          changed = true;
+        }
+        if (typeof streak === "number") {
+          // V16: server value is authoritative and adopted verbatim. Never
+          // zeroed from a client-side day derivation.
+          const nextStreak = Math.max(0, Math.floor(streak));
 
-      return changed ? next : p;
-    }),
+          if (nextStreak !== next.streak) {
+            next = { ...next, streak: nextStreak };
+            changed = true;
+          }
+          // V17-04A — the streak mirror and its day travel together. Without
+          // this, a server streak of N could sit next to a stale
+          // `lastActiveDay`, and `deriveStreak` would render 0 in the HUD
+          // while /profile rendered N.
+          const day = laterDayKey(next.lastActiveDay, lastStreakDay ?? null);
+          if (day !== next.lastActiveDay) {
+            next = { ...next, lastActiveDay: day };
+            changed = true;
+          }
+        }
+
+        return changed ? next : p;
+      });
+    },
     grantTitle: (title) => update((p) => p.titlesEarned.includes(title) ? p : { ...p, titlesEarned: [...p.titlesEarned, title] }),
     grantArtifact: (id) => update((p) => p.artifactsFound.includes(id) ? p : { ...p, artifactsFound: [...p.artifactsFound, id] }),
     // `markAchievementEarned` removed - Achievement Engine v2 owns unlocks.
