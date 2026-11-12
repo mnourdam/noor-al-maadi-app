@@ -95,15 +95,31 @@ export function recordActivity(
   const coins  = activity.coinsReward  ?? ACTIVITY_DEFAULTS.coinsReward;
   const hearts = activity.heartsPenalty ?? ACTIVITY_DEFAULTS.heartsPenalty;
 
+  // Reject the entire operation before completion/unlock markers or writes.
+  // A no-op return would let callers continue into the separate reward claim.
   if (correct) {
+    const nextChapterXp = ch.xpEarned + xp;
+    const nextChapterCoins = ch.coinsEarned + coins;
+    const nextTotalXp = cur.totalXp + xp;
+    const nextTotalCoins = cur.totalCoins + coins;
+    if (![xp, coins, ch.xpEarned, ch.coinsEarned, cur.totalXp, cur.totalCoins,
+      nextChapterXp, nextChapterCoins, nextTotalXp, nextTotalCoins].every(Number.isFinite)) {
+      throw new Error("invalid-progress-arithmetic");
+    }
     ch.completedActivityIds = [...ch.completedActivityIds, activity.id];
-    ch.xpEarned    += xp;
-    ch.coinsEarned += coins;
-    cur.totalXp    += xp;
-    cur.totalCoins += coins;
+    ch.xpEarned = nextChapterXp;
+    ch.coinsEarned = nextChapterCoins;
+    cur.totalXp = nextTotalXp;
+    cur.totalCoins = nextTotalCoins;
   } else {
-    ch.heartsLost        += hearts;
-    cur.totalHeartsLost  += hearts;
+    const nextChapterHearts = ch.heartsLost + hearts;
+    const nextTotalHearts = cur.totalHeartsLost + hearts;
+    if (![hearts, ch.heartsLost, cur.totalHeartsLost,
+      nextChapterHearts, nextTotalHearts].every(Number.isFinite)) {
+      throw new Error("invalid-progress-arithmetic");
+    }
+    ch.heartsLost = nextChapterHearts;
+    cur.totalHeartsLost = nextTotalHearts;
   }
 
   // Chapter completion is STICKY. Once a chapter is completed it stays

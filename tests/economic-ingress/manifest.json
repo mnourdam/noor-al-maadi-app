@@ -4021,7 +4021,7 @@
     },
     {
       "path": "src/lib/importedCampaignProgress.ts",
-      "sha256": "57c1b8aafcb7645e89da892163c64625cf1f9e226d689032a589e1108f083257",
+      "sha256": "e4f3b8459a0be41875931f973759457de9cffa8c6c4dcc5ef5bef98042f28f56",
       "rpc_candidates": [],
       "table_candidates": [
         "user_campaign_completions",
