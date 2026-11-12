@@ -541,7 +541,7 @@ export function AccountProvider({ children, emailAuthObserverForTests, compatibi
           }
           if (ok) setLastSyncAt(Date.now());
           await pushPublicStats(user.id, data, () => request.current() && profileRef.current === source);
-          if (request.current() && profileRef.current === source && syncTicket.current === ticket)
+          if (ok && request.current() && profileRef.current === source && syncTicket.current === ticket)
             lastLocalChangeRef.current = 0;
         } catch { /* Offline does not acknowledge the pending snapshot. */ }
         finally { finishSync(ticket, request.current); }
@@ -580,7 +580,7 @@ export function AccountProvider({ children, emailAuthObserverForTests, compatibi
             }
             if (ok) setLastSyncAt(Date.now());
             await pushPublicStats(uid, data, () => request.current() && profileRef.current === source);
-            if (request.current() && profileRef.current === source && syncTicket.current === ticket)
+            if (ok && request.current() && profileRef.current === source && syncTicket.current === ticket)
               lastLocalChangeRef.current = 0;
           } catch { /* Offline. */ }
           finally { finishSync(ticket, request.current); }
@@ -838,7 +838,7 @@ export function AccountProvider({ children, emailAuthObserverForTests, compatibi
         setReconciliationState("offline-local", "profile-revision-unresolved"); return false;
       }
       if (saveOk) setLastSyncAt(Date.now());
-      if (profileRef.current === source && syncTicket.current === ticket) lastLocalChangeRef.current = 0;
+      if (saveOk && profileRef.current === source && syncTicket.current === ticket) lastLocalChangeRef.current = 0;
       return saveOk;
     } finally { finishSync(ticket, request.current); }
   }, [user, identity, profileIdentity]);
