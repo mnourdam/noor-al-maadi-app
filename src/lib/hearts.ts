@@ -66,6 +66,9 @@ export function commitHearts(
   if (base >= HEART_MAX) return { hearts: clamped, heartsAt: now };
   const elapsed = Math.max(0, now - at);
   const gained = Math.floor(elapsed / HEART_RECOVERY_MS);
+  // Regeneration may have reached full without persisting a new tuple. There
+  // is no active interval at full, so spending from it starts a fresh timer.
+  if (base + gained >= HEART_MAX) return { hearts: clamped, heartsAt: now };
   let rolling = at + gained * HEART_RECOVERY_MS;
   if (rolling > now || now - rolling >= HEART_RECOVERY_MS) rolling = now;
   return { hearts: clamped, heartsAt: rolling };
