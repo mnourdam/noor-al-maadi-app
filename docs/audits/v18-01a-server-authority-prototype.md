@@ -132,7 +132,7 @@ harness checks and a DDL parse are not engine acceptance.
 Local tooling: no PostgreSQL server, psql or Docker was available. `pglast` 8.7,
 installed into a temporary non-project directory, parsed all 63 top-level SQL
 statements. Its PL/pgSQL parser cannot resolve the custom schema types, so body
-execution/privileges and actual concurrency remain **PENDING real CI**. No project
+execution/privileges and concurrency were pending until the verified run below. No project
 package or lockfile was changed for parsing. Runtime results must be recorded only
 after the actual disposable engine run and independent review.
 
@@ -151,3 +151,38 @@ after the actual disposable engine run and independent review.
 
 V18 remains HOLD, production NO-GO. No activation or live migration is authorized
 or implied by this prototype or a passing isolated engine run.
+
+## Verified disposable-engine acceptance
+
+Source `b93643d69a168b401fd7dea8d8cca02a9ae10ad7`, tree
+`cda31f373dc1cb676320f6b05f811d694339cb40`, ran successfully in
+[43204556601](https://github.com/mnourdam/noor-al-maadi-app/actions/runs/43204556601),
+job `131136305943`, on 2026-11-12. Every step passed, including real PostgreSQL
+17.6 transaction/privilege execution, four pure harness safety tests, evidence
+upload and container teardown. The actual log reports **325 engine assertions
+passed**. These are assertion records, not 325 distinct business scenarios.
+
+Artifact `13936956230` contains only `acceptance.json`; its downloaded ZIP digest
+was independently checked against GitHub metadata:
+`ac15b6bb087510a774b88d166564e96fd749e11d813f10201f688dd7d5bd0e63`.
+The parsed, sanitized evidence is preserved in
+[evidence/v18-authority-prototype-43204556601.json](evidence/v18-authority-prototype-43204556601.json).
+
+Evidence includes three observed-lock-overlap executions (different-source CAS,
+exact concurrent retry and bootstrap), immutable replay after later revision,
+independently relaxed issuance uniqueness with consumption still denying aliases,
+all-seven-table snapshots after injected statement failures, missing/tampered
+sealed facts, missing baseline inclusion, role/column/default-function ACLs and
+arithmetic underflow/overflow rejection. Independent runtime review compared the
+assertion checklist with the exact source and harness.
+
+The unchanged older isolated gate workflow also passed at this source
+(43204556463), as did npm runtime regressions (43204556440) and frozen Bun graph
+verification (43204556389). Application source was not changed by the prototype.
+
+This establishes the **synthetic engine contract only**. It does not test a crash
+or database restart, real JWT/Auth/PostgREST, hosted or production schema, actual
+player baseline provenance, external semantic entitlement aliases, arbitrary
+existing privileged definer routines, or device behavior. Decimal-string receipt
+encoding and overflow rejection are tested; successful high-bigint client
+interoperability is not separately certified. V18 remains HOLD/production NO-GO.
