@@ -1,3 +1,4 @@
+import { classifyProfileDeltaReceipt } from "../economy/profile-delta-receipt";
 import { recordTrace } from "@/lib/diag-trace";
 // ============================================================
 // Offline Outbox Flush Driver
@@ -147,8 +148,11 @@ async function handleItem(item: OutboxItem): Promise<{ ok: boolean; error?: stri
           p_source: p.source ?? item.kind,
         });
         if (error) return { ok: false, error: error.message };
-        const payload = (res ?? {}) as { ok?: boolean };
-        if (!payload.ok) return { ok: false, error: "rpc-not-ok" };
+        const receipt = classifyProfileDeltaReceipt(res);
+        if (receipt !== "granted" && receipt !== "already_granted") {
+          // Unknown receipts are not confirmations or trusted permanent rejections.
+          return { ok: false, error: "profile-delta-receipt-unresolved" };
+        }
         return { ok: true };
       }
 

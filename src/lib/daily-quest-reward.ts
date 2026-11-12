@@ -1,3 +1,4 @@
+import { classifyProfileDeltaReceipt } from "./economy/profile-delta-receipt";
 // ============================================================
 // Daily Quest — canonical atomic reward grant
 // ------------------------------------------------------------
@@ -228,20 +229,6 @@ export async function isDailyQuestRewardedOnServer(params: {
   }
 }
 
-/** Validate receipt semantics, never infer confirmation from HTTP success or totals. */
-function classifyGrantReceipt(data: unknown): "granted" | "already_granted" | "unauthenticated" | undefined {
-  if (!data || typeof data !== "object" || Array.isArray(data)) return undefined;
-  const receipt = data as Record<string, unknown>;
-  if (receipt.ok === false && receipt.reason === "unauthenticated" && receipt.applied === undefined)
-    return "unauthenticated";
-  if (receipt.ok !== true) return undefined;
-  if (receipt.applied === true && receipt.reason === undefined) return "granted";
-  // Older adapters omit the optional duplicate reason; retain that established shape.
-  if (receipt.applied === false && (receipt.reason === undefined || receipt.reason === "already_applied"))
-    return "already_granted";
-  return undefined;
-}
-
 /** Identity-scoped canonical grant. Stale results never carry usable stats.
  * A stale/failed response is NOT proof that an in-flight server grant rolled back.
  */
@@ -326,7 +313,7 @@ export async function grantDailyQuestReward(params: {
     const { data, error } = response;
     rpcStatus = error ? "error" : "success";
     if (error) return await queue(error.message);
-    const outcome = classifyGrantReceipt(data);
+    const outcome = classifyProfileDeltaReceipt(data);
     if (outcome === undefined) {
       // An unrecognized receipt does not prove rollback or permission to retry.
       // Do not attach unrelated profile totals as grant evidence or auto-enqueue.

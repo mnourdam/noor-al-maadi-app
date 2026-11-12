@@ -84,4 +84,4 @@ guarantee is claimed. Full regression and CI evidence are recorded below.
 
 Final local validation: **1,153/1,153 tests PASS** across 44 files; application
 and regression typecheck **PASS**; offline client/SSR build **PASS**;
-`git diff --check` **PASS**. Remote branch CI pending at publication.
+`git diff --check` **PASS**. Remote branch CI later **PASSED**: [43179521106](https://github.com/mnourdam/noor-al-maadi-app/actions/runs/43179521106), tested commit `187180ddbf7aee31501fa04ae710859903527c86`.
