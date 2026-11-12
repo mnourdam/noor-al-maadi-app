@@ -45,3 +45,7 @@ profile methods and other unvalidated ingestion paths remain separate work.
 Independent review **CLEAR**, independently rerun **19/19 PASS**. Full local
 validation: **1279/1279 tests across 51 files PASS**, both TypeScript projects PASS,
 and client/SSR build PASS. Remote CI pending for this commit; no deployment.
+
+Remote runtime CI **SUCCESS**: [43186936999](https://github.com/mnourdam/noor-al-maadi-app/actions/runs/43186936999), tested commit `57442d1e80fa6a2360de5f775b885814db537991`.
+Verified job `131076322762` passed every step, including regressions, scheduler,
+typecheck and client/SSR build. No deployment.
