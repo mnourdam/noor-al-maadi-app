@@ -51,7 +51,7 @@ jobs:
           distribution: temurin
           java-version: '21'
       - name: Validate task graph safety predicate
-        run: node --test scripts/test-android-compilation-task-graph.mjs
+        run: node --test scripts/test-android-compilation-task-graph.mjs scripts/test-android-build-config.mjs
       - name: Reproducible dependencies without install scripts
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Verify toolchain and provision Android compile SDK

@@ -75,3 +75,5 @@ Remote latest-source dual-graph acceptance: tested commit
 This proves both frozen dependency graphs work for this source under Node; it
 does not make their package versions equal or establish hosted Lovable/Android
 release runtime acceptance. No lock regeneration or production deployment.
+
+Subsequent frozen-Bun run [43194053317](https://github.com/mnourdam/noor-al-maadi-app/actions/runs/43194053317), source `c13de66c6b6445d81e99174d172ff9dafd18dbcb`, also **SUCCESS**. Verified job `131100328231` passed every step, including final unchanged-lock checks. Android compilation has separate evidence and was not successful in the paired Android attempt.

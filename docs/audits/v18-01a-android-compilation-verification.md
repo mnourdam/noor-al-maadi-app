@@ -47,3 +47,15 @@ SHA-256 and its three text-only entries; the actual **186-task** dry-run graph
 passes the corrected predicate. The reviewer independently rechecked that graph.
 No signing, APK/AAB or assemble task is admitted. Actual compilation remains
 pending a corrected CI execution, not established by this dry-run evidence.
+
+## First actual compilation failure: application BuildConfig
+
+Commit `c13de66c`, run `43194053322` / job `131100327904`, passed SDK/offline build/sync and the 186-task safety graph. Actual Gradle execution reached 146 tasks and compiled plugins, then failed at `MainActivity.java:31`: unresolved `BuildConfig` used by `WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG)`. Evidence artifact `13931364101`, reported SHA-256 `73e01e4a1afc1262ecf4a5fef729d0b0d02de73bf4f67e598b77a77871526401`.
+
+The application namespace and Java package both match `app.lovable.irth`; the application Gradle configuration omitted explicit BuildConfig generation. The bounded correction adds only `buildFeatures { buildConfig true }` to the app Android block. MainActivity remains unchanged and continues to use the generated variant-specific DEBUG constant; no unconditional WebView debugging, custom DEBUG override, release debuggable flag or signing changes were introduced.
+
+New static configuration/security regressions (`scripts/test-android-build-config.mjs`) reproduced 1 fail / 1 pass before the change and pass 2/2 afterward. They run in the verification workflow alongside the task-graph guard tests. These checks verify the checked-in configuration intent, not generated release output or runtime WebView behavior. A subsequent CI compile is still required; this failed run is not presented as Android acceptance.
+
+BuildConfig-generation correction independently reviewed **CLEAR**; reviewer
+reran **30/30** combined static configuration and task-graph tests. This does not
+itself prove Java compilation or release behavior; corrected CI is still required.

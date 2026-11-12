@@ -3,6 +3,9 @@ apply plugin: 'com.android.application'
 android {
     namespace = "app.lovable.irth"
     compileSdk = rootProject.ext.compileSdkVersion
+    buildFeatures {
+        buildConfig true
+    }
     defaultConfig {
         applicationId "app.lovable.irth"
         minSdkVersion rootProject.ext.minSdkVersion
