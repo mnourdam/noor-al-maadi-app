@@ -1,7 +1,14 @@
 /** Internal, inactive storage primitive. No grant, delivered mutation or profile integration. */
 import { getActiveOwner, getIdentityEpoch, onOwnerChange } from "@/lib/identity/owner";
 import { openSettlementDatabase, SETTLEMENT_STORES } from "./database";
-import { validateEntitlement, type Entitlement } from "./settlement";
+import {
+  applySettlementDecision,
+  validateSettlementDecision,
+  validateEntitlement,
+  type Binding,
+  type SettlementDecision,
+  type Entitlement,
+} from "./settlement";
 
 export type WritableSettlementStore = "economy" | "appliedGrants" | "migrationState";
 export type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
@@ -27,6 +34,15 @@ export interface SettlementTransaction {
     value: Json,
   ): void;
   abort(): void;
+}
+/** Separate dormant confirmation-only scope; no delivery or admission capability. */
+export interface ConfirmationSettlementTransaction extends SettlementTransaction {
+  compareSettleEntitlement(
+    key: string,
+    expected: Entitlement,
+    binding: Binding,
+    decision: SettlementDecision,
+  ): void;
 }
 function fail(reason: string): never {
   throw new Error(`settlement:${reason}`);
@@ -72,7 +88,7 @@ function synchronous(work: () => unknown): void {
     fail("async-transaction-callback");
   }
 }
-export function transactionsForOwner(owner: string) {
+function transactionFactory(owner: string, confirmation: boolean) {
   const epoch = getIdentityEpoch();
   if (!/^(user|guest):.+/.test(owner)) fail("invalid-owner");
   const guard = () => {
@@ -80,7 +96,7 @@ export function transactionsForOwner(owner: string) {
   };
   guard();
   return {
-    async run(work: (scope: SettlementTransaction) => void): Promise<void> {
+    async run(work: (scope: ConfirmationSettlementTransaction) => void): Promise<void> {
       guard();
       const db = await openSettlementDatabase();
       try {
@@ -137,6 +153,8 @@ export function transactionsForOwner(owner: string) {
             },
             readEntitlement(key, receive) {
               caught(() => {
+                if (mutations.has(JSON.stringify(["entitlements", keyFor(key)])))
+                  fail("read-after-write");
                 const req = tx.objectStore("entitlements").get(keyFor(key));
                 req.onsuccess = () =>
                   caught(() => {
@@ -185,6 +203,39 @@ export function transactionsForOwner(owner: string) {
               stop(new Error("settlement:transaction-aborted"));
             },
           };
+          if (confirmation) {
+            (scope as ConfirmationSettlementTransaction).compareSettleEntitlement = (
+              key,
+              expected,
+              binding,
+              decision,
+            ) => {
+              caught(() => {
+                const address = JSON.stringify(["entitlements", keyFor(key)]);
+                if (mutations.has(address)) fail("duplicate-write-target");
+                mutations.add(address);
+                const base = structuredClone(expected);
+                const b = structuredClone(binding),
+                  d = structuredClone(decision);
+                validateEntitlement(base, owner, key);
+                validateSettlementDecision(b, d);
+                canonical(base);
+                const target = tx.objectStore("entitlements");
+                const req = target.get(keyFor(key));
+                req.onsuccess = () =>
+                  caught(() => {
+                    const current = req.result as Entitlement | undefined;
+                    if (current === undefined) fail("missing-entitlement");
+                    validateEntitlement(current, owner, key);
+                    if (canonical(base) !== canonical(current)) fail("stale-record");
+                    const next = applySettlementDecision(current, b, d);
+                    validateEntitlement(next, owner, key);
+                    guard();
+                    target.put(next, keyFor(key));
+                  });
+              });
+            };
+          }
           tx.oncomplete = () => {
             active = false;
             unsubscribe();
@@ -200,11 +251,22 @@ export function transactionsForOwner(owner: string) {
             unsubscribe();
             reject(error ?? tx.error ?? new Error("settlement:storage-failed"));
           };
-          caught(() => synchronous(() => work(scope)));
+          caught(() => synchronous(() => work(scope as ConfirmationSettlementTransaction)));
         });
       } finally {
         db.close();
       }
     },
   };
+}
+
+/** Historical four-method scope remains unchanged. */
+export function transactionsForOwner(owner: string): {
+  run(work: (scope: SettlementTransaction) => void): Promise<void>;
+} {
+  return transactionFactory(owner, false);
+}
+/** Dormant composition only: no grant, delivery, import or economic admission. */
+export function confirmationTransactionsForOwner(owner: string) {
+  return transactionFactory(owner, true);
 }

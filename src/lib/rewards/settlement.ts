@@ -4,12 +4,7 @@ import { openSettlementDatabase } from "./database";
 export { SETTLEMENT_DB } from "./database";
 
 export type ProgressState =
-  | "storage_pending"
-  | "save_failed"
-  | "pending"
-  | "confirmed"
-  | "rejected"
-  | "legacy_unknown";
+  "storage_pending" | "save_failed" | "pending" | "confirmed" | "rejected" | "legacy_unknown";
 export type RewardState = "awaiting_confirmation" | "delivery_pending" | "delivered" | "not_due";
 export type RewardSource = "server" | "local" | "guest";
 export interface Binding {
@@ -77,6 +72,43 @@ export function validateEntitlement(row: Entitlement, owner: string, key: string
       fail("corrupt-record");
     seen.add(token(a.binding));
   }
+}
+
+export type SettlementDecision =
+  | { state: "confirmed"; rewardDue: boolean; evidence: string }
+  | { state: "rejected"; evidence: string };
+/** Internal validation only; opaque evidence authenticity belongs to the trusted adapter. */
+export function validateSettlementDecision(b: Binding, d: SettlementDecision): void {
+  if (
+    !validBinding(b) ||
+    !nonempty(d.evidence) ||
+    !["confirmed", "rejected"].includes(d.state) ||
+    (d.state === "confirmed" && typeof d.rewardDue !== "boolean")
+  )
+    fail("invalid-evidence");
+}
+/** Pure existing confirmation transition, never delivery or economic admission. */
+export function applySettlementDecision(
+  current: Entitlement | undefined,
+  b: Binding,
+  d: SettlementDecision,
+): Entitlement {
+  validateSettlementDecision(b, d);
+  const row = current === undefined ? undefined : structuredClone(current);
+  if (!row) return fail("missing-entitlement");
+  const a = row.attempts[row.attempts.length - 1];
+  if (token(a.binding) !== token(b)) fail("stale-binding");
+  const reward =
+    d.state === "confirmed" ? (d.rewardDue ? "delivery_pending" : "not_due") : "not_due";
+  if (a.progress === "confirmed" || a.progress === "rejected") {
+    if (a.progress !== d.state || a.reward !== reward || a.evidence !== d.evidence)
+      fail("decision-conflict");
+    return row;
+  }
+  a.progress = d.state;
+  a.reward = reward;
+  a.evidence = d.evidence;
+  return row;
 }
 
 /** Capture anew per account session; epochs fence calls, never invalidate durable rows. */
@@ -264,38 +296,11 @@ export function settlementForOwner(owner: string) {
       });
     },
     /** Trusted adapter evidence only; never infer this from missing receipts or flush counters. */
-    settle(
-      key: string,
-      binding: Binding,
-      decision:
-        | { state: "confirmed"; rewardDue: boolean; evidence: string }
-        | { state: "rejected"; evidence: string },
-    ) {
+    settle(key: string, binding: Binding, decision: SettlementDecision) {
       const b = structuredClone(binding),
         d = structuredClone(decision);
-      if (
-        !validBinding(b) ||
-        !nonempty(d.evidence) ||
-        !["confirmed", "rejected"].includes(d.state) ||
-        (d.state === "confirmed" && typeof d.rewardDue !== "boolean")
-      )
-        fail("invalid-evidence");
-      return access(key, (row) => {
-        if (!row) return fail("missing-entitlement");
-        const a = row.attempts[row.attempts.length - 1];
-        if (token(a.binding) !== token(b)) fail("stale-binding");
-        const reward =
-          d.state === "confirmed" ? (d.rewardDue ? "delivery_pending" : "not_due") : "not_due";
-        if (a.progress === "confirmed" || a.progress === "rejected") {
-          if (a.progress !== d.state || a.reward !== reward || a.evidence !== d.evidence)
-            fail("decision-conflict");
-          return row;
-        }
-        a.progress = d.state;
-        a.reward = reward;
-        a.evidence = d.evidence;
-        return row;
-      });
+      validateSettlementDecision(b, d);
+      return access(key, (row) => applySettlementDecision(row, b, d));
     },
   };
 }

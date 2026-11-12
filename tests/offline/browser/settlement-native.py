@@ -99,6 +99,41 @@ async def acceptance(directory, origin):
             check(await read(a) == winner and bob["owner"] == "user:synthetic-bob", "owner-isolated writes crossed")
             passed.append("two native tabs keep distinct owner records")
 
+            # Actual restricted confirmation API. All companion values are synthetic.
+            key = "atomic-commit"
+            pending = await a.evaluate("key=>confirmationNative.prepareConfirmation(key)", key)
+            committed = await a.evaluate("([key,row])=>confirmationNative.confirmAtomic(key,row,'synthetic-confirmation')", [key, pending])
+            check(committed["status"] == "committed", "atomic confirmation failed")
+            atomic = await a.evaluate("key=>confirmationNative.confirmationState(key)", key)
+            check(atomic["entitlement"]["attempts"][-1]["reward"] == "delivery_pending", "confirmation improperly delivered")
+            check(atomic["entitlement"]["attempts"][-1]["progress"] == "confirmed", "confirmation missing")
+            check(all(atomic[name]["value"] == {"synthetic": True} for name in ["economy", "appliedGrants", "migrationState"]), "companion commit incomplete")
+            passed.append("restricted confirmation and three synthetic companions commit together; not delivered")
+
+            key = "atomic-abort"
+            pending = await a.evaluate("key=>confirmationNative.prepareConfirmation(key)", key)
+            aborted = await a.evaluate("([key,row])=>confirmationNative.confirmAtomic(key,row,'synthetic-confirmation',true,true)", [key, pending])
+            check(aborted == {"status": "rejected", "reason": "settlement:transaction-aborted", "reached": ["appliedGrants", "economy", "entitlements", "migrationState"]}, "four successful native puts were not aborted")
+            rolled = await a.evaluate("key=>confirmationNative.confirmationState(key)", key)
+            check(rolled["entitlement"] == pending and all(rolled[name] is None for name in ["economy", "appliedGrants", "migrationState"]), "four-store rollback incomplete")
+            passed.append("abort after four successful native puts preserves pending entitlement and absent companions")
+
+            key = "atomic-race"
+            pending = await a.evaluate("key=>confirmationNative.prepareConfirmation(key)", key)
+            await b.evaluate("settlementNative.owner('user:synthetic-alice')")
+            decisions = await asyncio.gather(
+                a.evaluate("([key,row])=>confirmationNative.confirmAtomic(key,row,'winner-a',false)", [key, pending]),
+                b.evaluate("([key,row])=>confirmationNative.confirmAtomic(key,row,'winner-b',false)", [key, pending]))
+            check(sum(item["status"] == "committed" for item in decisions) == 1, "concurrent entitlement CAS did not have one winner")
+            check([item for item in decisions if item["status"] == "rejected"] == [{"status": "rejected", "reason": "settlement:stale-record", "reached": []}], "confirmation loser was not stale-record")
+            race = await a.evaluate("key=>confirmationNative.confirmationState(key)", key)
+            check(race == await b.evaluate("key=>confirmationNative.confirmationState(key)", key), "tabs disagree on winning entitlement")
+            index = next(i for i,item in enumerate(decisions) if item["status"] == "committed")
+            check(race["entitlement"]["attempts"][-1]["evidence"] == ["winner-a", "winner-b"][index], "entitlement winner evidence mismatch")
+            check(race["entitlement"]["attempts"][-1]["reward"] == "delivery_pending", "race delivered a reward")
+            passed.append("independent tabs cannot confirm competing decisions from the same full snapshot")
+            await b.evaluate("settlementNative.owner('user:synthetic-bob')")
+
             await a.reload()
             await a.wait_for_function("window.settlementNative !== undefined")
             await a.evaluate("settlementNative.owner('user:synthetic-alice')")
@@ -115,6 +150,10 @@ async def acceptance(directory, origin):
             b = await page(browser, "user:synthetic-bob")
             check(await read(a) == winner and await read(b) == bob, "browser process restart lost owner records")
             passed.append("clean browser process restart preserves both owners")
+            check(await a.evaluate("confirmationNative.confirmationState('atomic-commit')") == atomic, "confirmation companions lost on restart")
+            check(await a.evaluate("confirmationNative.confirmationState('atomic-abort')") == rolled, "aborted confirmation changed on restart")
+            check(await a.evaluate("confirmationNative.confirmationState('atomic-race')") == race, "winning confirmation lost on restart")
+            passed.append("clean restart retains committed confirmation and rollback evidence")
 
             stale = {**winner, "revision": 1, "value": {"synthetic": "raw-writer-overwrite"}}
             await a.evaluate("row=>settlementNative.rawOverwrite(row)", stale)
