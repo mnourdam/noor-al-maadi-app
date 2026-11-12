@@ -23,6 +23,13 @@ import {
 } from "../../scripts/lib/offline-snapshot-build.mjs";
 import { diffAgainstManifest } from "@/lib/offline-content-update";
 
+// Optional editorial metadata is outside this release-pipeline contract.
+// Keep these offline controller tests independent of fingerprint network timeouts.
+vi.mock("@/lib/stories/content-identity-check", () => ({
+  fetchStoryEditorialFingerprint: vi.fn(async () => null),
+  verifyStoryEditorialChange: vi.fn(async () => ({ result: "unknown" })),
+}));
+
 const SNAPSHOT_SRC = readFileSync("src/lib/offline-snapshot.ts", "utf8");
 const GENERATOR_SRC = readFileSync("scripts/generate-offline-snapshot.mjs", "utf8");
 const VERIFIER_SRC = readFileSync("scripts/verify-offline-snapshot.mjs", "utf8");

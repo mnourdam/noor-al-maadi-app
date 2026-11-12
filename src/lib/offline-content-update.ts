@@ -233,9 +233,21 @@ export async function applyContentUpdate(timeoutMs: number = APPLY_TIMEOUT_MS): 
   setState({ applying: true, error: null });
   const epoch = ++applyEpoch;
   const isCurrent = () => epoch === applyEpoch;
-  const previous = await loadSnapshot();
+  const recovery: {
+    previous: OfflineSnapshot | null;
+    activate: ((snapshot: OfflineSnapshot) => void) | null;
+  } = { previous: null, activate: null };
 
   const work = async (): Promise<boolean> => {
+    // Acquire the lazy adapter inside the deadline. Failure recovery can then
+    // restore synchronously without waiting on another module import.
+    const adapter = await import("./local-first-store");
+    if (!isCurrent()) return false;
+    recovery.activate = adapter.applyLocalSnapshot;
+    // Initial storage is also part of the bounded attempt, not a preflight
+    // that can leave the controller permanently applying before its timer starts.
+    recovery.previous = await loadSnapshot();
+    if (!isCurrent()) return false;
     const { refreshSnapshotIncremental } = await import("./offline-snapshot");
     const candidate = await refreshSnapshotIncremental();
 
@@ -254,12 +266,12 @@ export async function applyContentUpdate(timeoutMs: number = APPLY_TIMEOUT_MS): 
       throw new Error("candidate did not persist; keeping previous snapshot");
     }
 
-    // A timed-out attempt must never activate a candidate behind the user's
-    // back — the durable write is harmless, partial activation is not.
+    // This epoch gate prevents late activation only. A retired attempt may
+    // still have written durable storage; cancellation of that write is a
+    // separate, outstanding storage-boundary repair.
     if (!isCurrent()) return false;
 
-    const { applyLocalSnapshot } = await import("./local-first-store");
-    applyLocalSnapshot(stored);
+    adapter.applyLocalSnapshot(stored);
 
     // Convergence (D): persist fingerprint + counts + editorial timestamps +
     // the observed reaction-polluted `stories.last_updated` together.
@@ -291,15 +303,12 @@ export async function applyContentUpdate(timeoutMs: number = APPLY_TIMEOUT_MS): 
     return true;
   } catch (e) {
     console.warn("[content-update] update failed, keeping previous snapshot:", e);
-    // Invalidate this attempt so a late background completion cannot activate.
+    if (!isCurrent()) return false;
+    // Retire before cleanup. No recovery import can hold the UI or promise.
     applyEpoch++;
-    // Best-effort re-activation of the previous, still-valid snapshot.
     try {
-      if (previous) {
-        const { applyLocalSnapshot } = await import("./local-first-store");
-        applyLocalSnapshot(previous);
-      }
-    } catch { /* ignore */ }
+      if (recovery.previous && recovery.activate) recovery.activate(recovery.previous);
+    } catch { /* recovery is best-effort */ }
     // Retryable: `available` stays true so the banner can be tapped again.
     setState({ applying: false, error: formatError(e) });
     return false;

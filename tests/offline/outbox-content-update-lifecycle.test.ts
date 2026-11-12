@@ -1,0 +1,75 @@
+import { it,expect,vi,beforeEach,afterEach } from 'vitest';
+const e=vi.hoisted(()=>({stored:null as any,load:vi.fn(),save:vi.fn(),refresh:vi.fn(),apply:vi.fn()}));
+vi.mock('@/lib/offline-storage',()=>({loadSnapshot:()=>e.load(),saveSnapshot:(s:any)=>e.save(s)}));
+vi.mock('@/lib/offline-snapshot',()=>({refreshSnapshotIncremental:()=>e.refresh()}));
+vi.mock('@/lib/offline-snapshot-validate',()=>({validateSnapshot:()=>({ok:true})}));
+vi.mock('@/lib/local-first-store',()=>({applyLocalSnapshot:e.apply}));
+vi.mock('@/lib/offline-manifest',()=>({fetchContentManifest:async()=>null,isManifestCountComparable:()=>true,isManifestTimestampCanonical:()=>true}));
+vi.mock('@/lib/stories/content-identity-check',()=>({fetchStoryEditorialFingerprint:async()=>null}));
+vi.mock('@/lib/stories/content-identity-store',()=>({recordAppliedIdentity:()=>{}}));
+vi.mock('@/lib/offline-snapshot-warm-bridge',()=>({warmSnapshotImageCache:async()=>{}}));
+import {applyContentUpdate,getContentUpdateState,__resetContentUpdateState} from '@/lib/offline-content-update';
+const snapshot=(v:number)=>({snapshot_version:v,generated_at:'2026-11-12T00:00:00Z',collections:{},content_counts:{}});
+function deferred(){let resolve!:(v:any)=>void;return {promise:new Promise(r=>resolve=r),resolve:(v:any)=>resolve(v)};}
+beforeEach(()=>{vi.useFakeTimers();vi.resetAllMocks();__resetContentUpdateState();e.stored=snapshot(1);e.load.mockImplementation(async()=>e.stored);e.save.mockImplementation(async(s:any)=>{e.stored=s});});
+afterEach(()=>{vi.useRealTimers();});
+it('initial storage rejection resolves false and releases applying state',async()=>{
+ e.load.mockRejectedValueOnce(new Error('synthetic storage read unavailable'));
+ expect(await applyContentUpdate(1000)).toBe(false);
+ expect(getContentUpdateState().applying).toBe(false);
+ expect(getContentUpdateState().error).toContain('synthetic storage read unavailable');
+ expect(e.refresh).not.toHaveBeenCalled();
+});
+it('initial read timeout is bounded and retry succeeds without restart',async()=>{
+ e.load.mockReturnValueOnce(new Promise(()=>{}));
+ const first=applyContentUpdate(1000);
+ let finished=false;void first.then(()=>{finished=true});
+ await vi.advanceTimersByTimeAsync(1001);
+ expect(finished).toBe(true);
+ expect(await first).toBe(false);
+ expect(getContentUpdateState().applying).toBe(false);
+ e.refresh.mockResolvedValue(snapshot(3));
+ expect(await applyContentUpdate(1000)).toBe(true);
+ expect(e.stored.snapshot_version).toBe(3);
+});
+it('late initial read resolution cannot start retired download or disturb retry',async()=>{
+ const late=deferred();e.load.mockReturnValueOnce(late.promise);
+ const first=applyContentUpdate(1000);let finished=false;void first.then(()=>{finished=true});
+ await vi.advanceTimersByTimeAsync(1001);
+ expect(finished).toBe(true);
+ expect(await first).toBe(false);
+ e.refresh.mockResolvedValue(snapshot(3));
+ expect(await applyContentUpdate(1000)).toBe(true);
+ late.resolve(snapshot(1));await vi.advanceTimersByTimeAsync(1);
+ expect(e.refresh).toHaveBeenCalledTimes(1);
+ expect(e.stored.snapshot_version).toBe(3);
+ expect(getContentUpdateState()).toMatchObject({applying:false,error:null});
+});
+it('successful initial read retains normal persist-before-activate ordering',async()=>{
+ e.refresh.mockResolvedValue(snapshot(2));
+ expect(await applyContentUpdate(1000)).toBe(true);
+ expect(e.stored.snapshot_version).toBe(2);
+ expect(e.apply).toHaveBeenCalledWith(e.stored);
+ expect(e.save.mock.invocationCallOrder[0]).toBeLessThan(e.apply.mock.invocationCallOrder[0]);
+});
+it('hung adapter import is bounded; its late resolution cannot start retired work',async()=>{
+ const importGate=deferred();
+ vi.doMock('@/lib/local-first-store',async()=>{await importGate.promise;return {applyLocalSnapshot:e.apply}});
+ vi.resetModules();
+ const controller=await import('@/lib/offline-content-update');
+ e.refresh.mockResolvedValue(snapshot(3));
+ const failed=controller.applyContentUpdate(1000);
+ let finished=false;void failed.then(()=>{finished=true});
+ await vi.advanceTimersByTimeAsync(1001);
+ expect(finished).toBe(true);
+ expect(await failed).toBe(false);
+ expect(controller.getContentUpdateState().applying).toBe(false);
+ expect(e.load).not.toHaveBeenCalled();
+ expect(e.refresh).not.toHaveBeenCalled();
+ const retry=controller.applyContentUpdate(1000);
+ importGate.resolve(undefined);await vi.advanceTimersByTimeAsync(1);
+ expect(await retry).toBe(true);
+ expect(e.refresh).toHaveBeenCalledTimes(1);
+ expect(e.apply).toHaveBeenCalledExactlyOnceWith(snapshot(3));
+ expect(e.stored.snapshot_version).toBe(3);
+});
