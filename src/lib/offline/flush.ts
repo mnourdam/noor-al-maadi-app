@@ -27,9 +27,12 @@ export function getIdentityEpochSafe(): number {
   }
 }
 
-async function handleItem(item: OutboxItem): Promise<{ ok: boolean; error?: string }> {
+async function handleItem(item: OutboxItem, expectedEpoch: number): Promise<{ ok: boolean; error?: string }> {
   // Sanity: never sync one user's item into another user's session.
   const { data } = await supabase.auth.getSession();
+  // A session snapshot may have been captured before an identity change while
+  // this await was pending. Fence dispatch, not only the later queue update.
+  if (getIdentityEpochSafe() !== expectedEpoch) return { ok: false, error: "identity-changed" };
   const uid = data.session?.user?.id;
   if (!uid || uid !== item.userId) {
     return { ok: false, error: "session-mismatch" };
@@ -492,7 +495,7 @@ export async function flushOutbox(userId: string): Promise<{ flushed: number; fa
           break;
         }
 
-        const res = await handleItem(item);
+        const res = await handleItem(item, startEpoch);
 
         // IDENTITY CHECK: After network call, before updating local queue state.
         if (getIdentityEpochSafe() !== startEpoch) {

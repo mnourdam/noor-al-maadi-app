@@ -52,6 +52,6 @@ will be recorded after verification. No live backend or player data is used.
 Independent review: **CLEAR**, including separately rerun **79/79** daily and
 receipt tests. Final local full suite: **1,170/1,170 PASS** across 45 files.
 Application/regression typecheck, offline client/SSR build and diff check: **PASS**.
-Remote branch CI is pending at publication. This slice does not close separate
+Remote branch CI later **PASSED**: [43180553652](https://github.com/mnourdam/noor-al-maadi-app/actions/runs/43180553652), tested commit `b4edaa39f6d55df96afd5d5c893cee944e59108b`. This slice does not close separate
 identity changes occurring during the initial asynchronous auth lookup; those
 require a dispatch-boundary guard rather than receipt validation.
