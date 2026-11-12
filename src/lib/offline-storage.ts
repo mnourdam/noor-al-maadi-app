@@ -88,15 +88,35 @@ function hasIDB(): boolean {
   }
 }
 
-function openDB(): Promise<IDBDatabase> {
+function throwIfRetired(signal?: AbortSignal): void {
+  if (signal?.aborted) throw new DOMException("Snapshot write retired", "AbortError");
+}
+
+function openDB(signal?: AbortSignal): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
+    throwIfRetired(signal);
     const req = indexedDB.open(DB_NAME, DB_VERSION);
+    const retire = () => {
+      signal?.removeEventListener("abort", retire);
+      reject(new DOMException("Snapshot write retired", "AbortError"));
+    };
+    signal?.addEventListener("abort", retire, { once: true });
+    if (signal?.aborted) retire();
     req.onupgradeneeded = () => {
       const db = req.result;
       if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
     };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
+    req.onsuccess = () => {
+      signal?.removeEventListener("abort", retire);
+      if (signal?.aborted) {
+        req.result.close();
+        reject(new DOMException("Snapshot write retired", "AbortError"));
+      } else resolve(req.result);
+    };
+    req.onerror = () => {
+      signal?.removeEventListener("abort", retire);
+      reject(req.error);
+    };
   });
 }
 
@@ -140,13 +160,24 @@ function runTx<T>(
   db: IDBDatabase,
   mode: IDBTransactionMode,
   work: (store: IDBObjectStore, resolveWith: (value: T) => void) => void,
+  signal?: AbortSignal,
 ): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     let settled = false;
     let value: T = undefined as unknown as T;
-    const done = (fn: () => void) => { if (settled) return; settled = true; fn(); };
+    const done = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      signal?.removeEventListener("abort", retire);
+      fn();
+    };
+    const retire = () => {
+      try { tx.abort(); } catch { /* already completed: no rollback claim */ }
+      done(() => reject(new DOMException("Snapshot write retired", "AbortError")));
+    };
     let tx: IDBTransaction;
     try {
+      throwIfRetired(signal);
       tx = db.transaction(STORE, mode);
     } catch (e) {
       reject(e instanceof Error ? e : new Error(String(e)));
@@ -157,6 +188,8 @@ function runTx<T>(
       done(() => reject(tx.error ?? new Error("IndexedDB transaction failed")));
     tx.onabort = () =>
       done(() => reject(tx.error ?? new Error("IndexedDB transaction aborted")));
+    signal?.addEventListener("abort", retire, { once: true });
+    if (signal?.aborted) { retire(); return; }
     try {
       work(tx.objectStore(STORE), (v) => { value = v; });
     } catch (e) {
@@ -169,10 +202,12 @@ function runTx<T>(
 async function withDB<T>(
   mode: IDBTransactionMode,
   work: (store: IDBObjectStore, resolveWith: (value: T) => void) => void,
+  signal?: AbortSignal,
 ): Promise<T> {
-  const db = await openDB();
+  const db = await openDB(signal);
   try {
-    return await runTx<T>(db, mode, work);
+    throwIfRetired(signal);
+    return await runTx<T>(db, mode, work, signal);
   } finally {
     try { db.close(); } catch { /* ignore */ }
   }
@@ -181,8 +216,8 @@ async function withDB<T>(
 /** Exported for regression tests: aborted transactions must reject, not hang. */
 export const __idbInternals = { runTx };
 
-async function idbPut(value: OfflineSnapshot): Promise<void> {
-  await withDB<void>("readwrite", (store) => { store.put(value, KEY); });
+async function idbPut(value: OfflineSnapshot, signal?: AbortSignal): Promise<void> {
+  await withDB<void>("readwrite", (store) => { store.put(value, KEY); }, signal);
 }
 
 async function idbGet(): Promise<OfflineSnapshot | null> {
@@ -296,28 +331,35 @@ export function isQuotaExceeded(err: unknown): boolean {
  * until the replacement is durably written. No other browser storage
  * (IndexedDB databases, localStorage, auth, progress) is touched.
  */
-export async function saveSnapshot(snap: OfflineSnapshot): Promise<void> {
+export async function saveSnapshot(snap: OfflineSnapshot, signal?: AbortSignal): Promise<void> {
+  throwIfRetired(signal);
   if (!snapshotPersistable(snap)) {
     throw new Error("Refusing to persist incomplete offline snapshot");
   }
   let idbError: unknown = null;
   if (hasIDB()) {
-    try { await idbPut(snap); return; }
-    catch (e) { idbError = e; }
+    try { await idbPut(snap, signal); throwIfRetired(signal); return; }
+    catch (e) { throwIfRetired(signal); idbError = e; }
 
     if (isQuotaExceeded(idbError)) {
       try {
         const { reclaimDisposableImageCaches } = await import("./image-cache");
+        throwIfRetired(signal);
         const reclaimed = await reclaimDisposableImageCaches();
+        throwIfRetired(signal);
         console.warn(`[offline-storage] quota hit; reclaimed ${reclaimed} image cache(s), retrying once`);
-      } catch { /* reclamation is best-effort */ }
-      try { await idbPut(snap); return; }
-      catch (e) { idbError = e; }
+      } catch { throwIfRetired(signal); /* reclamation is best-effort */ }
+      try { await idbPut(snap, signal); throwIfRetired(signal); return; }
+      catch (e) { throwIfRetired(signal); idbError = e; }
     }
   }
+  throwIfRetired(signal);
   try {
-    localStorage.setItem(LS_KEY, JSON.stringify(snap));
+    const serialized = JSON.stringify(snap);
+    throwIfRetired(signal);
+    localStorage.setItem(LS_KEY, serialized);
   } catch (e) {
+    throwIfRetired(signal);
     console.warn("[offline-storage] saveSnapshot failed", idbError ?? e);
     // Surface the failure so callers keep the previous active snapshot and
     // can offer a retry, instead of silently reporting success.

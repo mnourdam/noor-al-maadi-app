@@ -193,15 +193,21 @@ export async function checkForContentUpdate(): Promise<boolean> {
  */
 export async function persistAppliedStoryIdentity(
   stored: Pick<OfflineSnapshot, "content_counts" | "generated_at">,
+  current: () => boolean = () => true,
 ): Promise<void> {
   try {
+    if (!current()) return;
     const manifest = await fetchContentManifest();
+    if (!current()) return;
     const detail = diffManifestDetailed(stored, manifest);
     const { fetchStoryEditorialFingerprint } = await import(
       "./stories/content-identity-check"
     );
+    if (!current()) return;
     const { recordAppliedIdentity } = await import("./stories/content-identity-store");
+    if (!current()) return;
     const fingerprint = await fetchStoryEditorialFingerprint();
+    if (!current()) return;
     recordAppliedIdentity({
       fingerprint,
       counts: detail.counts,
@@ -232,7 +238,8 @@ export async function applyContentUpdate(timeoutMs: number = APPLY_TIMEOUT_MS): 
   if (state.applying) return false;
   setState({ applying: true, error: null });
   const epoch = ++applyEpoch;
-  const isCurrent = () => epoch === applyEpoch;
+  const controller = new AbortController();
+  const isCurrent = () => epoch === applyEpoch && !controller.signal.aborted;
   const recovery: {
     previous: OfflineSnapshot | null;
     activate: ((snapshot: OfflineSnapshot) => void) | null;
@@ -249,9 +256,12 @@ export async function applyContentUpdate(timeoutMs: number = APPLY_TIMEOUT_MS): 
     recovery.previous = await loadSnapshot();
     if (!isCurrent()) return false;
     const { refreshSnapshotIncremental } = await import("./offline-snapshot");
+    if (!isCurrent()) return false;
     const candidate = await refreshSnapshotIncremental();
+    if (!isCurrent()) return false;
 
     const { validateSnapshot } = await import("./offline-snapshot-validate");
+    if (!isCurrent()) return false;
     const report = validateSnapshot(candidate);
     if (!report.ok) {
       // `report.issues` holds OBJECTS — joining them produced the
@@ -260,28 +270,32 @@ export async function applyContentUpdate(timeoutMs: number = APPLY_TIMEOUT_MS): 
     }
 
     // Persist FIRST — activation only happens once the candidate is durable.
-    await saveSnapshot(candidate);
+    if (!isCurrent()) return false;
+    await saveSnapshot(candidate, controller.signal);
+    if (!isCurrent()) return false;
     const stored = await loadSnapshot();
+    if (!isCurrent()) return false;
     if (!stored || stored.snapshot_version !== candidate.snapshot_version) {
       throw new Error("candidate did not persist; keeping previous snapshot");
     }
 
-    // This epoch gate prevents late activation only. A retired attempt may
-    // still have written durable storage; cancellation of that write is a
-    // separate, outstanding storage-boundary repair.
+    // Retirement fences pending writes; a previously completed transaction
+    // is not undone. Recheck independently before activating.
     if (!isCurrent()) return false;
 
     adapter.applyLocalSnapshot(stored);
 
     // Convergence (D): persist fingerprint + counts + editorial timestamps +
     // the observed reaction-polluted `stories.last_updated` together.
-    await persistAppliedStoryIdentity(stored);
+    if (!isCurrent()) return false;
+    await persistAppliedStoryIdentity(stored, isCurrent);
+    if (!isCurrent()) return false;
 
     // V17-09: media referenced by the freshly applied content (campaign
     // chapter images included) must become durable NOW, not on the next
     // boot — otherwise the player restarts offline and sees nothing.
     void import("./offline-snapshot-warm-bridge")
-      .then((m) => m.warmSnapshotImageCache(stored.collections as Record<string, any[]>))
+      .then((m) => { if (isCurrent()) return m.warmSnapshotImageCache(stored.collections as Record<string, any[]>); })
       .catch(() => { /* warming is best-effort */ });
 
     return true;
@@ -306,6 +320,7 @@ export async function applyContentUpdate(timeoutMs: number = APPLY_TIMEOUT_MS): 
     if (!isCurrent()) return false;
     // Retire before cleanup. No recovery import can hold the UI or promise.
     applyEpoch++;
+    controller.abort();
     try {
       if (recovery.previous && recovery.activate) recovery.activate(recovery.previous);
     } catch { /* recovery is best-effort */ }
@@ -313,6 +328,7 @@ export async function applyContentUpdate(timeoutMs: number = APPLY_TIMEOUT_MS): 
     setState({ applying: false, error: formatError(e) });
     return false;
   } finally {
+    if (!isCurrent()) controller.abort();
     if (timer) clearTimeout(timer);
   }
 }
