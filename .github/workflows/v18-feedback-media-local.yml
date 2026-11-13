@@ -1,0 +1,38 @@
+name: V18 Disposable Feedback Media Contract
+on:
+  push:
+    branches: [v18-01a-outbox-recovery]
+    paths:
+      - '.github/workflows/v18-feedback-media-local.yml'
+      - 'tests/sql/feedback-private-images-local-supabase/**'
+      - 'docs/proposals/v18-feedback-private-images.sql'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  disposable-authority-http:
+    if: github.ref == 'refs/heads/v18-01a-outbox-recovery'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: supabase/setup-cli@689adcfb80d947100a1eab127289b97d1fb07b13 # official v3.2.0
+        with:
+          version: '2.122.1'
+      - name: Fail-closed harness and adapter tests without a stack
+        run: python3 -m unittest discover -s tests/sql/feedback-private-images-local-supabase -p 'test_*.py' -v
+      - name: Real Auth and HTTP acceptance in new disposable local project only
+        run: python3 tests/sql/feedback-private-images-local-supabase/harness.py run
+      - name: Cleanup this run project only without backups
+        if: always()
+        run: python3 tests/sql/feedback-private-images-local-supabase/harness.py cleanup
+      - name: Upload sanitized report only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: feedback-private-images-local-supabase-evidence
+          path: ${{ runner.temp }}/v18-feedback-media-evidence/acceptance.json
+          if-no-files-found: warn
+          retention-days: 7

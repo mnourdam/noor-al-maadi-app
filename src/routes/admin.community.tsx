@@ -1,5 +1,9 @@
+import { onOwnerChange } from "@/lib/identity/owner";
+import { currentImageScope } from "@/lib/feedback/images";
+import { FeedbackImages } from "@/components/feedback/FeedbackImages";
+import { FeedbackReplyComposer } from "@/components/feedback/FeedbackReplyComposer";
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { AdminGate } from "@/lib/admin-guard";
 import { supabase } from "@/integrations/supabase/client";
@@ -270,10 +274,12 @@ function FilterChip({
   );
 }
 
-function AdminIssueDrawer({ id, onClose }: { id: string; onClose: () => void }) {
+function AdminIssueDrawer(props: { id: string; onClose: () => void }) {
+ const scope=useSyncExternalStore(onOwnerChange,currentImageScope,currentImageScope);
+ return <AdminIssueDrawerContent key={`${scope}:${props.id}`} {...props} />;
+}
+function AdminIssueDrawerContent({ id, onClose }: { id: string; onClose: () => void }) {
   const [data, setData] = useState<{ issue: AdminIssueRow; messages: FeedbackMessage[] } | null>(null);
-  const [reply, setReply] = useState("");
-  const [internal, setInternal] = useState(false);
   const [busy, setBusy] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -295,18 +301,6 @@ function AdminIssueDrawer({ id, onClose }: { id: string; onClose: () => void }) 
   useEffect(() => {
     void load();
   }, [load]);
-
-  async function send() {
-    if (!reply.trim()) return;
-    setBusy(true);
-    try {
-      await replyToIssue(id, reply.trim(), internal);
-      setReply("");
-      await load();
-    } finally {
-      setBusy(false);
-    }
-  }
 
   async function changeStatus(status: FeedbackStatus) {
     setBusy(true);
@@ -461,6 +455,7 @@ function AdminIssueDrawer({ id, onClose }: { id: string; onClose: () => void }) 
                       <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-100">
                         {m.body}
                       </p>
+                      <FeedbackImages attachments={m.attachments ?? []} />
                     </div>
                   </li>
                 );
@@ -468,31 +463,7 @@ function AdminIssueDrawer({ id, onClose }: { id: string; onClose: () => void }) 
             </ul>
 
             <div className="border-t border-slate-800 bg-slate-900/60 p-3">
-              <textarea
-                value={reply}
-                onChange={(e) => { setReply(e.target.value); markTyping(); }}
-                rows={3}
-                maxLength={5000}
-                placeholder="اكتب ردك للّاعب أو ملاحظة داخلية…"
-                className="w-full resize-none rounded-md border border-slate-700 bg-slate-950/60 p-3 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-amber-400/40"
-              />
-              <div className="mt-2 flex items-center justify-between gap-2">
-                <label className="inline-flex items-center gap-1.5 text-[11px] text-slate-300">
-                  <input
-                    type="checkbox"
-                    checked={internal}
-                    onChange={(e) => setInternal(e.target.checked)}
-                  />
-                  ملاحظة داخلية (لا يراها اللاعب)
-                </label>
-                <button
-                  onClick={() => void send()}
-                  disabled={busy || !reply.trim()}
-                  className="inline-flex items-center gap-2 rounded-md bg-amber-500 px-3 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400 disabled:opacity-50"
-                >
-                  <Send className="h-3.5 w-3.5" /> إرسال
-                </button>
-              </div>
+              <FeedbackReplyComposer issueId={id} staff onSent={load} onTyping={markTyping} />
             </div>
           </div>
         )}

@@ -1,5 +1,9 @@
+import { onOwnerChange } from "@/lib/identity/owner";
+import { currentImageScope } from "@/lib/feedback/images";
+import { FeedbackImages } from "@/components/feedback/FeedbackImages";
+import { FeedbackReplyComposer } from "@/components/feedback/FeedbackReplyComposer";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useSyncExternalStore } from "react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { getIssueThread, markIssueRead, rateIssue, replyToIssue } from "@/lib/feedback/api";
 import { CATEGORY_MAP, STATUS_LABELS, type FeedbackIssue, type FeedbackMessage } from "@/lib/feedback/types";
@@ -16,13 +20,16 @@ export const Route = createFileRoute("/feedback/$id")({
 });
 
 function FeedbackThread() {
+ const scope=useSyncExternalStore(onOwnerChange,currentImageScope,currentImageScope);
+ const {id}=useParams({from:"/feedback/$id"});
+ return <FeedbackThreadContent key={`${scope}:${id}`} />;
+}
+function FeedbackThreadContent() {
   const { id } = useParams({ from: "/feedback/$id" });
   const [issue, setIssue] = useState<FeedbackIssue | null>(null);
   const [messages, setMessages] = useState<FeedbackMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [reply, setReply] = useState("");
-  const [sending, setSending] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -61,22 +68,6 @@ function FeedbackThread() {
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [id, load]);
-
-  async function onSend(e: React.FormEvent) {
-    e.preventDefault();
-    const body = reply.trim();
-    if (!body) return;
-    setSending(true);
-    try {
-      await replyToIssue(id, body, false);
-      setReply("");
-      await load();
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setSending(false);
-    }
-  }
 
   const cat = issue ? CATEGORY_MAP[issue.category] : null;
   const st = issue ? STATUS_LABELS[issue.status] : null;
@@ -156,27 +147,7 @@ function FeedbackThread() {
                 onRated={() => void load()}
               />
             ) : (
-              <form onSubmit={onSend} className="rounded-2xl border border-white/10 bg-surface/60 p-3">
-                <textarea
-                  value={reply}
-                  onChange={(e) => { setReply(e.target.value); markTyping(); }}
-                  rows={3}
-                  maxLength={5000}
-                  placeholder="اكتب ردك…"
-                  className="w-full resize-none rounded-xl border border-white/10 bg-background/60 p-3 text-sm leading-relaxed text-foreground outline-none focus:border-gold/50"
-                />
-                <div className="mt-2 flex items-center justify-between gap-2">
-                  <p className="text-[10px] text-muted-foreground/70">{reply.length} / 5000</p>
-                  <button
-                    type="submit"
-                    disabled={sending || !reply.trim()}
-                    className="inline-flex items-center gap-2 rounded-xl bg-gold px-3 py-2 text-xs font-bold text-slate-950 disabled:opacity-50 hover:bg-gold/90"
-                  >
-                    <Send className="size-3.5" />
-                    {sending ? "جاري الإرسال…" : "إرسال الرد"}
-                  </button>
-                </div>
-              </form>
+              <FeedbackReplyComposer issueId={id} onSent={load} onTyping={markTyping} />
             )}
           </>
         )}
@@ -264,6 +235,7 @@ function MessageBubble({ message, reporterId }: { message: FeedbackMessage; repo
           <span>{new Date(message.created_at).toLocaleString("ar", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
         </div>
         <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.body}</p>
+        <FeedbackImages attachments={message.attachments ?? []} />
       </div>
     </li>
   );
