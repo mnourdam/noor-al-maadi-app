@@ -8,7 +8,7 @@ import { Route as Chapter } from "@/routes/campaigns.imported.$id.chapter.$chapt
 import { setActiveOwnerInternal } from "@/lib/identity/owner";
 import { installIdentityPartition, isPersonalKey } from "@/lib/identity/partition";
 import { recordActivity, getCampaignProgress } from "@/lib/importedCampaignProgress";
-import { campaign, profile, metrics, snapshot } from "./completed-reread-boundary";
+import { campaign, profile, metrics, snapshot, syntheticFeed } from "./completed-reread-boundary";
 import "@/styles.css";
 const rootRoute = createRootRoute({ component: Outlet });
 const overview = Overview.update({getParentRoute:()=>rootRoute,path:"/campaigns/imported/$id/"} as any);
@@ -56,6 +56,7 @@ Object.assign(window, { completedReread: {
     const router=createRouter({routeTree:rootRoute.addChildren([overview,chapter]),history,defaultPreload:false});
     const query=new QueryClient({defaultOptions:{queries:{retry:false,staleTime:Infinity}}});
     query.setQueryData(["campaign",campaign.id,"published"],campaign);
+    query.setQueryData(["campaigns","feed"],syntheticFeed(campaign));
     Object.assign((window as any).completedReread,{before, location:()=>router.state.location.href});
     createRoot(document.getElementById("app")!).render(<QueryClientProvider client={query}><RouterProvider router={router}/></QueryClientProvider>);
   }

@@ -3,6 +3,8 @@ import { render, screen, fireEvent, waitFor, cleanup, act } from "@testing-libra
 import { beforeEach, afterEach, it, expect, vi } from "vitest";
 import { IDBFactory } from "fake-indexeddb";
 const state = vi.hoisted(() => ({
+  realQuery: false,
+  feed: vi.fn(),
   uid: "u1",
   search: {} as Record<string, string>,
   chapterId: "ch1",
@@ -69,10 +71,13 @@ vi.mock("@tanstack/react-router", () => ({
   },
   notFound: () => new Error("missing"),
 }));
-vi.mock("@tanstack/react-query", () => ({
-  useQueryClient: () => ({ invalidateQueries: async () => {} }),
-  useQuery: () => ({ data: state.campaign, isLoading: false }),
-}));
+vi.mock("@tanstack/react-query", async original => {
+  const actual = await original<typeof import("@tanstack/react-query")>();
+  return { ...actual,
+    useQueryClient: () => state.realQuery ? actual.useQueryClient() : ({ invalidateQueries: async () => {} }),
+    useQuery: (options: any) => state.realQuery ? actual.useQuery(options) : ({ data: state.campaign, isLoading: false }),
+  };
+});
 vi.mock("@/lib/streak-activity", () => ({ recordStreakActivity: async () => ({ ok: true }) }));
 vi.mock("sonner", () => ({ toast: { error: state.toast } }));
 vi.mock("@/components/AppShell", () => ({
@@ -108,7 +113,7 @@ vi.mock("@/lib/investigations/recommend", () => ({
 }));
 vi.mock("@/lib/supabaseCampaigns", () => ({
   fetchCampaignByIdOrSlug: async () => state.campaign,
-  fetchPublishedFeed: async () => ({}),
+  fetchPublishedFeed: async () => state.realQuery ? state.feed() : ({}),
   onCampaignPublished: () => () => {},
 }));
 vi.mock("@/lib/hearts", async (original) => ({
@@ -162,6 +167,7 @@ vi.mock("@/lib/campaignArtwork", () => ({ CampaignArtwork: () => null, hasCampai
 vi.mock("@/components/KeyArtDissolve", () => ({ KeyArtDissolve: () => null }));
 vi.mock("@/lib/display-names", () => ({ displayBadgeName: (id: string) => id, displayArtifactName: (id: string) => id }));
 beforeEach(() => {
+  state.realQuery = false; state.feed.mockReset();
   state.search = {}; state.chapterId = "ch1"; state.hearts = 5;
   state.navigate.mockClear(); state.plan.mockClear(); state.harvest.mockClear(); state.refresh.mockReset().mockResolvedValue(undefined); state.resume.mockClear();
   state.ownerListeners.clear();
@@ -558,4 +564,29 @@ it("fences wrong-answer UI and resume writes if heart callback synchronously cha
   state.points.mockClear(); state.dinars.mockClear();
   await act(async () => { await state.resolve(true); });
   expect(state.points).toHaveBeenCalledWith(5); expect(state.dinars).toHaveBeenCalledWith(2);
+});
+
+it("actual overview with real QueryClient rejects missing feed but seeded synthetic feed makes no query", async () => {
+  await seedPartial();
+  state.realQuery = true;
+  state.feed.mockImplementation(() => { throw Error("unseeded external query prohibited"); });
+  const { QueryClient, QueryClientProvider } = await import("@tanstack/react-query");
+  const { syntheticFeed } = await import("./browser/completed-reread-boundary");
+  const { Route: Overview } = await import("@/routes/campaigns.imported.$id.index");
+  const Page = (Overview as any).component;
+  const makeClient = () => { const client = new QueryClient({defaultOptions:{queries:{retry:false,staleTime:Infinity}}}); client.setQueryData(["campaign", "c1", "published"], state.campaign); return client; };
+  const missing = makeClient();
+  const first = render(<QueryClientProvider client={missing}><Page /></QueryClientProvider>);
+  await waitFor(() => expect(state.feed).toHaveBeenCalledTimes(1));
+  await waitFor(() => expect(missing.getQueryState(["campaigns","feed"])?.status).toBe("error"));
+  first.unmount(); missing.clear(); state.feed.mockClear();
+  const seeded = makeClient(); const feed=syntheticFeed(state.campaign);
+  seeded.setQueryData(["campaigns","feed"],feed);
+  const second=render(<QueryClientProvider client={seeded}><Page /></QueryClientProvider>);
+  await screen.findByText("أعد القراءة");
+  await act(async()=>{await Promise.resolve();});
+  expect(state.feed).not.toHaveBeenCalled();
+  expect(seeded.getQueryData(["campaigns","feed"])).toEqual(feed);
+  expect(screen.getByText("أعد القراءة").closest("a")?.getAttribute("href")).toBe("/campaigns/imported/c1/chapter/ch1?review=chapter");
+  second.unmount(); seeded.clear();
 });

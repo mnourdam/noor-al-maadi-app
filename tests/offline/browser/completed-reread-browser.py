@@ -4,7 +4,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 ROOT=Path(__file__).resolve().parents[3]
 
-STAGES=frozenset(('initial','build','assets','server','launch','setup','review-start','review-link','review-enter','review-invariants','forged-start','forged-invariants','normal-start','normal-invariants','active-start','input-fill','reading-open','reading-close','reading-invariants','answer-submit','answer-next','completion-invariants','browser-version','final-invariants'))
+STAGES=frozenset(('initial','build','assets','server','launch','setup','review-start','review-link','review-link-count','review-href','snapshot-invariant','metrics-invariant','review-enter','review-invariants','forged-start','forged-invariants','normal-start','normal-invariants','active-start','input-fill','reading-open','reading-close','reading-invariants','answer-submit','answer-next','completion-invariants','browser-version','final-invariants'))
 DIAGNOSTICS={'stage':'initial','blocked_requests':0,'page_errors':0,'failed_requests':0,'completed_checks':0}
 def stage(value):
     if value not in STAGES:raise ValueError('unknown diagnostic stage')
@@ -69,14 +69,18 @@ async def acceptance(directory,origin,paths):
                 await page.wait_for_function('window.completedReread !== undefined')
                 await page.evaluate('(mode)=>completedReread.start(mode)',mode)
             async def unchanged():
+                stage('snapshot-invariant')
                 assert await page.evaluate('JSON.stringify(completedReread.snapshot())===JSON.stringify(completedReread.before)')
+                stage('metrics-invariant')
                 assert await page.evaluate('Object.values(completedReread.metrics).every(n=>n===0)')
             stage('review-start')
             await start('review')
             stage('review-link')
             link=page.get_by_role('link',name='أعد القراءة',exact=False)
+            stage('review-link-count')
             await expect(link).to_have_count(1)
             href=await link.get_attribute('href')
+            stage('review-href')
             assert href=='/campaigns/imported/synthetic-reread/chapter/one?review=chapter'
             await unchanged()
             stage('review-enter')

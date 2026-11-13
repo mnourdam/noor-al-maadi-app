@@ -15,3 +15,8 @@ export const supabase = { auth: { getSession: unexpected }, rpc: unexpected, fro
 export function snapshot() {
   return Object.fromEntries(Object.keys(localStorage).filter(k => k.includes("::owner=")).sort().map(k=>[k,localStorage.getItem(k)]));
 }
+
+/** Explicit one-campaign synthetic published feed; lock calculation remains a documented stub. */
+export function syntheticFeed(value: Campaign) {
+  return { items: [{ type: "campaign" as const, campaign: value }], sections: [{ divider: null, campaigns: [value] }], dividers: [], campaigns: [value] };
+}
