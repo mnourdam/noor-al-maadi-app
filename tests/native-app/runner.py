@@ -29,7 +29,7 @@ def require_ci():
         raise Failure('ci_context')
 
 HOME_READY = """(()=>{const visible=e=>!!e&&e.getClientRects().length>0;return location.pathname==='/' && visible(document.querySelector("#root a[href='/profile'][aria-label='بطاقة هويتك — الذهاب إلى حسابي']")) && visible(document.querySelector("#root [data-testid='home-stat-investigations'][href='/investigations']")) && !document.querySelector('#irth-boot-splash,.splash-root') && ![...document.querySelectorAll('[role=dialog]')].some(visible)})()"""
-FAILURE_CODES=set('unplanned_reconnect ci_context source_identity tool_revision debug_redirect firebase_config capacitor_config cleanup_path api_property apk_hash package internet_permission signer duplicate_zip assets_set asset_hash intel_macos_required existing_license_required image_missing hvf_unverified fresh_avd_required existing_devices emulator_exited boot_deadline installed_path installed_hash force_stop_not_observed target_response_limit target_schema foreign_page socket_readiness ambiguous_page target_readiness debug_origin target_detached target_crashed evaluation_error evaluation_deadline javascript_control native_platform native_bridge full_app_readiness check_schema command_failed'.split())
+FAILURE_CODES=set('exploratory_deadline exploratory_admission exploratory_snapshot exploratory_prerequisites exploratory_package_present_or_unknown exploratory_identity unplanned_reconnect ci_context source_identity tool_revision debug_redirect firebase_config capacitor_config cleanup_path api_property apk_hash package internet_permission signer duplicate_zip assets_set asset_hash intel_macos_required existing_license_required image_missing hvf_unverified fresh_avd_required existing_devices emulator_exited boot_deadline installed_path installed_hash force_stop_not_observed target_response_limit target_schema foreign_page socket_readiness ambiguous_page target_readiness debug_origin target_detached target_crashed evaluation_error evaluation_deadline javascript_control native_platform native_bridge full_app_readiness check_schema command_failed'.split())
 def category(error):
     if isinstance(error,Failure):return str(error) if str(error) in FAILURE_CODES else 'assertion_failure'
     return type(error).__name__ if isinstance(error,(TimeoutError,subprocess.TimeoutExpired,ValueError)) else 'runtime_error'
@@ -46,7 +46,14 @@ def packaged(url):
         return p.scheme=='https' and p.hostname=='localhost' and p.port in (None,443) and not p.username and not p.password
     except ValueError:return False
 
-def verify_apk(apk,receipt,sdk):
+def remaining(deadline, limit):
+    if deadline is None:return limit
+    value=min(limit,deadline-time.monotonic())
+    if value<=0:raise Failure("exploratory_deadline")
+    return value
+
+def verify_apk(apk,receipt,sdk,deadline=None):
+    def command(args,timeout=30):return globals()["command"](args,remaining(deadline,timeout))
     r=json.loads(Path(receipt).read_text()); raw=Path(apk).read_bytes()
     if hashlib.sha256(raw).hexdigest()!=r['apk_sha256']:raise Failure('apk_hash')
     if not re.fullmatch(r'[a-f0-9]{40}',r.get('source_sha','')) or command(['git','rev-parse','HEAD'])!=r['source_sha']:raise Failure('source_identity')
@@ -188,9 +195,9 @@ class Device:
             if self.root.is_symlink():raise Failure('cleanup_path')
             shutil.rmtree(self.root)
 
-def targets(port):
+def targets(port,deadline=None):
     # One bounded response; never print URL/target identifiers or page contents.
-    with LOCAL_OPENER.open(f'http://127.0.0.1:{port}/json',timeout=3) as response:
+    with LOCAL_OPENER.open(f'http://127.0.0.1:{port}/json',timeout=remaining(deadline,3)) as response:
         raw=response.read(262145)
     if len(raw)>262144:raise Failure('target_response_limit')
     rows=json.loads(raw)
@@ -200,13 +207,14 @@ def targets(port):
     return pages
 
 class Page:
-    def __init__(self,device):
+    def __init__(self,device,deadline=None):
+        self.deadline=deadline
         import websocket
         self.device=device;self.port=None;self.ws=None;self.sequence=0;self.target=None;self.pid=None
         self.connection_failures=0
         self.flags={'detached':False,'target_crashed':False,'detach_category':'none'}
         try:
-            end=time.monotonic()+90
+            end=time.monotonic()+remaining(deadline,90)
             while time.monotonic()<end:
                 try:
                     pid=device.adb('shell','pidof',PACKAGE,timeout=5)
@@ -217,7 +225,7 @@ class Page:
             self.port=int(device.adb('forward','tcp:0','localabstract:webview_devtools_remote_'+self.pid))
             while time.monotonic()<end:
                 try:
-                    rows=targets(self.port)
+                    rows=targets(self.port,deadline)
                     if len(rows)>1:raise Failure('ambiguous_page')
                     if rows:self.target=rows[0];break
                 except (TimeoutError,urllib.error.URLError):pass
@@ -225,18 +233,22 @@ class Page:
             if not self.target:raise Failure('target_readiness')
             p=urlparse(self.target.get('webSocketDebuggerUrl',''))
             if p.scheme!='ws' or p.hostname not in ('localhost','127.0.0.1') or p.username or p.password:raise Failure('debug_origin')
-            self.ws=websocket.create_connection(urlunparse(p._replace(netloc=f'127.0.0.1:{self.port}')),timeout=10,suppress_origin=True,http_no_proxy=['localhost','127.0.0.1'])
-        except Exception:self.close();raise
+            self.ws=websocket.create_connection(urlunparse(p._replace(netloc=f'127.0.0.1:{self.port}')),timeout=remaining(deadline,10),suppress_origin=True,http_no_proxy=['localhost','127.0.0.1'])
+        except Exception:
+            try:self.close()
+            except Exception:pass
+            raise
     def evaluate(self,expression):
         try:return self._evaluate_impl(expression)
         except Exception:
             self.connection_failures+=1
             raise
     def _evaluate_impl(self,expression):
-        self.sequence+=1;seq=self.sequence;end=time.monotonic()+15
-        self.ws.send(json.dumps({'id':seq,'method':'Runtime.evaluate','params':{'expression':expression,'awaitPromise':True,'returnByValue':True,'timeout':10000}}))
+        self.sequence+=1;seq=self.sequence;end=time.monotonic()+remaining(getattr(self,"deadline",None),15)
+        self.ws.settimeout(remaining(getattr(self,"deadline",None),10))
+        self.ws.send(json.dumps({'id':seq,'method':'Runtime.evaluate','params':{'expression':expression,'awaitPromise':True,'returnByValue':True,'timeout':max(1,int(remaining(getattr(self,'deadline',None),10)*1000))}}))
         while time.monotonic()<end:
-            self.ws.settimeout(max(.01,min(3,end-time.monotonic())))
+            self.ws.settimeout(remaining(end,3))
             response=json.loads(self.ws.recv())
             method=response.get('method')
             if method=='Inspector.detached':
@@ -253,7 +265,7 @@ class Page:
         if self.evaluate('1+1')!=2:raise Failure('javascript_control')
         if self.evaluate("Capacitor.isNativePlatform() && Capacitor.getPlatform()==='android'") is not True:raise Failure('native_platform')
         if self.evaluate("Capacitor.Plugins.App.getState().then(x=>x.isActive)") is not True:raise Failure('native_bridge')
-        end=time.monotonic()+30
+        end=time.monotonic()+remaining(getattr(self,"deadline",None),30)
         while time.monotonic()<end:
             if self.evaluate("typeof window.__IRTH_NATIVE_OBSERVATIONS__==='function' && window.__IRTH_NATIVE_OBSERVATIONS__().unexpected===0 && window.__IRTH_NATIVE_OBSERVATIONS__().nativeBlocked===0 && window.__IRTH_NATIVE_OBSERVATIONS__().bridgeGuardsIntact===true && ("+HOME_READY+")") is True:return
             time.sleep(.2)
@@ -285,10 +297,12 @@ class Page:
         return result
     def close(self):
         try:
-            if self.ws:self.ws.close()
+            if self.ws:
+                if getattr(self,"deadline",None) is not None:self.ws.settimeout(2);self.ws.close(timeout=2)
+                else:self.ws.close()
         finally:
             if self.port:
-                try:self.device.adb('forward','--remove','tcp:'+str(self.port),timeout=3)
+                try:getattr(self.device,'cleanup_adb',self.device.adb)('forward','--remove','tcp:'+str(self.port),timeout=3)
                 except Exception:pass
 
 def collect_guest_evidence(report,guest,device):
@@ -297,7 +311,7 @@ def collect_guest_evidence(report,guest,device):
         except Exception:report[key]={'diagnostic_error':True}
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('--apk',required=True);parser.add_argument('--receipt',required=True);parser.add_argument('--result',required=True);parser.add_argument('--journeys');args=parser.parse_args()
+    parser=argparse.ArgumentParser();parser.add_argument('--apk',required=True);parser.add_argument('--receipt',required=True);parser.add_argument('--result',required=True);parser.add_argument('--journeys');parser.add_argument('--exploratory-after-boot-failure',action='store_true');args=parser.parse_args()
     report={'result':'FAIL','stage':'preflight','scope':'SYNTHETIC_FULL_APP_ACCEPTANCE_ATTEMPT','reached':{'apk_verified':False,'boot_completed':False,'installed_verified':False,'launched':False,'home_ready':False},'release_ready':False,'unaccepted':['production_policies','private_image_activation_and_send','full_english_content','missing_original_artwork','physical_device_acceptance'],'groups':{name:{'status':'BLOCKED','reason':'not_executed'} for name in sorted(JOURNEYS)},'runner_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
     device=None;page=None;exit_code=1
     try:
@@ -337,7 +351,14 @@ def main():
                         spec=importlib.util.spec_from_file_location('guest_boot',Path(__file__).with_name('guest_boot_diagnostics.py'));guest=importlib.util.module_from_spec(spec);spec.loader.exec_module(guest)
                     except Exception:
                         report['guest_startup']={'diagnostic_error':True};report['boot_state_discriminator']={'diagnostic_error':True}
-                    else:collect_guest_evidence(report,guest,device)
+                    else:
+                        collect_guest_evidence(report,guest,device)
+                        if args.exploratory_after_boot_failure and report.get('category')=='boot_deadline':
+                            try:
+                                spec=importlib.util.spec_from_file_location('exploratory',Path(__file__).with_name('exploratory.py'));explore=importlib.util.module_from_spec(spec);spec.loader.exec_module(explore)
+                                report['exploratory']=explore.run(globals(),guest,device,args.apk,args.receipt,report)
+                            except Exception:
+                                report['exploratory']={'result':'BLOCKED','category':'diagnostic_error','release_ready':False}
         if page:report['intentional_restarts']=getattr(page,'intentional_restarts',0);report['connection_failures']=getattr(page,'connection_failures',0)
         try:
             if page:page.close()
