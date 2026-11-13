@@ -1,6 +1,6 @@
 """CI-only Intel macOS native driver. No app replacement or permission mutation."""
 import xml.etree.ElementTree as ET
-import threading
+import threading, sys
 import argparse, hashlib, importlib.util, json, os, platform, re, shutil, subprocess, time, urllib.request, urllib.error, zipfile
 from pathlib import Path
 from urllib.parse import urlparse, urlunparse
@@ -35,6 +35,29 @@ FAILURE_CODES=set('installed_digest_output install_package_present_or_unknown ex
 def category(error):
     if isinstance(error,Failure):return str(error) if str(error) in FAILURE_CODES else 'assertion_failure'
     return type(error).__name__ if isinstance(error,(TimeoutError,subprocess.TimeoutExpired,ValueError)) else 'runtime_error'
+
+
+def diagnostic_error(error):
+    """Fixed labels only; never retain exception text or protocol payloads."""
+    if isinstance(error,Failure):return category(error)
+    if isinstance(error,json.JSONDecodeError):return 'json_decode'
+    websocket=sys.modules.get('websocket')
+    for name,label in [('WebSocketTimeoutException','websocket_timeout'),('WebSocketConnectionClosedException','websocket_closed'),('WebSocketProtocolException','websocket_protocol'),('WebSocketBadStatusException','websocket_handshake_status')]:
+        cls=getattr(websocket,name,None)
+        if isinstance(cls,type) and isinstance(error,cls):return label
+    for cls,label in [(subprocess.TimeoutExpired,'command_timeout'),(TimeoutError,'timeout'),(ConnectionError,'connection_error'),(TypeError,'type_error'),(AttributeError,'attribute_error'),(ValueError,'value_error'),(OSError,'os_error')]:
+        if isinstance(error,cls):return label
+    return 'unknown'
+
+DIAGNOSTIC_CATEGORIES=FAILURE_CODES|{'none','unknown','assertion_failure','json_decode','websocket_timeout','websocket_closed','websocket_protocol','websocket_handshake_status','command_timeout','timeout','connection_error','type_error','attribute_error','value_error','os_error'}
+def safe_diagnostic_error(error):
+    try:
+        value=diagnostic_error(error)
+        return value if value in DIAGNOSTIC_CATEGORIES else 'unknown'
+    except Exception:return 'unknown'
+
+READINESS_PHASES={'not_started','javascript_control','native_platform','native_bridge','home','complete'}
+EVALUATION_PHASES={'not_started','deadline_setup','websocket_timeout_setup','send','receive_timeout_setup','receive','json_decode','response_dispatch','deadline_check','complete'}
 
 
 def command(args, timeout=30, input=None):
@@ -346,16 +369,28 @@ class Page:
             raise
     def evaluate(self,expression):
         try:return self._evaluate_impl(expression)
-        except Exception:
+        except Exception as error:
             self.connection_failures+=1
+            try:self.evaluation_error_category=safe_diagnostic_error(error)
+            except Exception:pass
             raise
     def _evaluate_impl(self,expression):
+        self.evaluation_phase='deadline_setup';self.evaluation_response_count=0
         self.sequence+=1;seq=self.sequence;end=time.monotonic()+remaining(getattr(self,"deadline",None),15)
+        self.evaluation_phase='websocket_timeout_setup'
         self.ws.settimeout(remaining(getattr(self,"deadline",None),10))
+        self.evaluation_phase='send'
         self.ws.send(json.dumps({'id':seq,'method':'Runtime.evaluate','params':{'expression':expression,'awaitPromise':True,'returnByValue':True,'timeout':max(1,int(remaining(getattr(self,'deadline',None),10)*1000))}}))
+        self.evaluation_phase='deadline_check'
         while time.monotonic()<end:
+            self.evaluation_phase='receive_timeout_setup'
             self.ws.settimeout(remaining(end,3))
-            response=json.loads(self.ws.recv())
+            self.evaluation_phase='receive'
+            raw=self.ws.recv()
+            self.evaluation_phase='json_decode'
+            response=json.loads(raw)
+            self.evaluation_response_count=min(1000,self.evaluation_response_count+1)
+            self.evaluation_phase='response_dispatch'
             method=response.get('method')
             if method=='Inspector.detached':
                 self.flags['detached']=True
@@ -363,17 +398,25 @@ class Page:
                 self.flags['detach_category']=reason if reason in ('target_closed','replaced_with_devtools','canceled_by_user') else 'other'
                 raise Failure('target_detached')
             if method in ('Inspector.targetCrashed','Target.targetCrashed'):self.flags['target_crashed']=True;raise Failure('target_crashed')
-            if response.get('id')!=seq:continue
+            if response.get('id')!=seq:
+                self.evaluation_phase='deadline_check';continue
             if 'error' in response or 'exceptionDetails' in response.get('result',{}):raise Failure('evaluation_error')
-            return response.get('result',{}).get('result',{}).get('value')
+            value=response.get('result',{}).get('result',{}).get('value')
+            self.evaluation_phase='complete';return value
         raise Failure('evaluation_deadline')
     def readiness(self):
+        self.readiness_checks={key:False for key in ('javascript_control','native_platform','native_bridge','home')}
+        self.readiness_phase='javascript_control'
         if self.evaluate('1+1')!=2:raise Failure('javascript_control')
+        self.readiness_checks['javascript_control']=True;self.readiness_phase='native_platform'
         if self.evaluate("Capacitor.isNativePlatform() && Capacitor.getPlatform()==='android'") is not True:raise Failure('native_platform')
+        self.readiness_checks['native_platform']=True;self.readiness_phase='native_bridge'
         if self.evaluate("Capacitor.Plugins.App.getState().then(x=>x.isActive)") is not True:raise Failure('native_bridge')
+        self.readiness_checks['native_bridge']=True;self.readiness_phase='home'
         end=time.monotonic()+remaining(getattr(self,"deadline",None),30)
         while time.monotonic()<end:
-            if self.evaluate("typeof window.__IRTH_NATIVE_OBSERVATIONS__==='function' && window.__IRTH_NATIVE_OBSERVATIONS__().unexpected===0 && window.__IRTH_NATIVE_OBSERVATIONS__().nativeBlocked===0 && window.__IRTH_NATIVE_OBSERVATIONS__().bridgeGuardsIntact===true && ("+HOME_READY+")") is True:return
+            if self.evaluate("typeof window.__IRTH_NATIVE_OBSERVATIONS__==='function' && window.__IRTH_NATIVE_OBSERVATIONS__().unexpected===0 && window.__IRTH_NATIVE_OBSERVATIONS__().nativeBlocked===0 && window.__IRTH_NATIVE_OBSERVATIONS__().bridgeGuardsIntact===true && ("+HOME_READY+")") is True:
+                self.readiness_checks['home']=True;self.readiness_phase='complete';return
             time.sleep(.2)
         raise Failure('full_app_readiness')
     def reopen_after_intentional_restart(self):
@@ -393,9 +436,14 @@ class Page:
         self.readiness()
     def diagnostics(self):
         result=dict(self.flags)
+        result['readiness_phase']=getattr(self,'readiness_phase','not_started') if getattr(self,'readiness_phase','not_started') in READINESS_PHASES else 'not_started'
+        result['readiness_checks']={key:getattr(self,'readiness_checks',{}).get(key) is True for key in ('javascript_control','native_platform','native_bridge','home')}
+        result['evaluation_phase']=getattr(self,'evaluation_phase','not_started') if getattr(self,'evaluation_phase','not_started') in EVALUATION_PHASES else 'not_started'
+        value=getattr(self,'evaluation_error_category','none');result['evaluation_error_category']=value if value in DIAGNOSTIC_CATEGORIES else 'unknown'
+        count=getattr(self,'evaluation_response_count',0);result['evaluation_response_count']=min(1000,max(0,count)) if type(count) is int else 0
         try:
             rows=targets(self.port);result['current_target_count']=len(rows);result['original_target_present']=any(r['id']==self.target['id'] for r in rows)
-        except Exception:result.update(current_target_count=None,original_target_present=None)
+        except Exception as error:result.update(current_target_count=None,original_target_present=None,target_probe_error_category=safe_diagnostic_error(error))
         try:result['original_process_present']=self.device.adb('shell','pidof',PACKAGE,timeout=3)==self.pid
         except Exception:result['original_process_present']=None
         try:result['original_socket_present']='webview_devtools_remote_'+self.pid in self.device.adb('shell','cat','/proc/net/unix',timeout=3)
