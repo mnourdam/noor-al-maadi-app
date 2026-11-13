@@ -30,7 +30,7 @@ def require_ci():
         raise Failure('ci_context')
 
 HOME_READY = """(()=>{const visible=e=>!!e&&e.getClientRects().length>0;return location.pathname==='/' && visible(document.querySelector("#root a[href='/profile'][aria-label='بطاقة هويتك — الذهاب إلى حسابي']")) && visible(document.querySelector("#root [data-testid='home-stat-investigations'][href='/investigations']")) && !document.querySelector('#irth-boot-splash,.splash-root') && ![...document.querySelectorAll('[role=dialog]')].some(visible)})()"""
-FAILURE_CODES=set('install_package_present_or_unknown exploratory_deadline exploratory_admission exploratory_snapshot exploratory_prerequisites exploratory_package_present_or_unknown exploratory_identity unplanned_reconnect ci_context source_identity tool_revision debug_redirect firebase_config capacitor_config cleanup_path api_property apk_hash package internet_permission signer duplicate_zip assets_set asset_hash intel_macos_required existing_license_required image_missing hvf_unverified fresh_avd_required existing_devices emulator_exited boot_deadline installed_path installed_hash force_stop_not_observed target_response_limit target_schema foreign_page socket_readiness ambiguous_page target_readiness debug_origin target_detached target_crashed evaluation_error evaluation_deadline javascript_control native_platform native_bridge full_app_readiness check_schema command_failed'.split())
+FAILURE_CODES=set('installed_digest_output install_package_present_or_unknown exploratory_deadline exploratory_admission exploratory_snapshot exploratory_prerequisites exploratory_package_present_or_unknown exploratory_identity unplanned_reconnect ci_context source_identity tool_revision debug_redirect firebase_config capacitor_config cleanup_path api_property apk_hash package internet_permission signer duplicate_zip assets_set asset_hash intel_macos_required existing_license_required image_missing hvf_unverified fresh_avd_required existing_devices emulator_exited boot_deadline installed_path installed_hash force_stop_not_observed target_response_limit target_schema foreign_page socket_readiness ambiguous_page target_readiness debug_origin target_detached target_crashed evaluation_error evaluation_deadline javascript_control native_platform native_bridge full_app_readiness check_schema command_failed'.split())
 def category(error):
     if isinstance(error,Failure):return str(error) if str(error) in FAILURE_CODES else 'assertion_failure'
     return type(error).__name__ if isinstance(error,(TimeoutError,subprocess.TimeoutExpired,ValueError)) else 'runtime_error'
@@ -86,10 +86,18 @@ def package_absent(device,deadline=None):
     if not lines or any(not re.fullmatch(r'package:[A-Za-z0-9_.]+',line) for line in lines) or 'package:'+PACKAGE in lines:
         raise Failure('install_package_present_or_unknown')
 
+def installed_apk_path(location):
+    # ADB shell may join argv: only shell-inert canonical PM path segments.
+    if not isinstance(location,str) or len(location)>600 or not re.fullmatch(r'package:/data/app/(?:[A-Za-z0-9_~+=-][A-Za-z0-9_~+=.\-]{0,254}/){1,2}base\.apk',location):
+        raise Failure('installed_path')
+    return location[8:]
+
 def installed_digest(device,location,deadline=None):
-    if not re.fullmatch(r'package:/data/app/[^\s]+/base\.apk',location):raise Failure('installed_path')
-    raw=subprocess.run([str(device.sdk/'platform-tools/adb'),'-s',device.serial,'exec-out','cat',location[8:]],capture_output=True,timeout=remaining(deadline,30),check=True).stdout
-    return hashlib.sha256(raw).hexdigest()
+    path=installed_apk_path(location)
+    output=device.adb('shell','/system/bin/toybox','sha256sum',path,timeout=remaining(deadline,30))
+    match=re.fullmatch(r'([0-9a-fA-F]{64}) {1,2}'+re.escape(path),output)
+    if not match:raise Failure('installed_digest_output')
+    return match.group(1).lower()
 
 def reconcile_install(device,expected):
     # Independent diagnostic allowance, never retries or turns failure into success.
@@ -220,9 +228,7 @@ class Device:
         return result
     def verify_installed(self,expected):
         location=self.adb('shell','pm','path',PACKAGE)
-        if not re.fullmatch(r'package:/data/app/[^\s]+/base\.apk',location):raise Failure('installed_path')
-        raw=subprocess.run([str(self.sdk/'platform-tools/adb'),'-s',self.serial,'exec-out','cat',location[8:]],capture_output=True,timeout=30,check=True).stdout
-        if hashlib.sha256(raw).hexdigest()!=expected:raise Failure('installed_hash')
+        if installed_digest(self,location)!=expected:raise Failure('installed_hash')
     def launch(self):self.adb('shell','am','start','-W','-n',PACKAGE+'/'+ACTIVITY);self.actions.append('launch')
     def back(self):self.adb('shell','input','keyevent','KEYCODE_BACK');self.actions.append('back')
     def home(self):self.adb('shell','input','keyevent','KEYCODE_HOME');self.actions.append('home')

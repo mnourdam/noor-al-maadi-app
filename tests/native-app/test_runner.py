@@ -37,7 +37,7 @@ class Tests(unittest.TestCase):
   with patch.object(m,'targets',return_value=[{'id':'new'}]):r=p.diagnostics()
   self.assertEqual(r['current_target_count'],1);self.assertFalse(r['original_target_present']);self.assertTrue(r['original_process_present']);self.assertNotIn('new',json.dumps(r))
  def test_installed_bytes_checked(self):
-  d=m.Device(Path('/sdk'),Path('/avd'));d.adb=Mock(return_value='package:/data/app/abc/base.apk')
+  d=m.Device(Path('/sdk'),Path('/avd'));d.adb=Mock(side_effect=['package:/data/app/abc/base.apk','1'*64+'  /data/app/abc/base.apk'])
   with patch.object(m.subprocess,'run',return_value=Mock(stdout=b'wrong')):
    with self.assertRaisesRegex(m.Failure,'installed_hash'):d.verify_installed('0'*64)
  def test_unsafe_installed_path_never_read(self):

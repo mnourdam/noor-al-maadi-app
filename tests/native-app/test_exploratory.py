@@ -11,6 +11,7 @@ class Tests(unittest.TestCase):
   self.report={**self.ident,'category':'boot_deadline','stage':'boot','result':'FAIL','release_ready':False,'reached':{'apk_verified':True,'boot_completed':False,'installed_verified':False,'launched':False,'home_ready':False},'groups':{k:{'status':'BLOCKED','reason':'not_executed'} for k in r.JOURNEYS},'boot_diagnostics':{},'guest_startup':{},'boot_state_discriminator':{}}
   self.device=Mock(sdk=Path('/sdk'),serial='emulator-5580');self.device.emulator.poll.return_value=None;self.device.actions=[]
   def adb(*args,**kw):
+   if args[:3]==('shell','/system/bin/toybox','sha256sum'):return self.ident['apk_sha256']+'  '+args[3]
    if args==('get-state',):return 'device'
    if args[:4]==('shell','cmd','package','list'):return 'package:android\npackage:com.android.systemui'
    if args[:3]==('shell','pm','path'):return 'package:/data/app/test/base.apk'
