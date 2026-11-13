@@ -8,6 +8,7 @@ PACKAGE='app.lovable.irth.acceptance'
 ACTIVITY='app.lovable.irth.MainActivity'
 IMAGE='system-images;android-35;default;x86_64'
 BOOT_SECONDS=900
+FIRST_LAUNCH_SECONDS=60
 JOURNEYS={'chapter_images_encyclopedia','museum_profile','content_update_recovery','private_feedback','chapter_reread','english_controls'}
 REASONS={'passed','fixture_missing','not_executed','assertion_failed','transport_blocked','activation_gate','content_incomplete','missing_completed_chapter_fixture','missing_text_activity_fixture','missing_authenticated_service_fixture','missing_update_fixture','missing_owned_artifact_fixture','control_unavailable','image_decode_failed'}
 def record_group(groups,name,status,reason):
@@ -52,7 +53,9 @@ def launch_once(device, receipt, deadline=None, reconcile_device=None, verified_
         except Exception:value='unavailable'
         receipt['boot_before_dispatch']={'value':value,'start_seconds':round(before-start,6),'end_seconds':round(time.monotonic()-start,6)}
         receipt['stage']='launch_command'
-        timeout=remaining(deadline,15)
+        limit=FIRST_LAUNCH_SECONDS if verified_install is True else 15
+        timeout=remaining(deadline,limit)
+        receipt.update(configured_timeout_seconds=limit,effective_timeout_seconds=timeout)
         receipt['dispatch_attempted']=True
         device.adb('shell','am','start','-W','-n',PACKAGE+'/'+ACTIVITY,timeout=timeout)
         receipt.update(stage='command_completed',command_completed=True)
