@@ -33,7 +33,10 @@ type OverlayMap = Record<string, KeyArtOverlayRow>;
 
 let cache: OverlayMap | null = null;
 let cachedAt = 0;
-let inflight: Promise<OverlayMap> | null = null;
+/** A bounded read, not a transport-cancellation guarantee. */
+export const KEY_ART_OVERLAY_TIMEOUT_MS = 8000;
+let generation = 0;
+let inflight: { promise: Promise<OverlayMap>; retire: () => void } | null = null;
 
 function readPersisted(): OverlayMap | null {
   try {
@@ -55,10 +58,11 @@ function persist(map: OverlayMap): void {
   } catch { /* ignore */ }
 }
 
-async function fetchOverlay(): Promise<OverlayMap> {
+async function fetchOverlay(signal: AbortSignal): Promise<OverlayMap> {
   const { data, error } = await supabase
     .from("campaigns_public" as any)
-    .select("id, slug, key_art_path, key_art_square_path, key_art_credit");
+    .select("id, slug, key_art_path, key_art_square_path, key_art_credit")
+    .abortSignal(signal);
   if (error || !data) throw new Error(error?.message ?? "overlay_failed");
   const map: OverlayMap = {};
   // Section dividers never carry key art.
@@ -79,30 +83,52 @@ async function fetchOverlay(): Promise<OverlayMap> {
 export async function getCampaignKeyArtOverlay(): Promise<OverlayMap> {
   const now = Date.now();
   if (cache && now - cachedAt < TTL_MS) return cache;
-  if (inflight) return inflight;
+  if (inflight) return inflight.promise;
 
   if (!cache) {
     const persisted = readPersisted();
-    if (persisted) cache = persisted; // serve stale immediately
+    if (persisted) cache = persisted; // available as fallback if refresh fails or times out
   }
 
   const offline = typeof navigator !== "undefined" && navigator.onLine === false;
   if (offline) return cache ?? {};
 
-  inflight = (async () => {
-    try {
-      const map = await fetchOverlay();
-      cache = map;
-      cachedAt = Date.now();
-      persist(map);
-      return map;
-    } catch {
-      return cache ?? {};
-    } finally {
-      inflight = null;
-    }
-  })();
-  return inflight;
+  const admitted = generation;
+  const controller = new AbortController();
+  let resolve!: (map: OverlayMap) => void;
+  let settled = false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const flight = {
+    promise: new Promise<OverlayMap>(done => { resolve = done; }),
+    retire: () => finish({}, true),
+  };
+  function current() { return generation === admitted && inflight === flight; }
+  function finish(map: OverlayMap, abort = false) {
+    if (settled) return;
+    settled = true;
+    if (timer !== undefined) clearTimeout(timer);
+    if (inflight === flight) inflight = null;
+    resolve(map);
+    // Detach first: abort listeners may synchronously start a successor read.
+    if (abort) controller.abort();
+  }
+  inflight = flight;
+  timer = setTimeout(() => {
+    if (current()) finish(cache ?? readPersisted() ?? {}, true);
+  }, KEY_ART_OVERLAY_TIMEOUT_MS);
+  void Promise.resolve().then(() => {
+    if (!current()) return null;
+    return fetchOverlay(controller.signal);
+  }).then(map => {
+    if (!current() || map === null) return;
+    cache = map;
+    cachedAt = Date.now();
+    persist(map);
+    finish(map);
+  }).catch(() => {
+    if (current()) finish(cache ?? readPersisted() ?? {});
+  });
+  return flight.promise;
 }
 
 /** Synchronous best-effort read (already-warm cache only). */
@@ -116,11 +142,14 @@ export function peekCampaignKeyArtOverlay(): OverlayMap {
 /** Drop cached artwork pointers so the next read re-fetches. Called
  *  after an admin upload / replace / delete. */
 export function invalidateCampaignKeyArtOverlay(): void {
+  const retired = inflight;
+  generation++;
   cache = null;
   cachedAt = 0;
   try {
     if (typeof window !== "undefined") window.localStorage.removeItem(LS_KEY);
   } catch { /* ignore */ }
+  retired?.retire();
 }
 
 /** Merge overlay artwork onto a campaign-shaped object. Existing

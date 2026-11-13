@@ -335,24 +335,35 @@ export function collectImageUrls(root: unknown, out: Set<string> = new Set()): S
 }
 
 /** React hook — returns the cached/object URL for an image, or `null` while resolving. */
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 export function useCachedImageSrc(url: string | null | undefined): string | null {
-  const [src, setSrc] = useState<string | null>(url && (url.startsWith("data:") || url.startsWith("blob:")) ? url : null);
+  // Each admission gets its own identity, including A→B→A. Never expose a
+  // previous request's URL while its replacement is pending or after revocation.
+  const request = useMemo(() => url ? { url } : null, [url]);
+  const [result, setResult] = useState<{ request: typeof request; src: string | null } | null>(null);
+  const borrowed = !!request && (request.url.startsWith("data:") || request.url.startsWith("blob:"));
   useEffect(() => {
+    if (!request || borrowed) return;
     let alive = true;
     let created: string | null = null;
-    if (!url) { setSrc(null); return; }
-    if (url.startsWith("data:") || url.startsWith("blob:")) { setSrc(url); return; }
-    (async () => {
-      const resolved = await resolveImageUrl(url);
-      if (!alive) { if (resolved && resolved.startsWith("blob:")) URL.revokeObjectURL(resolved); return; }
-      if (resolved && resolved.startsWith("blob:")) created = resolved;
-      setSrc(resolved);
-    })();
+    void resolveImageUrl(request.url).then(resolved => {
+      if (!alive) {
+        if (resolved?.startsWith("blob:")) { try { URL.revokeObjectURL(resolved); } catch { /* ignore */ } }
+        return;
+      }
+      // The resolver creates a fresh blob handle per invocation; direct input
+      // data/blob URLs bypass this path and remain the caller's property.
+      if (resolved?.startsWith("blob:")) created = resolved;
+      setResult({ request, src: resolved });
+    }).catch(() => {
+      if (alive) setResult({ request, src: null });
+    });
     return () => {
       alive = false;
       if (created) { try { URL.revokeObjectURL(created); } catch { /* ignore */ } }
     };
-  }, [url]);
-  return src;
+  }, [request, borrowed]);
+  if (!request) return null;
+  if (borrowed) return request.url;
+  return result?.request === request ? result.src : null;
 }

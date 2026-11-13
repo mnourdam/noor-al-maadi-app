@@ -23,6 +23,7 @@ import {
   bundledCoverContentVersion,
   hasOfflineStoryCover,
   localStoryCoverPath,
+  packagedCoverMediaId,
 } from "./offline-pack";
 
 export interface StoryCoverInput {
@@ -34,6 +35,16 @@ export interface StoryCoverInput {
 /** True when the bundled asset is still the correct bytes for this story. */
 export function bundledCoverIsCurrent(story: StoryCoverInput): boolean {
   if (!hasOfflineStoryCover(story.id)) return false;
+  const packagedMediaId = packagedCoverMediaId(story.id);
+  // A known different asset is not an offline fallback for the live cover.
+  // Absent live IDs and absent version provenance retain their existing policy.
+  if (
+    packagedMediaId &&
+    typeof story.cover_media_id === "string" &&
+    story.cover_media_id.length > 0 &&
+    story.cover_media_id !== packagedMediaId
+  )
+    return false;
   const packed = bundledCoverContentVersion(story.id);
   const live = Number(story.content_version ?? 1);
   if (packed == null || !Number.isFinite(live)) return true;
@@ -80,7 +91,7 @@ async function fetchCoverRow(
 export function useStoryCoverSrc(story: StoryCoverInput | null): string | null {
   const local = useMemo(
     () => (story && bundledCoverIsCurrent(story) ? localStoryCoverPath(story.id) : null),
-    [story?.id, story?.content_version],
+    [story?.id, story?.content_version, story?.cover_media_id],
   );
 
   const needsRemote = !local && !!story?.cover_media_id;
@@ -95,24 +106,42 @@ export function useStoryCoverSrc(story: StoryCoverInput | null): string | null {
     queryFn: () => fetchCoverRow(storyId, coverMediaId),
   });
 
-  const [remote, setRemote] = useState<string | null>(null);
+  // Bind displayed results to the request and every field consumed by the media
+  // resolver (ID selects packaged bytes; bucket/path/version select cached bytes).
+  // Do not serialize the entire mutable SDK row or treat path alone as identity.
+  const remoteKey =
+    needsRemote && row
+      ? JSON.stringify([
+          storyId,
+          coverMediaId,
+          story?.content_version ?? null,
+          row.id,
+          row.storage_bucket,
+          row.storage_path,
+          Number.isFinite(row.processing_version) ? row.processing_version : 1,
+        ])
+      : null;
+  const [remote, setRemote] = useState<{ key: string; url: string } | null>(null);
   useEffect(() => {
     let alive = true;
-    if (local || !row) {
+    if (!remoteKey || !row) {
       setRemote(null);
       return;
     }
     void (async () => {
-      const cached = await resolveCachedStoryMediaUrl(row);
-      if (alive && cached) setRemote(cached);
-
+      try {
+        const cached = await resolveCachedStoryMediaUrl(row);
+        if (alive) setRemote(cached ? { key: remoteKey, url: cached } : null);
+      } catch {
+        if (alive) setRemote(null);
+      }
     })();
     return () => {
       alive = false;
     };
-  }, [local, row?.storage_path]);
+  }, [remoteKey]);
 
-  return local ?? remote;
+  return local ?? (remote?.key === remoteKey ? remote.url : null);
 }
 
 // ------------------------------------------------------------

@@ -22,7 +22,7 @@
 // processing pipeline emits new bytes for the same path.
 // ============================================================
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { StoryMediaRow } from "./dao";
 import { localStoryMediaPath } from "./offline-pack";
@@ -132,25 +132,34 @@ export async function prefetchStoryMediaRows(
 
 /** React hook — offline-first URL for a media row, or null while resolving. */
 export function useStoryMediaUrl(row: MediaLike | null | undefined): string | null {
-  const k = row ? keyOf(row) : null;
-  const [url, setUrl] = useState<string | null>(null);
+  // Request identity includes packaged-media ID as well as the shared cache primitives.
+  // The snapshot also distinguishes A→B→A requests without changing cache/signing keys.
+  const request = useMemo(() => row ? {
+    id: row.id,
+    storage_bucket: row.storage_bucket,
+    storage_path: row.storage_path,
+    processing_version: row.processing_version,
+  } : null, [!!row, row?.id, row?.storage_bucket, row?.storage_path, row?.processing_version]);
+  const [resolved, setResolved] = useState<{ request: typeof request; url: string | null } | null>(null);
   useEffect(() => {
     let alive = true;
     let created: string | null = null;
-    if (!row) { setUrl(null); return; }
-    void resolveCachedStoryMediaUrl(row).then((v) => {
+    if (!request) return;
+    void resolveCachedStoryMediaUrl(request).then((url) => {
       if (!alive) {
-        if (v?.startsWith("blob:")) { try { URL.revokeObjectURL(v); } catch { /* ignore */ } }
+        if (url?.startsWith("blob:")) { try { URL.revokeObjectURL(url); } catch { /* ignore */ } }
         return;
       }
-      if (v?.startsWith("blob:")) created = v;
-      setUrl(v);
+      // resolveKeyedImageUrl creates a fresh object URL per call, not a shared blob handle.
+      if (url?.startsWith("blob:")) created = url;
+      setResolved({ request, url });
+    }).catch(() => {
+      if (alive) setResolved({ request, url: null });
     });
     return () => {
       alive = false;
       if (created) { try { URL.revokeObjectURL(created); } catch { /* ignore */ } }
     };
-  }, [k]);
-  return url;
+  }, [request]);
+  return request && resolved?.request === request ? resolved.url : null;
 }
-

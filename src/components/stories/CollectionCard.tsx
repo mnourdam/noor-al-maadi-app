@@ -4,12 +4,19 @@ import { useStoryCoverSrc } from "@/lib/stories/covers";
 import type { StoryCollection } from "@/lib/stories/collections";
 import type { StorySummary } from "@/lib/stories/summary";
 
+import { useUiLanguage } from "@/lib/ui-language/store";
+import { selectStoryMetadata } from "@/lib/stories/display-metadata";
+
 interface CollectionCardProps {
   collection: StoryCollection;
   stories: StorySummary[];
 }
 
 export function CollectionCard({ collection, stories }: CollectionCardProps) {
+  const { language } = useUiLanguage();
+  const title = selectStoryMetadata(collection.title_ar, collection.title_en, language);
+  const summary = selectStoryMetadata(collection.summary_ar, collection.summary_en, language);
+
   // Stats
   const total = stories.length;
   const completedCount = stories.filter(s => s.completed).length;
@@ -21,7 +28,9 @@ export function CollectionCard({ collection, stories }: CollectionCardProps) {
   const firstStoryWithCover = stories.find(s => s.cover_media_id);
   const coverSource = {
     cover_media_id: collection.cover_media_id || firstStoryWithCover?.cover_media_id,
-    id: collection.cover_media_id ? `collection-${collection.id}` : firstStoryWithCover?.id
+    id: collection.cover_media_id ? `collection-${collection.id}` : firstStoryWithCover?.id,
+    // A story fallback must carry its version so an older bundle is not treated as current.
+    ...(!collection.cover_media_id ? { content_version: firstStoryWithCover?.content_version } : {})
   };
   
   const cover = useStoryCoverSrc(coverSource as any);
@@ -50,7 +59,9 @@ export function CollectionCard({ collection, stories }: CollectionCardProps) {
         <div className="absolute inset-0 overflow-hidden">
           <img
             src={cover}
-            alt={collection.title_ar}
+            alt={title?.text ?? ""}
+            lang={title?.lang}
+            dir={title?.dir}
             className="h-full w-full object-cover transition duration-1000 group-hover:scale-110"
           />
           {/* Book-like Overlay (Darker Gradient) */}
@@ -73,13 +84,13 @@ export function CollectionCard({ collection, stories }: CollectionCardProps) {
 
         {/* Text Details */}
         <div className="relative space-y-1">
-          <h3 className="font-display text-xl font-bold text-white drop-shadow-lg transition-colors group-hover:text-gold">
-            {collection.title_ar}
+          <h3 lang={title?.lang} dir={title?.dir} className="font-display text-xl font-bold text-white drop-shadow-lg transition-colors group-hover:text-gold">
+            {title?.text}
           </h3>
           
-          {collection.summary_ar && (
-            <p className="line-clamp-2 text-xs leading-relaxed text-white/60">
-              {collection.summary_ar}
+          {summary && (
+            <p lang={summary.lang} dir={summary.dir} className="line-clamp-2 text-xs leading-relaxed text-white/60">
+              {summary.text}
             </p>
           )}
         </div>

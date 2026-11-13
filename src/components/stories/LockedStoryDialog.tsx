@@ -10,6 +10,9 @@
 // `evaluate_unlock_spec_v2` / `src/lib/stories/unlock`.
 // ============================================================
 
+import { useId, type ReactNode } from "react";
+import { useUiLanguage } from "@/lib/ui-language/store";
+import type { MessageKey } from "@/lib/ui-language/messages";
 import { ArrowLeft, Check, Lock, X } from "lucide-react";
 import { useRouter } from "@tanstack/react-router";
 import { ModalPortal } from "@/components/ModalPortal";
@@ -23,21 +26,21 @@ import {
 import type { StoryPrereq } from "@/lib/stories/summary";
 
 /** Arabic phrasing per prerequisite family. */
-const KIND_LABEL: Record<string, string> = {
-  campaign_completed: "أكمل الحملة",
-  campaign_complete: "أكمل الحملة",
-  campaign_chapter_complete: "أكمل فصل الحملة",
-  investigation_completed: "أكمل التحقيق",
-  investigation_complete: "أكمل التحقيق",
-  entity_discovered: "اكتشف في الموسوعة",
-  entities_discovered: "اكتشف عناصر الموسوعة",
-  artifact_owned: "امتلك المقتنى",
-  atlas_location_visited: "زر الموقع في الأطلس",
-  achievement_unlocked: "افتح الإنجاز",
-  player_level: "ابلغ المستوى",
-  story_completed: "أكمل القصة",
-  story_complete: "أكمل القصة",
-  date_window: "متاح في فترة محددة",
+const KIND_LABEL: Record<string, MessageKey> = {
+  campaign_completed: "storyRequireCampaign",
+  campaign_complete: "storyRequireCampaign",
+  campaign_chapter_complete: "storyRequireChapter",
+  investigation_completed: "storyRequireInvestigation",
+  investigation_complete: "storyRequireInvestigation",
+  entity_discovered: "storyRequireEntity",
+  entities_discovered: "storyRequireEntities",
+  artifact_owned: "storyRequireArtifact",
+  atlas_location_visited: "storyRequireAtlas",
+  achievement_unlocked: "storyRequireAchievement",
+  player_level: "storyRequireLevel",
+  story_completed: "storyRequireStory",
+  story_complete: "storyRequireStory",
+  date_window: "storyRequireDate",
 };
 
 /**
@@ -49,7 +52,7 @@ const KIND_LABEL: Record<string, string> = {
  * duplicate disabled by a merge navigates to its canonical replacement,
  * and an unresolvable/disabled ref without a replacement produces NO CTA.
  */
-function prereqTarget(p: StoryPrereq): { to: string; label: string } | null {
+function prereqTarget(p: StoryPrereq, messages: Readonly<Record<MessageKey, string>>): { to: string; label: ReactNode } | null {
   if (p.satisfied || !p.ref) return null;
   const name = p.title ?? null;
   switch (p.kind) {
@@ -63,15 +66,15 @@ function prereqTarget(p: StoryPrereq): { to: string; label: string } | null {
         // `path` is the shortest canonical route: state entities go straight
         // to /encyclopedia/state/<slug>, everything else to the entity route.
         to: resolved.path,
-        label: label ? `📖 الانتقال إلى ${label}` : "📖 الانتقال إلى الموسوعة",
+        label: <>{label ? <>📖 {messages.storyGoTo} <bdi lang="ar" dir="rtl">{label}</bdi></> : <>📖 {messages.storyGoEncyclopedia}</>}</>,
       };
     }
     case "campaign_completed":
-      return { to: `/campaigns/imported/${p.ref}`, label: name ? `🏛️ الانتقال إلى ${name}` : "🏛️ الانتقال إلى الحملة" };
+      return { to: `/campaigns/imported/${p.ref}`, label: <>{name ? <>🏛️ {messages.storyGoTo} <bdi lang="ar" dir="rtl">{name}</bdi></> : <>🏛️ {messages.storyGoCampaign}</>}</> };
     case "investigation_completed":
-      return { to: `/investigation/${p.ref}`, label: name ? `🔍 الانتقال إلى ${name}` : "🔍 الانتقال إلى التحقيق" };
+      return { to: `/investigation/${p.ref}`, label: <>{name ? <>🔍 {messages.storyGoTo} <bdi lang="ar" dir="rtl">{name}</bdi></> : <>🔍 {messages.storyGoInvestigation}</>}</> };
     case "story_completed":
-      return { to: `/story/${p.ref}`, label: name ? `📜 الانتقال إلى ${name}` : "📜 الانتقال إلى القصة" };
+      return { to: `/story/${p.ref}`, label: <>{name ? <>📜 {messages.storyGoTo} <bdi lang="ar" dir="rtl">{name}</bdi></> : <>📜 {messages.storyGoStory}</>}</> };
     default:
       return null;
   }
@@ -91,13 +94,15 @@ export function LockedStoryDialog({
   explanation?: string | null;
   onClose: () => void;
 }) {
+  const { language, direction, messages } = useUiLanguage();
+  const labelId = useId();
   const router = useRouter();
   const stash = useStashCurrentAsOrigin();
   const items = prereqs ?? [];
   const authored = (explanation ?? "").trim();
   const remaining = items.filter((p) => !p.satisfied);
   // First actionable requirement drives the primary CTA.
-  const primary = remaining.map(prereqTarget).find((t) => t !== null) ?? null;
+  const primary = remaining.map(p => prereqTarget(p, messages)).find((t) => t !== null) ?? null;
 
   const go = (to: string) => {
     onClose();
@@ -123,7 +128,7 @@ export function LockedStoryDialog({
       >
         <button
           type="button"
-          aria-label="إغلاق"
+          aria-label={messages.close} lang={language}
           onClick={onClose}
           className="absolute inset-0"
           tabIndex={-1}
@@ -131,12 +136,13 @@ export function LockedStoryDialog({
         <div
           role="dialog"
           aria-modal="true"
-          aria-label={`${title} — مقفلة`}
+          aria-labelledby={`${labelId}-title ${labelId}-locked`}
+          lang={language} dir={direction}
           className="relative w-full max-w-sm rounded-t-3xl border border-gold/30 bg-surface p-5 shadow-elegant sm:rounded-3xl"
         >
           <button
             onClick={onClose}
-            aria-label="إغلاق"
+            aria-label={messages.close} lang={language}
             className="absolute end-3 top-3 rounded-full border border-white/10 p-1.5 text-muted-foreground hover:text-foreground"
           >
             <X className="size-4" />
@@ -146,19 +152,20 @@ export function LockedStoryDialog({
             <Lock className="size-5 text-gold" />
           </div>
 
-          <h2 className="mt-3 font-display text-base font-bold text-gold">{title}</h2>
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+          <h2 id={`${labelId}-title`} lang="ar" dir="rtl" className="mt-3 font-display text-base font-bold text-gold">{title}</h2>
+          <span id={`${labelId}-locked`} className="sr-only">— {messages.catalogLocked}</span>
+          <p lang={authored ? "ar" : language} dir={authored ? "rtl" : direction} className="mt-1 text-xs leading-relaxed text-muted-foreground">
             {authored
               ? authored
               : remaining.length > 0
-                ? "هذه القصة مقفلة. أكمل المتطلبات التالية لفتحها:"
-                : "هذه القصة مقفلة حاليًا. تابع رحلتك في إرث لفتحها."}
+                ? messages.storyLockedRequirements
+                : messages.storyLockedJourney}
           </p>
 
           {items.length > 0 && (
             <ul className="mt-4 space-y-2">
               {items.map((p) => {
-                const target = prereqTarget(p);
+                const target = prereqTarget(p, messages);
                 return (
                   <li
                     key={`${p.kind}:${p.ref}`}
@@ -174,9 +181,9 @@ export function LockedStoryDialog({
                       </span>
                       <span>
                         <span className="text-muted-foreground">
-                          {KIND_LABEL[p.kind] ?? "متطلب"}:{" "}
+                          {messages[KIND_LABEL[p.kind] ?? "storyRequirement"]}:{" "}
                         </span>
-                        {p.title ?? p.ref}
+                        <bdi lang="ar" dir="rtl">{p.title ?? p.ref}</bdi>
                       </span>
                     </div>
                     {target && (
@@ -200,13 +207,13 @@ export function LockedStoryDialog({
                 onClick={() => go(primary.to)}
                 className="w-full rounded-full border border-gold/50 bg-gold/20 px-4 py-2.5 text-sm font-semibold text-gold transition hover:bg-gold/30"
               >
-                اذهب الآن
+                {messages.storyGoNow}
               </button>
               <button
                 onClick={onClose}
                 className="w-full rounded-full border border-white/10 px-4 py-2 text-xs text-muted-foreground transition hover:text-foreground"
               >
-                لاحقًا
+                {messages.storyLater}
               </button>
             </div>
           ) : (
@@ -214,7 +221,7 @@ export function LockedStoryDialog({
               onClick={onClose}
               className="mt-5 w-full rounded-full border border-gold/40 bg-gold/10 px-4 py-2.5 text-sm font-medium text-gold transition hover:bg-gold/20"
             >
-              حسنًا
+              {messages.storyOK}
             </button>
           )}
         </div>

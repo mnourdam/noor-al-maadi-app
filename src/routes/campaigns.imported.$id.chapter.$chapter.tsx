@@ -1,3 +1,4 @@
+import { useUiLanguage } from "@/lib/ui-language/store";
 import { toast } from "sonner";
 import { getIdentityEpoch, getActiveOwner, onOwnerChange } from "@/lib/identity/owner";
 import { saveAccepted } from "@/lib/offline/gameplay-write";
@@ -808,24 +809,25 @@ function ReviewChapterView({
   partial: boolean;
   completedActivityIds: readonly string[];
 }) {
+  const { language, direction, messages } = useUiLanguage();
   const next = nextChapterAfter(campaign, chapter);
   const nextReview = next && getChapterProgress(campaign.id, next.id).completed && isChapterUnlocked(campaign, next);
   const visibleActivities = partial
     ? chapter.activities.filter(activity => completedActivityIds.includes(activity.id))
     : chapter.activities;
   return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-[12px] text-emerald-100">
+    <div lang="ar" dir="rtl" className="space-y-4">
+      <div lang={language} dir={direction} className="rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-[12px] text-emerald-100">
         <Check className="me-1 inline size-3.5" />
-        {partial ? "أنهيتَ هذا الفصل — راجع الأنشطة المكتملة دون أثر على تقدمك." : "أنهيتَ هذه الحملة — أنت الآن في وضع المراجعة. تصفّح المحتوى دون أثر على تقدمك."}
+        {partial ? messages.completedReviewChapter : messages.completedReviewCampaign}
       </div>
 
       {visibleActivities.map((act) => (
         <ActivityReviewCard key={act.id} activity={act} />
       ))}
 
-      {visibleActivities.length === 0 && <p>لا تتوفر أنشطة مكتملة موثقة للمراجعة في هذا الفصل.</p>}
-      <div className="flex flex-col gap-2 pt-2">
+      {visibleActivities.length === 0 && <p lang={language} dir={direction}>{messages.completedReviewEmpty}</p>}
+      <div lang={language} dir={direction} className="flex flex-col gap-2 pt-2">
         {next && (
           <Link
             to="/campaigns/imported/$id/chapter/$chapter"
@@ -833,7 +835,7 @@ function ReviewChapterView({
             search={nextReview ? { review: "chapter" } : {}}
             className="motion-tap inline-flex items-center justify-center gap-1 rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground shadow-gold"
           >
-            <Check className="size-4" /> الفصل التالي
+            <Check className="size-4" /> {messages.completedReviewNext}
             <ArrowLeft className="size-4" />
           </Link>
         )}
@@ -842,7 +844,7 @@ function ReviewChapterView({
           params={{ id: campaign.id }}
           className="motion-tap rounded-2xl border border-white/10 py-2 text-center text-xs text-muted-foreground"
         >
-          عودة لقائمة الفصول
+          {messages.completedReviewBack}
         </Link>
       </div>
     </div>

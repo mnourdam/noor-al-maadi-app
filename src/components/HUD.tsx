@@ -23,7 +23,7 @@ type BumpKey = "dinars" | "points" | "hearts";
  * Lives inside AppShell so every screen sees it.
  */
 export const HUD = memo(function HUD() {
-  const { language, messages } = useUiLanguage();
+  const { language, direction, messages } = useUiLanguage();
   const { profile } = useProfile();
   const [, force] = useState(0);
   const [unread, setUnread] = useState(0);
@@ -155,7 +155,7 @@ export const HUD = memo(function HUD() {
               )}
             </button>
           </PopoverTrigger>
-          <PopoverContent lang="ar" dir="rtl" align="start" sideOffset={8} className="w-72 border-gold/25 bg-background/95 backdrop-blur-md">
+          <PopoverContent lang={language} dir={direction} align="start" sideOffset={8} className="w-72 border-gold/25 bg-background/95 backdrop-blur-md">
             <HeartsPopover profile={profile} />
           </PopoverContent>
         </Popover>
@@ -172,7 +172,7 @@ export const HUD = memo(function HUD() {
 
               </button>
             </PopoverTrigger>
-            <PopoverContent lang="ar" dir="rtl" align="center" sideOffset={8} className="w-72 border-gold/25 bg-background/95 backdrop-blur-md">
+            <PopoverContent lang={language} dir={direction} align="center" sideOffset={8} className="w-72 border-gold/25 bg-background/95 backdrop-blur-md">
               <DinarsPopover profile={profile} />
             </PopoverContent>
           </Popover>
@@ -188,7 +188,7 @@ export const HUD = memo(function HUD() {
 
               </button>
             </PopoverTrigger>
-            <PopoverContent lang="ar" dir="rtl" align="center" sideOffset={8} className="w-72 border-gold/25 bg-background/95 backdrop-blur-md">
+            <PopoverContent lang={language} dir={direction} align="center" sideOffset={8} className="w-72 border-gold/25 bg-background/95 backdrop-blur-md">
               <XPPopover profile={profile} />
             </PopoverContent>
           </Popover>
@@ -206,7 +206,7 @@ export const HUD = memo(function HUD() {
 
               </button>
             </PopoverTrigger>
-            <PopoverContent lang="ar" dir="rtl" align="end" sideOffset={8} className="w-72 border-gold/25 bg-background/95 backdrop-blur-md">
+            <PopoverContent lang={language} dir={direction} align="end" sideOffset={8} className="w-72 border-gold/25 bg-background/95 backdrop-blur-md">
               <StreakPopover profile={profile} />
             </PopoverContent>
           </Popover>

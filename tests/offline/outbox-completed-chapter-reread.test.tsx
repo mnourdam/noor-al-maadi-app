@@ -10,6 +10,7 @@ const state = vi.hoisted(() => ({
   chapterId: "ch1",
   hearts: 5,
   navigate: vi.fn(),
+  query: vi.fn(),
   plan: vi.fn(() => null),
   harvest: vi.fn(),
   refresh: vi.fn(async () => {}),
@@ -75,7 +76,7 @@ vi.mock("@tanstack/react-query", async original => {
   const actual = await original<typeof import("@tanstack/react-query")>();
   return { ...actual,
     useQueryClient: () => state.realQuery ? actual.useQueryClient() : ({ invalidateQueries: async () => {} }),
-    useQuery: (options: any) => state.realQuery ? actual.useQuery(options) : ({ data: state.campaign, isLoading: false }),
+    useQuery: (options: any) => { state.query(); return state.realQuery ? actual.useQuery(options) : ({ data: state.campaign, isLoading: false }); },
   };
 });
 vi.mock("@/lib/streak-activity", () => ({ recordStreakActivity: async () => ({ ok: true }) }));
@@ -363,6 +364,11 @@ it("carries review intent only to completed next chapter and validates exact sea
   expect(screen.getByRole("link", { name: /الفصل التالي/ }).getAttribute("href")).toBe("/campaigns/imported/c1/chapter/ch2?review=chapter");
   expect((view.Route as any).validateSearch({ review: "chapter", preview: "draft" })).toEqual({ review: "chapter", preview: "draft" });
   expect((view.Route as any).validateSearch({ review: "anything", preview: "anything" })).toEqual({});
+  const nextLink = screen.getByRole("link", { name: /الفصل التالي/ });
+  const { setUiLanguage } = await import("@/lib/ui-language/store");
+  await act(async () => setUiLanguage("en"));
+  expect(screen.getByRole("link", { name: "Next chapter" })).toBe(nextLink);
+  expect(nextLink.getAttribute("href")).toBe("/campaigns/imported/c1/chapter/ch2?review=chapter");
 });
 it("rejects captured gameplay callback after owner A→B→A epoch changes", async () => {
   const view = await mountChapter(); await screen.findByText("إجابة صحيحة");
@@ -564,6 +570,55 @@ it("fences wrong-answer UI and resume writes if heart callback synchronously cha
   state.points.mockClear(); state.dinars.mockClear();
   await act(async () => { await state.resolve(true); });
   expect(state.points).toHaveBeenCalledWith(5); expect(state.dinars).toHaveBeenCalledWith(2);
+});
+
+it("localizes completed-review chrome without remounting Arabic content, links or mutating progress", async () => {
+  await seedPartial(); state.search = { review: "chapter" };
+  await mountChapter();
+  const { setUiLanguage } = await import("@/lib/ui-language/store");
+  const next = screen.getByRole("link", { name: /الفصل التالي/ });
+  const back = screen.getByRole("link", { name: "عودة لقائمة الفصول" });
+  const content = screen.getByText("تفاصيل القراءة المكتملة");
+  const href = next.getAttribute("href");
+  const personal = () => Object.fromEntries(Object.entries(localStorage).filter(([key]) => !key.startsWith("irth.device.")));
+  const before = JSON.stringify(personal());
+  const queryCount = state.query.mock.calls.length;
+  next.focus();
+  for (const language of ["en", "ar", "en"] as const) {
+    await act(async () => setUiLanguage(language));
+    expect(screen.getByRole("link", { name: language === "en" ? "Next chapter" : /الفصل التالي/ })).toBe(next);
+    expect(screen.getByRole("link", { name: language === "en" ? "Back to chapter list" : "عودة لقائمة الفصول" })).toBe(back);
+    expect(document.activeElement).toBe(next);
+    expect(next.getAttribute("href")).toBe(href);
+    expect(content).toBe(screen.getByText("تفاصيل القراءة المكتملة"));
+    expect(content.closest('[lang]')?.getAttribute("lang")).toBe("ar");
+    expect(content.closest('[dir]')?.getAttribute("dir")).toBe("rtl");
+    expect(next.closest('[lang]')?.getAttribute("lang")).toBe(language);
+    expect(next.closest('[dir]')?.getAttribute("dir")).toBe(language === "en" ? "ltr" : "rtl");
+    expect(JSON.stringify(personal())).toBe(before);
+    expect(state.query).toHaveBeenCalledTimes(queryCount);
+    assertNoReadWrites();
+  }
+  expect(screen.getByText("You completed this chapter. Review completed activities without changing your progress.")).toBeTruthy();
+});
+
+it("localizes whole-campaign and missing-evidence notices without broadening visible activities", async () => {
+  const { progress, ch } = await seedPartial();
+  const next = state.campaign.chapters[1];
+  progress.recordActivity(state.campaign, next, next.activities[0], true);
+  const { setUiLanguage } = await import("@/lib/ui-language/store");
+  await act(async () => setUiLanguage("en"));
+  const view = await mountChapter();
+  expect(screen.getByText("You completed this campaign. Browse the review without changing your progress.")).toBeTruthy();
+  view.unmount(); localStorage.removeItem("irth_campaign_progress");
+  progress.recordActivity(state.campaign, ch, ch.activities[0], true);
+  ch.activities = [{ id: "new-unknown", type: "reading", text: "محتوى جديد غير مكتمل" }];
+  state.search = { review: "chapter" };
+  await mountChapter();
+  expect(screen.getByText("No recorded completed activities are available to review in this chapter.")).toBeTruthy();
+  expect(screen.queryByText("محتوى جديد غير مكتمل")).toBeNull();
+  expect(progress.getChapterProgress("c1", "ch1").completedActivityIds).toEqual(["read"]);
+  assertNoReadWrites();
 });
 
 it("actual overview with real QueryClient rejects missing feed but seeded synthetic feed makes no query", async () => {

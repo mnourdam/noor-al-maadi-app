@@ -5,6 +5,8 @@ on:
     paths:
       - '.github/workflows/v18-reread-shell-browser.yml'
       - 'tests/offline/browser/*reread-shell*'
+      - 'src/components/encyclopedia/EncyclopediaRelatedEntities.tsx'
+      - 'src/lib/encyclopedia-icons.tsx'
       - 'src/components/imported-campaign/ChapterReadingReview.tsx'
       - 'src/components/imported-campaign/RichReadingText.tsx'
       - 'src/components/ui/dialog.tsx'

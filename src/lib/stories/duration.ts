@@ -1,3 +1,4 @@
+import { UI_MESSAGES } from "@/lib/ui-language/messages";
 // ============================================================
 // Stories — canonical viewing-duration model (Phase 3).
 // ------------------------------------------------------------
@@ -136,4 +137,13 @@ export function formatDurationArabic(ms: number): string {
   if (seconds < 120) return "≈ دقيقة";
   const minutes = Math.round(seconds / 60);
   return `≈ ${minutes} د`;
+}
+
+/** Additive UI formatter; the canonical Arabic formatter and duration arithmetic remain unchanged. */
+export function formatStoryDuration(ms: number, language: "ar" | "en"): string {
+  if (language === "ar") return formatDurationArabic(ms);
+  const seconds = Math.max(0, Math.round(ms / 1000));
+  if (seconds < 60) return `≈ ${seconds} ${UI_MESSAGES.en.storySecondsUnit}`;
+  if (seconds < 120) return `≈ ${UI_MESSAGES.en.storyOneMinute}`;
+  return `≈ ${Math.round(seconds / 60)} ${UI_MESSAGES.en.storyMinutesUnit}`;
 }

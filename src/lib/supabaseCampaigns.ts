@@ -21,6 +21,7 @@ import {
 import {
   applyKeyArtOverlay,
   getCampaignKeyArtOverlay,
+  peekCampaignKeyArtOverlay,
   
   type KeyArtOverlayRow,
 } from "./campaignKeyArtOverlay";
@@ -76,51 +77,83 @@ function toCampaigns(
 // refresh replaces the local campaign rows with the authoritative
 // `campaigns_public` rows once per session while online.
 
-let _timelineRefresh: Promise<boolean> | null = null;
+type CampaignRefreshAttempt = {
+  result: Promise<boolean>;
+  finish: (ok: boolean) => void;
+  controller: AbortController;
+  active: boolean;
+  timer: ReturnType<typeof setTimeout> | null;
+};
+let _timelineRefresh: CampaignRefreshAttempt | null = null;
+const CAMPAIGN_REFRESH_DEADLINE_MS = 10_000;
 
-/** Pull authoritative campaign + divider rows into the local store. */
-export async function refreshCampaignRows(force = false): Promise<boolean> {
-  if (typeof navigator !== "undefined" && navigator.onLine === false) return false;
-  if (force) _timelineRefresh = null;
-  if (!_timelineRefresh) {
-    _timelineRefresh = (async () => {
-      try {
-        // Differential Sync Guard: Check manifest before fetching full rows.
-        const { fetchContentManifest } = await import("./offline-manifest");
-        const manifest = await fetchContentManifest();
-        const { localSnapshotInfo } = await import("./local-first-store");
-        const local = localSnapshotInfo();
-
-        if (manifest && local?.content_counts) {
-          const entry = manifest.find(m => m.collection === "admin_campaigns");
-          const localCount = local.content_counts["admin_campaigns"] ?? 0;
-          const serverDate = entry ? new Date(entry.last_updated).getTime() : 0;
-          const localDate = new Date(local.generated_at).getTime();
-
-          // If counts match and server data is older than our last snapshot, skip.
-          if (entry && entry.total_count === localCount && serverDate <= localDate) {
-            return true;
-          }
+/** Pull authoritative rows; only the current, unretired attempt may merge. */
+export function refreshCampaignRows(force = false): Promise<boolean> {
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return Promise.resolve(false);
+  if (!force && _timelineRefresh) return _timelineRefresh.result;
+  const previous = _timelineRefresh;
+  let resolve!: (ok: boolean) => void;
+  const result = new Promise<boolean>((done) => { resolve = done; });
+  const attempt: CampaignRefreshAttempt = {
+    result, controller: new AbortController(), active: true, timer: null,
+    finish(ok) {
+      if (!attempt.active) return;
+      // Retire before resolving or dispatching abort events: callbacks may reenter.
+      attempt.active = false;
+      if (attempt.timer !== null) clearTimeout(attempt.timer);
+      if (!ok && _timelineRefresh === attempt) _timelineRefresh = null;
+      resolve(ok);
+      if (!ok) attempt.controller.abort();
+    },
+  };
+  // A forced successor must be joinable even from the predecessor's abort handler.
+  _timelineRefresh = attempt;
+  attempt.timer = setTimeout(() => attempt.finish(false), CAMPAIGN_REFRESH_DEADLINE_MS);
+  previous?.finish(false);
+  const current = () => _timelineRefresh === attempt && attempt.active && !attempt.controller.signal.aborted;
+  void Promise.resolve().then(async () => {
+    try {
+      if (!current()) return;
+      const { fetchContentManifest } = await import("./offline-manifest");
+      if (!current()) return;
+      const manifest = await fetchContentManifest(attempt.controller.signal);
+      if (!current()) return;
+      const { localSnapshotInfo } = await import("./local-first-store");
+      if (!current()) return;
+      const local = localSnapshotInfo();
+      if (!current()) return;
+      if (manifest && local?.content_counts) {
+        const entry = manifest.find(m => m.collection === "admin_campaigns");
+        const localCount = local.content_counts["admin_campaigns"] ?? 0;
+        const serverDate = entry ? new Date(entry.last_updated).getTime() : 0;
+        const localDate = new Date(local.generated_at).getTime();
+        if (entry && entry.total_count === localCount && serverDate <= localDate) {
+          attempt.finish(true);
+          return;
         }
-
-        const { data, error } = await supabase
-          .from("campaigns_public" as any)
-          .select("id, slug, data, key_art_path, key_art_square_path, key_art_credit");
-        if (error || !Array.isArray(data) || data.length === 0) return false;
-        
-        const { mergeLocalCampaignRows, localPublishedCampaigns } = await import("./local-first-store");
-        return mergeLocalCampaignRows(data as any[]);
-      } catch (err) {
-        console.warn("[supabaseCampaigns] refresh failed:", err);
-        return false;
       }
-    })();
-    _timelineRefresh = _timelineRefresh.then((ok) => {
-      if (!ok) _timelineRefresh = null;
-      return ok;
-    });
-  }
-  return _timelineRefresh;
+      const { data, error } = await supabase
+        .from("campaigns_public" as any)
+        .select("id, slug, data, key_art_path, key_art_square_path, key_art_credit")
+        .abortSignal(attempt.controller.signal);
+      if (!current()) return;
+      if (error || !Array.isArray(data) || data.length === 0) {
+        attempt.finish(false);
+        return;
+      }
+      const { mergeLocalCampaignRows } = await import("./local-first-store");
+      if (!current()) return;
+      // This fences admission, not persistence already started by a valid merge.
+      const ok = mergeLocalCampaignRows(data as any[]);
+      if (current()) attempt.finish(ok);
+    } catch (err) {
+      if (current()) {
+        console.warn("[supabaseCampaigns] refresh failed:", err);
+        attempt.finish(false);
+      }
+    }
+  });
+  return result;
 }
 
 
@@ -158,6 +191,11 @@ export async function fetchPublishedCampaigns(): Promise<Campaign[]> {
  *   admin-only RPC `admin_get_campaign_full`. Non-admins get null.
  *   Never returns local cache.
  */
+export const PUBLISHED_CAMPAIGN_LOOKUP_TIMEOUT_MS = 8000;
+// Conservative alias-safe retirement for this module's published invalidation API.
+// Direct low-level store mutations are instead covered by fallback-time revalidation.
+let publishedReadGeneration = 0;
+
 export async function fetchCampaignByIdOrSlug(
   idOrSlug: string,
   opts?: { mode?: "published" | "draft" },
@@ -227,39 +265,62 @@ export async function fetchCampaignByIdOrSlug(
   }
 
 
-  // Local miss — try network (may be a freshly published campaign).
-  try {
-    let row: any = await supabase
+  // One deadline covers both ID and slug, including the missing-intro refresh.
+  const admitted = publishedReadGeneration;
+  const controller = new AbortController();
+  return new Promise<Campaign | null>(resolve => {
+    let settled = false;
+    const current = () => !settled && admitted === publishedReadGeneration;
+    const finish = (value: Campaign | null, abort = false) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(value);
+      if (abort) controller.abort();
+    };
+    const fallback = (): Campaign | null => {
+      if (!current()) return null;
+      const latest = localCampaignByIdOrSlug(idOrSlug);
+      const c = latest?.data as Campaign | undefined;
+      if (!latest || isDividerRow(latest) || !c || c.status !== "published") return null;
+      return applyKeyArtOverlay({
+        ...c,
+        id: c.id ?? latest.id,
+        slug: (c as any).slug ?? latest.slug,
+        key_art_path: latest.key_art_path ?? c.key_art_path ?? null,
+        key_art_square_path: latest.key_art_square_path ?? c.key_art_square_path ?? null,
+        key_art_credit: latest.key_art_credit ?? c.key_art_credit ?? null,
+      } as Campaign, peekCampaignKeyArtOverlay());
+    };
+    const timer = setTimeout(() => finish(fallback(), true), PUBLISHED_CAMPAIGN_LOOKUP_TIMEOUT_MS);
+    const lookup = (field: "id" | "slug") => supabase
       .from("campaigns_public" as any)
       .select("id, slug, data, key_art_path, key_art_square_path, key_art_credit")
-      .eq("id", idOrSlug)
-      .maybeSingle();
-    if (!row?.data) {
-      row = await supabase
-        .from("campaigns_public" as any)
-        .select("id, slug, data, key_art_path, key_art_square_path, key_art_credit")
-        .eq("slug", idOrSlug)
-        .maybeSingle();
-    }
-    if (!row?.error) {
-      const r = row?.data;
-      const c = (r?.data ?? null) as Campaign | null;
-      if (c && c.status === "published") {
-        return {
-          ...c,
-          key_art_path: r?.key_art_path ?? c.key_art_path ?? null,
-          key_art_square_path: r?.key_art_square_path ?? c.key_art_square_path ?? null,
-          key_art_credit: r?.key_art_credit ?? c.key_art_credit ?? null,
-        } as Campaign;
+      .eq(field, idOrSlug).abortSignal(controller.signal).maybeSingle();
+    const unavailable = (result: any) => !!result?.error && (result.status === 0 || result.status >= 500 && result.status <= 599);
+    void (async () => {
+      let result: any = await lookup("id");
+      if (!current()) { finish(null); return; }
+      if (unavailable(result)) { finish(fallback()); return; }
+      // A slug can fail the UUID id comparison before its valid slug lookup.
+      const slugAfterInvalidId = result?.status === 400 && result?.error?.code === "22P02";
+      if (result?.error && !slugAfterInvalidId) { finish(null); return; }
+      if (!result?.data) {
+        result = await lookup("slug");
+        if (!current()) { finish(null); return; }
+        if (unavailable(result)) { finish(fallback()); return; }
       }
-    } else {
-      console.warn("[supabaseCampaigns] resolve failed:", row.error.message);
-    }
-
-  } catch (err) {
-    console.warn("[supabaseCampaigns] resolve crashed:", err);
-  }
-  return null;
+      const row = result?.data;
+      const c = row?.data as Campaign | undefined;
+      if (result?.error || !row || isDividerRow(row) || !c || c.status !== "published") { finish(null); return; }
+      finish({
+        ...c,
+        key_art_path: row.key_art_path ?? c.key_art_path ?? null,
+        key_art_square_path: row.key_art_square_path ?? c.key_art_square_path ?? null,
+        key_art_credit: row.key_art_credit ?? c.key_art_credit ?? null,
+      } as Campaign);
+    })().catch(() => finish(null)); // Programming/unclassified throws are not cached success.
+  });
 }
 
 
@@ -271,6 +332,7 @@ export async function fetchCampaignByIdOrSlug(
  * call refetches the freshly-published data from Supabase.
  */
 export function invalidatePublishedCampaign(idOrSlug: string): void {
+  publishedReadGeneration++;
   invalidateLocalCampaign(idOrSlug);
 }
 

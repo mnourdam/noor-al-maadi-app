@@ -1,3 +1,5 @@
+import { useUiLanguage } from "@/lib/ui-language/store";
+
 /**
  * Recoverable state for the Encyclopedia hub and category pages.
  *
@@ -13,14 +15,17 @@ export function EncyclopediaUnavailable({
   onRetry: () => void;
   retrying?: boolean;
 }) {
+  const { language, direction, messages } = useUiLanguage();
   return (
     <div
       role="alert"
+      lang={language}
+      dir={direction}
       data-testid="encyclopedia-unavailable"
       className="mt-8 rounded-2xl border border-white/10 bg-surface/70 p-6 text-center"
     >
       <p className="text-xs text-muted-foreground">
-        تعذّر فتح المكتبة الآن. تحقّق من الاتصال ثم أعد المحاولة.
+        {messages.encyclopediaUnavailable}
       </p>
       <button
         type="button"
@@ -28,7 +33,7 @@ export function EncyclopediaUnavailable({
         disabled={retrying}
         className="mt-4 rounded-full border border-gold/40 bg-gold/10 px-5 py-2 text-[11px] font-bold text-gold disabled:opacity-60"
       >
-        {retrying ? "جارٍ إعادة المحاولة…" : "إعادة المحاولة"}
+        {retrying ? messages.encyclopediaRetrying : messages.encyclopediaRetry}
       </button>
     </div>
   );

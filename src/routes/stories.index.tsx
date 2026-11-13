@@ -36,6 +36,9 @@ import {
   type StorySortKey,
   type StoryStatusFilter,
 } from "@/lib/stories/catalog-filters";
+import type { MessageKey } from "@/lib/ui-language/messages";
+import { useUiLanguage } from "@/lib/ui-language/store";
+import { selectStoryMetadata } from "@/lib/stories/display-metadata";
 import { z } from "zod";
 import { storySummaryQueryKey, useStoryIdentityKey } from "@/lib/stories/query-keys";
 
@@ -148,10 +151,10 @@ function StoriesIndex() {
         ) : (
           <header className="flex flex-col gap-1">
             <h1 className="font-display text-3xl font-bold text-gold drop-shadow-sm">
-              مكتبة السلاسل القصصية
+              <CatalogText message="catalogTitle" />
             </h1>
             <p className="text-sm text-white/50">
-              رحلات عبر الزمن من خلال سلاسل موثقة
+              <CatalogText message="catalogSubtitle" />
             </p>
           </header>
         )}
@@ -159,10 +162,10 @@ function StoriesIndex() {
         {/* Search & Filters (Global) */}
         <div className="relative mt-6">
           <Search className="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <AndroidPlainTextInput
+          <CatalogSearchInput
             value={filters.q}
             onChange={(e) => patch({ q: e.target.value })}
-            placeholder={activeCollectionId ? "ابحث داخل السلسلة…" : "ابحث في السلاسل والقصص…"}
+            placeholderKey={activeCollectionId ? "catalogSearchCollection" : "catalogSearchAll"}
             className="w-full rounded-xl border border-gold/25 bg-black/40 px-4 py-3 pe-10 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-gold/60"
           />
           {filters.q && (
@@ -179,8 +182,8 @@ function StoriesIndex() {
         {/* Counters & Advanced Filters Toggle */}
         <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
           <div className="flex gap-2">
-            <Counter label="سلسلة" value={activeCollectionId ? 1 : visibleCollections.length} />
-            <Counter label="قصة" value={activeCollectionId ? visibleStories.length : counters.total} />
+            <Counter label="catalogCollections" value={activeCollectionId ? 1 : visibleCollections.length} />
+            <Counter label="catalogStories" value={activeCollectionId ? visibleStories.length : counters.total} />
           </div>
 
           <div className="flex items-center gap-3">
@@ -190,7 +193,7 @@ function StoriesIndex() {
               className="inline-flex items-center gap-1.5 rounded-full border border-gold/30 bg-black/40 px-3 py-1.5 text-xs text-gold"
             >
               <Filter className="size-3.5" />
-              تصفية متقدمة
+              <CatalogText message="catalogFilters" />
               {activeCount > 0 && (
                 <span className="rounded-full bg-gold px-1.5 text-[10px] font-bold text-black">
                   {activeCount}
@@ -199,58 +202,48 @@ function StoriesIndex() {
             </button>
 
             {activeCollectionId && (
-              <select
-                value={sort}
-                onChange={(e) => setSort(e.target.value as StorySortKey)}
-                className="rounded-lg border border-gold/25 bg-black/50 px-2 py-1.5 text-xs text-foreground outline-none focus:border-gold/60"
-              >
-                {(Object.keys(STORY_SORT_LABELS) as StorySortKey[]).map((k) => (
-                  <option key={k} value={k}>
-                    {STORY_SORT_LABELS[k]}
-                  </option>
-                ))}
-              </select>
+              <CatalogSortSelect value={sort} onChange={(e) => setSort(e.target.value as StorySortKey)} />
             )}
           </div>
         </div>
 
         {showFacets && (
           <div className="mt-3 space-y-3 rounded-2xl border border-gold/20 bg-black/30 p-3">
-            <Facet title="الحالة">
+            <Facet title="catalogStatus">
               {(Object.keys(STORY_STATUS_LABELS) as StoryStatusFilter[]).map((key) => (
                 <Chip
                   key={key}
                   active={filters.status === key}
                   onClick={() => patch({ status: key })}
                 >
-                  {STORY_STATUS_LABELS[key]}
+                  <CatalogText message={STATUS_MESSAGE_KEYS[key]} />
                 </Chip>
               ))}
             </Facet>
 
             {facets.worlds.length > 0 && (
-              <Facet title="العالم">
+              <Facet title="catalogWorld">
                 {facets.worlds.map((f) => (
                   <Chip
                     key={f.value}
                     active={filters.world === f.value}
                     onClick={() => patch({ world: filters.world === f.value ? null : f.value })}
                   >
-                    {worldLabelAr(f.value)} <Count n={f.count} />
+                    <span lang="ar" dir="rtl">{worldLabelAr(f.value)} <Count n={f.count} /></span>
                   </Chip>
                 ))}
               </Facet>
             )}
 
             {facets.eras.length > 0 && (
-              <Facet title="الحقبة">
+              <Facet title="catalogEra">
                 {facets.eras.map((f) => (
                   <Chip
                     key={f.value}
                     active={filters.era === f.value}
                     onClick={() => patch({ era: filters.era === f.value ? null : f.value })}
                   >
-                    {eraLabelAr(f.value)} <Count n={f.count} />
+                    <span lang="ar" dir="rtl">{eraLabelAr(f.value)} <Count n={f.count} /></span>
                   </Chip>
                 ))}
               </Facet>
@@ -262,7 +255,7 @@ function StoriesIndex() {
                 onClick={() => setFilters(EMPTY_STORY_FILTERS)}
                 className="text-xs text-muted-foreground underline hover:text-gold"
               >
-                مسح الفلاتر
+                <CatalogText message="catalogReset" />
               </button>
             )}
           </div>
@@ -273,7 +266,7 @@ function StoriesIndex() {
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
               <div className="size-8 animate-spin rounded-full border-2 border-gold border-t-transparent" />
-              <p className="mt-4 text-sm">جارٍ تحميل المكتبة…</p>
+              <p className="mt-4 text-sm"><CatalogText message="catalogLoading" /></p>
             </div>
           ) : activeCollectionId ? (
             /* Stories within a collection */
@@ -282,7 +275,7 @@ function StoriesIndex() {
                 <StoryCard key={story.id} story={story} />
               ))}
               {visibleStories.length === 0 && (
-                <EmptyState message="لا توجد قصص تطابق هذا البحث داخل السلسلة." />
+                <EmptyState message="catalogEmptyStories" />
               )}
             </div>
           ) : (
@@ -296,7 +289,7 @@ function StoriesIndex() {
                 />
               ))}
               {visibleCollections.length === 0 && (
-                <EmptyState message="لا توجد سلاسل تطابق عوامل التصفية المختارة." />
+                <EmptyState message="catalogEmptyCollections" />
               )}
             </div>
           )}
@@ -307,6 +300,9 @@ function StoriesIndex() {
 }
 
 function CollectionHero({ collection, stories }: { collection: any; stories: any[] }) {
+  const { language, direction, messages } = useUiLanguage();
+  const title = selectStoryMetadata(collection.title_ar, collection.title_en, language);
+  const summary = selectStoryMetadata(collection.summary_ar, collection.summary_en, language);
   const total = stories.length;
   const completedCount = stories.filter(s => s.completed).length;
   const started = stories.some(s => s.unlocked && (s.progress || s.completed));
@@ -317,7 +313,8 @@ function CollectionHero({ collection, stories }: { collection: any; stories: any
   const firstStoryWithCover = stories.find(s => s.cover_media_id);
   const coverSource = {
     cover_media_id: collection.cover_media_id || firstStoryWithCover?.cover_media_id,
-    id: collection.cover_media_id ? `collection-${collection.id}` : firstStoryWithCover?.id
+    id: collection.cover_media_id ? `collection-${collection.id}` : firstStoryWithCover?.id,
+    ...(!collection.cover_media_id ? { content_version: firstStoryWithCover?.content_version } : {})
   };
   const cover = useStoryCoverSrc(coverSource as any);
 
@@ -327,7 +324,7 @@ function CollectionHero({ collection, stories }: { collection: any; stories: any
         {cover && (
           <img 
             src={cover} 
-            alt={collection.title_ar} 
+            alt={title?.text ?? ""} lang={title?.lang} dir={title?.dir}
             className="h-full w-full object-cover"
           />
         )}
@@ -344,18 +341,18 @@ function CollectionHero({ collection, stories }: { collection: any; stories: any
       <div className="p-6 sm:p-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex-1 space-y-2">
-            <h1 className="font-display text-3xl font-bold text-gold drop-shadow-sm sm:text-4xl">
-              {collection.title_ar}
+            <h1 lang={title?.lang} dir={title?.dir} className="font-display text-3xl font-bold text-gold drop-shadow-sm sm:text-4xl">
+              {title?.text}
             </h1>
-            <p className="max-w-2xl text-sm leading-relaxed text-white/70 sm:text-base">
-              {collection.summary_ar}
-            </p>
+            {summary && <p lang={summary.lang} dir={summary.dir} className="max-w-2xl text-sm leading-relaxed text-white/70 sm:text-base">
+              {summary.text}
+            </p>}
           </div>
 
           <div className="flex flex-col items-start gap-4 sm:items-end">
-            <div className="flex gap-4">
-              <Stat label="عدد القصص" value={total} icon={BookOpenText} />
-              <Stat label="نسبة الإنجاز" value={`${pct}%`} icon={CheckCircle2} />
+            <div lang={language} dir={direction} className="flex gap-4">
+              <Stat label={messages.collectionStoryCount} value={total} icon={BookOpenText} />
+              <Stat label={messages.collectionCompletion} value={`${pct}%`} icon={CheckCircle2} />
             </div>
 
             <SmartContinueButton stories={stories} />
@@ -364,9 +361,9 @@ function CollectionHero({ collection, stories }: { collection: any; stories: any
 
         {/* Global Progress Line */}
         <div className="mt-8">
-          <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-gold/60">
-            <span>تقدم السلسلة</span>
-            <span>{completedCount} / {total} مكتملة</span>
+          <div lang={language} dir={direction} className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-gold/60">
+            <span>{messages.collectionProgress}</span>
+            <span>{completedCount} / {total} {messages.collectionCompleted}</span>
           </div>
           <div className="mt-2 h-1.5 w-full rounded-full bg-white/5 border border-white/5 overflow-hidden">
             <div 
@@ -381,17 +378,20 @@ function CollectionHero({ collection, stories }: { collection: any; stories: any
 }
 
 function SmartContinueButton({ stories }: { stories: any[] }) {
+  const { language, direction, messages } = useUiLanguage();
   const completedCount = stories.filter(s => s.completed).length;
   const started = stories.some(s => s.unlocked && (s.progress || s.completed));
   const isFullyCompleted = stories.length > 0 && completedCount === stories.length;
 
   // Find next story to read (first one not completed)
   const nextStory = stories.find(s => !s.completed) || stories[0];
+  // Collections may arrive before their story query, or legitimately be empty.
+  if (!nextStory?.id) return null;
 
   const getLabel = () => {
-    if (isFullyCompleted) return "إعادة القراءة";
-    if (started) return "متابعة القراءة";
-    return "ابدأ السلسلة";
+    if (isFullyCompleted) return messages.collectionReread;
+    if (started) return messages.collectionContinue;
+    return messages.collectionStart;
   };
 
   const getIcon = () => {
@@ -403,6 +403,8 @@ function SmartContinueButton({ stories }: { stories: any[] }) {
     <Link
       to="/story/$id"
       params={{ id: nextStory.id }}
+      lang={language}
+      dir={direction}
       className="inline-flex items-center gap-2 rounded-xl bg-gold px-6 py-3 text-sm font-bold text-black shadow-lg shadow-gold/20 transition hover:scale-105 hover:bg-white active:scale-95"
     >
       {getIcon()}
@@ -425,20 +427,20 @@ function Stat({ label, value, icon: Icon }: { label: string; value: string | num
   );
 }
 
-function Counter({ label, value }: { label: string; value: number }) {
+function Counter({ label, value }: { label: MessageKey; value: number }) {
   return (
     <div className="flex items-center gap-1.5 rounded-full bg-black/40 px-3 py-1 text-xs border border-white/5">
       <span className="font-bold text-gold">{value}</span>
-      <span className="text-muted-foreground">{label}</span>
+      <span className="text-muted-foreground"><CatalogText message={label} /></span>
     </div>
   );
 }
 
-function Facet({ title, children }: { title: string; children: React.ReactNode }) {
+function Facet({ title, children }: { title: MessageKey; children: React.ReactNode }) {
   return (
     <div className="space-y-2">
       <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
-        {title}
+        <CatalogText message={title} />
       </h4>
       <div className="flex flex-wrap gap-2">{children}</div>
     </div>
@@ -473,11 +475,37 @@ function Count({ n }: { n: number }) {
   return <span className="ms-1 text-[10px] opacity-60">({n})</span>;
 }
 
-function EmptyState({ message }: { message: string }) {
+function EmptyState({ message }: { message: MessageKey }) {
   return (
     <div className="col-span-full py-20 text-center">
       <BookOpenText className="mx-auto size-12 text-muted-foreground/20" />
-      <p className="mt-4 text-sm text-muted-foreground">{message}</p>
+      <p className="mt-4 text-sm text-muted-foreground"><CatalogText message={message} /></p>
     </div>
   );
+}
+
+// Subscribe at display leaves: locale changes must not restart catalog queries or sync.
+const STATUS_MESSAGE_KEYS: Record<StoryStatusFilter, MessageKey> = {
+  all: "catalogAll", available: "catalogAvailable", in_progress: "catalogReading",
+  completed: "catalogCompleted", locked: "catalogLocked",
+};
+const SORT_MESSAGE_KEYS: Record<StorySortKey, MessageKey> = {
+  recommended: "catalogRecommended", newest: "catalogNewest",
+  shortest: "catalogShortest", reward: "catalogReward",
+};
+function CatalogText({ message }: { message: MessageKey }) {
+  const { language, direction, messages } = useUiLanguage();
+  return <span lang={language} dir={direction}>{messages[message]}</span>;
+}
+function CatalogSearchInput({ placeholderKey, ...props }: React.ComponentProps<typeof AndroidPlainTextInput> & { placeholderKey: MessageKey }) {
+  const { language, messages } = useUiLanguage();
+  return <AndroidPlainTextInput {...props} lang={language} dir="auto" placeholder={messages[placeholderKey]} />;
+}
+function CatalogSortSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
+  const { language, direction, messages } = useUiLanguage();
+  return <select {...props} lang={language} dir={direction}
+    className="rounded-lg border border-gold/25 bg-black/50 px-2 py-1.5 text-xs text-foreground outline-none focus:border-gold/60">
+    {(Object.keys(STORY_SORT_LABELS) as StorySortKey[]).map(key =>
+      <option key={key} value={key}>{messages[SORT_MESSAGE_KEYS[key]]}</option>)}
+  </select>;
 }

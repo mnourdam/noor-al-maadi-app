@@ -13,7 +13,7 @@ const stubs=new Map([
  [path.resolve('src/lib/androidQuietMode.ts'),'export const isSectionEnabled=()=>false;'],
  [path.resolve('src/lib/navigation/overlay-registration.tsx'),'export const OverlayDismissRegistration=()=>null;'],
 ]);
-const expected=['src/components/AppShell.tsx','src/components/UiLanguageChooser.tsx','src/lib/ui-language/store.ts','src/lib/ui-language/messages.ts','src/components/imported-campaign/ChapterReadingReview.tsx','src/components/imported-campaign/RichReadingText.tsx','src/components/ui/dialog.tsx'];
+const expected=['src/components/encyclopedia/EncyclopediaRelatedEntities.tsx','src/components/AppShell.tsx','src/components/UiLanguageChooser.tsx','src/lib/ui-language/store.ts','src/lib/ui-language/messages.ts','src/components/imported-campaign/ChapterReadingReview.tsx','src/components/imported-campaign/RichReadingText.tsx','src/components/ui/dialog.tsx'];
 const seen=new Set();
 const boundary={name:'synthetic-shell-boundary',enforce:'pre',async resolveId(id,importer){
  for(const ext of ['', '.ts','.tsx'])if(stubs.has(id+ext))return '\0shell-stub:'+id+ext;

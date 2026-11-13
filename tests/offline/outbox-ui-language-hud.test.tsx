@@ -16,7 +16,7 @@ vi.mock('@/components/motion/MotionPrimitives', () => ({ AnimatedNumber: ({ valu
 vi.mock('@/lib/boot/reconciliation', () => ({ getReconciliationState: () => 'ready', subscribeReconciliation: () => () => {} }));
 import { HUD } from '@/components/HUD';
 afterEach(() => { cleanup(); setUiLanguage('ar'); });
-it('reactively translates actual HUD primary labels but preserves Arabic popovers and stat values', async () => {
+it('reactively translates actual HUD primary labels and popover language islands while preserving stat values', async () => {
   setUiLanguage('ar'); await act(async () => { render(<HUD />); });
   expect(screen.getByRole('button', { name: 'القلوب' })).toBeTruthy();
   act(() => setUiLanguage('en'));
@@ -25,7 +25,7 @@ it('reactively translates actual HUD primary labels but preserves Arabic popover
   }
   expect(screen.getByRole('link', { name: 'Notifications' }).getAttribute('href')).toBe('/notifications');
   expect(screen.getByLabelText('Next heart in').textContent).toBe('00:12');
-  for (const p of screen.getAllByTestId('popover')) { expect(p.getAttribute('lang')).toBe('ar'); expect(p.getAttribute('dir')).toBe('rtl'); }
+  for (const p of screen.getAllByTestId('popover')) { expect(p.getAttribute('lang')).toBe('en'); expect(p.getAttribute('dir')).toBe('ltr'); }
   expect(screen.getByText('12')).toBeTruthy(); expect(screen.getByText('34')).toBeTruthy();
   act(() => setUiLanguage('ar'));
   expect(screen.getByRole('button', { name: 'القلوب' })).toBeTruthy();

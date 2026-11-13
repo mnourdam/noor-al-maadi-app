@@ -1,4 +1,4 @@
-// Related entities — grouped informational chips (non-interactive).
+// Related entities — grouped informational references (non-interactive).
 // Lucide icons only (no emojis), styled as small museum tags.
 import { Network } from "lucide-react";
 import type { RelatedEntityGroups, RelatedRef } from "@/types/encyclopediaArticle";
@@ -57,11 +57,15 @@ export function EncyclopediaRelatedEntities({ related }: { related?: RelatedEnti
               {(related[k] as RelatedRef[]).map((ref, i) => (
                 <span
                   key={`${ref.slug}-${i}`}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-gold/25 bg-black/30 px-3 py-1 text-[11px] text-foreground/90 select-none"
-                  title={ref.note}
+                  className="inline-flex max-w-full items-start gap-1.5 rounded-xl border border-gold/25 bg-black/30 px-3 py-2 text-[11px] text-foreground/90"
                 >
-                  <span className="size-1 rounded-full bg-gold/70" />
-                  <span className="truncate max-w-[200px]">{ref.label ?? ref.slug}</span>
+                  <span className="mt-1.5 size-1 shrink-0 rounded-full bg-gold/70" />
+                  <span className="min-w-0 space-y-1">
+                    <span className="block whitespace-normal break-words">{ref.label ?? ref.slug}</span>
+                    {typeof ref.note === "string" && ref.note.trim() && (
+                      <span className="block whitespace-pre-wrap break-words leading-relaxed text-muted-foreground">{ref.note}</span>
+                    )}
+                  </span>
                 </span>
               ))}
             </div>
