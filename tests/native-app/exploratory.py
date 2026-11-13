@@ -34,8 +34,10 @@ def run(api,guest,device,apk,receipt,original):
         result['attempted']=True;result['actions'].append('install')
         result['installation']={}
         api['install_once'](bounded,apk,verified['apk_sha256'],result['installation'],deadline,reconcile_device=device)
-        result['reached']['installed_verified']=True;result['actions'].append('launch')
-        bounded.adb('shell','am','start','-W','-n',api['PACKAGE']+'/'+api['ACTIVITY'])
+        result['reached']['installed_verified']=True;result['launch']={}
+        try:api['launch_once'](bounded,result['launch'],deadline,reconcile_device=device)
+        finally:
+            if result['launch'].get('dispatch_attempted'):result['actions'].append('launch')
         result['reached']['launched']=True
         page=api['Page'](bounded,deadline=deadline);page.readiness()
         result['reached']['home_native_bridge']=True;result['result']='HOME_OBSERVED_NOT_ACCEPTANCE'

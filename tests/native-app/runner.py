@@ -7,7 +7,7 @@ from urllib.parse import urlparse, urlunparse
 PACKAGE='app.lovable.irth.acceptance'
 ACTIVITY='app.lovable.irth.MainActivity'
 IMAGE='system-images;android-35;default;x86_64'
-BOOT_SECONDS=600
+BOOT_SECONDS=900
 JOURNEYS={'chapter_images_encyclopedia','museum_profile','content_update_recovery','private_feedback','chapter_reread','english_controls'}
 REASONS={'passed','fixture_missing','not_executed','assertion_failed','transport_blocked','activation_gate','content_incomplete','missing_completed_chapter_fixture','missing_text_activity_fixture','missing_authenticated_service_fixture','missing_update_fixture','missing_owned_artifact_fixture','control_unavailable','image_decode_failed'}
 def record_group(groups,name,status,reason):
@@ -40,6 +40,32 @@ def command(args, timeout=30, input=None):
     p=subprocess.run([str(x) for x in args],input=input,capture_output=True,timeout=timeout)
     if p.returncode: raise Failure('command_failed')
     return p.stdout.decode('utf8','replace').strip()
+
+def launch_once(device, receipt, deadline=None, reconcile_device=None):
+    """One dispatch only. Observation after failure never promotes its outcome."""
+    start=time.monotonic()
+    receipt.update(stage='boot_sample',dispatch_attempted=False,command_completed=False)
+    try:
+        before=time.monotonic()
+        try:
+            value=fixed_value(device.adb('shell','getprop','sys.boot_completed',timeout=remaining(deadline,2)),{'0','1'})
+        except Exception:value='unavailable'
+        receipt['boot_before_dispatch']={'value':value,'start_seconds':round(before-start,6),'end_seconds':round(time.monotonic()-start,6)}
+        receipt['stage']='launch_command'
+        timeout=remaining(deadline,15)
+        receipt['dispatch_attempted']=True
+        device.adb('shell','am','start','-W','-n',PACKAGE+'/'+ACTIVITY,timeout=timeout)
+        receipt.update(stage='command_completed',command_completed=True)
+    except Exception as error:
+        receipt['failure_category']=category(error)
+        if receipt['dispatch_attempted']:
+            try:
+                spec=importlib.util.spec_from_file_location('launch_reconciliation',Path(__file__).with_name('launch_reconciliation.py'))
+                helper=importlib.util.module_from_spec(spec);spec.loader.exec_module(helper)
+                receipt['reconciliation']=helper.collect(reconcile_device or device,PACKAGE,ACTIVITY)
+            except Exception:receipt['reconciliation']={'status':'unavailable','category':'diagnostic_error'}
+        raise
+    finally:receipt['elapsed_seconds']=round(time.monotonic()-start,6)
 
 def packaged(url):
     try:
@@ -204,16 +230,32 @@ class Device:
         command([self.sdk/'cmdline-tools/latest/bin/avdmanager','create','avd','-n','irth-full-acceptance','-k',IMAGE],60,input=b'no\n')
         self.emulator=subprocess.Popen([str(self.sdk/'emulator/emulator'),'-avd','irth-full-acceptance','-port','5580','-accel','on','-no-window','-no-audio','-no-snapshot','-no-boot-anim','-gpu','swiftshader_indirect'],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
         self.output.start(self.emulator.stdout,self.emulator.stderr)
-        end=time.monotonic()+BOOT_SECONDS
-        while time.monotonic()<end:
+        self.await_boot()
+    def await_boot(self):
+        start=time.monotonic();end=start+BOOT_SECONDS
+        self.boot_observations.update(budget_seconds=BOOT_SECONDS,reference_seconds=600,observation_class='no_exact_one_observed')
+        while True:
+            before=time.monotonic()
+            if before>=end:break
             if self.emulator.poll() is not None:raise Failure('emulator_exited')
+            value=None
             try:
-                value=self.adb('shell','getprop','sys.boot_completed',timeout=5)
+                value=self.adb('shell','getprop','sys.boot_completed',timeout=min(5,end-before))
                 self.boot_observations['sys_boot_completed']=fixed_value(value,{'0','1'})
-                if value=='1':return
             except Failure:self.boot_observations['poll_command_failure']=True
             except subprocess.TimeoutExpired:self.boot_observations['poll_timeout']=True
-            time.sleep(1)
+            after=time.monotonic()
+            sample={'start_seconds':round(before-start,6),'end_seconds':round(after-start,6)}
+            self.boot_observations['last_poll']=sample
+            if value=='1':
+                self.boot_observations['first_exact_one']=sample
+                if after>end:self.boot_observations['observation_class']='response_after_900_not_admitted'
+                else:
+                    self.boot_observations['observation_class']=('observed_by_600' if after-start<=600 else 'observed_only_after_600' if before-start>600 else 'observation_straddles_600')
+                    return
+                break
+            if after>=end:break
+            time.sleep(min(1,end-after))
         raise Failure('boot_deadline')
     def boot_diagnostics(self):
         result=dict(self.boot_observations)
@@ -229,7 +271,8 @@ class Device:
     def verify_installed(self,expected):
         location=self.adb('shell','pm','path',PACKAGE)
         if installed_digest(self,location)!=expected:raise Failure('installed_hash')
-    def launch(self):self.adb('shell','am','start','-W','-n',PACKAGE+'/'+ACTIVITY);self.actions.append('launch')
+    def launch(self,receipt=None):
+        launch_once(self,receipt if receipt is not None else {});self.actions.append('launch')
     def back(self):self.adb('shell','input','keyevent','KEYCODE_BACK');self.actions.append('back')
     def home(self):self.adb('shell','input','keyevent','KEYCODE_HOME');self.actions.append('home')
     def force_stop(self):
@@ -379,7 +422,7 @@ def main():
         report['stage']='install';report['installation']={}
         install_once(device,args.apk,report['apk_sha256'],report['installation'])
         report['reached']['installed_verified']=True
-        report['stage']='launch';device.launch();report['reached']['launched']=True;page=Page(device)
+        report['stage']='launch';report['launch']={};device.launch(report['launch']);report['reached']['launched']=True;page=Page(device)
         report['stage']='app_readiness';page.readiness();report['reached']['home_ready']=True
         report['result']='READY_NOT_ACCEPTANCE';exit_code=1
         if args.journeys:

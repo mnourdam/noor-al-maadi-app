@@ -33,7 +33,7 @@ class BootDiagnostics(unittest.TestCase):
  def test_boot_timeout_preserved_with_poll_observation(self):
   with tempfile.TemporaryDirectory() as td:
    d=m.Device(Path('/unused'),Path(td)/'avd');process=Mock();process.poll.return_value=None;process.stdout=io.BytesIO(b'');process.stderr=io.BytesIO(b'')
-   with patch.object(m,'command',return_value=''),patch.object(m.subprocess,'Popen',return_value=process) as popen,patch.object(m.time,'monotonic',side_effect=[0,1,601]),patch.object(m.time,'sleep'),patch.object(d,'adb',return_value='0'):
+   with patch.object(m,'command',return_value=''),patch.object(m.subprocess,'Popen',return_value=process) as popen,patch.object(m.time,'monotonic',side_effect=[0,1,2,901]),patch.object(m.time,'sleep'),patch.object(d,'adb',return_value='0'):
     with self.assertRaisesRegex(m.Failure,'boot_deadline'):d.boot()
    d.output.join();self.assertEqual(d.boot_observations['sys_boot_completed'],'0')
    argv=popen.call_args.args[0];self.assertEqual(argv[argv.index('-accel')+1],'on');self.assertEqual(argv[argv.index('-gpu')+1],'swiftshader_indirect')
@@ -41,14 +41,14 @@ class BootDiagnostics(unittest.TestCase):
   for exitcode in (None,1):
    with tempfile.TemporaryDirectory() as td:
     d=m.Device(Path('/unused'),Path(td)/'avd');process=Mock();process.poll.return_value=exitcode;process.stdout=io.BytesIO(b'');process.stderr=io.BytesIO(b'')
-    with patch.object(m,'command',return_value=''),patch.object(m.subprocess,'Popen',return_value=process),patch.object(m.time,'monotonic',side_effect=[0,1]),patch.object(d,'adb',return_value='1'):
+    with patch.object(m,'command',return_value=''),patch.object(m.subprocess,'Popen',return_value=process),patch.object(m.time,'monotonic',side_effect=[0,1,2]),patch.object(d,'adb',return_value='1'):
      if exitcode is None:d.boot();self.assertEqual(d.boot_observations['sys_boot_completed'],'1')
      else:
       with self.assertRaisesRegex(m.Failure,'emulator_exited'):d.boot()
     d.output.join()
  def test_scope_and_deadline_source_contract(self):
   source=Path(__file__).with_name('runner.py').read_text()
-  self.assertNotIn('INSTALLED_FULL_APP_SYNTHETIC',source);self.assertIn('end=time.monotonic()+BOOT_SECONDS',source)
+  self.assertNotIn('INSTALLED_FULL_APP_SYNTHETIC',source);self.assertIn('end=start+BOOT_SECONDS',source)
   self.assertIn("'installed_verified':False",source);self.assertIn("'home_ready':False",source)
   self.assertIn("install_once(device,args.apk,report['apk_sha256'],report['installation'])\n        report['reached']['installed_verified']=True",source)
 if __name__=='__main__':unittest.main()

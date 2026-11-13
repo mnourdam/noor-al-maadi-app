@@ -5,8 +5,8 @@ s=importlib.util.spec_from_file_location('runner',Path(__file__).with_name('runn
 class Tests(unittest.TestCase):
  def device(self):return Mock(sdk=Path('/sdk'),serial='emulator-5580')
  def test_budget_exact_gate(self):
-  self.assertEqual(m.BOOT_SECONDS,600)
-  source=Path(m.__file__).read_text();self.assertIn("if value=='1':return",source)
+  self.assertEqual(m.BOOT_SECONDS,900)
+  source=Path(m.__file__).read_text();self.assertIn("if value=='1':",source);self.assertIn("if after>end:",source)
  def test_success_single_install_and_hash(self):
   d=self.device();d.adb.side_effect=['package:android','','package:/data/app/test/base.apk'];r={}
   with patch.object(m,'installed_digest',return_value=hashlib.sha256(b'apk').hexdigest()):m.install_once(d,'apk',hashlib.sha256(b'apk').hexdigest(),r)

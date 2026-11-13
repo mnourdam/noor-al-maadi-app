@@ -20,14 +20,19 @@ class Tests(unittest.TestCase):
  def test_early_boot_and_900_stop(self):
   report,_=self.run_observe(9);self.assertEqual(report['original_600_observation'],'observed_by_600');self.assertEqual([s['label'] for s in report['snapshots']],['terminal'])
   report,events=self.run_observe();self.assertEqual(report['result'],'NO_BOOT_OBSERVED_WITHIN_900');self.assertIsNone(report['first_one']);self.assertLessEqual(max(events),900)
- def test_actual_runner_budget_unchanged_and_argv_identical(self):
-  self.assertEqual(m.r.BOOT_SECONDS,600);self.assertEqual(m.LIMIT,900)
+ def test_authorized_actual_budget_and_observer_limit_with_identical_argv(self):
+  self.assertEqual(m.r.BOOT_SECONDS,900);self.assertEqual(m.LIMIT,900)
   tree=ast.parse(Path(m.r.__file__).read_text());calls=[n for n in ast.walk(tree) if isinstance(n,ast.Call) and isinstance(n.func,ast.Attribute) and n.func.attr=='Popen']
   argv=[x.value for x in calls[0].args[0].elts[1:]];self.assertEqual(argv,m.ARGV)
  def test_workflow_branch_no_app_build_install_or_license_changes(self):
   text=(Path(__file__).resolve().parents[2]/'.github/workflows/v18-boot-observation.yml').read_text()
   for required in ['macos-15-intel','contents: read','persist-credentials: false','accept-android-sdk-licenses: false','if: always()',"refs/heads/v18-01a-outbox-recovery"]:self.assertIn(required,text)
   for forbidden in ['npm','Gradle','gradle','setup-java','setup-node','pip install','--licenses','sudo','chmod','build-full-app','runner.py --apk']:self.assertNotIn(forbidden,text)
+ def test_exact_runtime_push_paths_and_explicit_dispatch(self):
+  # Parse the deliberately small trigger block without optional YAML dependencies.
+  text=(Path(__file__).resolve().parents[2]/'.github/workflows/v18-boot-observation.yml').read_text()
+  trigger=text.split('\non:\n',1)[1].split('\npermissions:',1)[0]
+  self.assertEqual(trigger,"  push:\n    branches: [v18-01a-outbox-recovery]\n    paths:\n      - '.github/workflows/v18-boot-observation.yml'\n      - 'tests/native-boot-observer/observe.py'\n  workflow_dispatch:")
  def test_no_application_paths_in_observer(self):
   source=Path(m.__file__).read_text()
   for forbidden in ['.install','verify_apk(','.launch(','.home(','.force_stop(','.Page(',"'install'",'settings','keyevent']:self.assertNotIn(forbidden,source)

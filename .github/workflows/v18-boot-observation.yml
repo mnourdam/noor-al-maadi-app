@@ -4,7 +4,7 @@ on:
     branches: [v18-01a-outbox-recovery]
     paths:
       - '.github/workflows/v18-boot-observation.yml'
-      - 'tests/native-boot-observer/**'
+      - 'tests/native-boot-observer/observe.py'
   workflow_dispatch:
 permissions:
   contents: read
