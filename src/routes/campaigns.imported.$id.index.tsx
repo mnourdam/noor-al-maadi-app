@@ -459,6 +459,7 @@ function ImportedCampaignOverview() {
                         <Link
                           to="/campaigns/imported/$id/chapter/$chapter"
                           params={{ id: campaign.id, chapter: ch.id }}
+                          search={done ? { review: "chapter" } : {}}
                           className={`parchment-dark group relative block overflow-hidden rounded-2xl border p-4 transition ${
                             isCurrent
                               ? "border-gold/70 shadow-[0_0_24px_-6px_oklch(0.78_0.13_85/0.5)] hover:border-gold"

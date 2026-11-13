@@ -1,0 +1,57 @@
+name: V18 Completed Chapter Reread Browser Acceptance
+on:
+  push:
+    branches: [v18-01a-outbox-recovery]
+    paths:
+      - '.github/workflows/v18-completed-reread-browser.yml'
+      - 'tests/offline/browser/*completed-reread*'
+      - 'src/routes/campaigns.imported.$id.index.tsx'
+      - 'src/routes/campaigns.imported.$id.chapter.$chapter.tsx'
+      - 'src/components/imported-campaign/**'
+      - 'src/components/AndroidSafeTextInput.tsx'
+      - 'src/lib/identity/**'
+      - 'src/lib/importedCampaignProgress.ts'
+      - 'src/lib/campaignLedger.ts'
+      - 'src/lib/ui-language/**'
+      - 'src/styles.css'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  completed-reread:
+    if: github.ref == 'refs/heads/v18-01a-outbox-recovery'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: node --test tests/offline/browser/test-completed-reread-build.mjs
+      - run: python tests/offline/browser/test-completed-reread-safety.py
+      - name: Install official pinned browser tooling
+        run: |
+          python -m pip install playwright==1.62.0
+          python -m playwright install --with-deps chromium
+      - name: Synthetic actual completed chapter reread browser acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          export CHROMIUM_EXECUTABLE_PATH="$(python -c 'from playwright.sync_api import sync_playwright; p=sync_playwright().start(); print(p.chromium.executable_path); p.stop()')"
+          python tests/offline/browser/completed-reread-browser.py > completed-reread-result.json
+          cat completed-reread-result.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: completed-reread-browser-evidence
+          path: completed-reread-result.json
+          if-no-files-found: error
+          retention-days: 7

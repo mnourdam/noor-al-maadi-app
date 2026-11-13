@@ -1,5 +1,5 @@
 import { toast } from "sonner";
-import { getIdentityEpoch } from "@/lib/identity/owner";
+import { getIdentityEpoch, getActiveOwner, onOwnerChange } from "@/lib/identity/owner";
 import { saveAccepted } from "@/lib/offline/gameplay-write";
 // ============================================================
 // /campaigns/imported/$id/chapter/$chapter — Imported chapter player
@@ -11,7 +11,7 @@ import { saveAccepted } from "@/lib/offline/gameplay-write";
 // completion modal lists rewards with resolved Arabic titles.
 // ============================================================
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { clearOrderingHelp } from "@/lib/campaigns/ordering-help";
 import { createFileRoute, Link, useParams, useNavigate, useSearch, notFound } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -70,8 +70,10 @@ import { ReviewActivity } from "@/components/memory/ReviewActivity";
 
 export const Route = createFileRoute("/campaigns/imported/$id/chapter/$chapter")({
   head: () => ({ meta: [{ title: "فصل من حملة — إرث" }] }),
-  validateSearch: (s: Record<string, unknown>): { preview?: "draft" } =>
-    s.preview === "draft" ? { preview: "draft" } : {},
+  validateSearch: (s: Record<string, unknown>): { preview?: "draft"; review?: "chapter" } => ({
+    ...(s.preview === "draft" ? { preview: "draft" as const } : {}),
+    ...(s.review === "chapter" ? { review: "chapter" as const } : {}),
+  }),
   component: ImportedChapterPlayer,
   notFoundComponent: () => (
     <AppShell>
@@ -85,6 +87,21 @@ export const Route = createFileRoute("/campaigns/imported/$id/chapter/$chapter")
     <AppShell><div className="px-5 pt-20 text-center text-muted-foreground">تعذّر تحميل الفصل.</div></AppShell>
   ),
 });
+
+/** Transient UI maps never cross owner epochs; mismatches are masked during render. */
+function useScopedTransientMap<T>(scope: object): [
+  Record<string, T>,
+  (update: (previous: Record<string, T>) => Record<string, T>) => void,
+] {
+  const [state, setState] = useState({ scope, value: {} as Record<string, T> });
+  return [
+    state.scope === scope ? state.value : {},
+    update => setState(previous => ({
+      scope,
+      value: update(previous.scope === scope ? previous.value : {}),
+    })),
+  ];
+}
 
 function ImportedChapterPlayer() {
   const { id, chapter: chapterId } = useParams({ from: "/campaigns/imported/$id/chapter/$chapter" });
@@ -117,18 +134,41 @@ function ImportedChapterPlayer() {
   const { profile, addPoints, addDinars, loseHeartOnce, recordStreakActivity } = useProfile();
   // PR1: per-render lock to swallow rapid duplicate onResolve calls
   // (e.g. double-tap on the answer button before the next paint).
-  const resolveLockRef = useRef(false);
+  const resolveLockRef = useRef<{ scope: object } | null>(null);
   const activeSaveRef = useRef(true);
   useEffect(() => { activeSaveRef.current = true; return () => { activeSaveRef.current = false; }; }, []);
+  const ownerEpoch = useSyncExternalStore(onOwnerChange, getIdentityEpoch, () => 0);
+  const owner = getActiveOwner();
+  const attemptScope = useMemo(() => ({ owner, ownerEpoch }), [owner, ownerEpoch]);
   const camProgress = campaign ? getCampaignProgress(campaign.id) : null;
   const chProgress  = campaign ? getChapterProgress(campaign.id, chapterId) : null;
 
+  const requestedChapterReview = search.review === "chapter";
+  const wholeCampaignReview = !!camProgress?.completed;
+  const chapterReviewAllowed = !!campaign && !!chapter && !!chProgress?.completed && isChapterUnlocked(campaign, chapter);
+  const rejectedReview = requestedChapterReview && !wholeCampaignReview && !chapterReviewAllowed;
+  const reviewMode = wholeCampaignReview || (requestedChapterReview && chapterReviewAllowed);
+  // Rejected read requests must not fall through to mutation-capable gameplay while redirecting.
+  const blockGameplay = reviewMode || requestedChapterReview;
+  const admission = useMemo(() => ({ owner, ownerEpoch }), [owner, ownerEpoch, id, chapterId, mode, requestedChapterReview]);
+  const admissionRef = useRef(admission);
+  admissionRef.current = admission;
+  const gameplayAllowedRef = useRef(!blockGameplay);
+  gameplayAllowedRef.current = !blockGameplay;
+  const completionAdmissionRef = useRef<typeof admission | null>(null);
+  const canMutate = () => activeSaveRef.current && !blockGameplay && gameplayAllowedRef.current && admissionRef.current === admission &&
+    getIdentityEpoch() === ownerEpoch && getActiveOwner() === owner;
+
   // PR2: strict progression. We only track a *correct* ack (gates the "Next" button).
   // Wrong answers never enter pendingAck — the activity stays open for retry.
-  const [pendingAck, setPendingAck] = useState<Record<string, "correct" | undefined>>({});
-  const [wrongFlash, setWrongFlash] = useState<Record<string, number>>({}); // activityId → attempt count (drives shake/feedback)
-  const [outOfHeartsOpen, setOutOfHeartsOpen] = useState(false);
+  const [pendingAck, setPendingAck] = useScopedTransientMap<"correct" | undefined>(attemptScope);
+  const [wrongFlash, setWrongFlash] = useScopedTransientMap<number>(attemptScope); // activityId → attempt count (drives shake/feedback)
+  const [heartAdmission, setHeartAdmission] = useState<typeof admission | null>(null);
   const [completionOpen, setCompletionOpen] = useState(false);
+  const openHearts = () => {
+    if (!canMutate()) return;
+    setHeartAdmission(admission);
+  };
 
   // Effective hearts derived from profile.
   const effectiveHearts = useMemo(() => getEffectiveHearts(profile), [profile, progressTick]);
@@ -136,26 +176,25 @@ function ImportedChapterPlayer() {
 
   // Auto-surface the out-of-hearts modal the first time we mount with 0 hearts.
   useEffect(() => {
-    if (heartsDepleted) setOutOfHeartsOpen(true);
+    if (!blockGameplay && heartsDepleted) openHearts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [heartsDepleted]);
+  }, [heartsDepleted, blockGameplay, admission]);
 
   // PR2 anti-skip: hard URL guard. If this chapter is locked, redirect to overview.
   // Exception: if the campaign is already fully completed, all chapters are
   // freely browsable in review mode — never redirect.
-  const reviewMode = !!camProgress?.completed;
   const navigate = useNavigate();
   useEffect(() => {
     if (!campaign || !chapter) return;
-    if (!reviewMode && !isChapterUnlocked(campaign, chapter)) {
+    if (rejectedReview || (!reviewMode && !isChapterUnlocked(campaign, chapter))) {
       navigate({ to: "/campaigns/imported/$id", params: { id: campaign.id }, replace: true });
       return;
     }
     // PR3: persist resume pointer the moment we enter this chapter.
-    if (!reviewMode) {
+    if (!blockGameplay) {
       setActivePosition({ campaignId: campaign.id, chapterId: chapter.id });
     }
-  }, [campaign, chapter, navigate, reviewMode]);
+  }, [campaign, chapter, navigate, reviewMode, rejectedReview, blockGameplay, ownerEpoch]);
 
   // Memory Engine — keep the review bank in sync with what the player has
   // actually finished (published snapshot + local progress ledger), then
@@ -164,14 +203,15 @@ function ImportedChapterPlayer() {
   // completion/allDone.
   const [bankTick, setBankTick] = useState(0);
   useEffect(() => {
+    if (blockGameplay) return;
     let alive = true;
     harvestCampaignIntoBank(campaign ?? null);
     void refreshMemoryBank().then(() => { if (alive) setBankTick(t => t + 1); });
     return () => { alive = false; };
-  }, [campaign?.id]);
+  }, [campaign?.id, blockGameplay, ownerEpoch]);
 
   const plan = useMemo(() => {
-    if (!chapter || reviewMode) return null;
+    if (!chapter || blockGameplay) return null;
     // Re-selection is only ever allowed BEFORE the chapter is started, so a
     // review can never appear behind the player's current position.
     const started = (chProgress?.completedActivityIds.length ?? 0) > 0;
@@ -180,7 +220,7 @@ function ImportedChapterPlayer() {
       Date.now(), { allowReselect: !started },
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [campaign?.id, chapter?.id, chapter?.activities.map(a => a.id).join("|"), reviewMode, progressTick, bankTick]);
+  }, [campaign?.id, chapter?.id, chapter?.activities.map(a => a.id).join("|"), blockGameplay, ownerEpoch, progressTick, bankTick]);
 
 
   const runtimeActivities = useMemo(() => {
@@ -208,6 +248,7 @@ function ImportedChapterPlayer() {
     return <AppShell><div className="px-5 pt-20 text-center text-muted-foreground">جاري التحميل…</div></AppShell>;
   }
   if (!campaign || !chapter) throw notFound();
+  if (rejectedReview) return null;
 
   const runtimeStep = runtimeActivities[currentIdx];
   const activityIsReview = isReviewMarker(runtimeStep);
@@ -224,11 +265,12 @@ function ImportedChapterPlayer() {
   const wrongAttempts = activity ? (wrongFlash[activity.id] ?? 0) : 0;
 
   const onResolve = async (correct: boolean, meta?: { viaReveal?: boolean; skipped?: boolean }) => {
-    if (!activity) return;
+    if (!canMutate() || !activity) return;
 
     // PR1: hard guard against rapid duplicate submissions.
-    if (resolveLockRef.current) return;
-    resolveLockRef.current = true;
+    if (resolveLockRef.current?.scope === attemptScope) return;
+    const resolveLock = { scope: attemptScope };
+    resolveLockRef.current = resolveLock;
     const epoch = getIdentityEpoch();
     try {
 
@@ -236,7 +278,7 @@ function ImportedChapterPlayer() {
     // Skipping an optional reflective moment is not an answer and costs no
     // heart, so it is never blocked by this gate.
     if (heartsDepleted && !meta?.skipped) {
-      setOutOfHeartsOpen(true);
+      openHearts();
       return;
     }
 
@@ -250,11 +292,13 @@ function ImportedChapterPlayer() {
       const toLose = Math.max(1, Math.min(1, hearts));
       const attemptKey = `act:${campaign!.id}:${chapter!.id}:${activity.id}:${wrongAttempts}`;
       for (let i = 0; i < toLose; i++) loseHeartOnce(attemptKey);
+      // Profile callbacks can synchronously retire this owner before UI/resume writes.
+      if (!canMutate()) return;
       setWrongFlash(prev => ({ ...prev, [activity.id]: (prev[activity.id] ?? 0) + 1 }));
       // Persist resume position on the current (still-open) activity.
       setActivePosition({ campaignId: campaign!.id, chapterId: chapter!.id, activityId: activity.id });
       if (effectiveHearts - toLose <= 0) {
-        setTimeout(() => setOutOfHeartsOpen(true), 250);
+        setTimeout(() => { if (activeSaveRef.current && canMutate()) openHearts(); }, 250);
       }
       return; // do NOT call recordActivity / pendingAck / advance
     }
@@ -281,7 +325,7 @@ function ImportedChapterPlayer() {
       xpEarned: projectedChapter?.xpEarned ?? 0, coinsEarned: projectedChapter?.coinsEarned ?? 0,
       completed: projectedChapter?.completed ?? false,
     });
-    if (!activeSaveRef.current || getIdentityEpoch() !== epoch) return;
+    if (!activeSaveRef.current || !canMutate() || getIdentityEpoch() !== epoch) return;
     if (!saveAccepted(ack) && !(ack.reason === "buffered_no_session" && !profile.loggedIn)) {
       toast.error("تعذر حفظ تقدم الفصل. حاول مجددًا؛ لم تُمنح مكافآت جديدة.");
       return;
@@ -379,16 +423,19 @@ function ImportedChapterPlayer() {
     }
 
     if (newlyCampaign) {
-      setTimeout(() => { if (activeSaveRef.current && getIdentityEpoch() === epoch) setCompletionOpen(true); }, 350);
+      completionAdmissionRef.current = admission;
+      setTimeout(() => {
+        if (activeSaveRef.current && getIdentityEpoch() === epoch && admissionRef.current === admission) setCompletionOpen(true);
+      }, 350);
     }
     bump();
-    } catch { if (activeSaveRef.current) toast.error("تعذر حفظ تقدم الفصل. حاول مجددًا."); }
-    finally { resolveLockRef.current = false; }
+    } catch { if (canMutate()) toast.error("تعذر حفظ تقدم الفصل. حاول مجددًا."); }
+    finally { if (resolveLockRef.current === resolveLock) resolveLockRef.current = null; }
   };
 
   // PR2: only advances after a correct answer (or on activities without validation).
   const acknowledgeAndAdvance = () => {
-    if (!activity || currentAck !== "correct") return;
+    if (!canMutate() || !activity || currentAck !== "correct") return;
     setPendingAck(prev => {
       const next = { ...prev };
       delete next[activity.id];
@@ -401,7 +448,7 @@ function ImportedChapterPlayer() {
   // Runs when the player finishes (or skips) the injected review card.
   // Never touches campaign progress, hearts, dinars, or unlocks.
   const onReviewDone = (outcome: { correct: boolean | null; skipped: boolean }) => {
-    if (!reviewMarker || !plan) return;
+    if (!canMutate() || !reviewMarker || !plan) return;
     const now = Date.now();
     const live = findItem(reviewMarker.reviewItemId);
     // Skip: no history mutation, no XP, but still cap the daily slot so a
@@ -535,7 +582,7 @@ function ImportedChapterPlayer() {
                 لا توجد أنشطة في هذا الفصل بعد.
               </div>
             ) : reviewMode ? (
-              <ReviewChapterView campaign={campaign} chapter={chapter} />
+              <ReviewChapterView campaign={campaign} chapter={chapter} partial={!wholeCampaignReview} completedActivityIds={chProgress?.completedActivityIds ?? []} />
             ) : allDone ? (() => {
               // Canonical chapter totals: exact XP/dinars/unlocks the
               // player received while completing this chapter (activity
@@ -569,7 +616,7 @@ function ImportedChapterPlayer() {
                     <Heart className="size-3.5" />
                     <span className="flex-1">نفدت قلوبك — لا يمكنك بدء نشاط جديد الآن.</span>
                     <button
-                      onClick={() => setOutOfHeartsOpen(true)}
+                      onClick={() => openHearts()}
                       className="rounded-md border border-rose-400/40 bg-rose-500/20 px-2 py-0.5 text-[11px] font-bold"
                     >
                       التفاصيل
@@ -591,14 +638,14 @@ function ImportedChapterPlayer() {
                     }
                     return (
                       <ReviewActivity
-                        key={reviewMarker.runtimeId}
+                        key={JSON.stringify([owner, ownerEpoch, reviewMarker.runtimeId])}
                         item={liveItem}
                         onDone={onReviewDone}
                       />
                     );
                   })() : activity ? (
                     <ActivityRenderer
-                      key={`${activity.id}:${wrongAttempts}`}
+                      key={JSON.stringify([owner, ownerEpoch, activity.id, wrongAttempts])}
                       activity={activity}
                       onResolve={onResolve}
                       onAdvance={acknowledgeAndAdvance}
@@ -641,13 +688,13 @@ function ImportedChapterPlayer() {
       </ReadingScale>
 
 
-      <OutOfHeartsModal open={outOfHeartsOpen} onClose={() => setOutOfHeartsOpen(false)} />
+      <OutOfHeartsModal open={!blockGameplay && heartAdmission === admission} onClose={() => setHeartAdmission(null)} />
 
       {camProgress && (() => {
         const summary = computeCampaignRewardSummary(campaign, { isCampaignCompleted: true });
         return (
           <CampaignCompleteModal
-            open={completionOpen}
+            open={!requestedChapterReview && completionAdmissionRef.current === admission && completionOpen}
             onClose={() => setCompletionOpen(false)}
             campaignId={campaign.id}
             campaignTitle={campaign.title}
@@ -753,27 +800,37 @@ function ChapterCompletePanel(props: {
 function ReviewChapterView({
   campaign,
   chapter,
+  partial,
+  completedActivityIds,
 }: {
   campaign: Campaign;
   chapter: CampaignChapter;
+  partial: boolean;
+  completedActivityIds: readonly string[];
 }) {
   const next = nextChapterAfter(campaign, chapter);
+  const nextReview = next && getChapterProgress(campaign.id, next.id).completed && isChapterUnlocked(campaign, next);
+  const visibleActivities = partial
+    ? chapter.activities.filter(activity => completedActivityIds.includes(activity.id))
+    : chapter.activities;
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-[12px] text-emerald-100">
         <Check className="me-1 inline size-3.5" />
-        أنهيتَ هذه الحملة — أنت الآن في وضع المراجعة. تصفّح المحتوى دون أثر على تقدمك.
+        {partial ? "أنهيتَ هذا الفصل — راجع الأنشطة المكتملة دون أثر على تقدمك." : "أنهيتَ هذه الحملة — أنت الآن في وضع المراجعة. تصفّح المحتوى دون أثر على تقدمك."}
       </div>
 
-      {chapter.activities.map((act) => (
+      {visibleActivities.map((act) => (
         <ActivityReviewCard key={act.id} activity={act} />
       ))}
 
+      {visibleActivities.length === 0 && <p>لا تتوفر أنشطة مكتملة موثقة للمراجعة في هذا الفصل.</p>}
       <div className="flex flex-col gap-2 pt-2">
         {next && (
           <Link
             to="/campaigns/imported/$id/chapter/$chapter"
             params={{ id: campaign.id, chapter: next.id }}
+            search={nextReview ? { review: "chapter" } : {}}
             className="motion-tap inline-flex items-center justify-center gap-1 rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground shadow-gold"
           >
             <Check className="size-4" /> الفصل التالي
