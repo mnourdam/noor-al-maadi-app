@@ -27,7 +27,7 @@ it('reactively switches every subscriber and persists only the device preference
   expect(screen.getByTestId('language').textContent).toBe('en');
   expect(localStorage.getItem(UI_LANGUAGE_KEY)).toBe('en');
   expect(Object.keys(localStorage)).toEqual([UI_LANGUAGE_KEY]);
-  expect(screen.getByText(/Pages, popovers and content remain in Arabic/)).toBeTruthy();
+  expect(screen.getByText("Preview includes navigation, main status labels, achievement text and achievement tab/detail controls. Other profile tabs, interfaces and content remain in Arabic.", { exact: true })).toBeTruthy();
 });
 it('rejects unsupported runtime locale without persisting or notifying', () => {
   render(<Probe />); act(() => setUiLanguage('fr' as any));

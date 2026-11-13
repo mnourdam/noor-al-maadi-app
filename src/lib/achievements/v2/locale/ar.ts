@@ -5,7 +5,7 @@
  * `CANONICAL_DEFINITIONS` MUST have a title and description key here — the
  * registry validator fails the boot otherwise.
  */
-export const ar: Record<string, string> = {
+export const ar = {
   // ===== Campaigns =====
   "ach.ach_campaign_1.title":  "أوّل الحملات",
   "ach.ach_campaign_1.description":  "أتمم أول حملة تاريخية.",
@@ -119,4 +119,4 @@ export const ar: Record<string, string> = {
   "ach.ach_legend_master.description":  "أتمم 10 حملات و100 أثر و100 يوم متتالٍ.",
   "ach.ach_legend_eternal.title": "خالد في الإرث",
   "ach.ach_legend_eternal.description": "ابلغ المستوى العاشر مع 365 يومًا متتاليًا.",
-};
+} satisfies Record<string, string>;

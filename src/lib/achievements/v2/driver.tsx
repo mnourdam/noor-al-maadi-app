@@ -12,6 +12,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useUiLanguage } from "@/lib/ui-language/store";
 import { useProfile } from "@/lib/profile";
 import { useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
 import { levelFor } from "@/lib/progression";
@@ -288,6 +289,7 @@ export function AchievementEngineBoot() {
  * `useAchievementLegacyEvals` bridge was deleted in Slice 4.
  */
 export function useAchievementViews(): AchievementView[] {
+  const { language } = useUiLanguage();
   const museumIds = useMuseumPresentationIds();
   const subscribe = (cb: () => void) => onEngineTick(cb);
   const version = useSyncExternalStore(
@@ -299,10 +301,11 @@ export function useAchievementViews(): AchievementView[] {
     // `version` is intentionally read to keep memo cache invalidation aligned.
     void version;
     return projectMuseumViews(buildViews({
+      locale: language,
       registry,
       evaluation: getEvaluation(),
       persisted: getPersisted(),
     }), museumIds, getSnapshot());
-  }, [version, museumIds]);
+  }, [version, museumIds, language]);
 }
 

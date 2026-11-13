@@ -174,7 +174,7 @@ export function validate(
   const seenIds = new Set<AchievementId>();
   const seenAnalytics = new Map<string, AchievementId>();
   const idSet = new Set(definitions.map((d) => d.id));
-  const i18nKeys = knownI18nKeys();
+  const i18nKeys = knownI18nKeys("ar");
   // sortOrder collisions are scoped to (category, family) — same tier in a
   // different family is not a real collision.
   const seenSortKey = new Map<string, AchievementId>();

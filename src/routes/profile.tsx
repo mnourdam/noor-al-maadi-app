@@ -1,8 +1,10 @@
+import { useUiLanguage } from "@/lib/ui-language/store";
+import { achievementCategoryLabel, achievementRarityLabel, achievementReceiptDate } from "@/lib/achievements/v2/chrome";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { countMyUnreadFeedback } from "@/lib/feedback/api";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 import {
   Crown, Flame, Star, Trophy, LogOut, Volume2, BellRing, Sparkles, Info,
@@ -154,7 +156,7 @@ function ProfilePage() {
   const [nameMsg, setNameMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [resetting, setResetting] = useState(false);
-  const [achDetail, setAchDetail] = useState<AchievementView | null>(null);
+  const [achDetailId, setAchDetailId] = useState<string | null>(null);
 
   // ===== Username editing =====
   const currentUsername = account?.username ?? "";
@@ -204,6 +206,7 @@ function ProfilePage() {
     () => new Map<string, AchievementView>(achievementViews.map((v) => [v.id, v])),
     [achievementViews],
   );
+  const achDetail = achDetailId ? achViewMap.get(achDetailId) ?? null : null;
   const earnedCount = achievementViews.filter(isEarned).length;
 
   // Deep-link: `?achievement=<id>` (e.g. from notifications or the retired
@@ -213,7 +216,7 @@ function ProfilePage() {
     if (!id) return;
     const view = achViewMap.get(id);
     if (!view) return;
-    setAchDetail(view);
+    setAchDetailId(view.id);
     void navigate({
       search: (prev: z.infer<typeof profileSearchSchema>) => ({ ...prev, achievement: undefined }),
       replace: true,
@@ -493,7 +496,7 @@ function ProfilePage() {
 
           {tab === "progress" && <ProgressTab profile={profile} lvl={lvl} />}
           {tab === "achievements" && (
-            <AchievementsTab views={achievementViews} onOpen={(v) => setAchDetail(v)} />
+            <AchievementsTab views={achievementViews} onOpen={(v) => setAchDetailId(v.id)} />
           )}
           {/* seasons tab removed in Phase 3B */}
           {/* referrals tab removed in Phase 2 */}
@@ -555,7 +558,7 @@ function ProfilePage() {
         {achDetail && (
           <AchievementDialog
             view={achDetail}
-            onClose={() => setAchDetail(null)}
+            onClose={() => setAchDetailId(null)}
           />
         )}
       </Screen>
@@ -969,6 +972,7 @@ function AchievementsTab({
   views: AchievementView[];
   onOpen: (v: AchievementView) => void;
 }) {
+  const { language, direction, messages } = useUiLanguage();
   const grouped = useMemo(() => {
     return CATEGORY_ORDER.map((catId) => {
       const items = views
@@ -984,15 +988,15 @@ function AchievementsTab({
   const totalPct = views.length ? Math.round((totalEarned / views.length) * 100) : 0;
 
   return (
-    <div className="space-y-4">
+    <div lang={language} dir={direction} className="space-y-4">
       <div className="rounded-2xl border border-gold/25 bg-surface p-4">
         <div className="flex items-center gap-3">
           <div className="grid size-10 place-items-center rounded-xl bg-gradient-gold text-primary-foreground">
             <Trophy className="size-5" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="font-display text-sm font-bold">خزانة الإنجازات</p>
-            <p className="text-[11px] text-muted-foreground">{totalEarned} من {views.length} مفتوحة</p>
+            <p className="font-display text-sm font-bold">{messages.achCabinet}</p>
+            <p className="text-[11px] text-muted-foreground">{messages.achUnlockedCount.replace("{earned}", String(totalEarned)).replace("{total}", String(views.length))}</p>
           </div>
           <span className="font-display text-lg text-gold">{totalPct}%</span>
         </div>
@@ -1010,7 +1014,7 @@ function AchievementsTab({
                 <Icon className="size-5" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="font-display text-sm font-bold">{meta.name}</p>
+                <p className="font-display text-sm font-bold">{achievementCategoryLabel(catId, messages)}</p>
                 <p className="text-[11px] text-muted-foreground">{earned}/{items.length} · {pct}%</p>
               </div>
               <div className="w-20 h-1.5 overflow-hidden rounded-full bg-white/10">
@@ -1034,7 +1038,7 @@ function AchievementsTab({
                       {secret ? <Lock className="size-5" /> : <ItemIcon className="size-5" />}
                     </div>
                     <p className="font-display line-clamp-1 text-[10px] font-bold leading-tight">
-                      {secret ? "إنجاز سرّي" : (v.displayTitle ?? v.id)}
+                      {secret ? messages.achSecretTitle : (v.displayTitle ?? v.id)}
                     </p>
                     {!earnedItem && !secret && (
                       <div className="w-full h-0.5 overflow-hidden rounded-full bg-white/10">
@@ -1063,6 +1067,8 @@ function AchievementDialog({
   view: AchievementView;
   onClose: () => void;
 }) {
+  const { language, direction, messages } = useUiLanguage();
+  const headingId = useId();
   const earned = isEarned(view);
   const secret = view.state === "locked-secret" && !earned;
   const style = secret ? SECRET_STYLE : RARITY_STYLE[view.rarity];
@@ -1073,25 +1079,25 @@ function AchievementDialog({
 
   return (
     <ModalPortal>
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 animate-fade-in" role="dialog" aria-modal="true" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 animate-fade-in" role="dialog" aria-modal="true" lang={language} dir={direction} aria-labelledby={headingId} onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-sm overflow-hidden rounded-3xl border border-gold/30 bg-surface p-6 shadow-elegant animate-scale-in">
-        <button onClick={onClose} aria-label="إغلاق" className="absolute top-3 left-3 grid size-8 place-items-center rounded-full border border-white/10 bg-background/60 text-muted-foreground hover:text-foreground">
+        <button onClick={onClose} aria-label={messages.close} className="absolute top-3 left-3 grid size-8 place-items-center rounded-full border border-white/10 bg-background/60 text-muted-foreground hover:text-foreground">
           <X className="size-4" />
         </button>
         <div className="flex flex-col items-center text-center">
           <div className={`grid size-20 place-items-center rounded-full border-2 ${style.ring} ${earned ? "bg-gradient-gold text-primary-foreground" : "bg-background text-foreground/60"}`}>
             {secret ? <Lock className="size-8" /> : <Icon className="size-8" />}
           </div>
-          <span className={`mt-3 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold ${style.chip}`}>{style.label}</span>
-          <h3 className="font-display mt-2 text-lg font-bold">
-            {secret ? "إنجاز سرّي" : (view.displayTitle ?? view.id)}
+          <span className={`mt-3 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold ${style.chip}`}>{achievementRarityLabel(view.rarity, secret, messages)}</span>
+          <h3 id={headingId} className="font-display mt-2 text-lg font-bold">
+            {secret ? messages.achSecretTitle : (view.displayTitle ?? view.id)}
           </h3>
           <p className="mt-1 text-[12px] leading-6 text-muted-foreground">
-            {secret ? "اكتشفه بنفسك خلال رحلتك." : (view.displayDescription ?? "")}
+            {secret ? messages.achSecretDescription : (view.displayDescription ?? "")}
           </p>
           {view.ownershipPresentationOnly && (
             <p className="mt-2 text-[11px] leading-5 text-muted-foreground">
-              تحقق شرط الاقتناء. لم يُؤكد صرف مكافأة هذا الإنجاز بعد.
+              {messages.achOwnershipUnconfirmed}
             </p>
           )}
         </div>
@@ -1099,7 +1105,7 @@ function AchievementDialog({
         {!secret && (
           <div className="mt-5">
             <div className="mb-1 flex items-center justify-between text-[11px] text-muted-foreground">
-              <span>التقدم</span>
+              <span>{messages.achProgress}</span>
               <span className="font-display text-gold">{pct}%</span>
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-white/10">
@@ -1107,7 +1113,7 @@ function AchievementDialog({
             </div>
             {earned && view.unlockedAt && (
               <p className="mt-2 text-[10px] text-gold">
-                فُتح في {new Date(view.unlockedAt).toLocaleDateString("ar-EG", { year: "numeric", month: "short", day: "numeric" })}
+                {messages.achUnlockedOn} <bdi lang="ar" dir="rtl">{achievementReceiptDate(view.unlockedAt)}</bdi>
               </p>
             )}
           </div>
@@ -1115,31 +1121,31 @@ function AchievementDialog({
 
         {hasRewards && !secret && (
           <div className="mt-5">
-            <p className="mb-2 text-[10px] tracking-[0.18em] text-gold/80">المكافآت</p>
+            <p className="mb-2 text-[10px] tracking-[0.18em] text-gold/80">{messages.achRewards}</p>
             <div className="flex flex-wrap gap-1.5">
               {rewards.xp ? (
                 <span className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-gold/5 px-2.5 py-1 text-[11px] text-gold">
-                  <Sparkles className="size-3" /> +{rewards.xp} نقطة
+                  <Sparkles className="size-3" /> +{rewards.xp} {messages.achPointsUnit}
                 </span>
               ) : null}
               {rewards.dinars ? (
                 <span className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-gold/5 px-2.5 py-1 text-[11px] text-gold">
-                  <Coins className="size-3" /> +{rewards.dinars} دينار
+                  <Coins className="size-3" /> +{rewards.dinars} {messages.achDinarsUnit}
                 </span>
               ) : null}
               {rewards.titleId ? (
                 <span className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-gold/5 px-2.5 py-1 text-[11px] text-gold">
-                  <Crown className="size-3" /> لقب: {rewards.titleId}
+                  <Crown className="size-3" /> {messages.achRewardTitle} <bdi lang="ar" dir="rtl">{rewards.titleId}</bdi>
                 </span>
               ) : null}
               {rewards.museumItemId ? (
                 <span className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-gold/5 px-2.5 py-1 text-[11px] text-gold">
-                  <Landmark className="size-3" /> قطعة متحف
+                  <Landmark className="size-3" /> {messages.achMuseumReward}
                 </span>
               ) : null}
               {rewards.cosmeticId ? (
                 <span className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-gold/5 px-2.5 py-1 text-[11px] text-gold">
-                  <Medal className="size-3" /> زخرفة
+                  <Medal className="size-3" /> {messages.achCosmeticReward}
                 </span>
               ) : null}
             </div>

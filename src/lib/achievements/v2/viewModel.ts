@@ -8,7 +8,7 @@
  * Pure function. No side effects.
  */
 
-import { resolveI18n } from "./i18n";
+import { resolveI18n, type LocaleId } from "./i18n";
 import type { Registry } from "./registry";
 import type {
   AchievementDefinition,
@@ -20,6 +20,8 @@ import type {
 } from "./types";
 
 export interface ViewModelInput {
+  /** Display only; never participates in eligibility or persistence. */
+  locale?: LocaleId;
   registry: Registry;
   evaluation: EvaluationResult;
   persisted: ReadonlyMap<AchievementId, UserAchievementRecord>;
@@ -48,13 +50,14 @@ export function buildViews(input: ViewModelInput): AchievementView[] {
       sortOrder: def.sortOrder,
       family: def.family,
       tier: def.tier,
-      displayTitle: showText ? resolveI18n(def.i18n.titleKey) : null,
-      displaySubtitle: showText ? resolveI18n(def.i18n.subtitleKey) : null,
+      displayTitle: showText ? resolveI18n(def.i18n.titleKey, input.locale) : null,
+      displaySubtitle: showText ? resolveI18n(def.i18n.subtitleKey, input.locale) : null,
       displayDescription: showText
         ? resolveI18n(
             isUnlocked
               ? def.i18n.descriptionKey
               : def.i18n.lockedDescriptionKey ?? def.i18n.descriptionKey,
+            input.locale,
           )
         : null,
       media: def.media,
