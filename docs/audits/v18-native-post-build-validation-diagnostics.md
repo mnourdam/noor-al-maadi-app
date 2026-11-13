@@ -1,0 +1,9 @@
+# Post-Gradle validation diagnostics only
+
+Local parent `1aa7306d` tree `1d927565473c920093f603472c8d6ac08fed36f0` equals public `7af3b6931324f724340be25ba259f2a3f9f411bc`. Its actual native run `43418916169` retained configuration_or_validation at gradle_debug, not command exit/timeout. That stage previously persisted across subsequent APK/file/asset/tool checks. The exact failed check is not established.
+
+This diagnostic-only extraction assigns fixed substages for APK presence, ZIP open, asset membership, asset hashes and pinned build-tools presence. Fixed allowlisted reason codes distinguish missing APK, invalid ZIP, duplicate asset members, mismatched membership, mismatched hashes and missing pinned tools. Existing existence, exact membership, duplicate rejection, byte hashes and pinned-directory requirements are preserved. No command, timeout, build flag, signing or application behavior changes.
+
+Membership failure retains only bounded expected/actual/missing/unexpected counts and a fixed boolean indicating whether assets/public/.vite/manifest.json is among missing members. No member names, paths, content or exception messages are retained. Counts cap at one million; false does not identify another missing file. The repository AAPT hidden-asset filter and Vite build-manifest generation suggest a testable mismatch candidate, not an established cause. Exact equality continues to fail even if only this manifest is missing.
+
+48 Python controls pass locally, including actual tiny synthetic ZIP cases for every distinction, successful unchanged bytes, native non-asset members, missing/present tools and a missing-manifest negative control. Existing failure nonzero/result retention controls remain. No local Gradle, APK build/install, emulator or publication occurred; a reviewed diagnostic run must measure the cause before any repair.

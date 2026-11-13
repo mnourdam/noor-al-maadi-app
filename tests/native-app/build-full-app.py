@@ -53,6 +53,39 @@ def gradle_indicators(*outputs):
   parts.append(value.lower())
  text=' '.join(parts)
  return {key:any(token in text for token in tokens) for key,tokens in GRADLE_INDICATORS.items()}
+POST_BUILD_REASONS=frozenset({'apk_missing','apk_zip_invalid','apk_asset_duplicates','apk_asset_membership','apk_asset_hash','pinned_build_tools_missing'})
+class PostBuildValidation(ValueError):
+ def __init__(self,reason):
+  if reason not in POST_BUILD_REASONS:raise ValueError('invalid diagnostic reason')
+  self.reason=reason
+  super().__init__(reason)
+def post_build_require(condition,reason):
+ if not condition:raise PostBuildValidation(reason)
+def verify_built_assets(apk,assets):
+ STATE.pop('asset_membership_diagnostics',None)
+ STATE['stage']='apk_output_presence'
+ post_build_require(apk.is_file(),'apk_missing')
+ STATE['stage']='apk_zip_open'
+ try:
+  with zipfile.ZipFile(apk) as archive:
+   names=[n for n in archive.namelist() if n.startswith('assets/public/') and not n.endswith('/') or n=='assets/capacitor.config.json']
+   STATE['stage']='apk_asset_membership'
+   post_build_require(len(names)==len(set(names)),'apk_asset_duplicates')
+   if set(names)!=set(assets):
+    missing=set(assets)-set(names);unexpected=set(names)-set(assets)
+    STATE['asset_membership_diagnostics']={'expected_count':min(len(assets),1000000),'actual_count':min(len(names),1000000),'missing_count':min(len(missing),1000000),'unexpected_count':min(len(unexpected),1000000),'missing_vite_manifest':'assets/public/.vite/manifest.json' in missing}
+    raise PostBuildValidation('apk_asset_membership')
+   STATE['stage']='apk_asset_hashes'
+   post_build_require(all(hashlib.sha256(archive.read(n)).hexdigest()==assets[n] for n in names),'apk_asset_hash')
+ except zipfile.BadZipFile:
+  raise PostBuildValidation('apk_zip_invalid') from None
+
+def require_build_tools(sdk):
+ STATE['stage']='pinned_build_tools_presence'
+ tools=sdk/'build-tools/35.0.0'
+ post_build_require(tools.is_dir(),'pinned_build_tools_missing')
+ return tools
+
 def failure_evidence(error):
  if isinstance(error,subprocess.TimeoutExpired):category='command_timeout'
  elif isinstance(error,subprocess.CalledProcessError):category='command_exit'
@@ -60,6 +93,7 @@ def failure_evidence(error):
  elif isinstance(error,OSError):category='operating_system_error'
  else:category='unexpected_exception'
  evidence={'category':category}
+ if isinstance(error,PostBuildValidation):evidence['validation_reason']=error.reason
  source=os.environ.get('GITHUB_SHA','')
  if re.fullmatch(r'[0-9a-f]{40}',source):evidence['source_sha']=source
  if isinstance(error,subprocess.CalledProcessError):
@@ -110,13 +144,10 @@ def build(root):
  cfg=json.loads((asset_root/'capacitor.config.json').read_text())
  p.require(cfg.get('appId')==p.APP_ID and cfg.get('server',{}).get('androidScheme')=='https' and not cfg.get('server',{}).get('url') and not cfg.get('server',{}).get('allowNavigation') and cfg.get('android',{}).get('allowMixedContent') is False,'unsafe native server configuration')
  run(['bash','android/gradlew','-p','android','--no-daemon','assembleDebug'],timeout=1200)
- apk=root/'android/app/build/outputs/apk/debug/app-debug.apk';p.require(apk.is_file(),'APK missing')
- with zipfile.ZipFile(apk) as archive:
-  names=[n for n in archive.namelist() if n.startswith('assets/public/') and not n.endswith('/') or n=='assets/capacitor.config.json']
-  p.require(len(names)==len(set(names)) and set(names)==set(assets),'APK asset membership mismatch')
-  p.require(all(hashlib.sha256(archive.read(n)).hexdigest()==assets[n] for n in names),'APK assets differ from built source')
+ apk=root/'android/app/build/outputs/apk/debug/app-debug.apk'
+ verify_built_assets(apk,assets)
  sdk=Path(env.get('ANDROID_SDK_ROOT') or env.get('ANDROID_HOME',''))
- tools=sdk/'build-tools/35.0.0';p.require(tools.is_dir(),'pinned Android build tools35.0.0 missing');badging=run([str(tools/'aapt'),'dump','badging',str(apk)]);permissions=run([str(tools/'aapt'),'dump','permissions',str(apk)])
+ tools=require_build_tools(sdk);badging=run([str(tools/'aapt'),'dump','badging',str(apk)]);permissions=run([str(tools/'aapt'),'dump','permissions',str(apk)])
  p.require("package: name='"+p.APP_ID+"'" in badging,'package isolation failed')
  p.require('android.permission.INTERNET' not in permissions,'INTERNET merged into APK')
  manifest=run([str(tools/'aapt'),'dump','xmltree',str(apk),'AndroidManifest.xml'])
