@@ -1,0 +1,36 @@
+{
+  "compiler": "0.28.1",
+  "compiler_integrity": "sha512-HrJrvZv5ayxBzPfwphOoNzkzOIIlifzk0KJrGK2c8R4+LKpMtpYLQeUdjnwjWv/LZlkH2laZk+4w78pi99D4Vw==",
+  "official_revision": "872757184c35626fef3d84f35e0b3c4fa82af1b6",
+  "tsconfig_sha256": "b8c6c4bc7b12b1bacbcfda6c537523f52fafa1eab48f6a3e5e65bf22e5b355ae",
+  "tree_inventory_sha256": "4325735eb4092a1eba5509c4923548e759a6370f2b6ea86283c01dc4d447c318",
+  "script_sha256": "e515080a07109b571047ef275db3cf7777c9c33adfb8f0bf034c12ed9b89cf39",
+  "comparisons": [
+    {
+      "module": "storage/uploader",
+      "input_sha256": "e44e5458f70c9279e81f66c83ca82ef31de6fe84f1917903615095df5280716e",
+      "compiled_bytes": 18054,
+      "compiled_sha256": "ca2d0c3c5ebfcc87288bbce37e964caead2fd6910db405a5618ff3425a54b702",
+      "observed_sha256": "ca2d0c3c5ebfcc87288bbce37e964caead2fd6910db405a5618ff3425a54b702",
+      "matches": true
+    },
+    {
+      "module": "storage/database/pg",
+      "input_sha256": "d3bcfa58b849cfe17e7fa311ecc3b119f50e0b41fc43e10024d761b03851496e",
+      "compiled_bytes": 91215,
+      "compiled_sha256": "5dd19ee62c62810fe0468434473beaeeb96af0ea54c0e31f2e7a49de8e717b7c",
+      "observed_sha256": "5dd19ee62c62810fe0468434473beaeeb96af0ea54c0e31f2e7a49de8e717b7c",
+      "matches": true
+    },
+    {
+      "module": "internal/hashing/string-to-int",
+      "input_sha256": "bab1e69c782912ba45b4a781e20883cc8df21a58614d07b29a2907f8827f272a",
+      "compiled_bytes": 1292,
+      "compiled_sha256": "608f76b3aca24e7e17395e5dd0b8857919a60f82e90813057b967b41b0f3d630",
+      "observed_sha256": "608f76b3aca24e7e17395e5dd0b8857919a60f82e90813057b967b41b0f3d630",
+      "matches": true
+    }
+  ],
+  "all_match": true,
+  "target_modules_executed": false
+}
