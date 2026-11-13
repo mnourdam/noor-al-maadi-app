@@ -68,5 +68,5 @@ class GuestDiagnostics(unittest.TestCase):
  def test_runner_failure_only_gate(self):
   source=Path(__file__).with_name('runner.py').read_text()
   self.assertIn("if report['stage']=='boot' and not report['reached']['boot_completed']:",source)
-  self.assertIn('end=time.monotonic()+300',source)
+  self.assertIn('end=time.monotonic()+BOOT_SECONDS',source)
 if __name__=='__main__':unittest.main()

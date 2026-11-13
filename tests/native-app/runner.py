@@ -7,6 +7,7 @@ from urllib.parse import urlparse, urlunparse
 PACKAGE='app.lovable.irth.acceptance'
 ACTIVITY='app.lovable.irth.MainActivity'
 IMAGE='system-images;android-35;default;x86_64'
+BOOT_SECONDS=600
 JOURNEYS={'chapter_images_encyclopedia','museum_profile','content_update_recovery','private_feedback','chapter_reread','english_controls'}
 REASONS={'passed','fixture_missing','not_executed','assertion_failed','transport_blocked','activation_gate','content_incomplete','missing_completed_chapter_fixture','missing_text_activity_fixture','missing_authenticated_service_fixture','missing_update_fixture','missing_owned_artifact_fixture','control_unavailable','image_decode_failed'}
 def record_group(groups,name,status,reason):
@@ -29,7 +30,7 @@ def require_ci():
         raise Failure('ci_context')
 
 HOME_READY = """(()=>{const visible=e=>!!e&&e.getClientRects().length>0;return location.pathname==='/' && visible(document.querySelector("#root a[href='/profile'][aria-label='بطاقة هويتك — الذهاب إلى حسابي']")) && visible(document.querySelector("#root [data-testid='home-stat-investigations'][href='/investigations']")) && !document.querySelector('#irth-boot-splash,.splash-root') && ![...document.querySelectorAll('[role=dialog]')].some(visible)})()"""
-FAILURE_CODES=set('exploratory_deadline exploratory_admission exploratory_snapshot exploratory_prerequisites exploratory_package_present_or_unknown exploratory_identity unplanned_reconnect ci_context source_identity tool_revision debug_redirect firebase_config capacitor_config cleanup_path api_property apk_hash package internet_permission signer duplicate_zip assets_set asset_hash intel_macos_required existing_license_required image_missing hvf_unverified fresh_avd_required existing_devices emulator_exited boot_deadline installed_path installed_hash force_stop_not_observed target_response_limit target_schema foreign_page socket_readiness ambiguous_page target_readiness debug_origin target_detached target_crashed evaluation_error evaluation_deadline javascript_control native_platform native_bridge full_app_readiness check_schema command_failed'.split())
+FAILURE_CODES=set('install_package_present_or_unknown exploratory_deadline exploratory_admission exploratory_snapshot exploratory_prerequisites exploratory_package_present_or_unknown exploratory_identity unplanned_reconnect ci_context source_identity tool_revision debug_redirect firebase_config capacitor_config cleanup_path api_property apk_hash package internet_permission signer duplicate_zip assets_set asset_hash intel_macos_required existing_license_required image_missing hvf_unverified fresh_avd_required existing_devices emulator_exited boot_deadline installed_path installed_hash force_stop_not_observed target_response_limit target_schema foreign_page socket_readiness ambiguous_page target_readiness debug_origin target_detached target_crashed evaluation_error evaluation_deadline javascript_control native_platform native_bridge full_app_readiness check_schema command_failed'.split())
 def category(error):
     if isinstance(error,Failure):return str(error) if str(error) in FAILURE_CODES else 'assertion_failure'
     return type(error).__name__ if isinstance(error,(TimeoutError,subprocess.TimeoutExpired,ValueError)) else 'runtime_error'
@@ -78,6 +79,52 @@ def verify_apk(apk,receipt,sdk,deadline=None):
         for n in selected:
             if hashlib.sha256(z.read(n)).hexdigest()!=r['assets_sha256'][n]:raise Failure('asset_hash')
     return {'apk_sha256':r['apk_sha256'],'source_sha':r['source_sha'],'signer_sha256':r['signer_sha256'].lower()}
+
+def package_absent(device,deadline=None):
+    listing=device.adb('shell','cmd','package','list','packages',timeout=remaining(deadline,5))
+    lines=listing.splitlines()
+    if not lines or any(not re.fullmatch(r'package:[A-Za-z0-9_.]+',line) for line in lines) or 'package:'+PACKAGE in lines:
+        raise Failure('install_package_present_or_unknown')
+
+def installed_digest(device,location,deadline=None):
+    if not re.fullmatch(r'package:/data/app/[^\s]+/base\.apk',location):raise Failure('installed_path')
+    raw=subprocess.run([str(device.sdk/'platform-tools/adb'),'-s',device.serial,'exec-out','cat',location[8:]],capture_output=True,timeout=remaining(deadline,30),check=True).stdout
+    return hashlib.sha256(raw).hexdigest()
+
+def reconcile_install(device,expected):
+    # Independent diagnostic allowance, never retries or turns failure into success.
+    end=time.monotonic()+20
+    result={'scope':'READ_ONLY_AFTER_UNCERTAIN_INSTALL','status':'unavailable'}
+    try:
+        listing=device.adb('shell','cmd','package','list','packages',timeout=remaining(end,5))
+        lines=listing.splitlines()
+        if not lines or any(not re.fullmatch(r'package:[A-Za-z0-9_.]+',line) for line in lines):return result
+        if 'package:'+PACKAGE not in lines:return {**result,'status':'absent'}
+        result['status']='present_unverified'
+        location=device.adb('shell','pm','path',PACKAGE,timeout=remaining(end,5))
+        result['status']='exact_hash' if installed_digest(device,location,end)==expected else 'hash_mismatch'
+    except Exception as error:result['category']=category(error)
+    return result
+
+def install_once(device,apk,expected,receipt,deadline=None,reconcile_device=None):
+    issued=False
+    receipt.update(stage='absence_check',install_issued=False,verified=False)
+    try:
+        package_absent(device,deadline)
+        receipt['stage']='install_command';install_timeout=remaining(deadline,120)
+        receipt['install_issued']=True;issued=True
+        device.adb('install',apk,timeout=install_timeout)
+        receipt['stage']='pm_path'
+        location=device.adb('shell','pm','path',PACKAGE,timeout=remaining(deadline,15))
+        receipt['stage']='installed_hash'
+        if installed_digest(device,location,deadline)!=expected:raise Failure('installed_hash')
+        receipt.update(stage='verified',verified=True)
+    except Exception as error:
+        receipt['failure_category']=category(error)
+        if issued:
+            try:receipt['reconciliation']=reconcile_install(reconcile_device or device,expected)
+            except Exception:receipt['reconciliation']={'status':'unavailable','category':'diagnostic_error'}
+        raise
 
 EMULATOR_INDICATORS={
     'hypervisor_error':('hv_error','hypervisor initialization failed','failed to initialize hvf'),
@@ -149,7 +196,7 @@ class Device:
         command([self.sdk/'cmdline-tools/latest/bin/avdmanager','create','avd','-n','irth-full-acceptance','-k',IMAGE],60,input=b'no\n')
         self.emulator=subprocess.Popen([str(self.sdk/'emulator/emulator'),'-avd','irth-full-acceptance','-port','5580','-accel','on','-no-window','-no-audio','-no-snapshot','-no-boot-anim','-gpu','swiftshader_indirect'],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
         self.output.start(self.emulator.stdout,self.emulator.stderr)
-        end=time.monotonic()+300
+        end=time.monotonic()+BOOT_SECONDS
         while time.monotonic()<end:
             if self.emulator.poll() is not None:raise Failure('emulator_exited')
             try:
@@ -323,8 +370,9 @@ def main():
         api=device.adb('shell','getprop','ro.build.version.sdk')
         if not re.fullmatch(r'[0-9]{1,3}',api):raise Failure('api_property')
         report['android_api']=int(api)
-        report['stage']='install';device.adb('install',args.apk,timeout=120)
-        device.verify_installed(report['apk_sha256']);report['reached']['installed_verified']=True
+        report['stage']='install';report['installation']={}
+        install_once(device,args.apk,report['apk_sha256'],report['installation'])
+        report['reached']['installed_verified']=True
         report['stage']='launch';device.launch();report['reached']['launched']=True;page=Page(device)
         report['stage']='app_readiness';page.readiness();report['reached']['home_ready']=True
         report['result']='READY_NOT_ACCEPTANCE';exit_code=1
