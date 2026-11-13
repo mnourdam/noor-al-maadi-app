@@ -9,8 +9,13 @@ on:
 permissions:
   contents: read
 jobs:
-  actual-app:
+  build:
     if: github.ref == 'refs/heads/v18-01a-outbox-recovery'
+    outputs:
+      artifact_id: ${{ steps.upload.outputs.artifact-id }}
+      artifact_digest: ${{ steps.upload.outputs.artifact-digest }}
+      apk_sha256: ${{ steps.stage.outputs.apk_sha256 }}
+      receipt_sha256: ${{ steps.stage.outputs.receipt_sha256 }}
     runs-on: macos-15-intel
     timeout-minutes: 60
     steps:
@@ -18,6 +23,7 @@ jobs:
         run: echo '{"result":"FAIL","stage":"toolchain_setup","release_ready":false}' > "$RUNNER_TEMP/irth-full-app-result.json"
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
@@ -41,12 +47,87 @@ jobs:
           python3 -m venv "$RUNNER_TEMP/irth-native-python"
           "$RUNNER_TEMP/irth-native-python/bin/python" -m pip install websocket-client==1.8.0
           PYTHONDONTWRITEBYTECODE=1 "$RUNNER_TEMP/irth-native-python/bin/python" -m unittest discover -s tests/native-app -p 'test_*.py' -v
-          node --test tests/native-app/test-transport.mjs
+          node --test tests/native-app/test-transport.mjs tests/native-app/test-artifact-metadata.cjs
       - name: Build fresh actual app with synthetic transport and ephemeral signer
         run: '"$RUNNER_TEMP/irth-native-python/bin/python" tests/native-app/build-full-app.py "$RUNNER_TEMP/irth-full-app" --result "$RUNNER_TEMP/irth-full-app-result.json"'
-      - name: Installed actual app and native journeys
+      - name: Stage exactly the APK and public receipt
+        id: stage
+        run: '"$RUNNER_TEMP/irth-native-python/bin/python" tests/native-app/transfer.py stage --root "$RUNNER_TEMP/irth-apk-transfer" --apk "$RUNNER_TEMP/irth-full-app/android/app/build/outputs/apk/debug/app-debug.apk" --receipt "$RUNNER_TEMP/irth-full-app/apk-receipt.json"'
+      - uses: actions/upload-artifact@v4
+        id: upload
+        with:
+          name: synthetic-apk-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/irth-apk-transfer/
+          if-no-files-found: error
+          retention-days: 1
+      - name: Retain sanitized build result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: actual-android-build-result
+          path: ${{ runner.temp }}/irth-full-app-result.json
+          if-no-files-found: warn
+          retention-days: 7
+  device:
+    needs: build
+    if: github.ref == 'refs/heads/v18-01a-outbox-recovery' && needs.build.result == 'success'
+    runs-on: macos-15-intel
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Initialize sanitized device evidence
+        run: echo '{"result":"FAIL","stage":"device_transfer_setup","release_ready":false}' > "$RUNNER_TEMP/irth-full-app-result.json"
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Bind immutable artifact metadata to this run and source
+        uses: actions/github-script@v7
+        env:
+          EXPECTED_ARTIFACT_ID: ${{ needs.build.outputs.artifact_id }}
+          EXPECTED_ARTIFACT_DIGEST: ${{ needs.build.outputs.artifact_digest }}
+        with:
+          script: |
+            const id = process.env.EXPECTED_ARTIFACT_ID;
+            if (!/^[1-9][0-9]*$/.test(id) || !Number.isSafeInteger(Number(id))) throw new Error('artifact_id_validation');
+            const {data} = await github.rest.actions.getArtifact({...context.repo, artifact_id: Number(id)});
+            require(`${process.env.GITHUB_WORKSPACE}/tests/native-app/artifact-metadata.cjs`).validate(data, {
+              id, digest: process.env.EXPECTED_ARTIFACT_DIGEST, sha: context.sha,
+              name: `synthetic-apk-${context.runId}-${process.env.GITHUB_RUN_ATTEMPT}`,
+              run: context.runId, repository: context.payload.repository.id
+            });
+      - name: Require fresh transfer directory
+        run: test ! -e "$RUNNER_TEMP/irth-apk-download" && test ! -L "$RUNNER_TEMP/irth-apk-download"
+      - uses: actions/download-artifact@v4
+        with:
+          artifact-ids: ${{ needs.build.outputs.artifact_id }}
+          path: ${{ runner.temp }}/irth-apk-download
+          merge-multiple: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+        with:
+          accept-android-sdk-licenses: false
+          log-accepted-android-sdk-licenses: false
+          packages: ''
+      - name: Official verification tools and isolated Python
         run: |
-          "$RUNNER_TEMP/irth-native-python/bin/python" tests/native-app/runner.py --exploratory-after-boot-failure --apk "$RUNNER_TEMP/irth-full-app/android/app/build/outputs/apk/debug/app-debug.apk" --receipt "$RUNNER_TEMP/irth-full-app/apk-receipt.json" --journeys tests/native-app/journeys.py --result "$RUNNER_TEMP/irth-full-app-result.json"
+          test -f "$ANDROID_SDK_ROOT/licenses/android-sdk-license"
+          sdkmanager 'platforms;android-36' 'build-tools;35.0.0' 'platform-tools' 'emulator' 'system-images;android-35;default;x86_64' </dev/null
+          python3 -m venv "$RUNNER_TEMP/irth-native-python"
+          "$RUNNER_TEMP/irth-native-python/bin/python" -m pip install websocket-client==1.8.0
+      - name: Verify both transferred files and full manifest semantics
+        env:
+          EXPECTED_APK_SHA256: ${{ needs.build.outputs.apk_sha256 }}
+          EXPECTED_RECEIPT_SHA256: ${{ needs.build.outputs.receipt_sha256 }}
+        run: '"$RUNNER_TEMP/irth-native-python/bin/python" tests/native-app/transfer.py verify --root "$RUNNER_TEMP/irth-apk-download"'
+      - name: Installed actual app and native journeys on fresh runner
+        run: |
+          "$RUNNER_TEMP/irth-native-python/bin/python" tests/native-app/runner.py --exploratory-after-boot-failure --apk "$RUNNER_TEMP/irth-apk-download/acceptance.apk" --receipt "$RUNNER_TEMP/irth-apk-download/apk-receipt.json" --journeys tests/native-app/journeys.py --result "$RUNNER_TEMP/irth-full-app-result.json"
       - name: Retain sanitized result, including blocked groups
         if: always()
         uses: actions/upload-artifact@v4

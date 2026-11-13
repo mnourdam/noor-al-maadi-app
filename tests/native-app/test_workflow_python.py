@@ -8,7 +8,7 @@ PYTHON = '"$RUNNER_TEMP/irth-native-python/bin/python"'
 
 
 def validate_python_contract(text):
-    assert text.count('python3 -m venv "$RUNNER_TEMP/irth-native-python"') == 1
+    assert text.count('python3 -m venv "$RUNNER_TEMP/irth-native-python"') == 2
     assert "--break-system-packages" not in text
     assert not re.search(r"^\s*(?:python3? -m pip|pip3?)\s+install\b", text, re.M)
     expected = [
@@ -19,10 +19,10 @@ def validate_python_contract(text):
     ]
     start = text.index('python3 -m venv')
     for invocation in expected:
-        assert text.count(invocation) == 1
+        assert text.count(invocation) == (2 if " -m pip " in invocation else 1)
         assert text.index(invocation) > start
     # Bare system Python is used only to create the isolated environment.
-    assert len(re.findall(r"\bpython3?\s", text)) == 1
+    assert len(re.findall(r"\bpython3?\s", text)) == 2
     assert 'if: always()' in text
     assert '"release_ready":false' in text
     assert 'continue-on-error:' not in text
