@@ -46,10 +46,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          export CHROMIUM_EXECUTABLE_PATH="$(python -c 'from playwright.sync_api import sync_playwright; p=sync_playwright().start(); print(p.chromium.executable_path); p.stop()')"
-          python tests/offline/browser/completed-reread-browser.py > completed-reread-result.json
+          export CHROMIUM_EXECUTABLE_PATH="$(python -c 'from playwright.sync_api import sync_playwright; exec("with sync_playwright() as p:\n print(p.chromium.executable_path)")')"
+          status=0
+          python tests/offline/browser/completed-reread-browser.py > completed-reread-result.json || status=$?
           cat completed-reread-result.json
+          exit "$status"
       - uses: actions/upload-artifact@v4
+        if: always() && hashFiles('completed-reread-result.json') != ''
         with:
           name: completed-reread-browser-evidence
           path: completed-reread-result.json

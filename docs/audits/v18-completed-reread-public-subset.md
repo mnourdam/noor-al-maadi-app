@@ -29,3 +29,10 @@ The sixteenth changed path is this scope audit. Copied audits retain historical 
 ## Fresh subset validation
 
 Exact source candidate 15a4ee1c (tree 2f701334ec5285f7ee1b01af23824df353cada71) passes its isolated full npm aggregate: **1,935 / 1,935 tests across 102 files**, not the larger private tree’s count. Both TypeScript projects pass. Static fixture bundle and ten guard checks pass. Five focused route/provider suites pass 65/65; independent review separately reran 65/65 plus ten guards and verified every copied blob/public-base tree. Final evidence edit changes only this audit. Browser runtime remains pending. No local browser/server or publication is performed.
+
+## First runtime failure and diagnostic-only correction
+Public `bf0cd359`, run `43398576561`, passed installation/static guards but the browser step failed. Its JSON was redirected and shell errexit skipped both printing and the ordinary artifact step. This is not yet evidence of a production defect or a failing acceptance group.
+
+The runner now reports only fixed stage labels, allowlisted exception categories and numeric failure/completed-check counts. It never emits exception messages, URLs, page text, storage or raw logs. Context cleanup cannot replace an existing primary exception; cleanup-only failures still fail. The workflow prints the JSON on Python failure, exits with the original Python status, and uploads existing evidence on failure. Browser executable discovery uses a context manager. Assertions, five required groups, timeouts, origin/asset guards and all production source remain unchanged. Pure tests exercise redacted failures, cleanup behavior and a real shell subprocess retaining exit 7 while printing failure JSON. No browser/server was run locally; runtime remains unclassified pending authorized rerun.
+
+Diagnostic-only candidate `72f9e1d0`: independent review CLEAR, eight Node and five Python pure guards PASS, final actual-module static bundle PASS. No production-source/TypeScript changes and no local runtime execution. A fresh remote diagnostic run is still required to identify the failing group.
