@@ -1,0 +1,41 @@
+name: V18 app-free boot observation
+on:
+  push:
+    branches: [v18-01a-outbox-recovery]
+    paths:
+      - '.github/workflows/v18-boot-observation.yml'
+      - 'tests/native-boot-observer/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: v18-app-free-boot-observation
+  cancel-in-progress: false
+jobs:
+  observe:
+    if: github.ref == 'refs/heads/v18-01a-outbox-recovery'
+    runs-on: macos-15-intel
+    timeout-minutes: 30
+    steps:
+      - name: Initialize sanitized evidence
+        run: echo '{"result":"FAIL","scope":"APP_FREE_BOOT_OBSERVATION_ONLY","stage":"setup","release_ready":false}' > "$RUNNER_TEMP/irth-boot-observation.json"
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: android-actions/setup-android@v3
+        with:
+          accept-android-sdk-licenses: false
+          log-accepted-android-sdk-licenses: false
+          packages: ''
+      - name: Offline observer controls
+        run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests/native-boot-observer -p 'test_*.py' -v
+      - name: Observe fresh official image without an application
+        run: python3 tests/native-boot-observer/observe.py --result "$RUNNER_TEMP/irth-boot-observation.json"
+      - name: Retain sanitized observation
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-free-boot-observation
+          path: ${{ runner.temp }}/irth-boot-observation.json
+          if-no-files-found: warn
+          retention-days: 7
