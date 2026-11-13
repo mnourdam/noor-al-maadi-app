@@ -1,0 +1,5 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';
+import {safeRelative,safeSource,safeOutput} from './build-image-decode.mjs';
+test('reject traversal, encoded, absolute and empty segments',()=>{for(const p of ['../x','/x','a//b','a/./b','a\\b','%2e%2e/x',''])assert.throws(()=>safeRelative(p));});
+test('reject arbitrary/existing output',()=>{for(const p of ['/tmp','/workspace/output','/tmp/irth-image-decode-a/../assets'])assert.throws(()=>safeOutput(p));});
+test('reject symlink assets and directories',()=>{const root=fs.mkdtempSync(path.join(os.tmpdir(),'decode-guards-'));try{fs.writeFileSync(path.join(root,'real'),'x');fs.symlinkSync(path.join(root,'real'),path.join(root,'link'));assert.throws(()=>safeSource(root,'link'));fs.symlinkSync(root,path.join(root,'dir'));assert.throws(()=>safeSource(root,'dir/real'));assert.equal(safeSource(root,'real'),path.join(root,'real'));}finally{fs.rmSync(root,{recursive:true,force:true});}});
