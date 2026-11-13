@@ -92,7 +92,7 @@ class Parsers(unittest.TestCase):
     def test_collector_replacement_and_probe_budget(self):
         device=Mock(sdk=Path('/sdk'),serial='emulator-5580');guest=Mock();spec=Mock()
         guest.capture.side_effect=[row('42'),row(''),self.sockets('@webview_devtools_remote_42'),row('43')]
-        with patch.object(h.importlib.util,'spec_from_file_location',return_value=spec),patch.object(h.importlib.util,'module_from_spec',return_value=guest):out=h.collect(device,r.PACKAGE,r.ACTIVITY)
+        with patch.object(h.importlib.util,'spec_from_file_location',return_value=spec),patch.object(h.importlib.util,'module_from_spec',return_value=guest),patch.object(h.time,'monotonic',return_value=0):out=h.collect(device,r.PACKAGE,r.ACTIVITY)
         self.assertFalse(out['same_process_sampled']);self.assertEqual(out['socket'],'unavailable_process_changed_or_unverified');self.assertNotIn('42',json.dumps(out));self.assertEqual(guest.capture.call_count,4)
         guest.reset_mock()
         with patch.object(h.importlib.util,'spec_from_file_location',return_value=spec),patch.object(h.importlib.util,'module_from_spec',return_value=guest),patch.object(h.time,'monotonic',side_effect=[0,13,13,13]):out=h.collect(device,r.PACKAGE,r.ACTIVITY)

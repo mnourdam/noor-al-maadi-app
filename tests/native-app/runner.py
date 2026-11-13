@@ -56,6 +56,22 @@ def safe_diagnostic_error(error):
         return value if value in DIAGNOSTIC_CATEGORIES else 'unknown'
     except Exception:return 'unknown'
 
+def recoverable_receive_timeout(error):
+    # recv() can also auto-pong. Never turn a control-frame SEND timeout into a
+    # receive retry. Match loaded library code objects, never traceback strings.
+    websocket=sys.modules.get('websocket');transport=sys.modules.get('websocket._socket')
+    cls=getattr(websocket,'WebSocketTimeoutException',None)
+    if not isinstance(cls,type) or not isinstance(error,cls):return False
+    recv_code=getattr(getattr(transport,'recv',None),'__code__',None)
+    send_code=getattr(getattr(transport,'send',None),'__code__',None)
+    if recv_code is None or send_code is None:return False
+    found=False;trace=error.__traceback__
+    while trace:
+        if trace.tb_frame.f_code is send_code:return False
+        if trace.tb_frame.f_code is recv_code:found=True
+        trace=trace.tb_next
+    return found
+
 READINESS_PHASES={'not_started','javascript_control','native_platform','native_bridge','home','complete'}
 EVALUATION_PHASES={'not_started','deadline_setup','websocket_timeout_setup','send','receive_timeout_setup','receive','json_decode','response_dispatch','deadline_check','complete'}
 
@@ -375,7 +391,7 @@ class Page:
             except Exception:pass
             raise
     def _evaluate_impl(self,expression):
-        self.evaluation_phase='deadline_setup';self.evaluation_response_count=0
+        self.evaluation_phase='deadline_setup';self.evaluation_response_count=0;self.evaluation_receive_timeout_count=0
         self.sequence+=1;seq=self.sequence;end=time.monotonic()+remaining(getattr(self,"deadline",None),15)
         self.evaluation_phase='websocket_timeout_setup'
         self.ws.settimeout(remaining(getattr(self,"deadline",None),10))
@@ -386,7 +402,15 @@ class Page:
             self.evaluation_phase='receive_timeout_setup'
             self.ws.settimeout(remaining(end,3))
             self.evaluation_phase='receive'
-            raw=self.ws.recv()
+            try:raw=self.ws.recv()
+            except Exception as error:
+                try:recoverable=recoverable_receive_timeout(error)
+                except Exception:recoverable=False
+                if not recoverable:raise
+                self.evaluation_receive_timeout_count=min(1000,self.evaluation_receive_timeout_count+1)
+                self.evaluation_phase='deadline_check';continue
+            if time.monotonic()>=end:
+                self.evaluation_phase='deadline_check';raise Failure('evaluation_deadline')
             self.evaluation_phase='json_decode'
             response=json.loads(raw)
             self.evaluation_response_count=min(1000,self.evaluation_response_count+1)
@@ -441,6 +465,7 @@ class Page:
         result['evaluation_phase']=getattr(self,'evaluation_phase','not_started') if getattr(self,'evaluation_phase','not_started') in EVALUATION_PHASES else 'not_started'
         value=getattr(self,'evaluation_error_category','none');result['evaluation_error_category']=value if value in DIAGNOSTIC_CATEGORIES else 'unknown'
         count=getattr(self,'evaluation_response_count',0);result['evaluation_response_count']=min(1000,max(0,count)) if type(count) is int else 0
+        count=getattr(self,'evaluation_receive_timeout_count',0);result['evaluation_receive_timeout_count']=min(1000,max(0,count)) if type(count) is int else 0
         try:
             rows=targets(self.port);result['current_target_count']=len(rows);result['original_target_present']=any(r['id']==self.target['id'] for r in rows)
         except Exception as error:result.update(current_target_count=None,original_target_present=None,target_probe_error_category=safe_diagnostic_error(error))
