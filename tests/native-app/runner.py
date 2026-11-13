@@ -291,6 +291,11 @@ class Page:
                 try:self.device.adb('forward','--remove','tcp:'+str(self.port),timeout=3)
                 except Exception:pass
 
+def collect_guest_evidence(report,guest,device):
+    for key,probe,args in [('guest_startup',guest.collect,(device.sdk/'platform-tools/adb',device.serial)),('boot_state_discriminator',guest.collect_boot_state,(device.sdk/'platform-tools/adb',device.serial,device.root))]:
+        try:report[key]=probe(*args)
+        except Exception:report[key]={'diagnostic_error':True}
+
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('--apk',required=True);parser.add_argument('--receipt',required=True);parser.add_argument('--result',required=True);parser.add_argument('--journeys');args=parser.parse_args()
     report={'result':'FAIL','stage':'preflight','scope':'SYNTHETIC_FULL_APP_ACCEPTANCE_ATTEMPT','reached':{'apk_verified':False,'boot_completed':False,'installed_verified':False,'launched':False,'home_ready':False},'release_ready':False,'unaccepted':['production_policies','private_image_activation_and_send','full_english_content','missing_original_artwork','physical_device_acceptance'],'groups':{name:{'status':'BLOCKED','reason':'not_executed'} for name in sorted(JOURNEYS)},'runner_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
@@ -330,8 +335,9 @@ def main():
                 if report['stage']=='boot' and not report['reached']['boot_completed']:
                     try:
                         spec=importlib.util.spec_from_file_location('guest_boot',Path(__file__).with_name('guest_boot_diagnostics.py'));guest=importlib.util.module_from_spec(spec);spec.loader.exec_module(guest)
-                        report['guest_startup']=guest.collect(device.sdk/'platform-tools/adb',device.serial)
-                    except Exception:report['guest_startup']={'diagnostic_error':True}
+                    except Exception:
+                        report['guest_startup']={'diagnostic_error':True};report['boot_state_discriminator']={'diagnostic_error':True}
+                    else:collect_guest_evidence(report,guest,device)
         if page:report['intentional_restarts']=getattr(page,'intentional_restarts',0);report['connection_failures']=getattr(page,'connection_failures',0)
         try:
             if page:page.close()

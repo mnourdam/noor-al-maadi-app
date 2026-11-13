@@ -1,0 +1,19 @@
+# Read-only framework boot-state discriminator
+
+Base local `954e2f69` tree `cf863a30a07b702989b1ddc99b27c9812e81aafd` matches public `601a200dd1f055ca0fd7c00789561192aba7b6b7`. Run `43429053829`, verified artifact `14040011949` SHA-256 `816d37d00038c0988d1573cf827a3fa73c2e97d8f6137bcdded909d91e5362fb`, showed running framework services but no boot-complete properties before admission deadline. Uptime 290.26 seconds is a later guest sample, not proof the host deadline was wrong. No app installation or execution occurred.
+
+## Source-grounded distinction
+
+Inspected immutable AOSP Android 15 frameworks/base revision [cc8bb19595c661f5cf42f330457000e643c67d1b](https://github.com/aosp-mirror/platform_frameworks_base/tree/cc8bb19595c661f5cf42f330457000e643c67d1b): ActivityTaskSupervisor schedules finish after resumed activity idle; ActivityManagerService waits for its animation callback, then performs runtime/storage/boot-phase work before setting both boot properties. WindowManagerService additionally checks display/policy/decor readiness and SurfaceControl before the callback. BootAnimationUtil explicitly supports disabled animation; a stopped animation service alone does not prove the callback happened. No evidence currently justifies removing -no-boot-anim, skipping setup, pressing HOME, increasing the timeout or treating ADB as boot completion.
+
+Fields and event tags come from services/core/java/com/android/server/{am/ActivityManagerService.java,wm/WindowManagerService.java,EventLogTags.logtags,am/EventLogTags.logtags,wm/EventLogTags.logtags}. Exact files were inspected at the revision above. This is source guidance, not byte attestation of the installed API35 image.
+
+## Fixed evidence, not admission
+
+Only after existing boot failure, a bounded activity processes/window windows sample extracts four AMS and two WMS boot booleans. Missing/malformed fields are unavailable; duplicates are ambiguous; any incomplete/nonzero capture invalidates all parsed fields. No dump content or components are retained. Fixed bootanimation/factory properties and device/user-0 setup enums are read without modification; null/empty is explicit, not false. HOME intent resolution for user 0 records only present/absent/unavailable and never launches an activity. User 0 is the chosen synthetic probe scope, not a claimed current-user identity.
+
+Nine fixed numeric boot EventLog tags are read with tag filters and retain only unique bounded millisecond timestamps. These timestamps and booleans are sampled after the deadline; they cannot prove exact execution progress or causal order in a blocked finishBooting call. Missing tags or format differences remain unavailable, not evidence that a milestone never happened.
+
+Optional sizing in the same batch reads only six bounded numeric RAM/core/heap/display fields from the owned canonical AVD config.ini and hardware-qemu.ini. Symlinks, missing files, oversized files, unsupported units and duplicate values do not yield trusted numbers. Values retain their original field conventions; no arbitrary config strings/paths are copied. Guest memory retains only bounded MemTotal/MemAvailable in KiB. No host resources or configuration are changed.
+
+Ten extra probes reuse the reviewed two-second capture/one-second reap helper, adding at most 30 seconds of configured capture/reap budget after failure. AMS/WMS captures cap at 256 KiB; other probes use 8 KiB. This does not extend the unchanged 300-second boot admission or launch any app. Existing cleanup and incomplete-capture semantics remain. Independent error guards preserve each diagnostic result when the other batch fails. 79 Python guards passed locally; no SDK, emulator, Gradle, hosted backend or native retry ran. Actual CI evidence remains required, and release readiness remains false.
