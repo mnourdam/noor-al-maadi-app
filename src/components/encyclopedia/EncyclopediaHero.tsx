@@ -45,6 +45,13 @@ export interface EncyclopediaHeroProps {
 }
 
 export function EncyclopediaHero(props: EncyclopediaHeroProps) {
+  // A readiness verdict belongs to this exact source, never its replacement.
+  // Remount the probe/cache hook too: it may retain the prior resolved URL
+  // while the next source is still resolving (or unavailable offline).
+  return <SourceScopedHero key={props.imageUrl ?? ""} {...props} />;
+}
+
+function SourceScopedHero(props: EncyclopediaHeroProps) {
   const {
     imageUrl, imageCredit, imageSource,
     eyebrow, Icon, title, subtitle, chips, extra,

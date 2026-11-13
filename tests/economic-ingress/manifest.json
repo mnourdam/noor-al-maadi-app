@@ -3910,6 +3910,16 @@
       "limit": "lexical literal calls only; wrapper/dynamic/local writers require manual coverage"
     },
     {
+      "path": "src/lib/achievements/v2/museum-presentation.ts",
+      "sha256": "53614be323264abb31b82edf462f8d9856f7f81215981fc6063351578280e825",
+      "rpc_candidates": [],
+      "table_candidates": [
+        "user_collection"
+      ],
+      "limit": "lexical literal calls only; wrapper/dynamic/local writers require manual coverage",
+      "review_classification": "read-only SELECT item_id,item_type filtered by authenticated user_id; owner/epoch-fenced memory-only achievement presentation; no RPC, writes, earning-engine input or reward claims; not hosted RLS or authority acceptance"
+    },
+    {
       "path": "src/lib/adminUsers.ts",
       "sha256": "da0b51b07dfbe606c0049b2027666685ab7bb6764550c7bf1f8e2a13968867f7",
       "rpc_candidates": [

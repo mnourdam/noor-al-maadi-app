@@ -1089,6 +1089,11 @@ function AchievementDialog({
           <p className="mt-1 text-[12px] leading-6 text-muted-foreground">
             {secret ? "اكتشفه بنفسك خلال رحلتك." : (view.displayDescription ?? "")}
           </p>
+          {view.ownershipPresentationOnly && (
+            <p className="mt-2 text-[11px] leading-5 text-muted-foreground">
+              تحقق شرط الاقتناء. لم يُؤكد صرف مكافأة هذا الإنجاز بعد.
+            </p>
+          )}
         </div>
 
         {!secret && (

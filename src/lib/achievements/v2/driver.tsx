@@ -23,6 +23,7 @@ import {
 } from "@/lib/campaigns/completions";
 import {
   getEvaluation,
+  getSnapshot,
   getPersisted,
   initAchievementEngine,
   establishAchievementLiveBaseline,
@@ -32,6 +33,7 @@ import {
   refreshPersistedForUser,
 } from "./engine";
 import { buildViews } from "./viewModel";
+import { useMuseumPresentationIds, projectMuseumViews } from "./museum-presentation";
 import { registry } from "./index";
 import type { AchievementView } from "./types";
 
@@ -286,6 +288,7 @@ export function AchievementEngineBoot() {
  * `useAchievementLegacyEvals` bridge was deleted in Slice 4.
  */
 export function useAchievementViews(): AchievementView[] {
+  const museumIds = useMuseumPresentationIds();
   const subscribe = (cb: () => void) => onEngineTick(cb);
   const version = useSyncExternalStore(
     subscribe,
@@ -295,11 +298,11 @@ export function useAchievementViews(): AchievementView[] {
   return useMemo(() => {
     // `version` is intentionally read to keep memo cache invalidation aligned.
     void version;
-    return buildViews({
+    return projectMuseumViews(buildViews({
       registry,
       evaluation: getEvaluation(),
       persisted: getPersisted(),
-    });
-  }, [version]);
+    }), museumIds, getSnapshot());
+  }, [version, museumIds]);
 }
 

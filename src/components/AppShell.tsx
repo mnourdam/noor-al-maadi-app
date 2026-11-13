@@ -2,24 +2,27 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { Compass, Swords, Map, Library, User, BookOpen } from "lucide-react";
 import { createContext, useContext, useEffect, memo, type ReactNode } from "react";
 import { HUD } from "./HUD";
+import { UiLanguageChooser } from "./UiLanguageChooser";
+import { useUiLanguage } from "@/lib/ui-language/store";
 import { FriendNotificationsPoller } from "./FriendNotificationsPoller";
 
 import { androidMark, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
 import { isSectionEnabled } from "@/lib/androidQuietMode";
 
 const tabs = [
-  { to: "/", label: "الرئيسية", icon: Compass, tutorialTargetId: null },
-  { to: "/campaigns", label: "الحملات", icon: Swords, tutorialTargetId: "nav-campaigns" },
-  { to: "/encyclopedia", label: "الموسوعة", icon: BookOpen, tutorialTargetId: "nav-encyclopedia" },
-  // Player-facing label stays "الأطلس"; route remains `/map`.
-  { to: "/map", label: "الأطلس", icon: Map, tutorialTargetId: "nav-atlas" },
-  { to: "/collection", label: "المتحف", icon: Library, tutorialTargetId: "nav-museum" },
-  { to: "/profile", label: "حسابي", icon: User, tutorialTargetId: "nav-profile" },
+  { to: "/", label: "home", icon: Compass, tutorialTargetId: null },
+  { to: "/campaigns", label: "campaigns", icon: Swords, tutorialTargetId: "nav-campaigns" },
+  { to: "/encyclopedia", label: "encyclopedia", icon: BookOpen, tutorialTargetId: "nav-encyclopedia" },
+  // Locale changes only the label; the atlas route remains `/map`.
+  { to: "/map", label: "atlas", icon: Map, tutorialTargetId: "nav-atlas" },
+  { to: "/collection", label: "museum", icon: Library, tutorialTargetId: "nav-museum" },
+  { to: "/profile", label: "profile", icon: User, tutorialTargetId: "nav-profile" },
 ] as const;
 
 const AppShellNestingContext = createContext(false);
 
 export const AppShell = memo(function AppShell({ children }: { children: ReactNode }) {
+  const { language, direction, messages } = useUiLanguage();
   androidMark("render:AppShell");
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const androidStable = isAndroidUltraStableMode();
@@ -63,14 +66,16 @@ export const AppShell = memo(function AppShell({ children }: { children: ReactNo
         style={{ paddingBottom: "calc(6rem + env(safe-area-inset-bottom))" }}
       >
         <HUD />
+        <UiLanguageChooser />
         {!androidStable && isSectionEnabled("friendPoller") && <FriendNotificationsPoller />}
         {/* Legacy BackNavigationGuard removed — hardware Back is owned by
             the Navigation Engine (single Capacitor listener). Web back uses
             the browser's native history; no sentinel hack required. */}
-        <div className="section-flow relative z-20 flex-1">
+        <div lang="ar" dir="rtl" className="section-flow relative z-20 flex-1">
           <div key={pathname} className="motion-page">{children}</div>
         </div>
         <nav
+          lang={language} dir={direction} aria-label={messages.navigation}
           className="fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-md md:max-w-2xl lg:max-w-3xl px-3"
           style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
         >
@@ -84,12 +89,12 @@ export const AppShell = memo(function AppShell({ children }: { children: ReactNo
                   {...(tutorialTargetId
                     ? { "data-tutorial-target": tutorialTargetId }
                     : {})}
-                  className={`motion-tap flex flex-col items-center justify-center gap-0.5 rounded-xl py-2 text-[10px] transition-all duration-200 ${
+                  className={`motion-tap flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl py-2 text-[10px] transition-all duration-200 ${
                     active ? "bg-gradient-gold text-primary-foreground shadow-gold motion-nav-active" : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   <Icon className="size-4" strokeWidth={active ? 2.5 : 1.8} />
-                  <span className="font-medium">{label}</span>
+                  <span className="w-full break-words text-center font-medium leading-tight">{messages[label]}</span>
                 </Link>
               );
             })}

@@ -1,0 +1,55 @@
+name: V18 Reread and English Shell Browser Acceptance
+on:
+  push:
+    branches: [v18-01a-outbox-recovery]
+    paths:
+      - '.github/workflows/v18-reread-shell-browser.yml'
+      - 'tests/offline/browser/*reread-shell*'
+      - 'src/components/imported-campaign/ChapterReadingReview.tsx'
+      - 'src/components/imported-campaign/RichReadingText.tsx'
+      - 'src/components/ui/dialog.tsx'
+      - 'src/components/AppShell.tsx'
+      - 'src/components/UiLanguageChooser.tsx'
+      - 'src/lib/ui-language/**'
+      - 'src/lib/identity/owner.ts'
+      - 'src/styles.css'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  reread-shell:
+    if: github.ref == 'refs/heads/v18-01a-outbox-recovery'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: node --test tests/offline/browser/test-reread-shell-build.mjs
+      - name: Install official pinned browser tooling
+        run: |
+          python -m pip install playwright==1.62.0
+          python -m playwright install --with-deps chromium
+      - name: Synthetic reread and shell browser acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          export CHROMIUM_EXECUTABLE_PATH="$(python -c 'from playwright.sync_api import sync_playwright; p=sync_playwright().start(); print(p.chromium.executable_path); p.stop()')"
+          python tests/offline/browser/reread-shell-browser.py > reread-shell-result.json
+          cat reread-shell-result.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: reread-shell-browser-evidence
+          path: reread-shell-result.json
+          if-no-files-found: error
+          retention-days: 7

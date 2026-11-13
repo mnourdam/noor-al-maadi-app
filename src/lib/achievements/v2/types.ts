@@ -254,6 +254,8 @@ export type TransitionOrigin =
  * Unified projection consumed by every UI surface.
  */
 export interface AchievementView {
+  /** Ownership evidence for display only; not a persisted unlock or reward receipt. */
+  ownershipPresentationOnly?: boolean;
   id: AchievementId;
   state: AchievementState;
   progress: number;

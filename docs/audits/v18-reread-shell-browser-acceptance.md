@@ -1,0 +1,13 @@
+# Reread and English-shell Chromium acceptance lane (runtime pending)
+
+This dedicated repair-branch-only lane exercises selected production surfaces together: `ChapterReadingReview`, `RichReadingText`, real Radix Dialog, `AppShell`, `UiLanguageChooser` and the local language store. Production Tailwind styles and packaged local fonts are bundled. The decorative arabesque public texture is deliberately omitted; no production public assets are copied.
+
+The fixture replaces router infrastructure, HUD, friend poller, Android diagnostic switches and navigation overlay registration with inert test stubs. Thus it does not test HUD popovers, the whole gameplay route, native/hardware Back or the navigation dispatcher. Actual Radix keyboard focus trapping, Escape and trigger focus restoration are tested. The activity sibling is a synthetic unsent input; DOM identity, value and mount count must remain unchanged across language changes and repeated reading overlays. Chapter retirement uses the same keyed-component composition as the reviewed route; owner retirement calls the real owner module.
+
+Planned runtime assertions require six nonempty navigation labels, keyboard language selection, LTR navigation alongside Arabic RTL page content, and horizontal bounds at 360/390/768 px with real styles/fonts. They also require repeated dialog open/close preserving the activity, owner/chapter retirement, and a clean browser-process restart retaining the same local language preference. Clean restart is not arbitrary crash or Android process-death proof.
+
+## Isolation and evidence
+
+Build configuration disables app config, environment-file loading and public copying; the build rejects backend SDK imports and verifies that selected real source modules entered the bundle. Output is confined to an isolated temporary prefix. Browser context uses a fresh temporary persistent profile, blocks service workers and WebSockets, and permits HTTP requests only to the exact loopback origin and generated fixture/asset routes. Any blocked request, page error or missing required check fails acceptance. The local server serves generated assets only, never the profile directory. No account, backend, real notification/content payload, historical translation, image generation, APK or deployment is involved.
+
+Local static evidence: fixture bundle successful, four output-path rejection guards pass, Python syntax valid. No local browser or loopback server has been started. Actual Chromium layout/focus/persistence acceptance remains pending independently reviewed CI execution. The workflow uses Node 24, pinned official Playwright 1.62.0, contents-read permission, checkout without persisted credentials and JSON-only result artifacts.

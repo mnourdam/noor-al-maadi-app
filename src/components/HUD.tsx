@@ -1,3 +1,4 @@
+import { useUiLanguage } from "@/lib/ui-language/store";
 import { useEffect, useRef, useState, memo } from "react";
 import { Heart, Coins, Flame, Bell, Star } from "lucide-react";
 import { Link } from "@tanstack/react-router";
@@ -22,6 +23,7 @@ type BumpKey = "dinars" | "points" | "hearts";
  * Lives inside AppShell so every screen sees it.
  */
 export const HUD = memo(function HUD() {
+  const { language, messages } = useUiLanguage();
   const { profile } = useProfile();
   const [, force] = useState(0);
   const [unread, setUnread] = useState(0);
@@ -125,7 +127,7 @@ export const HUD = memo(function HUD() {
           <PopoverTrigger asChild>
             <button
               type="button"
-              aria-label="القلوب"
+              lang={language} aria-label={messages.hearts}
               key={heartShake}
               className={`flex items-center gap-0.5 rounded-lg px-1 py-1 -mx-1 -my-1 transition hover:bg-white/5 active:bg-white/10 ${heartShake ? "hud-shake" : ""}`}
             >
@@ -145,7 +147,7 @@ export const HUD = memo(function HUD() {
                     />
                   ))}
                   {hearts < HEART_MAX && (
-                    <span className="ms-1 text-[10px] tabular-nums text-muted-foreground" aria-label="القلب التالي خلال">
+                    <span className="ms-1 text-[10px] tabular-nums text-muted-foreground" lang={language} aria-label={messages.nextHeart}>
                       {formatHeartTimer(next)}
                     </span>
                   )}
@@ -153,7 +155,7 @@ export const HUD = memo(function HUD() {
               )}
             </button>
           </PopoverTrigger>
-          <PopoverContent align="start" sideOffset={8} className="w-72 border-gold/25 bg-background/95 backdrop-blur-md">
+          <PopoverContent lang="ar" dir="rtl" align="start" sideOffset={8} className="w-72 border-gold/25 bg-background/95 backdrop-blur-md">
             <HeartsPopover profile={profile} />
           </PopoverContent>
         </Popover>
@@ -163,14 +165,14 @@ export const HUD = memo(function HUD() {
             <PopoverTrigger asChild>
               <button
                 type="button"
-                aria-label="الدنانير"
+                lang={language} aria-label={messages.dinars}
                 className={`motion-tap inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-gold transition hover:bg-white/5 active:bg-white/10 ${bumpCls("dinars")}`}
               >
                 <Coins className="size-3.5" /> <AnimatedNumber value={profile.dinars} />
 
               </button>
             </PopoverTrigger>
-            <PopoverContent align="center" sideOffset={8} className="w-72 border-gold/25 bg-background/95 backdrop-blur-md">
+            <PopoverContent lang="ar" dir="rtl" align="center" sideOffset={8} className="w-72 border-gold/25 bg-background/95 backdrop-blur-md">
               <DinarsPopover profile={profile} />
             </PopoverContent>
           </Popover>
@@ -179,14 +181,14 @@ export const HUD = memo(function HUD() {
             <PopoverTrigger asChild>
               <button
                 type="button"
-                aria-label="الخبرة"
+                lang={language} aria-label={messages.experience}
                 className={`motion-tap inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-amber-200 transition hover:bg-white/5 active:bg-white/10 ${bumpCls("points")}`}
               >
                 <Star className="size-3.5" /> <AnimatedNumber value={profile.points} />
 
               </button>
             </PopoverTrigger>
-            <PopoverContent align="center" sideOffset={8} className="w-72 border-gold/25 bg-background/95 backdrop-blur-md">
+            <PopoverContent lang="ar" dir="rtl" align="center" sideOffset={8} className="w-72 border-gold/25 bg-background/95 backdrop-blur-md">
               <XPPopover profile={profile} />
             </PopoverContent>
           </Popover>
@@ -195,7 +197,7 @@ export const HUD = memo(function HUD() {
             <PopoverTrigger asChild>
               <button
                 type="button"
-                aria-label="الحماسة"
+                lang={language} aria-label={messages.streak}
                 className="motion-tap inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-orange-400 transition hover:bg-white/5 active:bg-white/10"
               >
                 {/* V16: display-only expiry derivation — persisted state is untouched. */}
@@ -204,7 +206,7 @@ export const HUD = memo(function HUD() {
 
               </button>
             </PopoverTrigger>
-            <PopoverContent align="end" sideOffset={8} className="w-72 border-gold/25 bg-background/95 backdrop-blur-md">
+            <PopoverContent lang="ar" dir="rtl" align="end" sideOffset={8} className="w-72 border-gold/25 bg-background/95 backdrop-blur-md">
               <StreakPopover profile={profile} />
             </PopoverContent>
           </Popover>
@@ -213,7 +215,7 @@ export const HUD = memo(function HUD() {
             to="/notifications" 
             onDoubleClick={onDebugTap}
             className="relative inline-flex items-center text-muted-foreground hover:text-gold" 
-            aria-label="الإشعارات"
+            lang={language} aria-label={messages.notifications}
           >
             <Bell className="size-4" />
             {unread > 0 && (

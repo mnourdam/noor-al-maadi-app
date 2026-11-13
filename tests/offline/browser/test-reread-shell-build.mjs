@@ -1,0 +1,2 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import {spawnSync} from 'node:child_process';
+for(const output of ['', 'relative', '/tmp/not-approved/site', '/tmp/irth-reread-shell-x/../../unsafe'])test(`reject ${JSON.stringify(output)}`,()=>{const r=spawnSync(process.execPath,['tests/offline/browser/build-reread-shell.mjs',output],{encoding:'utf8'});assert.notEqual(r.status,0);assert.match(r.stderr,/isolated temporary output required/)});
