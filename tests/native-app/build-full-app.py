@@ -112,6 +112,22 @@ def run_command(args,root,env,timeout=900):
   raise subprocess.CalledProcessError(result.returncode,args,output=result.stdout,stderr=result.stderr)
  return result.stdout
 
+def remove_generated_vite_manifest(root):
+ # Only disposable build metadata, before Capacitor copy and expected inventory.
+ STATE['stage']='generated_build_metadata'
+ p.require(root.is_absolute() and root.resolve()==root and not root.is_symlink(),'noncanonical build root')
+ current=root
+ for part in ('dist','android','.vite'):
+  current=current/part
+  p.require(not current.is_symlink() and current.is_dir(),'unsafe build metadata directory')
+ target=current/'manifest.json'
+ p.require(not target.is_symlink() and target.is_file(),'unsafe or missing build metadata file')
+ p.require(target.stat().st_size<=4*1024*1024,'unexpected build metadata size')
+ metadata=json.loads(target.read_text())
+ p.require(isinstance(metadata,dict) and len(metadata)>0 and all(isinstance(entry,dict) and isinstance(entry.get('file'),str) for entry in metadata.values()),'unexpected Vite manifest shape')
+ target.unlink()
+ STATE['generated_vite_manifest_removed']=True
+
 def build(root):
  p.require(os.environ.get('GITHUB_ACTIONS')=='true','build requires disposable CI')
  p.require(os.environ.get('GITHUB_REF')=='refs/heads/v18-01a-outbox-recovery','isolated branch only')
@@ -123,6 +139,7 @@ def build(root):
  (root/'scripts').mkdir();shutil.copy2(p.ROOT/'scripts/finalize-android.mjs',root/'scripts/finalize-android.mjs')
  run(['node',str(p.ROOT/'node_modules/vite/bin/vite.js'),'build','--config',str(root/'vite.acceptance.config.ts')])
  run(['node','scripts/finalize-android.mjs'])
+ remove_generated_vite_manifest(root)
  run(['node',str(p.ROOT/'node_modules/@capacitor/cli/bin/capacitor'),'sync','android'])
  # Per-run debug certificate only, never an owner/release signing key.
  key=root/'acceptance-debug.keystore'
