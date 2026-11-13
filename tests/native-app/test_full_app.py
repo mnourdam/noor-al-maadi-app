@@ -36,7 +36,7 @@ class BuildEnvironment(unittest.TestCase):
    result=Path(td)/'result.json'
    completed=subprocess.run([sys.executable,str(Path(__file__).with_name('build-full-app.py')),str(Path(td)/'fresh'),'--result',str(result)],env={'PATH':m.os.environ.get('PATH','')},capture_output=True,text=True)
    self.assertNotEqual(completed.returncode,0)
-   data=json.loads(result.read_text());self.assertEqual(data,{'result':'FAIL','stage':'producer_preflight','release_ready':False,'category':'producer_stage_failed'})
+   data=json.loads(result.read_text());self.assertEqual(data,{'result':'FAIL','stage':'producer_preflight','release_ready':False,'category':'configuration_or_validation'})
    self.assertFalse((Path(td)/'fresh').exists())
  def test_workflow_never_accepts_licenses(self):
   workflow=(Path(__file__).resolve().parents[2]/'.github/workflows/v18-android-full-app.yml').read_text()

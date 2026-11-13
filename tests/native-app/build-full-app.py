@@ -30,17 +30,60 @@ def verify_manifest(text):
   p.require(len(found)==1 and re.fullmatch(r'\(type 0x12\)0x0+',found[0]['attrs'].get('value','')) is not None,'Firebase metadata not disabled')
 
 STATE={'result':'FAIL','stage':'producer_preflight','release_ready':False}
+# These are bounded text indicators, not diagnoses. No matched text is retained.
+GRADLE_INDICATORS={
+ 'dependency_resolution': ('could not resolve all files', 'could not resolve all dependencies', 'could not find '),
+ 'network_resolution': ('unknownhostexception', 'connect timed out', 'connection timed out', 'could not get resource'),
+ 'sdk_license': ('license for package', 'licenses have not been accepted'),
+ 'sdk_location': ('sdk location not found', 'failed to find platform sdk'),
+ 'java_compatibility': ('unsupported class file major version', 'invalid source release', 'requires java'),
+ 'compilation': ('compilation failed', 'compiledebugjavawithjavac failed'),
+ 'task_failure': ('execution failed for task',),
+ 'daemon_disappeared': ('gradle build daemon disappeared unexpectedly',),
+ 'memory': ('outofmemoryerror', 'java heap space', 'gc overhead limit exceeded'),
+ 'disk_space': ('no space left on device',),
+}
+def gradle_indicators(*outputs):
+ # Inspect only a bounded head/tail of each captured stream, including timeout bytes.
+ parts=[]
+ for value in outputs:
+  if isinstance(value,bytes):value=value[:65536].decode('utf-8','replace')+' '+value[-65536:].decode('utf-8','replace')
+  elif isinstance(value,str):value=value[:65536]+' '+value[-65536:]
+  else:value=''
+  parts.append(value.lower())
+ text=' '.join(parts)
+ return {key:any(token in text for token in tokens) for key,tokens in GRADLE_INDICATORS.items()}
+def failure_evidence(error):
+ if isinstance(error,subprocess.TimeoutExpired):category='command_timeout'
+ elif isinstance(error,subprocess.CalledProcessError):category='command_exit'
+ elif isinstance(error,ValueError):category='configuration_or_validation'
+ elif isinstance(error,OSError):category='operating_system_error'
+ else:category='unexpected_exception'
+ evidence={'category':category}
+ source=os.environ.get('GITHUB_SHA','')
+ if re.fullmatch(r'[0-9a-f]{40}',source):evidence['source_sha']=source
+ if isinstance(error,subprocess.CalledProcessError):
+  value=error.returncode
+  evidence['returncode']=value if type(value) is int and -255<=value<=255 else None
+ if STATE.get('stage')=='gradle_debug' and isinstance(error,(subprocess.TimeoutExpired,subprocess.CalledProcessError)):
+  evidence['gradle_indicators']=gradle_indicators(error.stdout,error.stderr)
+ return evidence
+
+def run_command(args,root,env,timeout=900):
+ labels={'vite.js':'web_build','finalize-android.mjs':'web_finalize','capacitor':'native_sync','keytool':'ephemeral_signing','bash':'gradle_debug','aapt':'apk_manifest_inspection','apksigner':'apk_signer_inspection'}
+ STATE['stage']=labels.get(Path(args[1] if args[0]=='node' else args[0]).name,'producer_command')
+ # Capture only. Neither raw output nor command arguments enter retained evidence.
+ result=subprocess.run(args,cwd=root,env=env,capture_output=True,text=True,timeout=timeout)
+ if result.returncode!=0:
+  raise subprocess.CalledProcessError(result.returncode,args,output=result.stdout,stderr=result.stderr)
+ return result.stdout
+
 def build(root):
  p.require(os.environ.get('GITHUB_ACTIONS')=='true','build requires disposable CI')
  p.require(os.environ.get('GITHUB_REF')=='refs/heads/v18-01a-outbox-recovery','isolated branch only')
  receipt=p.prepare(root);home=root/'private-home';home.mkdir(mode=0o700);env=build_env(home,receipt['source_sha'])
  def run(args,timeout=900):
-  labels={'vite.js':'web_build','finalize-android.mjs':'web_finalize','capacitor':'native_sync','keytool':'ephemeral_signing','bash':'gradle_debug','aapt':'apk_manifest_inspection','apksigner':'apk_signer_inspection'}
-  STATE['stage']=labels.get(Path(args[1] if args[0]=='node' else args[0]).name,'producer_command')
-  # No arbitrary stdout forwarded: generated tools may print environment/config.
-  result=subprocess.run(args,cwd=root,env=env,capture_output=True,text=True,timeout=timeout)
-  p.require(result.returncode==0,'build stage failed: '+Path(args[0]).name)
-  return result.stdout
+  return run_command(args,root,env,timeout)
  p.require((p.ROOT/'node_modules/.bin/vite').is_file(),'locked source dependencies missing')
  (root/'node_modules').symlink_to(p.ROOT/'node_modules',target_is_directory=True)
  (root/'scripts').mkdir();shutil.copy2(p.ROOT/'scripts/finalize-android.mjs',root/'scripts/finalize-android.mjs')
@@ -91,8 +134,8 @@ if __name__=='__main__':
  parser=argparse.ArgumentParser();parser.add_argument('destination',type=Path);parser.add_argument('--result',required=True,type=Path);args=parser.parse_args()
  code=0
  try:build(args.destination.resolve())
- except Exception:
-  STATE['result']='FAIL';STATE['category']='producer_stage_failed';code=1
+ except Exception as error:
+  STATE['result']='FAIL';STATE.update(failure_evidence(error));code=1
  finally:
   args.result.write_text(json.dumps(STATE,sort_keys=True)+'\n');print(json.dumps(STATE,sort_keys=True))
  raise SystemExit(code)

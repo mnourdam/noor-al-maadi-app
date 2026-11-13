@@ -19,7 +19,7 @@ def geometry_evidence(raw):
 CHARACTER_PROBE=r"""(el)=>{
  const limit=2048, recordLimit=16, box=el.getBoundingClientRect(), style=getComputedStyle(el);
  const categories=['ASCII_SPACE','LINE_BREAK','OTHER_WHITESPACE','NON_WHITESPACE'];
- const counts=Object.fromEntries(categories.map(k=>[k,{characters:0,rectangles:0,zero_width:0,outside:0}]));
+ const counts=Object.fromEntries(categories.map(k=>[k,{characters:0,rectangles:0,zero_width:0,outside:0,non_hanging_outside:0}]));
  const violations=[];let inspected=0,total=0,nodeIndex=0;
  const walker=document.createTreeWalker(el,NodeFilter.SHOW_TEXT);
  while(walker.nextNode()){
@@ -34,7 +34,7 @@ CHARACTER_PROBE=r"""(el)=>{
     for(const r of range.getClientRects()){
      c.rectangles++;if(r.width===0)c.zero_width++;
      const outside=r.left<box.left-1||r.right>box.right+1||r.top<box.top-1||r.bottom>box.bottom+1;
-     if(outside){c.outside++;if(violations.length<recordLimit)violations.push({category,node:nodeIndex,start:offset,end,left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height});}
+     if(outside){c.outside++;if(category!=='ASCII_SPACE'||r.right>box.right+1||r.top<box.top-1||r.bottom>box.bottom+1)c.non_hanging_outside++;if(violations.length<recordLimit)violations.push({category,node:nodeIndex,start:offset,end,left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height});}
     }
    }
    offset=end;
@@ -51,7 +51,7 @@ def character_evidence(raw):
     if type(total) is not int or type(inspected) is not int or not 0<=inspected<=min(total,2048) or total>1000000:raise ValueError('character_schema')
     if type(raw.get('truncated')) is not bool or raw['truncated']!=(total>inspected):raise ValueError('character_schema')
     counts=raw.get('counts',{})
-    keys=('characters','rectangles','zero_width','outside')
+    keys=('characters','rectangles','zero_width','outside','non_hanging_outside')
     if set(counts)!=set(categories):raise ValueError('character_schema')
     for value in counts.values():
         if set(value)!=set(keys) or any(type(n) is not int or n<0 or n>1000000 for n in value.values()):raise ValueError('character_schema')
@@ -68,6 +68,21 @@ def character_evidence(raw):
     return {'limit':2048,'record_limit':16,'total':total,'inspected':inspected,'truncated':raw['truncated'],
             'counts':{c:{k:bounded_number(counts[c][k]) for k in keys} for c in categories},'violations':safe,
             'style':{k:style.get(k) if style.get(k) in values else 'other' for k,values in allowed.items()}}
+
+def visible_geometry_passes(geometry,characters,element):
+    tests=geometry['tests']
+    if not all(value for key,value in tests.items() if key!='ranges_contained'):return False
+    if characters['truncated'] or characters['total']!=characters['inspected']:return False
+    nonwhite=characters['counts']['NON_WHITESPACE']
+    if nonwhite['characters']<=0 or nonwhite['rectangles']<=nonwhite['zero_width']:return False
+    if any(count['non_hanging_outside']>0 for count in characters['counts'].values()):return False
+    if tests['ranges_contained']:return True
+    style=characters['style']
+    if element!='note' or style!={'white_space':'pre-wrap','direction':'rtl','overflow_x':'visible','overflow_y':'visible'}:return False
+    if characters['counts']['ASCII_SPACE']['outside']<=0:return False
+    if any(count['outside']>0 for category,count in characters['counts'].items() if category!='ASCII_SPACE'):return False
+    # Only measured RTL ASCII-space left-edge hanging is exempt, not general whitespace.
+    return all(count['non_hanging_outside']==0 for count in characters['counts'].values())
 
 async def close_preserving_primary(context):
     active=sys.exc_info()[0] is not None
@@ -179,9 +194,8 @@ async def acceptance(directory,origin):
                           min_top:Math.min(...lines.map(r=>r.top)),max_bottom:Math.max(...lines.map(r=>r.bottom)),viewport_width:innerWidth}};
                     }""")
                     REPORT['geometry']=geometry_evidence(raw)
-                    if not REPORT['geometry']['tests']['ranges_contained']:
-                        REPORT['characters']=character_evidence(await element.evaluate(CHARACTER_PROBE))
-                    assert all(REPORT['geometry']['tests'].values())
+                    REPORT['characters']=character_evidence(await element.evaluate(CHARACTER_PROBE))
+                    assert visible_geometry_passes(REPORT['geometry'],REPORT['characters'],element_name)
                 REPORT['stage']='related_note_whitespace'
                 assert await note.evaluate('(el)=>getComputedStyle(el).whiteSpace') == 'pre-wrap'
                 assert await page.evaluate('document.documentElement.scrollWidth<=innerWidth+1')

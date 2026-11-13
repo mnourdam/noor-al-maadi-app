@@ -40,7 +40,7 @@ class Diagnostics(unittest.TestCase):
    self.assertEqual(result.returncode,23)
    self.assertEqual(json.loads((Path(td)/'reread-shell-result.json').read_text()),{'result':'FAIL','stage':'executable_discovery'})
  def character_fixture(self):
-  counts={c:{'characters':0,'rectangles':0,'zero_width':0,'outside':0} for c in ('ASCII_SPACE','LINE_BREAK','OTHER_WHITESPACE','NON_WHITESPACE')}
+  counts={c:{'characters':0,'rectangles':0,'zero_width':0,'outside':0,'non_hanging_outside':0} for c in ('ASCII_SPACE','LINE_BREAK','OTHER_WHITESPACE','NON_WHITESPACE')}
   counts['ASCII_SPACE'].update(characters=1,rectangles=1,outside=1)
   return {'limit':2048,'record_limit':16,'total':1,'inspected':1,'truncated':False,'counts':counts,
    'violations':[{'category':'ASCII_SPACE','node':0,'start':0,'end':1,'left':27.016,'right':29,'top':1,'bottom':2,'width':1.984,'height':1,'text':'PRIVATE'}],
@@ -60,11 +60,10 @@ class Diagnostics(unittest.TestCase):
   with self.assertRaises(ValueError):m.character_evidence(raw)
   raw=self.character_fixture();raw['violations'][0]['category']='raw text'
   with self.assertRaises(ValueError):m.character_evidence(raw)
- def test_character_probe_does_not_replace_original_failure(self):
+ def test_character_probe_preserves_named_geometry_controls(self):
   source=Path(__file__).with_name('reread-shell-browser.py').read_text()
-  self.assertIn("if not REPORT['geometry']['tests']['ranges_contained']:",source)
   self.assertIn("REPORT['characters']=character_evidence(await element.evaluate(CHARACTER_PROBE))",source)
-  self.assertIn("assert all(REPORT['geometry']['tests'].values())",source)
+  self.assertIn("assert visible_geometry_passes(REPORT['geometry'],REPORT['characters'],element_name)",source)
  def test_actual_character_probe_node_execution(self):
   program=r'''
 const assert=require('node:assert/strict'), fs=require('node:fs');
@@ -94,6 +93,34 @@ assert.equal(capped.violations.length,16);assert.equal(offsets.length,2048);
 '''
   result=subprocess.run(['node','-e',program],input=m.CHARACTER_PROBE,capture_output=True,text=True,timeout=10)
   self.assertEqual(result.returncode,0,result.stderr)
+ def test_actual_probe_visible_overflow_counterfactuals(self):
+  program=r'''
+const fs=require('node:fs'), probe=eval('('+fs.readFileSync(0,'utf8')+')');
+global.NodeFilter={SHOW_TEXT:4};
+global.getComputedStyle=()=>({whiteSpace:'pre-wrap',direction:'rtl',overflowX:'visible',overflowY:'visible'});
+function run(text,mode){
+ let i=0,start=0;const node={textContent:text};
+ global.document={createTreeWalker:()=>({currentNode:node,nextNode:()=>i++===0}),createRange:()=>({
+ setStart:(_,v)=>start=v,setEnd:()=>{},getClientRects:()=>{
+ const bad=(mode==='visible'&&start===0)||(mode!=='visible'&&start===1);
+ return [{left:bad?-2:1,right:bad&&mode==='right'?22:3,top:bad&&mode==='vertical'?-2:1,bottom:3,width:2,height:2}];
+ }})};
+ return probe({getBoundingClientRect:()=>({left:0,right:20,top:0,bottom:20})});
+}
+console.log(JSON.stringify([run('ا ','space'),run('ا ','visible'),run('ا ','right'),run('ا ','vertical'),run('ا'.repeat(2049),'space'),run('','space'),run('ا'+String.fromCharCode(9),'space')]));
+'''
+  result=subprocess.run(['node','-e',program],input=m.CHARACTER_PROBE,capture_output=True,text=True,timeout=10)
+  self.assertEqual(result.returncode,0,result.stderr)
+  names=('content','multiline','positive_box','viewport','horizontal_scroll','vertical_scroll','unclamped','not_ellipsis','ranges_contained')
+  geometry={'tests':dict.fromkeys(names,True)};geometry['tests']['ranges_contained']=False
+  cases=[m.character_evidence(raw) for raw in json.loads(result.stdout)]
+  self.assertEqual([m.visible_geometry_passes(geometry,c,'note') for c in cases],[True,False,False,False,False,False,False])
+  self.assertFalse(m.visible_geometry_passes(geometry,cases[0],'label'))
+  unexplained=json.loads(json.dumps(cases[0]));unexplained['counts']['ASCII_SPACE']['outside']=0
+  self.assertFalse(m.visible_geometry_passes(geometry,unexplained,'note'))
+  for name in names[:-1]:
+   broken={'tests':dict(geometry['tests'])};broken['tests'][name]=False
+   self.assertFalse(m.visible_geometry_passes(broken,cases[0],'note'))
  def test_workflow_always_retains(self):
   text=(Path(__file__).resolve().parents[3]/'.github/workflows/v18-reread-shell-browser.yml').read_text()
   self.assertIn('if: always()',text);self.assertIn('exit "$status"',text)
