@@ -327,6 +327,11 @@ def main():
             if device.emulator:
                 try:report['boot_diagnostics']=device.boot_diagnostics()
                 except Exception:report['boot_diagnostics']={'diagnostic_error':True}
+                if report['stage']=='boot' and not report['reached']['boot_completed']:
+                    try:
+                        spec=importlib.util.spec_from_file_location('guest_boot',Path(__file__).with_name('guest_boot_diagnostics.py'));guest=importlib.util.module_from_spec(spec);spec.loader.exec_module(guest)
+                        report['guest_startup']=guest.collect(device.sdk/'platform-tools/adb',device.serial)
+                    except Exception:report['guest_startup']={'diagnostic_error':True}
         if page:report['intentional_restarts']=getattr(page,'intentional_restarts',0);report['connection_failures']=getattr(page,'connection_failures',0)
         try:
             if page:page.close()
