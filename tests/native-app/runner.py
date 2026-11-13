@@ -1,5 +1,6 @@
 """CI-only Intel macOS native driver. No app replacement or permission mutation."""
 import xml.etree.ElementTree as ET
+import threading
 import argparse, hashlib, importlib.util, json, os, platform, re, shutil, subprocess, time, urllib.request, urllib.error, zipfile
 from pathlib import Path
 from urllib.parse import urlparse, urlunparse
@@ -71,9 +72,50 @@ def verify_apk(apk,receipt,sdk):
             if hashlib.sha256(z.read(n)).hexdigest()!=r['assets_sha256'][n]:raise Failure('asset_hash')
     return {'apk_sha256':r['apk_sha256'],'source_sha':r['source_sha'],'signer_sha256':r['signer_sha256'].lower()}
 
+EMULATOR_INDICATORS={
+    'hypervisor_error':('hv_error','hypervisor initialization failed','failed to initialize hvf'),
+    'graphics_error':('failed to initialize vulkan','failed to initialize opengl','egl_not_initialized','failed to create vulkan'),
+    'disk_error':('no space left on device','could not open backing file'),
+    'memory_error':('cannot allocate memory','out of memory'),
+    'avd_lock_error':('another emulator instance','failed to lock'),
+    'fatal_marker':('fatal:', 'panic:'),
+}
+class EmulatorOutput:
+    # Drain pipes without storing raw logs. A short overlap detects split tokens.
+    def __init__(self):
+        self.lock=threading.Lock();self.bytes_seen=0;self.flags={key:False for key in EMULATOR_INDICATORS};self.threads=[];self.read_error=False
+    def consume(self,stream):
+        overlap=b''
+        try:
+            while True:
+                chunk=stream.read(4096)
+                if not chunk:break
+                text=(overlap+chunk).decode('utf8','replace').lower()
+                with self.lock:
+                    self.bytes_seen=min(1000000000,self.bytes_seen+len(chunk))
+                    for key,tokens in EMULATOR_INDICATORS.items():self.flags[key]|=any(token in text for token in tokens)
+                overlap=chunk[-128:]
+        except Exception:
+            with self.lock:self.read_error=True
+        finally:
+            try:stream.close()
+            except Exception:
+                with self.lock:self.read_error=True
+    def start(self,*streams):
+        for stream in streams:
+            thread=threading.Thread(target=self.consume,args=(stream,),daemon=True);self.threads.append(thread);thread.start()
+    def snapshot(self):
+        with self.lock:return {'bytes_seen_capped':self.bytes_seen,'indicators':dict(self.flags),'read_error':self.read_error,'readers_complete':all(not thread.is_alive() for thread in self.threads)}
+    def join(self):
+        for thread in self.threads:thread.join(timeout=2)
+
+def fixed_value(value,allowed):
+    value=value.strip()
+    return value if value in allowed else ('empty' if not value else 'other')
+
 class Device:
     def __init__(self,sdk,root):
-        self.sdk=sdk; self.root=root; self.emulator=None;self.created=False;self.serial='emulator-5580';self.actions=[]
+        self.sdk=sdk; self.root=root; self.emulator=None;self.created=False;self.serial='emulator-5580';self.actions=[];self.output=EmulatorOutput();self.boot_observations={'sys_boot_completed':'not_observed','poll_command_failure':False,'poll_timeout':False}
     def adb(self,*args,timeout=15):return command([self.sdk/'platform-tools/adb','-s',self.serial,*args],timeout)
     def provision(self):
         if platform.system()!='Darwin' or platform.machine() not in ('x86_64','AMD64'):raise Failure('intel_macos_required')
@@ -98,15 +140,30 @@ class Device:
         self.root.mkdir(mode=0o700);self.created=True
         os.environ['ANDROID_AVD_HOME']=str(self.root)
         command([self.sdk/'cmdline-tools/latest/bin/avdmanager','create','avd','-n','irth-full-acceptance','-k',IMAGE],60,input=b'no\n')
-        self.emulator=subprocess.Popen([str(self.sdk/'emulator/emulator'),'-avd','irth-full-acceptance','-port','5580','-accel','on','-no-window','-no-audio','-no-snapshot','-no-boot-anim','-gpu','swiftshader_indirect'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+        self.emulator=subprocess.Popen([str(self.sdk/'emulator/emulator'),'-avd','irth-full-acceptance','-port','5580','-accel','on','-no-window','-no-audio','-no-snapshot','-no-boot-anim','-gpu','swiftshader_indirect'],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+        self.output.start(self.emulator.stdout,self.emulator.stderr)
         end=time.monotonic()+300
         while time.monotonic()<end:
             if self.emulator.poll() is not None:raise Failure('emulator_exited')
             try:
-                if self.adb('shell','getprop','sys.boot_completed',timeout=5)=='1':return
-            except (Failure,subprocess.TimeoutExpired):pass
+                value=self.adb('shell','getprop','sys.boot_completed',timeout=5)
+                self.boot_observations['sys_boot_completed']=fixed_value(value,{'0','1'})
+                if value=='1':return
+            except Failure:self.boot_observations['poll_command_failure']=True
+            except subprocess.TimeoutExpired:self.boot_observations['poll_timeout']=True
             time.sleep(1)
         raise Failure('boot_deadline')
+    def boot_diagnostics(self):
+        result=dict(self.boot_observations)
+        code=self.emulator.poll() if self.emulator else None
+        result.update(emulator_started=self.emulator is not None,emulator_alive=self.emulator is not None and code is None,emulator_returncode=code if type(code) is int and -255<=code<=255 else None)
+        # Post-attempt diagnostics only; never extends or retries boot admission.
+        for name,args,allowed in [('adb_state',('get-state',),{'device','offline','unknown'}),('dev_bootcomplete',('shell','getprop','dev.bootcomplete'),{'0','1'}),('boot_animation',('shell','getprop','init.svc.bootanim'),{'running','stopped','restarting'})]:
+            try:result[name]=fixed_value(self.adb(*args,timeout=2),allowed)
+            except subprocess.TimeoutExpired:result[name]='timeout'
+            except Exception:result[name]='command_failed'
+        result['emulator_output']=self.output.snapshot()
+        return result
     def verify_installed(self,expected):
         location=self.adb('shell','pm','path',PACKAGE)
         if not re.fullmatch(r'package:/data/app/[^\s]+/base\.apk',location):raise Failure('installed_path')
@@ -126,6 +183,7 @@ class Device:
             except Exception:pass
             try:self.emulator.wait(timeout=10)
             except subprocess.TimeoutExpired:self.emulator.kill();self.emulator.wait(timeout=5)
+        self.output.join()
         if self.created:
             if self.root.is_symlink():raise Failure('cleanup_path')
             shutil.rmtree(self.root)
@@ -235,21 +293,21 @@ class Page:
 
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('--apk',required=True);parser.add_argument('--receipt',required=True);parser.add_argument('--result',required=True);parser.add_argument('--journeys');args=parser.parse_args()
-    report={'result':'FAIL','stage':'preflight','scope':'INSTALLED_FULL_APP_SYNTHETIC','release_ready':False,'unaccepted':['production_policies','private_image_activation_and_send','full_english_content','missing_original_artwork','physical_device_acceptance'],'groups':{name:{'status':'BLOCKED','reason':'not_executed'} for name in sorted(JOURNEYS)},'runner_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
+    report={'result':'FAIL','stage':'preflight','scope':'SYNTHETIC_FULL_APP_ACCEPTANCE_ATTEMPT','reached':{'apk_verified':False,'boot_completed':False,'installed_verified':False,'launched':False,'home_ready':False},'release_ready':False,'unaccepted':['production_policies','private_image_activation_and_send','full_english_content','missing_original_artwork','physical_device_acceptance'],'groups':{name:{'status':'BLOCKED','reason':'not_executed'} for name in sorted(JOURNEYS)},'runner_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
     device=None;page=None;exit_code=1
     try:
         require_ci()
         sdk=Path(os.environ['ANDROID_HOME']);root=Path(os.environ['RUNNER_TEMP'])/'irth-full-native-avd'
         device=Device(sdk,root);device.provision();report['sdk_versions']=device.versions;report['acceleration']='HVF'
-        report['stage']='apk_verify';report.update(verify_apk(args.apk,args.receipt,sdk))
-        report['stage']='boot';device.boot()
+        report['stage']='apk_verify';report.update(verify_apk(args.apk,args.receipt,sdk));report['reached']['apk_verified']=True
+        report['stage']='boot';device.boot();report['reached']['boot_completed']=True
         api=device.adb('shell','getprop','ro.build.version.sdk')
         if not re.fullmatch(r'[0-9]{1,3}',api):raise Failure('api_property')
         report['android_api']=int(api)
         report['stage']='install';device.adb('install',args.apk,timeout=120)
-        device.verify_installed(report['apk_sha256'])
-        report['stage']='launch';device.launch();page=Page(device)
-        report['stage']='app_readiness';page.readiness()
+        device.verify_installed(report['apk_sha256']);report['reached']['installed_verified']=True
+        report['stage']='launch';device.launch();report['reached']['launched']=True;page=Page(device)
+        report['stage']='app_readiness';page.readiness();report['reached']['home_ready']=True
         report['result']='READY_NOT_ACCEPTANCE';exit_code=1
         if args.journeys:
             report['stage']='journeys';spec=importlib.util.spec_from_file_location('journeys',args.journeys);module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
@@ -264,13 +322,19 @@ def main():
         report['category']=category(e)
         if page:report.update(page.diagnostics())
     finally:
-        if device:report['native_actions']=device.actions
+        if device:
+            report['native_actions']=device.actions
+            if device.emulator:
+                try:report['boot_diagnostics']=device.boot_diagnostics()
+                except Exception:report['boot_diagnostics']={'diagnostic_error':True}
         if page:report['intentional_restarts']=getattr(page,'intentional_restarts',0);report['connection_failures']=getattr(page,'connection_failures',0)
         try:
             if page:page.close()
         except Exception:report['cleanup_failed']=True;report['result']='FAIL';exit_code=1
         try:
-            if device:device.close()
+            if device:
+                device.close()
+                if 'boot_diagnostics' in report:report['boot_diagnostics']['emulator_output']=device.output.snapshot()
         except Exception:report['cleanup_failed']=True;report['result']='FAIL';exit_code=1
         Path(args.result).write_text(json.dumps(report,sort_keys=True)+'\n');print(json.dumps(report,sort_keys=True))
     return exit_code
