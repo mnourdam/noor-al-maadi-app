@@ -38,6 +38,7 @@ jobs:
           python-version: '3.12'
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: node --test tests/offline/browser/test-reread-shell-build.mjs
+      - run: PYTHONDONTWRITEBYTECODE=1 python tests/offline/browser/test-reread-shell-diagnostics.py -v
       - name: Install official pinned browser tooling
         run: |
           python -m pip install playwright==1.62.0
@@ -46,10 +47,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          export CHROMIUM_EXECUTABLE_PATH="$(python -c 'from playwright.sync_api import sync_playwright; p=sync_playwright().start(); print(p.chromium.executable_path); p.stop()')"
-          python tests/offline/browser/reread-shell-browser.py > reread-shell-result.json
+          printf '{"result":"FAIL","stage":"executable_discovery"}\n' > reread-shell-result.json
+          CHROMIUM_EXECUTABLE_PATH="$(python -c 'from playwright.sync_api import sync_playwright; exec("with sync_playwright() as p:\n print(p.chromium.executable_path)")')"
+          export CHROMIUM_EXECUTABLE_PATH
+          status=0
+          python tests/offline/browser/reread-shell-browser.py > reread-shell-result.json || status=$?
           cat reread-shell-result.json
+          exit "$status"
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: reread-shell-browser-evidence
           path: reread-shell-result.json

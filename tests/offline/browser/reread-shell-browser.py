@@ -1,9 +1,26 @@
 """Selected real React surfaces/CSS in Chromium; no native Back, full app or backend."""
-import asyncio, functools, http.server, json, os, subprocess, tempfile, threading
+import asyncio, functools, http.server, json, os, subprocess, tempfile, threading, sys, math
 from pathlib import Path
 from urllib.parse import urlsplit
-from playwright.async_api import async_playwright, expect
 ROOT=Path(__file__).resolve().parents[3]
+REPORT={'result':'FAIL','stage':'build','checks':[]}
+def bounded_number(value):
+    if type(value) not in (int,float) or not math.isfinite(value) or abs(value)>1000000:return None
+    return round(value,3)
+def geometry_evidence(raw):
+    names=('content','multiline','positive_box','viewport','horizontal_scroll','vertical_scroll','unclamped','not_ellipsis','ranges_contained')
+    if not isinstance(raw,dict) or set(raw.get('tests',{}))!=set(names):raise ValueError('geometry_schema')
+    if any(type(v) is not bool for v in raw['tests'].values()):raise ValueError('geometry_schema')
+    numbers=raw.get('numbers',{})
+    expected=('left','right','top','bottom','width','height','client_width','scroll_width','client_height','scroll_height','line_count','min_left','max_right','min_top','max_bottom','viewport_width')
+    if set(numbers)!=set(expected):raise ValueError('geometry_schema')
+    return {'tests':raw['tests'],'numbers':{k:bounded_number(numbers[k]) for k in expected}}
+async def close_preserving_primary(context):
+    active=sys.exc_info()[0] is not None
+    try:await context.close()
+    except Exception:
+        REPORT['cleanup_failed']=True
+        if not active:raise
 class Handler(http.server.SimpleHTTPRequestHandler):
     def log_message(self,*args): pass
     def do_GET(self):
@@ -12,7 +29,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_response(204); self.end_headers(); return
         super().do_GET()
 async def acceptance(directory,origin):
+    from playwright.async_api import async_playwright, expect
     checks=[]; blocked=[]; errors=[]
+    REPORT.update(stage="launch",checks=checks,blocked_requests=0,page_errors=0)
+    def error_event():
+        errors.append('pageerror');REPORT['page_errors']=len(errors)
     async with async_playwright() as p:
         async def launch():
             context=await p.chromium.launch_persistent_context(str(directory/'profile'),executable_path=os.environ['CHROMIUM_EXECUTABLE_PATH'],headless=True,service_workers='block',args=['--disable-background-networking'])
@@ -20,12 +41,13 @@ async def acceptance(directory,origin):
                 u=urlsplit(r.request.url)
                 if u.scheme=='http' and u.netloc==urlsplit(origin).netloc and not u.username and not u.password and (u.path in ('/','/fixture.js','/favicon.ico','/arabesque-pattern.png') or u.path.startswith('/assets/')):
                     await r.continue_()
-                else: blocked.append('request'); await r.abort()
-            async def ws(socket): blocked.append('websocket'); await socket.close()
+                else: blocked.append('request'); REPORT['blocked_requests']=len(blocked); await r.abort()
+            async def ws(socket): blocked.append('websocket'); REPORT['blocked_requests']=len(blocked); await socket.close()
             await context.route('**/*',route); await context.route_web_socket('**/*',ws)
-            context.on('page',lambda page:page.on('pageerror',lambda _:errors.append('pageerror')))
+            context.on('page',lambda page:page.on('pageerror',lambda _:error_event()))
             return context
         context=await launch()
+        REPORT['stage']='initial_controls'
         try:
             page=await context.new_page(); await page.goto(origin); await page.wait_for_function('window.rereadShell !== undefined'); await page.evaluate('document.fonts.ready')
             cdp=await context.new_cdp_session(page); version=(await cdp.send('Browser.getVersion'))['product']; await cdp.detach()
@@ -72,6 +94,7 @@ async def acceptance(directory,origin):
             assert await page.evaluate("""savedDialog===document.querySelector('[role="dialog"]') && savedInput===document.querySelector("#unsent") && savedInput.value==="synthetic unsent response" && rereadShell.metrics.mounts===1 && rereadShell.metrics.unmounts===0""")
             await dialog.get_by_role('button',name='Return to activity',exact=True).click(); await expect(trigger).to_be_focused()
             checks.append('open reread switches ar/en controls without replacing dialog/activity or translating Arabic narrative')
+            REPORT['stage']='related_note_setup'
             # Independent related-note group; earlier acceptance groups retained.
 
             stored_before = await page.evaluate('JSON.stringify({...localStorage})')
@@ -84,44 +107,64 @@ async def acceptance(directory,origin):
                 await page.set_viewport_size({'width':width,'height':900})
                 label = related.get_by_text(label_text, exact=True)
                 note = related.get_by_text(note_text, exact=True)
-                for element, expected in [(label,label_text),(note,note_text)]:
+                for element_name,element, expected in [('label',label,label_text),('note',note,note_text)]:
+                    REPORT.update(stage='related_note_geometry',viewport=width,element=element_name)
                     await expect(element).to_be_visible()
                     assert await element.text_content() == expected
-                    assert await element.evaluate("""(el)=>{
+                    raw=await element.evaluate("""(el)=>{
                         const style=getComputedStyle(el), box=el.getBoundingClientRect();
                         const range=document.createRange();range.selectNodeContents(el);
                         const lines=Array.from(range.getClientRects()).filter(r=>r.width>0&&r.height>0);
-                        return el.childNodes.length>0 && lines.length>1 && box.width>0 && box.height>0 &&
-                          box.left>=-1 && box.right<=innerWidth+1 &&
-                          el.scrollWidth<=el.clientWidth+1 && el.scrollHeight<=el.clientHeight+1 &&
-                          style.webkitLineClamp==='none' && style.textOverflow!=='ellipsis' &&
-                          lines.every(r=>r.width>0 && r.left>=box.left-1 && r.right<=box.right+1 && r.top>=box.top-1 && r.bottom<=box.bottom+1);
+                        return {tests:{content:el.childNodes.length>0,multiline:lines.length>1,positive_box:box.width>0&&box.height>0,
+                          viewport:box.left>=-1&&box.right<=innerWidth+1,horizontal_scroll:el.scrollWidth<=el.clientWidth+1,
+                          vertical_scroll:el.scrollHeight<=el.clientHeight+1,unclamped:style.webkitLineClamp==='none',not_ellipsis:style.textOverflow!=='ellipsis',
+                          ranges_contained:lines.every(r=>r.width>0&&r.left>=box.left-1&&r.right<=box.right+1&&r.top>=box.top-1&&r.bottom<=box.bottom+1)},
+                          numbers:{left:box.left,right:box.right,top:box.top,bottom:box.bottom,width:box.width,height:box.height,
+                          client_width:el.clientWidth,scroll_width:el.scrollWidth,client_height:el.clientHeight,scroll_height:el.scrollHeight,
+                          line_count:lines.length,min_left:Math.min(...lines.map(r=>r.left)),max_right:Math.max(...lines.map(r=>r.right)),
+                          min_top:Math.min(...lines.map(r=>r.top)),max_bottom:Math.max(...lines.map(r=>r.bottom)),viewport_width:innerWidth}};
                     }""")
+                    REPORT['geometry']=geometry_evidence(raw)
+                    assert all(REPORT['geometry']['tests'].values())
+                REPORT['stage']='related_note_whitespace'
                 assert await note.evaluate('(el)=>getComputedStyle(el).whiteSpace') == 'pre-wrap'
                 assert await page.evaluate('document.documentElement.scrollWidth<=innerWidth+1')
             assert await page.evaluate('JSON.stringify({...localStorage})') == stored_before
             assert await page.evaluate('window.savedInput===document.querySelector("#unsent") && savedInput.value==="synthetic unsent response" && rereadShell.metrics.mounts===1')
             checks.append('related entities: full long label and multiline authored note fit at 360/390/768px without truncation or state mutation')
+            REPORT['stage']='owner_chapter_retirement'
             await trigger.click(); await expect(page.get_by_role('dialog')).to_be_visible(); await page.evaluate('rereadShell.changeChapter()'); await expect(page.get_by_role('dialog')).not_to_be_visible()
             await trigger.click(); await expect(page.get_by_role('dialog')).to_be_visible(); await page.evaluate('rereadShell.changeOwner()'); await expect(page.get_by_role('dialog')).not_to_be_visible()
             checks.append('keyed chapter replacement and real owner change retire open reading overlay')
             assert await page.evaluate('localStorage.getItem("irth.device.uiLanguage.v1")')=='en'
-        finally: await context.close()
+        finally: await close_preserving_primary(context)
+        REPORT['stage']='restart'
         context=await launch()
         try:
             page=await context.new_page(); await page.goto(origin); await page.wait_for_function('window.rereadShell !== undefined')
             await expect(page.locator('select')).to_have_value('en'); await expect(page.locator('nav')).to_have_attribute('dir','ltr')
             assert await page.evaluate('localStorage.getItem("irth.device.uiLanguage.v1")')=='en'
             checks.append('clean browser restart retains local English preference with real store readback')
-        finally: await context.close()
+        finally: await close_preserving_primary(context)
+    REPORT.update(stage='final_guards',blocked_requests=len(blocked),page_errors=len(errors))
     assert not blocked and not errors and len(checks)==8
     return {'result':'PASS','chromium':version,'checks':checks,'blocked_requests':len(blocked),'page_errors':len(errors),'limits':'Selected real widgets/shell/CSS/fonts with router/HUD/poller/diagnostic/overlay-bridge stubs. Decorative texture omitted. No full app, native Back, native device, backend, historical translation, user text-selection policy or arbitrary crash proof.'}
 def main():
-    with tempfile.TemporaryDirectory(prefix='irth-reread-shell-') as temp:
-        directory=Path(temp); assets=directory/'assets'; assets.mkdir()
-        subprocess.run(['node','tests/offline/browser/build-reread-shell.mjs',str(assets)],cwd=ROOT,check=True,stdout=subprocess.DEVNULL)
-        server=http.server.ThreadingHTTPServer(('127.0.0.1',0),functools.partial(Handler,directory=str(assets))); server.daemon_threads=True
-        thread=threading.Thread(target=server.serve_forever,daemon=True); thread.start()
-        try: print(json.dumps(asyncio.run(acceptance(directory,f'http://127.0.0.1:{server.server_port}')),indent=2))
-        finally: server.shutdown();server.server_close();thread.join(timeout=5)
-if __name__=='__main__': main()
+    code=0
+    try:
+        with tempfile.TemporaryDirectory(prefix='irth-reread-shell-') as temp:
+            directory=Path(temp); assets=directory/'assets'; assets.mkdir()
+            subprocess.run(['node','tests/offline/browser/build-reread-shell.mjs',str(assets)],cwd=ROOT,check=True,stdout=subprocess.DEVNULL)
+            server=http.server.ThreadingHTTPServer(('127.0.0.1',0),functools.partial(Handler,directory=str(assets))); server.daemon_threads=True
+            thread=threading.Thread(target=server.serve_forever,daemon=True); thread.start()
+            try:REPORT.update(asyncio.run(acceptance(directory,f'http://127.0.0.1:{server.server_port}')))
+            finally:
+                active=sys.exc_info()[0] is not None
+                try:server.shutdown();server.server_close();thread.join(timeout=5)
+                except Exception:
+                    REPORT['server_cleanup_failed']=True
+                    if not active:raise
+    except Exception as error:
+        REPORT['result']='FAIL';REPORT['category']=type(error).__name__ if type(error).__name__ in ('AssertionError','TimeoutError','CalledProcessError','ValueError') else 'runtime_error';code=1
+    print(json.dumps(REPORT,indent=2));return code
+if __name__=='__main__':raise SystemExit(main())
