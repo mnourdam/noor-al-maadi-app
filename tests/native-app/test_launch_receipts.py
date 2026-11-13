@@ -35,7 +35,7 @@ class Receipt(unittest.TestCase):
         self.assertEqual(receipt['boot_before_dispatch']['value'],'unavailable');self.assertTrue(receipt['command_completed'])
     def test_normal_and_exploratory_use_shared_helper_no_promotion(self):
         source=Path(r.__file__).read_text();explore=Path(r.__file__).with_name('exploratory.py').read_text()
-        self.assertIn("device.launch(report['launch'])",source);self.assertIn("api['launch_once'](bounded,result['launch'],deadline,reconcile_device=device)",explore)
+        self.assertIn("device.launch(report['launch'],verified_install=True)",source);self.assertIn("api['launch_once'](bounded,result['launch'],deadline,reconcile_device=device,verified_install=True)",explore)
         self.assertNotIn("bounded.adb('shell','am'",explore);self.assertEqual(r.BOOT_SECONDS,900)
 class Parsers(unittest.TestCase):
     def test_pid_exact_absence_multiple_malformed_capture(self):

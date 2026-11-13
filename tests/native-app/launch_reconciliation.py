@@ -41,7 +41,7 @@ def socket(row,process):
         if len(parts)==8 and parts[7]==expected:found+=1
     return 'present' if found==1 else ('ambiguous' if found>1 else 'not_observed_in_complete_capture')
 
-def collect(device,package,klass):
+def collect(device,package,klass,identity=None):
     # Existing helper caps streams, kills/reaps ONLY its own read-only adb probe.
     spec=importlib.util.spec_from_file_location('launch_guest_capture',Path(__file__).with_name('guest_boot_diagnostics.py'))
     guest=importlib.util.module_from_spec(spec);spec.loader.exec_module(guest)
@@ -63,6 +63,8 @@ def collect(device,package,klass):
         last=probe('process_after',['shell','pidof',package]);last_state,last_process=pid(last);out['process_after']=last_state
         out['same_process_sampled']=last_state=='present' and process==last_process
         out['socket']=socket(sockets,process) if out['same_process_sampled'] else 'unavailable_process_changed_or_unverified'
+        if identity is not None and out['same_process_sampled'] and out['activity']=='exact_component_observed' and out['socket'] in ('present','not_observed_in_complete_capture') and all(probe['capture']=='complete' for probe in out['probes'].values()):
+            identity.update(origin='launch_reconciliation_same_process',process=process)
     else:out['socket']='unavailable_no_unique_process'
     out['elapsed_seconds']=round(time.monotonic()-start,6)
     return out

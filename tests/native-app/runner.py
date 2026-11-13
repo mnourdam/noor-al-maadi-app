@@ -41,7 +41,7 @@ def command(args, timeout=30, input=None):
     if p.returncode: raise Failure('command_failed')
     return p.stdout.decode('utf8','replace').strip()
 
-def launch_once(device, receipt, deadline=None, reconcile_device=None):
+def launch_once(device, receipt, deadline=None, reconcile_device=None, verified_install=False):
     """One dispatch only. Observation after failure never promotes its outcome."""
     start=time.monotonic()
     receipt.update(stage='boot_sample',dispatch_attempted=False,command_completed=False)
@@ -62,7 +62,14 @@ def launch_once(device, receipt, deadline=None, reconcile_device=None):
             try:
                 spec=importlib.util.spec_from_file_location('launch_reconciliation',Path(__file__).with_name('launch_reconciliation.py'))
                 helper=importlib.util.module_from_spec(spec);spec.loader.exec_module(helper)
-                receipt['reconciliation']=helper.collect(reconcile_device or device,PACKAGE,ACTIVITY)
+                identity={}
+                receipt['reconciliation']=helper.collect(reconcile_device or device,PACKAGE,ACTIVITY,identity)
+                if isinstance(error,subprocess.TimeoutExpired) and verified_install is True:
+                    try:
+                        spec=importlib.util.spec_from_file_location('native_initialization',Path(__file__).with_name('native_initialization.py'))
+                        observer=importlib.util.module_from_spec(spec);spec.loader.exec_module(observer)
+                        receipt['native_initialization']=observer.observe(reconcile_device or device,PACKAGE,ACTIVITY,identity,receipt,verified_install)
+                    except Exception:receipt['native_initialization']={'status':'unavailable','category':'diagnostic_error'}
             except Exception:receipt['reconciliation']={'status':'unavailable','category':'diagnostic_error'}
         raise
     finally:receipt['elapsed_seconds']=round(time.monotonic()-start,6)
@@ -271,8 +278,8 @@ class Device:
     def verify_installed(self,expected):
         location=self.adb('shell','pm','path',PACKAGE)
         if installed_digest(self,location)!=expected:raise Failure('installed_hash')
-    def launch(self,receipt=None):
-        launch_once(self,receipt if receipt is not None else {});self.actions.append('launch')
+    def launch(self,receipt=None,verified_install=False):
+        launch_once(self,receipt if receipt is not None else {},verified_install=verified_install);self.actions.append('launch')
     def back(self):self.adb('shell','input','keyevent','KEYCODE_BACK');self.actions.append('back')
     def home(self):self.adb('shell','input','keyevent','KEYCODE_HOME');self.actions.append('home')
     def force_stop(self):
@@ -422,7 +429,7 @@ def main():
         report['stage']='install';report['installation']={}
         install_once(device,args.apk,report['apk_sha256'],report['installation'])
         report['reached']['installed_verified']=True
-        report['stage']='launch';report['launch']={};device.launch(report['launch']);report['reached']['launched']=True;page=Page(device)
+        report['stage']='launch';report['launch']={};device.launch(report['launch'],verified_install=True);report['reached']['launched']=True;page=Page(device)
         report['stage']='app_readiness';page.readiness();report['reached']['home_ready']=True
         report['result']='READY_NOT_ACCEPTANCE';exit_code=1
         if args.journeys:

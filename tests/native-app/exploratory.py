@@ -35,7 +35,7 @@ def run(api,guest,device,apk,receipt,original):
         result['installation']={}
         api['install_once'](bounded,apk,verified['apk_sha256'],result['installation'],deadline,reconcile_device=device)
         result['reached']['installed_verified']=True;result['launch']={}
-        try:api['launch_once'](bounded,result['launch'],deadline,reconcile_device=device)
+        try:api['launch_once'](bounded,result['launch'],deadline,reconcile_device=device,verified_install=True)
         finally:
             if result['launch'].get('dispatch_attempted'):result['actions'].append('launch')
         result['reached']['launched']=True
