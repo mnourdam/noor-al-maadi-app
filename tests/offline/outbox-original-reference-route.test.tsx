@@ -18,7 +18,7 @@ vi.mock('@/components/FriendNotificationsPoller',()=>({FriendNotificationsPoller
 vi.mock('@/lib/androidFreezeDiagnostics',()=>({androidMark:()=>{},isAndroidUltraStableMode:()=>false}));
 vi.mock('@/lib/androidQuietMode',()=>({isSectionEnabled:()=>false}));
 vi.mock('@/lib/account',()=>({useAccount:()=>({user:null})}));
-vi.mock('@/lib/profile',()=>({useProfile:()=>({profile:{settings:{textSize:'sm'}}})}));
+vi.mock('@/lib/profile',()=>({useProfileQuotaExceeded:()=>false,useProfile:()=>({profile:{settings:{textSize:'sm'}}})}));
 vi.mock('@/lib/navigation/engine',()=>({useBack:()=>state.back,useStashCurrentAsOrigin:()=>state.back}));
 vi.mock('@/hooks/useEntityReadCompletion',()=>({useEntityReadCompletion:(value:unknown)=>state.read(value)}));
 vi.mock('@/lib/relationship-graph',()=>({resolveRelatedEntities:async()=>[],groupRelatedByReason:()=>[]}));

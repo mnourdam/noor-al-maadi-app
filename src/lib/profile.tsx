@@ -173,6 +173,7 @@ interface Ctx {
   profile: ProfileState;
   hydrated: boolean;
   getPersistence: () => ProfilePersistence;
+  quotaExceeded: boolean;
   login: (name: string) => void;
   logout: () => void;
   userId: string | null;
@@ -462,7 +463,7 @@ function hydrateFromStorage(reportReadable?: (readable: boolean) => void): Profi
 }
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
-  const { profile, owner: profileOwner, epoch: profileEpoch, setProfile, hydrate, getPersistence, capture, reset, prepareConditional } = useProfileWriter(initial);
+  const { profile, quotaExceeded, owner: profileOwner, epoch: profileEpoch, setProfile, hydrate, getPersistence, capture, reset, prepareConditional } = useProfileWriter(initial);
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
     hydrate(hydrateFromStorage);
@@ -630,6 +631,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   const ctx = useMemo<Ctx>(() => ({
     profile,
     hydrated,
+    quotaExceeded,
     getPersistence,
     login: (name) => update((p) => ({ ...p, name: name.trim() || "صديق التاريخ", loggedIn: true })),
     logout: () => {
@@ -1250,7 +1252,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     grantTitle: (title) => update((p) => p.titlesEarned.includes(title) ? p : { ...p, titlesEarned: [...p.titlesEarned, title] }),
     grantArtifact: (id) => update((p) => p.artifactsFound.includes(id) ? p : { ...p, artifactsFound: [...p.artifactsFound, id] }),
     // `markAchievementEarned` removed - Achievement Engine v2 owns unlocks.
-  }), [profile, profileOwner, profileEpoch, hydrated, getPersistence, capture, reset, prepareConditional, sessionCurrent, update, awardBadge, trySpendDinars]);
+  }), [profile, quotaExceeded, profileOwner, profileEpoch, hydrated, getPersistence, capture, reset, prepareConditional, sessionCurrent, update, awardBadge, trySpendDinars]);
 
   return <ProfileContext.Provider value={ctx}>{children}</ProfileContext.Provider>;
 }
@@ -1259,4 +1261,9 @@ export function useProfile() {
   const ctx = useContext(ProfileContext);
   if (!ctx) throw new Error("useProfile must be used within ProfileProvider");
   return ctx;
+}
+
+/** Shells rendered outside the player provider have no local persistence signal. */
+export function useProfileQuotaExceeded(): boolean {
+  return useContext(ProfileContext)?.quotaExceeded ?? false;
 }

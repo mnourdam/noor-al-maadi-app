@@ -247,7 +247,7 @@ for (const mode of ["QuotaExceededError", "SecurityError", "lost-ack"] as const)
     await act(async () => {
       api!.addPoints(7);
     });
-    expect(errors).toHaveLength(1);
+    expect(errors).toHaveLength(mode === "QuotaExceededError" ? 0 : 1);
     expect(api!.getPersistence().outcome).toBe("failed");
     expect(saved().points).toBe(mode === "lost-ack" ? 107 : 100);
   });

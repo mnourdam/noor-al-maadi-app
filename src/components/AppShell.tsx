@@ -1,6 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Compass, Swords, Map, Library, User, BookOpen } from "lucide-react";
 import { createContext, useContext, useEffect, memo, type ReactNode } from "react";
+import { ProfileStorageWarning } from "./ProfileStorageWarning";
 import { HUD } from "./HUD";
 import { UiLanguageChooser } from "./UiLanguageChooser";
 import { useUiLanguage } from "@/lib/ui-language/store";
@@ -66,6 +67,7 @@ export const AppShell = memo(function AppShell({ children }: { children: ReactNo
         style={{ paddingBottom: "calc(6rem + env(safe-area-inset-bottom))" }}
       >
         <HUD />
+        <ProfileStorageWarning />
         <UiLanguageChooser />
         {!androidStable && isSectionEnabled("friendPoller") && <FriendNotificationsPoller />}
         {/* Legacy BackNavigationGuard removed — hardware Back is owned by

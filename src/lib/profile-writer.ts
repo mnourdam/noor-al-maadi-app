@@ -1,5 +1,5 @@
 /** Per-provider write lifecycle, not a cross-tab CAS or economic authority. */
-import { useCallback, useEffect, useMemo, useRef, useState, type SetStateAction } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type SetStateAction } from "react";
 import { getActiveOwner, getIdentityEpoch, onOwnerChange } from "./identity/owner";
 import type { ProfileState } from "./profile";
 
@@ -29,7 +29,23 @@ export interface ConditionalProfileWrite {
   apply(change: (profile: ProfileState) => ProfileState): Promise<boolean>;
 }
 export function useProfileWriter(initial: ProfileState) {
+  useSyncExternalStore(onOwnerChange, () => getIdentityEpoch(), () => 0);
   const source = useRef(Symbol("profile-provider"));
+  type QuotaScope = Pick<Frame, "source" | "owner" | "epoch" | "generation">;
+  const [quota, setQuota] = useState<QuotaScope | null>(null);
+  // Admission/effect callbacks may outlive the render that created them.
+  // Track the latest warning decision without scheduling null-to-null updates.
+  const quotaCurrent = useRef<QuotaScope | null>(null);
+  const publishQuota = (next: QuotaScope | null) => {
+    if (quotaCurrent.current === next) return;
+    quotaCurrent.current = next;
+    setQuota(next);
+  };
+  const carryQuota = (next: Pick<Frame, "source" | "owner" | "epoch" | "generation">) => {
+    const previous = quotaCurrent.current;
+    if (!previous) return;
+    publishQuota(previous.source === next.source && previous.owner === next.owner && previous.epoch === next.epoch ? next : null);
+  };
   const generation = useRef(0);
   const admitted = useRef(0);
   const active = useRef(true);
@@ -141,6 +157,7 @@ export function useProfileWriter(initial: ProfileState) {
           readable = value;
         }) ?? initial;
       if (!matches(scope)) return;
+      carryQuota(scope);
       commit((previous) =>
         matches(scope)
           ? {
@@ -190,6 +207,7 @@ export function useProfileWriter(initial: ProfileState) {
         // Serialization/setItem failures retain the existing outer error path.
       }
       result.current = { ...evidence, outcome: matches(frame) && verified ? "written" : "unresolved" };
+      if (result.current.outcome === "written") publishQuota(null);
       if (attempt) settleConditional(
         attempt.applied && result.current.outcome === "written" &&
           pending.current?.ticket === admitted.current,
@@ -198,7 +216,14 @@ export function useProfileWriter(initial: ProfileState) {
     } catch (error) {
       result.current = { ...evidence, outcome: "failed" };
       if (attempt) settleConditional(false, attempt.token);
-      // Preserve existing React error-boundary behavior; never report durability.
+      // Storage exhaustion must not tear down the player UI. Keep the failed
+      // receipt and conditional false; do not delete data, retry or claim a save.
+      if (error instanceof DOMException && error.name === "QuotaExceededError") {
+        if (matches(frame) && !(quotaCurrent.current && matches(quotaCurrent.current)))
+          publishQuota({ source: frame.source, owner: frame.owner, epoch: frame.epoch, generation: frame.generation });
+        return;
+      }
+      // Unexpected faults keep the existing error-boundary behavior.
       throw error;
     }
   }, [frame]);
@@ -214,6 +239,7 @@ export function useProfileWriter(initial: ProfileState) {
       )
         return;
       const nextScope = { ...scope, generation: ++generation.current };
+      carryQuota(nextScope);
       settleConditional(false);
       admitted.current++;
       commit((previous) => {
@@ -307,6 +333,7 @@ export function useProfileWriter(initial: ProfileState) {
     };
   }, []);
   return {
+    quotaExceeded: quota !== null && matches(quota),
     profile: frame.value,
     owner: frame.owner,
     epoch: frame.epoch,

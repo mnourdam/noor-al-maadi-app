@@ -311,7 +311,8 @@ it("quota after a React mutation is not durable profile inclusion", async () => 
   await act(async () => {
     api!.addPoints(7);
   });
-  expect(errors.some((error) => error.name === "QuotaExceededError")).toBe(true);
+  expect(errors).toHaveLength(0);
+  expect(api!.getPersistence().outcome).toBe("failed");
   expect(saved().points).toBe(100);
-  expect(log).toHaveBeenCalled(); // React reports the caught persistence-effect error.
+  expect(log).not.toHaveBeenCalled(); // Quota no longer tears down the provider.
 });
