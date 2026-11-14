@@ -82,11 +82,12 @@ class Experiment(base.Experiment):
   self.sql(Path(__file__).with_name('sender.sql').read_text());self.sql(f"INSERT INTO promotion_model.client_config VALUES(true,'{revision}');NOTIFY pgrst,'reload schema';")
   def attempt(internal=False,reservation=None,input_bytes=None,terminal=True):
    content=raw if input_bytes is None else input_bytes
-   a={'rid':reservation or str(uuid.uuid4()),'aid':str(uuid.uuid4()),'token':str(uuid.uuid4()),'owner':owner[0],'issue':str(uuid.uuid4()),'internal':internal,'input':hashlib.sha256(content).hexdigest(),'revision':revision}
+   uploader=staff if internal else owner
+   a={'rid':reservation or str(uuid.uuid4()),'aid':str(uuid.uuid4()),'token':str(uuid.uuid4()),'owner':owner[0],'uploader':uploader[0],'issue':str(uuid.uuid4()),'internal':internal,'input':hashlib.sha256(content).hexdigest(),'revision':revision}
    if reservation is None:self.worker('reserve',a)
-   a['key']=self.worker('claim',a);a['source_id']=str(uuid.uuid4());a['source']=owner[0]+'/'+a['source_id']
+   a['key']=self.worker('claim',a);a['source_id']=str(uuid.uuid4());a['source']=uploader[0]+'/'+a['source_id']
    self.check(self.worker('input_begin',a) is True,'durable exact input intent before upload')
-   self.check(self.storage(self.Q,a['source'],owner[1],'POST',content)[0] in (200,201),'owner upload positive')
+   self.check(self.storage(self.Q,a['source'],uploader[1],'POST',content)[0] in (200,201),'bound uploader positive')
    if terminal:
     self.check(self.storage(self.Q,a['source'],self.fields['service'])==(200,content),'testbench terminal PUT plus exact service read')
     self.check(self.worker('input_terminal',a) is True,'testbench terminal writer receipt')

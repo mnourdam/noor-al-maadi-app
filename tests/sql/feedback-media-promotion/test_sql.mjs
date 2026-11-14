@@ -65,6 +65,15 @@ try {
  await db.exec('RESET ROLE;');assert.equal(await one('SELECT count(*)::int FROM promotion_model.publication'),countBefore);assert.equal(await one('SELECT reservation_id FROM promotion_model.attempt WHERE id=$1',[alien.aid]),alien.rid);
  // Staff uploader is distinct from recipient; roles derive from auth, not request data.
  const staff=randomUUID(),staff2=randomUUID();await db.exec(`CREATE OR REPLACE FUNCTION public.is_feedback_staff(uuid) RETURNS boolean LANGUAGE SQL AS $$SELECT $1 IN ('${staff}'::uuid,'${staff2}'::uuid) AND current_setting('fixture.staff_active',true) IS DISTINCT FROM 'false'$$;SET fixture.staff_active='true';`);
+ // Reproduce prior helper mismatch: an owner-upload internal intent is not authorized.
+ for(const explicitStaff of [false,true]){
+  await db.exec(`SET fixture.uid='${owner}';SET fixture.role='service_role';`);
+  const ia={...a,rid:randomUUID(),aid:randomUUID(),token:randomUUID(),internal:true,source_id:randomUUID(),...(explicitStaff?{uploader:staff}:{})};ia.source=(explicitStaff?staff:owner)+'/'+ia.source_id;
+  await worker('reserve',ia);ia.key=await worker('claim',ia);assert.equal(ia.key,owner+'/'+ia.aid);assert.equal(await worker('input_begin',ia),true);
+  await db.exec(`SET fixture.role='authenticated';SET ROLE authenticated;`);assert.equal(await one('SELECT public.fixture_quarantine_insert($1)',[ia.source]),false);
+  await db.exec(`SET fixture.uid='${staff}';`);assert.equal(await one('SELECT public.fixture_quarantine_insert($1)',[ia.source]),explicitStaff);
+  await db.exec('RESET ROLE;');const identities=(await db.query('SELECT owner_id,uploader_id FROM promotion_model.attempt WHERE id=$1',[ia.aid])).rows[0];assert.equal(identities.owner_id,owner);assert.equal(identities.uploader_id,explicitStaff?staff:owner);
+ }
  for(const inside of [false,true]){
   const smid=randomUUID(),said=randomUUID(),args=[smid,ci,'staff immutable',said,'d'.repeat(64),10,inside];
   const sr=()=>one('SELECT public.reserve_canonical_feedback_image_v1($1,$2,$3,$4,$5,$6,$7)',args),sf=()=>one('SELECT public.finalize_canonical_feedback_image_v1($1,$2,$3,$4,$5,$6,$7)',args);

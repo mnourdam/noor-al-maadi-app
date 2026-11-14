@@ -123,7 +123,7 @@ BEGIN
  IF auth.role() IS DISTINCT FROM 'service_role' THEN RAISE EXCEPTION 'service_only' USING ERRCODE='42501'; END IF;
  IF op IN('input_begin','input_terminal','input_admit','reject_input','input_cleanup','input_positive','input_removed','input_retry_absence') THEN RETURN to_jsonb(promotion_model.input_control(op,p)); END IF;
  CASE op
- WHEN 'reserve' THEN INSERT INTO promotion_model.reservation(id,owner_id,thread_id,internal) VALUES((p->>'rid')::uuid,(p->>'owner')::uuid,(p->>'issue')::uuid,(p->>'internal')::boolean); RETURN 'true';
+ WHEN 'reserve' THEN INSERT INTO promotion_model.reservation(id,owner_id,uploader_id,thread_id,internal) VALUES((p->>'rid')::uuid,(p->>'owner')::uuid,coalesce((p->>'uploader')::uuid,(p->>'owner')::uuid),(p->>'issue')::uuid,(p->>'internal')::boolean); RETURN 'true';
  WHEN 'claim' THEN RETURN to_jsonb(promotion_model.claim((p->>'rid')::uuid,(p->>'aid')::uuid,(p->>'token')::uuid,p->>'input',p->>'revision'));
  WHEN 'start' THEN IF NOT promotion_model.input_control('input_admit',p) THEN RETURN 'false'; END IF; RETURN to_jsonb(promotion_model.start_write((p->>'aid')::uuid,(p->>'token')::uuid));
  WHEN 'terminal' THEN IF (p->>'bytes')::integer NOT BETWEEN 1 AND 2097152 OR p->>'bytes' IS NULL THEN RETURN 'false'; END IF; IF NOT promotion_model.terminal((p->>'aid')::uuid,(p->>'token')::uuid,(p->>'success')::boolean,p->>'output') THEN RETURN 'false'; END IF; UPDATE promotion_model.attempt SET output_size=(p->>'bytes')::integer WHERE id=(p->>'aid')::uuid; RETURN 'true';
