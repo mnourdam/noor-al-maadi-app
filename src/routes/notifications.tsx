@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useRef, useSyncExternalStore } from "react";
 import { Trash2, ChevronLeft, MailOpen, CheckCheck, Image as ImageIcon } from "lucide-react";
 import { AppShell, Screen } from "@/components/AppShell";
 import { NotificationThumbnail } from "@/components/notifications/NotificationThumbnail";
@@ -15,6 +15,7 @@ import {
   subscribeToMyNotifications,
   type ServerNotification,
 } from "@/lib/notifications/server";
+import { getActiveOwner, getIdentityEpoch, onOwnerChange } from "@/lib/identity/owner";
 import { useStashCurrentAsOrigin } from "@/lib/navigation";
 
 
@@ -48,7 +49,15 @@ function relativeTime(iso: string): string {
   return new Date(iso).toLocaleDateString("ar", { month: "short", day: "numeric" });
 }
 
+const notificationScope = () => JSON.stringify([getActiveOwner(), getIdentityEpoch()]);
+const serverNotificationScope = () => "server";
+
 function NotificationsCenter() {
+  const scope = useSyncExternalStore(onOwnerChange, notificationScope, serverNotificationScope);
+  return <ScopedNotificationsCenter key={scope} scope={scope} />;
+}
+
+function ScopedNotificationsCenter({ scope }: { scope: string }) {
   const router = useRouter();
   const stashOrigin = useStashCurrentAsOrigin();
   const [rows, setRows] = useState<ServerNotification[]>([]);
@@ -56,24 +65,35 @@ function NotificationsCenter() {
   const [feedback, setFeedback] = useState<string | null>(null);
 
 
-  const refresh = useCallback(async () => {
-    const list = await fetchMyNotifications(150);
-    setRows(list);
-    setLoading(false);
-  }, []);
+  const mounted = useRef(false);
+  const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const current = () => mounted.current && notificationScope() === scope;
 
   useEffect(() => {
+    mounted.current = true;
+    let alive = true;
+    const refresh = async () => {
+      if (!alive || notificationScope() !== scope) return;
+      const list = await fetchMyNotifications(150);
+      if (!alive || notificationScope() !== scope) return;
+      setRows(list);
+      setLoading(false);
+    };
     void refresh();
     const unsub = subscribeToMyNotifications(() => { void refresh(); });
     const onLocal = () => { void refresh(); };
     window.addEventListener("irth:notifications:updated", onLocal);
     return () => {
+      alive = false;
+      mounted.current = false;
+      if (feedbackTimer.current !== null) clearTimeout(feedbackTimer.current);
       unsub();
       window.removeEventListener("irth:notifications:updated", onLocal);
     };
-  }, [refresh]);
+  }, [scope]);
 
   const open = async (n: ServerNotification) => {
+    if (!current()) return;
     if (!n.read_at) {
       setRows((cur) => cur.map((r) => (r.id === n.id ? { ...r, read_at: new Date().toISOString() } : r)));
       void markNotificationRead(n.id);
@@ -87,6 +107,7 @@ function NotificationsCenter() {
     };
     // V16: one canonical action resolver for push taps and Center taps.
     const action = resolveNotificationAction(like);
+    if (!current()) return;
     if (action.kind === "external") {
       await openExternalUrl(action.url);
       return;
@@ -100,29 +121,36 @@ function NotificationsCenter() {
     // Stash /notifications as origin so Back from the target returns
     // here rather than falling through to the target's structural parent.
     stashOrigin(path || "/");
+    if (!current()) return;
     try {
       await router.navigate({ to: (path || "/") as "/", hash: hashPart || undefined });
     } catch {
-      window.location.href = to;
+      if (current()) window.location.href = to;
     }
   };
 
 
   const remove = async (id: string) => {
+    if (!current()) return;
     setRows((cur) => cur.filter((r) => r.id !== id));
     await deleteMyNotification(id);
   };
 
   const markAll = async () => {
+    if (!current()) return;
     const now = new Date().toISOString();
     setRows((cur) => cur.map((r) => ({ ...r, read_at: r.read_at ?? now })));
     await markAllNotificationsRead();
+    if (!current()) return;
     setFeedback("تم تحديد كل الإشعارات كمقروءة.");
-    setTimeout(() => setFeedback(null), 2500);
+    if (feedbackTimer.current !== null) clearTimeout(feedbackTimer.current);
+    feedbackTimer.current = setTimeout(() => { if (current()) setFeedback(null); }, 2500);
   };
 
   const clearAll = async () => {
+    if (!current()) return;
     if (!window.confirm("مسح كل الإشعارات من المركز؟")) return;
+    if (!current()) return;
     setRows([]);
     await clearMyNotifications();
   };
