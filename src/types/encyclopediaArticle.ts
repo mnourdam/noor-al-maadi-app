@@ -84,6 +84,30 @@ export interface EncyclopediaArticle {
   facts?: QuickFact[];
   related?: RelatedEntityGroups;
   sources?: ArticleSource[];
+  originalReferences?: OriginalReference[];
+}
+
+export type OriginalReference = string | { label: string; value: string; url?: string };
+/** Verbatim legacy references. Conservative exact dedup; never infer a URL. */
+function originalReferences(raw: unknown, sources: ArticleSource[] = []): OriginalReference[] {
+  if (!Array.isArray(raw)) return [];
+  const result: OriginalReference[] = [], seen = new Set<string>();
+  const empty = (x: unknown) => x == null || x === "";
+  for (const item of raw) {
+    let ref: OriginalReference;
+    if (typeof item === "string" && item.trim()) ref = item;
+    else if (item && typeof item === "object" && !Array.isArray(item)) {
+      const x = item as Record<string, unknown>;
+      if (!Object.keys(x).every(k => ["label", "value", "url"].includes(k)) || typeof x.label !== "string" || !x.label.trim() || typeof x.value !== "string" || !x.value.trim() || (x.url !== undefined && typeof x.url !== "string")) continue;
+      ref = { label: x.label, value: x.value, ...(x.url !== undefined ? {url: x.url as string} : {}) };
+    } else continue;
+    const duplicate = sources.some(source => typeof ref === "string"
+      ? source.title === ref && empty(source.author) && empty(source.note) && empty(source.url)
+      : source.title === ref.label && source.note === ref.value && empty(source.author) && source.url === ref.url);
+    const key = typeof ref === "string" ? JSON.stringify(["text", ref]) : JSON.stringify(["pair", ref.label, ref.value, ref.url ?? null]);
+    if (!duplicate && !seen.has(key)) {seen.add(key);result.push(ref);}
+  }
+  return result;
 }
 
 /** Best-effort parser. Accepts the raw `body` (and optionally `metadata`)
@@ -121,6 +145,10 @@ export function parseEncyclopediaArticle(
     if (!out.sources && Array.isArray(m.sources)) out.sources = m.sources.filter(isSource);
   }
 
+  if (body && typeof body === "object" && !Array.isArray(body)) {
+    const refs = originalReferences((body as Record<string, unknown>).references, out.sources);
+    if (refs.length) out.originalReferences = refs;
+  }
   return out;
 }
 

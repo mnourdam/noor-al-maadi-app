@@ -8,6 +8,7 @@ import { EncyclopediaTimeline } from "./EncyclopediaTimeline";
 import { EncyclopediaSections } from "./EncyclopediaSections";
 import { EncyclopediaFacts } from "./EncyclopediaFacts";
 import { EncyclopediaRelatedEntities } from "./EncyclopediaRelatedEntities";
+import { EncyclopediaOriginalReferences } from "./EncyclopediaOriginalReferences";
 import { EncyclopediaSources } from "./EncyclopediaSources";
 
 export function EncyclopediaArticleBody({ article }: { article: EncyclopediaArticle }) {
@@ -19,6 +20,7 @@ export function EncyclopediaArticleBody({ article }: { article: EncyclopediaArti
       <EncyclopediaFacts   facts={article.facts} />
       <EncyclopediaRelatedEntities related={article.related} />
       <EncyclopediaSources sources={article.sources} />
+      <EncyclopediaOriginalReferences references={article.originalReferences} />
     </>
   );
 }
