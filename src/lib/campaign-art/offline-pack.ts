@@ -137,7 +137,9 @@ export function localCampaignArtPathForStoragePath(
 // ------------------------------------------------------------
 import { OFFLINE_CHAPTER_IMAGE_PATHS } from "./chapter-pack.generated";
 
-const BUNDLED_CHAPTER_PATHS: ReadonlySet<string> = new Set(OFFLINE_CHAPTER_IMAGE_PATHS);
+import { INTERPRETIVE_CHAPTER_IMAGES } from "./interpretive-chapters";
+
+const BUNDLED_CHAPTER_PATHS: ReadonlySet<string> = new Set([...OFFLINE_CHAPTER_IMAGE_PATHS, ...INTERPRETIVE_CHAPTER_IMAGES.map(item => item.path)]);
 
 /** Bucket path of a chapter image URL, or null when it is not one of ours. */
 export function chapterImageStoragePath(url: string | null | undefined): string | null {
@@ -154,7 +156,8 @@ export function chapterImageStoragePath(url: string | null | undefined): string 
 
 /** Local, same-origin path for a bundled chapter image URL. */
 export function localChapterImagePathForUrl(url: string | null | undefined): string | null {
-  const path = chapterImageStoragePath(url);
+  // Only exact inventoried same-origin paths bypass cache/network.
+  const path = url?.startsWith("/campaign-key-art/") ? url.slice("/campaign-key-art/".length) : chapterImageStoragePath(url);
   if (!path || !BUNDLED_CHAPTER_PATHS.has(path)) return null;
   return `/campaign-key-art/${path}`;
 }

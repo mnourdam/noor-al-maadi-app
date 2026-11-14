@@ -1,0 +1,146 @@
+{
+  "versions": {
+    "aom": "3.15.1",
+    "archive": "3.8.9",
+    "cairo": "1.18.6",
+    "cgif": "0.5.4",
+    "exif": "0.6.26",
+    "expat": "2.8.5",
+    "ffi": "3.8.0",
+    "fontconfig": "2.18.3",
+    "freetype": "2.14.3",
+    "fribidi": "1.0.17",
+    "glib": "2.90.0",
+    "harfbuzz": "14.5.0",
+    "heif": "1.23.5",
+    "highway": "1.4.0",
+    "imagequant": "2.4.1",
+    "lcms": "2.19.1",
+    "mozjpeg": "0826579",
+    "pango": "1.58.2",
+    "pixman": "0.46.4",
+    "png": "1.6.58",
+    "proxy-libintl": "0.5",
+    "rsvg": "2.63.2",
+    "tiff": "4.7.2",
+    "uhdr": "2.0.2",
+    "vips": "8.18.7",
+    "webp": "1.6.0",
+    "xml2": "2.15.4",
+    "zlib-ng": "2.3.3",
+    "sharp": "0.35.5"
+  },
+  "records": [
+    {
+      "source": "cordoba-city-of-books-candidate.png",
+      "source_sha256": "b32942cee72c5b9ef1fec70508ed47107d21592116b9cf6ff6b6ad3b37b0da93",
+      "source_bytes": 2720723,
+      "source_dimensions": [
+        1672,
+        941
+      ],
+      "crop": {
+        "left": 4,
+        "top": 2,
+        "width": 1664,
+        "height": 936
+      },
+      "target": "cordoba-city-of-books-interpretive.webp",
+      "width": 1600,
+      "height": 900,
+      "quality": 74,
+      "bytes": 167780,
+      "sha256": "b8f991c4adb80ae6f3b02d44d23ca7805def2d74e89d36738707def1b36f696c",
+      "attempts": [
+        {
+          "quality": 74,
+          "bytes": 167780
+        }
+      ],
+      "status": "new interpretive illustration; local test-branch binding only; not recovered or authenticated",
+      "campaign_id": "cordoba-golden-age",
+      "chapter_id": "ch5",
+      "chapter_title": "مدينة الكتب",
+      "path": "chapters/cordoba-golden-age/ch5/interpretive-v1.webp",
+      "source_chapter_sha256": "f172867a43f4891a3efd09a9f41bdda0ed308850ef89b3ec8d9c5933d47b2ceb"
+    },
+    {
+      "source": "ottoman-institutions-candidate.png",
+      "source_sha256": "3132f0553a4842b4dffb326612c99db00c9dd222d39a3d31bd4cf39d3ffb2b65",
+      "source_bytes": 2934892,
+      "source_dimensions": [
+        1672,
+        941
+      ],
+      "crop": {
+        "left": 4,
+        "top": 2,
+        "width": 1664,
+        "height": 936
+      },
+      "target": "ottoman-institutions-interpretive.webp",
+      "width": 1600,
+      "height": 900,
+      "quality": 74,
+      "bytes": 201540,
+      "sha256": "4e1221e90c6cf9d1fb2972421f9869277dbbb3b235499dc8d5a1865b1ad698b6",
+      "attempts": [
+        {
+          "quality": 74,
+          "bytes": 201540
+        }
+      ],
+      "status": "new interpretive illustration; local test-branch binding only; not recovered or authenticated",
+      "campaign_id": "ottoman-golden-age",
+      "chapter_id": "ch10",
+      "chapter_title": "قمة الإمبراطورية",
+      "path": "chapters/ottoman-golden-age/ch10/interpretive-v1.webp",
+      "source_chapter_sha256": "2f328db85337532d4167abc62081a445cb3f6042c3a0a4c2921248112bcb7828"
+    },
+    {
+      "source": "early-ottoman-frontier-candidate.png",
+      "source_sha256": "004dcced99aa3be99bf8b4d863fadcc2b0db091d15eccc74fb47904cd4accd99",
+      "source_bytes": 3630386,
+      "source_dimensions": [
+        1672,
+        941
+      ],
+      "crop": {
+        "left": 4,
+        "top": 2,
+        "width": 1664,
+        "height": 936
+      },
+      "target": "early-ottoman-frontier-interpretive.webp",
+      "width": 1600,
+      "height": 900,
+      "quality": 74,
+      "bytes": 313360,
+      "sha256": "9e5575223f5eba541d53f1234f7b3cb3465c4d8cea5fed1512a911b81cb79159",
+      "attempts": [
+        {
+          "quality": 74,
+          "bytes": 313360
+        }
+      ],
+      "status": "new interpretive illustration; local test-branch binding only; not recovered or authenticated",
+      "campaign_id": "rise-of-the-ottoman-state",
+      "chapter_id": "ch2",
+      "chapter_title": "قبيلة قايي",
+      "path": "chapters/rise-of-the-ottoman-state/ch2/interpretive-v1.webp",
+      "source_chapter_sha256": "3620441cdacaf7d66eec807e3d2b8f95c2fd20bb79378c8eb7c76507e555deaf"
+    }
+  ],
+  "encoding": {
+    "format": "webp",
+    "quality": 74,
+    "effort": 6,
+    "resize": {
+      "width": 1600,
+      "height": 900,
+      "kernel": "lanczos3"
+    },
+    "metadata": "stripped default",
+    "max_bytes_per_asset": 327680
+  }
+}

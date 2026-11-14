@@ -86,6 +86,7 @@ it("keeps legacy text attribution through staff reply, player follow-up, close a
     issue: issue(),
     messages: [
       message("a", "alice", "initial"),
+      message("a2", "alice", "second consecutive player reply", "admin"),
       message("b", "staff", "staff answer", "admin"),
       message("c", "alice", "legacy player follow-up", "admin"),
     ],
@@ -93,6 +94,11 @@ it("keeps legacy text attribution through staff reply, player follow-up, close a
   api.get.mockImplementation(async () => state);
   const v = render(<Thread />);
   await v.findByText("legacy player follow-up");
+  for (const body of ["initial", "second consecutive player reply", "legacy player follow-up"]) {
+    const bubble = within(v.getByText(body).closest("li")!);
+    expect(bubble.getByText("أنت")).toBeTruthy();
+    expect(bubble.queryByText("فريق إرث")).toBeNull();
+  }
   expect(v.getByLabelText("نص الرد")).toBeTruthy();
   expect(v.queryByLabelText("إرفاق صور بالمحادثة")).toBeNull();
   expect(
@@ -109,6 +115,24 @@ it("keeps legacy text attribution through staff reply, player follow-up, close a
   fireEvent.click(v.getByRole("button", { name: "نعم" }));
   await waitFor(() => expect(api.rate).toHaveBeenCalledWith("thread-one", 5));
   await v.findByText("شكراً لتقييمك — يساعدنا على تحسين الدعم.");
+});
+it("presents two player replies, staff reply and player follow-up with per-message attribution", async () => {
+  api.get.mockResolvedValue({ issue: issue(), messages: [
+    message("p1", "alice", "sequence first"),
+    message("p2", "alice", "sequence second"),
+    message("s1", "staff", "sequence staff", "admin"),
+    message("p3", "alice", "sequence follow-up"),
+  ] });
+  const v = render(<Thread />);
+  await v.findByText("sequence follow-up");
+  for (const body of ["sequence first", "sequence second", "sequence follow-up"]) {
+    const bubble = within(v.getByText(body).closest("li")!);
+    expect(bubble.getByText("أنت")).toBeTruthy();
+    expect(bubble.queryByText("فريق إرث")).toBeNull();
+  }
+  const staff = within(v.getByText("sequence staff").closest("li")!);
+  expect(staff.getByText("فريق إرث")).toBeTruthy();
+  expect(staff.queryByText("أنت")).toBeNull();
 });
 it("retires loaded messages and draft when identity changes", async () => {
   api.get.mockImplementation(async () => ({

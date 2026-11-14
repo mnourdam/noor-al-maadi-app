@@ -76,3 +76,29 @@ it('preserves already-claimed records and marks display evidence without inventi
  expect(projected.state).toBe('unlocked');expect(projected.ownershipPresentationOnly).toBe(true);
  expect(projected.claimedAt).toBeNull();expect(projected.unlockedAt).toBeNull();expect(projected.rewards).toBe(base.rewards);
 });
+
+it('repeated collection and reconnect refreshes remain presentation-only even when confirmed ownership later decreases', async () => {
+ const view = render(<><AchievementEngineBoot/><MuseumView/></>);
+ await waitFor(() => expect(view.getByTestId('museum').textContent).toBe('unlocked:1'));
+ const canonicalMuseum = getSnapshot().museum;
+ for (const event of ['online', 'focus', 'irth:outbox:flushed', 'irth:collection:changed']) {
+  const calls = state.query.mock.calls.length;
+  const response = deferred<any>();
+  state.query.mockReturnValueOnce(response.promise);
+  await act(async () => { window.dispatchEvent(new Event(event)); });
+  await waitFor(() => expect(state.query.mock.calls.length).toBeGreaterThan(calls));
+  await act(async () => { response.resolve(result(10)); });
+  expect(view.getByTestId('museum').textContent).toBe('unlocked:1');
+  expect(getPersisted().has('ach_artifact_10')).toBe(false);
+ }
+ state.query.mockResolvedValue(result(9));
+ await act(async () => {
+  window.dispatchEvent(new Event('irth:collection:changed'));
+ });
+ await waitFor(() => expect(view.getByTestId('museum').textContent).toBe('locked-visible:0.9'));
+ expect(getSnapshot().museum).toEqual(canonicalMuseum);
+ expect(getSnapshot().museum.totalOwned).toBe(0);
+ expect(getPersisted().has('ach_artifact_10')).toBe(false);
+ expect(state.claim).not.toHaveBeenCalled();
+ expect(state.repair.mock.calls.flatMap(([request]) => request.data.ids)).not.toContain('ach_artifact_10');
+});

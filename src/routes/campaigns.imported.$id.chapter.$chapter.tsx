@@ -32,6 +32,7 @@ import { ChapterReadingReview } from "@/components/imported-campaign/ChapterRead
 import { ActivityReviewCard } from "@/components/imported-campaign/ActivityReviewCard";
 import { RichReadingText } from "@/components/imported-campaign/RichReadingText";
 import { CachedImage } from "@/components/CachedImage";
+import { chapterImageForDisplay } from "@/lib/campaign-art/interpretive-chapters";
 import { OutOfHeartsModal } from "@/components/imported-campaign/OutOfHeartsModal";
 import { CampaignCompleteModal } from "@/components/imported-campaign/CampaignCompleteModal";
 import { UnlockList } from "@/components/imported-campaign/UnlockList";
@@ -482,6 +483,7 @@ function ImportedChapterPlayer() {
     bump();
   };
 
+  const chapterImage = chapterImageForDisplay(campaign.id, chapter.id, chapter.imageUrl);
   return (
     <AppShell>
       <ReadingScale className="animate-reveal pb-10">
@@ -503,11 +505,11 @@ function ImportedChapterPlayer() {
         </div>
 
         <div className="mx-auto max-w-2xl px-5 pt-4">
-          {chapter.imageUrl ? (
+          {chapterImage ? (
             // Hero composition — title overlays the artwork like campaign key art.
             <div className="relative overflow-hidden rounded-2xl border border-gold/15">
               <CachedImage
-                src={chapter.imageUrl}
+                src={chapterImage}
                 alt=""
                 loading="lazy"
                 className="aspect-[16/9] w-full object-cover"

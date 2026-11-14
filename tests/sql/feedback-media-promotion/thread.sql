@@ -53,7 +53,7 @@ BEGIN
  SELECT * INTO q FROM client_request WHERE image_id=NEW.attempt_id;
  IF NOT FOUND THEN RETURN NEW;END IF;
  IF NEW.id IS DISTINCT FROM q.mid OR NEW.author_id IS DISTINCT FROM q.uploader_id OR NEW.body IS DISTINCT FROM q.body OR NEW.internal IS DISTINCT FROM q.internal THEN RAISE EXCEPTION 'message_binding' USING ERRCODE='42501';END IF;
- INSERT INTO public.feedback_messages(id,issue_id,author_id,author_role,body,is_internal,attachments) VALUES(NEW.id,q.issue_id,q.uploader_id,CASE WHEN public.is_feedback_staff(q.uploader_id) IS TRUE THEN 'admin' ELSE 'player' END,q.body,q.internal,'[]');
+ INSERT INTO public.feedback_messages(id,issue_id,author_id,author_role,body,is_internal,attachments) VALUES(NEW.id,q.issue_id,q.uploader_id,CASE WHEN q.uploader_id=q.owner_id AND NOT q.internal THEN 'player' ELSE 'admin' END,q.body,q.internal,'[]');
  RETURN NEW;
 END $$;
 REVOKE ALL ON FUNCTION promotion_model.mirror_client_message() FROM PUBLIC,anon,authenticated;

@@ -100,5 +100,38 @@ try {
   assert.equal((await sf()).status,'published');assert.equal((await sf()).status,'published');await db.exec('RESET ROLE;');await db.query('UPDATE public.feedback_issues SET reporter_id=$1 WHERE id=$2',[randomUUID(),ci]);await db.exec('SET ROLE authenticated;');await assert.rejects(()=>one('SELECT public.fixture_finalize($1,$2,$3,$4)',[smid,said,'staff immutable',inside]));await db.exec('RESET ROLE;');await db.query('UPDATE public.feedback_issues SET reporter_id=$1 WHERE id=$2',[owner,ci]);await db.exec('SET ROLE authenticated;');const previous=args[6];args[6]=!inside;await assert.rejects(sr);await assert.rejects(sf);args[6]=previous;
   assert.equal((await one('SELECT public.get_feedback_issue_thread($1)',[orphan])).issue.id,orphan);const st=await one('SELECT public.get_feedback_issue_thread($1)',[ci]);assert.equal(st.messages.find(m=>m.id===smid).author_id,staff);assert.equal(st.messages.find(m=>m.id===smid).is_internal,inside);assert.equal(await one('SELECT public.fixture_canonical_read($1)',[t.object_key]),true);await db.exec(`SET fixture.uid='${owner}';`);assert.equal(await one('SELECT public.fixture_canonical_read($1)',[t.object_key]),!inside);assert.equal((await one('SELECT public.get_feedback_issue_thread($1)',[ci])).messages.some(m=>m.id===smid),!inside);await db.exec(`SET fixture.uid='${randomUUID()}';`);assert.equal(await one('SELECT public.fixture_canonical_read($1)',[t.object_key]),false);await db.exec('RESET ROLE;');
  }
+ // Actual legacy reply author-role precedence, not a synthetic classifier.
+ const legacyReply=originalSource.match(/CREATE OR REPLACE FUNCTION public.reply_to_feedback_issue\(p_issue_id uuid, p_body text, p_is_internal boolean DEFAULT false\)[\s\S]*?\$function\$;/)[0];assert.equal(createHash('sha256').update(legacyReply).digest('hex'),'52401aeaaa7e8aecbc270193fb71fa9bcefaded3c68c36781be19243b6ca86b5');
+ await db.exec(legacyReply);await db.exec('ALTER TABLE public.feedback_messages ALTER COLUMN id SET DEFAULT gen_random_uuid();');
+ // Consecutive legacy replies must retain their authenticated authors after a staff reply.
+ const sequenceIssue=randomUUID();await db.query('INSERT INTO public.feedback_issues(id,reporter_id) VALUES($1,$2)',[sequenceIssue,owner]);
+ const sequence=[];
+ for(const [index,actor] of [owner,owner,staff,owner].entries()){
+  await db.exec(`SET fixture.uid='${actor}';SET fixture.role='authenticated';SET fixture.staff_active='true';SET ROLE authenticated;`);
+  const body=`sequence-${index}`,id=await one('SELECT public.reply_to_feedback_issue($1,$2,false)',[sequenceIssue,body]);
+  sequence.push({id,author_id:actor,author_role:actor===staff?'admin':'player',body,is_internal:false,issue_id:sequenceIssue});
+  await db.exec('RESET ROLE;');
+  // Deterministic ordering avoids relying on timestamp resolution in this in-process engine.
+  await db.query('UPDATE public.feedback_messages SET created_at=$1 WHERE id=$2',[`2026-11-14T00:00:0${index}Z`,id]);
+ }
+ await db.exec(`SET fixture.uid='${owner}';SET ROLE authenticated;`);
+ const sequenceThread=await one('SELECT public.get_feedback_issue_thread($1)',[sequenceIssue]);
+ assert.deepEqual(sequenceThread.messages.map(({id,author_id,author_role,body,is_internal,issue_id})=>({id,author_id,author_role,body,is_internal,issue_id})),sequence);
+ await db.exec('RESET ROLE;');
+ assert.deepEqual((await db.query('SELECT id,author_id,author_role,body,is_internal,issue_id FROM public.feedback_messages WHERE issue_id=$1 ORDER BY created_at',[sequenceIssue])).rows,sequence);
+ for(const own of [true,false])for(const inside of [false,true]){
+  const recipient=own?staff:owner,rid=randomUUID(),aid=randomUUID(),iid=randomUUID();await db.query('INSERT INTO public.feedback_issues(id,reporter_id) VALUES($1,$2)',[iid,recipient]);
+  await db.exec(`SET fixture.uid='${staff}';SET fixture.role='authenticated';SET fixture.staff_active='true';SET ROLE authenticated;`);
+  const legacyId=await one('SELECT public.reply_to_feedback_issue($1,$2,$3)',[iid,'classification',inside]);
+  const args=[rid,iid,'classification',aid,'f'.repeat(64),10,inside];const reserve=()=>one('SELECT public.reserve_canonical_feedback_image_v1($1,$2,$3,$4,$5,$6,$7)',args),finalize=()=>one('SELECT public.finalize_canonical_feedback_image_v1($1,$2,$3,$4,$5,$6,$7)',args);await reserve();
+  await db.exec("RESET ROLE;SET fixture.role='service_role';");const token=await one('SELECT token FROM promotion_model.attempt WHERE id=$1',[aid]);const a={rid,aid,token,owner:recipient,uploader:staff,issue:iid,internal:inside,input:'f'.repeat(64),revision:'fixture',source:staff+'/'+aid,source_id:aid,success:true,output:'a'.repeat(64),bytes:10};
+  for(const op of ['input_terminal','start','terminal','attest'])assert.equal(await worker(op,a),true);
+  await db.exec("SET fixture.role='authenticated';SET ROLE authenticated;");assert.equal((await finalize()).status,'published');await db.exec("SET fixture.staff_active='false';");
+  if(own&&!inside){assert.equal((await finalize()).status,'published');await one('SELECT public.reply_to_feedback_issue($1,$2,$3)',[iid,'after role loss',inside]);}
+  else {await assert.rejects(finalize,e=>e.code==='42501');await assert.rejects(()=>one('SELECT public.reply_to_feedback_issue($1,$2,$3)',[iid,'after role loss',inside]),e=>e.code==='P0001'&&e.message==='forbidden');}
+  await db.exec("SET fixture.staff_active='true';");assert.equal((await finalize()).status,'published');await db.exec('RESET ROLE;');
+  const persisted=(await db.query('SELECT author_id,author_role,body,is_internal,issue_id FROM public.feedback_messages WHERE id=$1',[rid])).rows[0],legacy=(await db.query('SELECT author_id,author_role,body,is_internal,issue_id FROM public.feedback_messages WHERE id=$1',[legacyId])).rows[0];assert.deepEqual(persisted,legacy);assert.equal(persisted.author_role,own&&!inside?'player':'admin');assert.equal(persisted.author_id,staff);
+  await db.exec(`SET fixture.uid='${randomUUID()}';SET ROLE authenticated;`);await assert.rejects(finalize);await db.exec('RESET ROLE;');
+ }
  console.log('PASS real PostgreSQL fixture publication, binding, retirement, cleanup and ACL controls');
 } finally {await db.close();}

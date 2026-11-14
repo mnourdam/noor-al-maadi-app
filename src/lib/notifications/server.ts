@@ -13,7 +13,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import type { NotificationPayload } from "./deepLink";
-import { getActiveOwner, getIdentityEpoch, ownerUserId } from "@/lib/identity/owner";
+import { getActiveOwner, getIdentityEpoch, ownerUserId, onOwnerChange } from "@/lib/identity/owner";
 
 export interface ServerNotification {
   id: string;
@@ -261,70 +261,77 @@ export async function setMyPreferences(prefs: NotificationPreferences): Promise<
 type NotifListener = () => void;
 
 let sharedListeners = new Set<NotifListener>();
-let sharedChannels: Array<ReturnType<typeof supabase.channel>> = [];
 let sharedTeardown: (() => void) | null = null;
+let releaseSharedOwner: (() => void) | null = null;
 
-function notifyShared() {
+function notifyShared(current: () => boolean) {
   for (const fn of Array.from(sharedListeners)) {
+    if (!current()) return;
     try { fn(); } catch { /* listener errors are non-fatal */ }
   }
 }
 
 function openSharedChannels() {
+  const scope = identityScope(), uid = ownerUserId(scope.owner);
   let alive = true;
-
-  (async () => {
-    const { data } = await supabase.auth.getUser();
-    const uid = data.user?.id;
-    if (!alive || !uid) return;
-
-    // Per-user deliveries (read/dismissed/deleted state).
-    sharedChannels.push(
-      supabase
-        .channel(`notif-deliveries-${uid}`)
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "notification_deliveries", filter: `user_id=eq.${uid}` },
-          () => notifyShared(),
-        )
-        .subscribe(),
-    );
-
-    // Notifications inserts: catches both direct (target_user_id=uid) and
-    // broadcast/all rows that have no per-user delivery row yet. RLS
-    // ensures the user only sees rows they are allowed to read.
-    sharedChannels.push(
-      supabase
-        .channel(`notif-inserts-${uid}`)
-        .on(
-          "postgres_changes",
-          { event: "INSERT", schema: "public", table: "notifications" },
-          () => notifyShared(),
-        )
-        .subscribe(),
-    );
-  })();
-
-  sharedTeardown = () => {
-    alive = false;
-    for (const c of sharedChannels) supabase.removeChannel(c);
-    sharedChannels = [];
-    sharedTeardown = null;
+  const channels: Array<ReturnType<typeof supabase.channel>> = [];
+  const current = () => alive && scope.current() && sharedListeners.size > 0;
+  const remove = (channel: ReturnType<typeof supabase.channel>) => {
+    try { void Promise.resolve(supabase.removeChannel(channel)).catch(() => {}); }
+    catch { /* removal cannot revive retired callbacks */ }
   };
+  const teardown = () => {
+    alive = false;
+    // Detach before SDK calls: synchronous reentry must not clear a successor.
+    if (sharedTeardown === teardown) sharedTeardown = null;
+    for (const channel of channels.splice(0)) remove(channel);
+  };
+  sharedTeardown = teardown;
+  if (!uid) return;
+
+  void (async () => {
+    try {
+      const { data, error } = await supabase.auth.getUser();
+      if (error || !current() || data.user?.id !== uid) return;
+      const add = (name: string, filter: { event: "*" | "INSERT"; schema: string; table: string; filter?: string }) => {
+        if (!current()) return;
+        const channel = supabase.channel(name).on("postgres_changes", filter, () => notifyShared(current));
+        if (!current()) { remove(channel); return; }
+        channels.push(channel);
+        channel.subscribe();
+        if (!current()) teardown();
+      };
+      add(`notif-deliveries-${uid}`, { event: "*", schema: "public", table: "notification_deliveries", filter: `user_id=eq.${uid}` });
+      // RLS still determines accessible direct/broadcast inserts.
+      add(`notif-inserts-${uid}`, { event: "INSERT", schema: "public", table: "notifications" });
+    } catch { teardown(); /* auth/channel failures are non-fatal, no retry */ }
+  })();
 }
 
 export function subscribeToMyNotifications(onChange: () => void): () => void {
   if (typeof navigator !== "undefined" && navigator.onLine === false) return () => {};
 
+  const firstListener = sharedListeners.size === 0;
   sharedListeners.add(onChange);
-  if (sharedListeners.size === 1) openSharedChannels();
+  if (firstListener) {
+    releaseSharedOwner = onOwnerChange(() => {
+      const scope = identityScope();
+      sharedTeardown?.();
+      if (scope.current() && sharedListeners.size > 0) openSharedChannels();
+    });
+    openSharedChannels();
+  }
 
   let released = false;
   return () => {
     if (released) return;
     released = true;
     sharedListeners.delete(onChange);
-    if (sharedListeners.size === 0) sharedTeardown?.();
+    if (sharedListeners.size === 0) {
+      releaseSharedOwner?.();
+      releaseSharedOwner = null;
+      sharedTeardown?.();
+    }
   };
 }
 

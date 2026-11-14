@@ -2,6 +2,9 @@ import React from "react";
 import { render, screen, fireEvent, waitFor, cleanup, act } from "@testing-library/react";
 import { beforeEach, afterEach, it, expect, vi } from "vitest";
 import { IDBFactory } from "fake-indexeddb";
+import { existsSync } from "node:fs";
+import { INTERPRETIVE_CHAPTER_IMAGES } from "@/lib/campaign-art/interpretive-chapters";
+import { OFFLINE_CHAPTER_IMAGE_PATHS } from "@/lib/campaign-art/chapter-pack.generated";
 const state = vi.hoisted(() => ({
   uid: "u1",
   owner: null as string | null,
@@ -50,7 +53,7 @@ vi.mock("@/lib/identity/owner", () => ({
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => vi.fn(),
   useRouterState: () => "/settings",
-  useParams: () => ({ id: "c1", chapter: "ch1" }),
+  useParams: () => ({ id: state.campaign?.id ?? "c1", chapter: state.campaign?.chapters[0]?.id ?? "ch1" }),
   useSearch: () => ({}),
   createFileRoute: () => (options: any) => options,
   Link: ({ children }: any) => <div>{children}</div>,
@@ -128,7 +131,6 @@ vi.mock("@/components/imported-campaign/CampaignCompleteModal", () => ({
     open ? <div data-testid="campaign-complete">أتممت الحملة</div> : null,
 }));
 vi.mock("@/components/imported-campaign/UnlockList", () => ({ UnlockList: () => null }));
-vi.mock("@/components/CachedImage", () => ({ CachedImage: () => null }));
 vi.mock("@/components/motion/MotionPrimitives", () => ({
   Stagger: ({ children }: any) => <div>{children}</div>,
   AnimatedNumber: ({ value }: any) => <span>{value}</span>,
@@ -220,15 +222,28 @@ async function modules() {
   const totals = await import("@/lib/campaignRewardsGranted");
   return { progress, ledger, totals };
 }
-it("actual chapter route restores same question and unsent answer after repeated reread without persistence or rewards", async () => {
+it.each(["absent", "authored", ...INTERPRETIVE_CHAPTER_IMAGES.map(item => item.campaignId)])("actual chapter route restores question/input without mutation with image=%s", async (imageCase) => {
   const ch = state.campaign.chapters[0];
+  const binding = INTERPRETIVE_CHAPTER_IMAGES.find(item => item.campaignId === imageCase);
+  if (binding) { state.campaign.id = binding.campaignId; ch.id = binding.chapterId; }
+  const withImage = imageCase !== "absent";
+  const path = binding?.path ?? OFFLINE_CHAPTER_IMAGE_PATHS[0];
+  expect(path).toBeTruthy();
+  expect(existsSync(`${process.cwd()}/public/campaign-key-art/${path}`)).toBe(true);
+  if (imageCase === "authored") ch.imageUrl = `https://example.test/storage/v1/object/sign/campaign-key-art/${path}?token=synthetic`;
+  Object.defineProperty(navigator, "onLine", { value: false, configurable: true });
+  const cacheOpen = vi.fn(() => { throw new Error("cache forbidden"); });
+  vi.stubGlobal("caches", { open: cacheOpen });
   ch.activities = [
     { id: "read", type: "reading_then_question", prompt: "استمتع بالقراءة", contextText: "النص السابق للفصل" },
     { id: "question", type: "multiple_choice", prompt: "السؤال الحالي", options: ["أ", "ب"], correctAnswer: 0 },
   ];
   const { progress } = await modules();
   progress.recordActivity(state.campaign, ch, ch.activities[0], true);
-  await campaignPlayer();
+  const view = await campaignPlayer();
+  if (withImage) await waitFor(() => expect(view.container.querySelector("img")?.getAttribute("src")).toBe(`/campaign-key-art/${path}`));
+  else expect(view.container.querySelector("img")).toBeNull();
+  const input = screen.getByRole("textbox", { name: "إجابتي" });
   fireEvent.change(screen.getByRole("textbox", { name: "إجابتي" }), { target: { value: "إجابة لم أرسلها" } });
   const before = JSON.stringify({ ...localStorage });
   const rpcBefore = state.rpc.mock.calls.length;
@@ -237,12 +252,15 @@ it("actual chapter route restores same question and unsent answer after repeated
     expect(screen.getByText("النص السابق للفصل")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "العودة إلى النشاط" }));
     expect(screen.getByText("السؤال الحالي")).toBeTruthy();
+    expect(screen.getByRole("textbox", { name: "إجابتي" })).toBe(input);
     expect((screen.getByRole("textbox", { name: "إجابتي" }) as HTMLInputElement).value).toBe("إجابة لم أرسلها");
   }
   expect(JSON.stringify({ ...localStorage })).toBe(before);
   expect(state.rpc.mock.calls.length).toBe(rpcBefore);
+  expect(fetch).not.toHaveBeenCalled();
+  expect(cacheOpen).not.toHaveBeenCalled();
   expect(state.points).not.toHaveBeenCalled();
   expect(state.dinars).not.toHaveBeenCalled();
   expect(state.heart).not.toHaveBeenCalled();
-  expect(progress.getChapterProgress("c1", "ch1").completedActivityIds).toEqual(["read"]);
+  expect(progress.getChapterProgress(state.campaign.id, ch.id).completedActivityIds).toEqual(["read"]);
 });
