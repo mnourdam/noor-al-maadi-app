@@ -19,3 +19,12 @@ Cleanup obligations are never deleted in this prototype, even after recognized r
 ## Local verification
 
 Six Python orchestration/guard controls PASS, with actual worker callback order and failure/retirement fences under synthetic transport. A separate actual PGlite PostgreSQL run passes fixture SQL, service receipt binding, actor publication/read predicate, idempotency conflicts, retirement, irreversible cleanup and role denial controls. PGlite0.3.14 installed only in isolated tools directory from official registry; application manifests/locks unchanged. These local tests do not replace pending native SQL/Auth/Storage CI. No local stack was launched.
+
+
+## First native run and exact-row probe correction
+
+Public64ff run stopped after the74 baseline and four added case entries, at `actor direct receipt mutation denied`. Artifact14106368051 SHA2568adeb0f422a58db7e400678890c2d358f18a2277de64ee838808cbe0a8e91320 was independently source/digest/CRC verified; unique-project cleanup succeeded. The response status/code was not retained, so this does not establish an ACL defect or its cause. Trusted publication was not reached.
+
+The original PATCH targeted the entire view without a filter. The corrected probe targets only the existing immutable attempt UUID, first positively proving that exact row exists. POST is unchanged; both still require HTTP403 with SQLSTATE42501. Each attempt records only fixed actor index/method, bounded HTTP status, allowlisted code, and exact private SQL state-fingerprint equality; raw rows, identifiers, response text and hashes are not emitted. A changed fingerprint fails independently of response classification.
+
+[PostgREST's official safe-update documentation](https://docs.postgrest.org/en/v14/integrations/pg-safeupdate.html) explains that unfiltered updates can be rejected before their intended mutation. That is a plausible ambiguity, **not a verified explanation of64ff**. The exact-row correction does not relax ACL acceptance. Actual PGlite role controls now separately require42501 for direct INSERT and filtered UPDATE; the native result remains pending. Seven Python controls and the expanded SQL run pass locally.

@@ -7,6 +7,19 @@ def module(name,path):
 base=module('decode_boundary',Path(__file__).parents[1]/'feedback-media-decode/experiment.py')
 w=module('promotion_worker',Path(__file__).with_name('worker.py'))
 b=base.b
+def receipt_request(method,aid):
+ b.require(method in ('POST','PATCH'),'invalid receipt method')
+ b.require(str(uuid.UUID(aid))==aid,'invalid receipt identity')
+ path='/rest/v1/fixture_promotion_receipts'
+ if method=='PATCH':path+='?id=eq.'+aid
+ return path,{'id':aid,'output_digest':'0'*64}
+
+def receipt_diagnostic(actor_index,method,status,data):
+ b.require(type(actor_index) is int and 0<=actor_index<=2 and method in ('POST','PATCH'),'invalid receipt diagnostic scope')
+ code=data.get('code') if isinstance(data,dict) else None
+ return {'actor_index':actor_index,'method':method,'http_status':status if type(status) is int and 100<=status<=599 else None,
+         'code':code if code in ('42501','21000','P0001','PGRST100','PGRST102','PGRST204','PGRST205') else 'OTHER'}
+
 class Experiment(base.Experiment):
  Q,C=base.Q,base.C
  require=staticmethod(b.require);bound_decode=staticmethod(base.bound_decode)
@@ -45,10 +58,17 @@ class Experiment(base.Experiment):
   def unreadable(actor,a,label):
    result=self.storage(self.C,a['key'],actor[1]);self.check(base.permission(result) or self.object_absent(result),label)
   a=attempt();self.check_denied(self.finalize(owner,a),'unattested finalize denied')
-  for actor in actors:
+  for actor_index,actor in enumerate(actors):
    self.check_denied(self.call('fixture_worker',actor[1],{'op':'terminal','p':a}),'actor worker RPC denied')
    for method in ('POST','PATCH'):
-    status,data=self.decoded(self.request('/rest/v1/fixture_promotion_receipts',actor[1],{'id':a['aid'],'output_digest':'0'*64},method))
+    self.check(self.sql(f"SELECT count(*) FROM promotion_model.attempt WHERE id='{a['aid']}';")=='1','exact target receipt exists before actor mutation')
+    path,payload=receipt_request(method,a['aid'])
+    before=self.sql("SELECT md5(coalesce(jsonb_agg(to_jsonb(a) ORDER BY id)::text,'[]')) FROM promotion_model.attempt a;")
+    status,data=self.decoded(self.request(path,actor[1],payload,method))
+    diagnostic=receipt_diagnostic(actor_index,method,status,data)
+    diagnostic['receipts_unchanged']=self.sql("SELECT md5(coalesce(jsonb_agg(to_jsonb(a) ORDER BY id)::text,'[]')) FROM promotion_model.attempt a;")==before
+    self.report.setdefault('receipt_mutations',[]).append(diagnostic)
+    self.check(diagnostic['receipts_unchanged'],'receipt state unchanged after denied actor mutation')
     self.check(status==403 and data.get('code')=='42501','actor direct receipt mutation denied')
   self.check(w.process(self,a) is True,'actual worker attested canonical')
   self.check_denied(self.finalize(other,a),'other owner publication denied')

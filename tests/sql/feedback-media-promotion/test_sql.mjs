@@ -27,5 +27,7 @@ try {
  await db.exec("SET fixture.role='authenticated';SET ROLE authenticated;");
  await assert.rejects(()=>worker('terminal',a),/permission denied/);
  await assert.rejects(()=>db.exec('SELECT * FROM promotion_model.attempt'),/permission denied/);
+ await assert.rejects(()=>db.query('INSERT INTO public.fixture_promotion_receipts(id,output_digest) VALUES($1,$2)',[a.aid,'0'.repeat(64)]),e=>e.code==='42501');
+ await assert.rejects(()=>db.query('UPDATE public.fixture_promotion_receipts SET output_digest=$1 WHERE id=$2',['0'.repeat(64),a.aid]),e=>e.code==='42501');
  console.log('PASS real PostgreSQL fixture publication, binding, retirement, cleanup and ACL controls');
 } finally {await db.close();}

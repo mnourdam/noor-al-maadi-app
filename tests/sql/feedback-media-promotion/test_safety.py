@@ -30,4 +30,15 @@ class Tests(unittest.TestCase):
   for text in ("auth.role() IS DISTINCT FROM 'service_role'",'REVOKE ALL ON ALL FUNCTIONS','auth.uid()','r.generation<>a.generation','a.cleaning','state=\'TERMINAL\'','REVOKE ALL ON FUNCTION'):
    self.assertIn(text,s)
   self.assertNotIn('DELETE FROM',s)
+class ReceiptMutation(unittest.TestCase):
+ def test_exact_patch_and_diagnostic(self):
+  spec=importlib.util.spec_from_file_location('experiment',Path(__file__).with_name('experiment.py'));m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+  aid='11111111-1111-4111-8111-111111111111'
+  self.assertEqual(m.receipt_request('PATCH',aid)[0],'/rest/v1/fixture_promotion_receipts?id=eq.'+aid)
+  self.assertEqual(m.receipt_request('POST',aid)[0],'/rest/v1/fixture_promotion_receipts')
+  for method,bad in [('DELETE',aid),('PATCH',aid+'?x=1')]:
+   with self.assertRaises(Exception):m.receipt_request(method,bad)
+  self.assertEqual(m.receipt_diagnostic(0,'PATCH',403,{'code':'42501','message':'private'})['code'],'42501')
+  self.assertEqual(m.receipt_diagnostic(0,'PATCH',400,{'code':'private','details':'private'})['code'],'OTHER')
+  self.assertNotIn('private',str(m.receipt_diagnostic(0,'POST',400,{'code':'private','message':'private'})))
 if __name__=='__main__':unittest.main()
