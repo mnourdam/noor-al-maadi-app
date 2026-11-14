@@ -6,6 +6,7 @@ def module(name,path):
  spec=importlib.util.spec_from_file_location(name,path);m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m);return m
 base=module('decode_boundary',Path(__file__).parents[1]/'feedback-media-decode/experiment.py')
 w=module('promotion_worker',Path(__file__).with_name('worker.py'))
+c=module('promotion_concurrency',Path(__file__).with_name('concurrency.py'))
 b=base.b
 def receipt_request(method,aid):
  b.require(method in ('POST','PATCH'),'invalid receipt method')
@@ -160,6 +161,33 @@ class Experiment(base.Experiment):
   wrong=attempt();self.worker('retire',wrong)
   self.check(w.cleanup_input(self,dict(wrong,source=internal['key'])) is False,'canonical key cannot substitute input cleanup key')
   self.check(self.storage(self.C,internal['key'],staff[1])==self.storage(self.C,internal['key'],self.fields['service']),'wrong input cleanup leaves canonical unchanged')
+  self.report['stage']='two contender canonical transaction ordering'
+  def ready_candidate():
+   item=attempt();output=self.bound_decode(raw,item['input'])
+   self.check(self.worker('start',item) is True,'concurrent candidate admitted')
+   self.check(self.storage(self.C,item['key'],self.fields['service'],'POST',output)[0] in (200,201),'concurrent candidate PUT terminal')
+   self.check(self.storage(self.C,item['key'],self.fields['service'])==(200,output),'concurrent candidate exact service bytes')
+   item=dict(item,output=hashlib.sha256(output).hexdigest(),bytes=len(output),success=True)
+   self.check(self.worker('terminal',item) is True,'concurrent candidate terminal receipt')
+   return item,output
+  def publication_sql(item):
+   values=[item[k] for k in ('aid','token','input','output','revision','owner','issue')]
+   return 'SELECT promotion_model.publish('+','.join(c.quote(v) for v in values)+',false)'
+  def cleanup_sql(item):
+   return 'SELECT promotion_model.claim_cleanup('+c.quote(item['aid'])+','+c.quote(item['key'])+',true)'
+  first,first_bytes=ready_candidate()
+  c.run_order(self,publication_sql(first),'t',cleanup_sql(first),'')
+  self.check(self.sql(f"SELECT r.accepted=a.id AND r.generation=a.generation AND NOT a.cleaning AND NOT a.cleanup_due FROM promotion_model.reservation r JOIN promotion_model.attempt a ON a.reservation_id=r.id WHERE a.id='{first['aid']}';")=='t','publish first persists accepted candidate without cleanup mutation')
+  mid=str(uuid.uuid4());self.check(self.finalize(owner,first,mid)==(200,mid),'publish first actor finalization')
+  self.check(self.storage(self.C,first['key'],owner[1])==(200,first_bytes),'publish first actual owner byte read')
+  second,second_bytes=ready_candidate()
+  c.run_order(self,cleanup_sql(second),second['key'],publication_sql(second),'f')
+  self.check(self.sql(f"SELECT a.cleaning AND a.cleanup_due AND r.accepted IS NULL AND r.generation>a.generation AND NOT EXISTS(SELECT 1 FROM promotion_model.publication WHERE attempt_id=a.id) FROM promotion_model.reservation r JOIN promotion_model.attempt a ON a.reservation_id=r.id WHERE a.id='{second['aid']}';")=='t','cleanup first persists irreversible unpublished fence')
+  self.check(self.storage(self.C,second['key'],self.fields['service'])==(200,second_bytes),'cleanup first same service positive before delete')
+  status,_=self.request('/storage/v1/object/'+self.C,self.fields['service'],{'prefixes':[second['key']]},'DELETE',service=True);self.check(status==200,'cleanup first exact canonical remove')
+  self.check(self.object_absent(self.storage(self.C,second['key'],self.fields['service'])),'cleanup first recognized canonical absence')
+  self.check(self.sql(f"SELECT count(*) FROM storage.objects WHERE bucket_id='{self.C}' AND name='{second['key']}';")=='0','cleanup first canonical metadata absent')
+  self.check(self.storage(self.C,first['key'],owner[1])==(200,first_bytes),'cleanup first unrelated published canonical preserved')
   self.report['input_terminality']='Explicit harness-observed terminal PUT plus exact service read; not a production writer/lease guarantee'
   self.report['result']='LOCAL STACK PASS; SYNTHETIC WORKER PUBLICATION ONLY; ACTIVATION BLOCKED'
 if __name__=='__main__':

@@ -47,7 +47,7 @@ The earlier64ff failure remains an unknown response mechanism. Corrected exact-r
 
 No new implementation or production-enabling action is authorized or implied by this evidence update.
 
-## Prepared original-quarantine cleanup extension (not yet runtime-accepted)
+## Original-quarantine cleanup extension (pre-run implementation record)
 
 A six-file test-only delta closes the prototype's missing input obligation: an immutable input intent is created before each owner PUT, binding attempt, captured reservation generation/owner/scope and source key/digest. Ordinary actors cannot write these receipts. A fixture-only service terminal receipt follows an explicitly observed successful PUT response plus exact service byte read. That fact is supplied by this controlled testbench, **not** by client completion claims, arbitrary TTL, one404 or an asserted production lease. It does not prove no concurrent in-flight write exists in deployment.
 
@@ -55,4 +55,35 @@ Input upload RLS now admits only the current generation's exact WRITING intent. 
 
 Cleanup is eligible only for terminal input writers with a current published canonical result or retired reservation. Reservation→attempt→input locks serialize the irreversible cleaning claim before external deletion. Successful-publication input cleanup does not revoke canonical reads. Exact source digest must be observed by the same service credentials before DELETE; a durable positive-read marker supports retry after a deletion-response crash. Recognized API absence plus SQL metadata absence records removal observation, but the input obligation is never deleted. Unknown WRITING intent is ineligible even when the fixture manually deletes bytes and observes404. A delayed already-fetched decoder cannot start writing after retirement/input cleanup; wrong source or canonical keys cannot substitute for the input key.
 
-Prepared native controls cover original cleanup after publication and malformed rejection, unchanged readable canonical bytes, denied original reupload, retirement, crash-after-delete retry/idempotence, unknown writer404 retention and prefetched worker retirement. Local13 Python controls and expanded actual PGlite checks pass. No new native execution has occurred yet; prior804b does not cover this extension. No scheduler, production trusted-writer completion, lease recovery, retention SLA, physical erasure or client rollout is inferred.
+Prepared native controls cover original cleanup after publication and malformed rejection, unchanged readable canonical bytes, denied original reupload, retirement, crash-after-delete retry/idempotence, unknown writer404 retention and prefetched worker retirement. Local13 Python controls and expanded actual PGlite checks pass. At this local checkpoint native execution was pending; prior804b did not cover this extension. Exact subsequent d810 runtime evidence follows. No scheduler, production trusted-writer completion, lease recovery, retention SLA, physical erasure or client rollout is inferred.
+
+
+## Verified original-quarantine cleanup runtime
+
+Exact source `d810e464ad11216ed9d9772ab3f7f94d2dbd852d`, run `43577283398`, job `132394185337`: SUCCESS. Artifact `14107665336` (3,486 bytes), SHA256 `1bb1aa4211ae826849a99f2f41dfe71f18f69ab775ea977f206a445b3c30bbd9`; independent reviewer verified GitHub source association, archive hash/CRC, sole `acceptance.json` and matching fixture/worker hashes. All205 sequential records passed, not205 independent scenarios; the six actor receipt mutations still returned403/42501 with state unchanged. Unique disposable project stopped without backups.
+
+Actual service cleanup removed original quarantine bytes after successful publication while canonical bytes stayed readable. Newly admitted original reuploads were denied. Rejected-decode cleanup, post-delete interruption/retry, unknown WRITING intent surviving404, prefetched worker retirement fence and wrong-key/canonical-key refusal all passed. Removal observations retain durable input obligations rather than discarding them.
+
+The runtime explicitly used **harness-observed successful terminal PUT plus exact service read**, not a client completion claim or deployed lease authority. It does not prove no earlier in-flight writer exists. Serial controlled interruption points are not independent-connection race acceptance. Active superseded terminal inputs remain conservatively retained until reservation retirement; this is not a complete drain, retention SLA or physical-erasure guarantee.
+
+### Current delivery gates
+
+- Integrate the real application/proposal with the trusted worker and canonical publication path; this fixture does not enable that path.
+- Verify multi-connection races and actual worker lease/restart/terminality, including already-in-flight PUTs, before deploying cleanup authority.
+- Define and validate complete drain/retention behavior without prematurely discarding unresolved obligations.
+- Bound native decoder resource use beyond the V8 heap limit.
+- Complete real Android/full-app and release-artifact acceptance.
+
+The exact result remains `LOCAL STACK PASS; SYNTHETIC WORKER PUBLICATION ONLY; ACTIVATION BLOCKED`. This update changes evidence only, not application code, authority or deployment.
+
+## Prepared two-connection transaction-order controls
+
+A four-file test-only extension leaves fixture functions, application and budgets unchanged. Two contending native PostgreSQL sessions and a third observer operate only through the existing exact-project/container admin boundary. Candidate canonical bytes are first uploaded and positively verified by the same service credentials; the receipt is terminal but not yet attested.
+
+Publish-first: one transaction calls actual `promotion_model.publish` and must return true while holding its reservation lock. A second calls actual `claim_cleanup(abandon=true)`. The observer must see the exact same identified waiter blocked on the holder's transaction ID, with matching unique application markers, backend start, role/database, expected query, holder idle-open transaction and granted transaction lock. Only then is the winner committed. Cleanup must return SQL NULL normally; persisted generation/accepted/cleaning state is verified, then real actor HTTP finalization and canonical byte read must succeed.
+
+Cleanup-first: the holder's actual claim must return the exact canonical key. The competing publish must be positively observed waiting on the same transaction; after commit it must return false normally. Persisted irreversible cleaning/generation/empty publication state is checked, followed by service exact-byte GET, exact-key removal, recognized absence and SQL metadata absence. Unrelated published bytes must remain readable.
+
+No sleep is used as evidence. Each contender has a separate bounded3-second unique-marker startup admission; empty initial observations are not mistaken for permanent absence. Query/result/deadlock/timeouts or lost identity/wait observations fail, never become denial success. SQL statement/lock/idle-transaction timeouts and operation deadlines bound the experiment; the3-second observation window caps each observer call to remaining time, and late responses cannot qualify. Reaping has separate bounded allowances. Finally both sessions are independently released/reaped and original identities/locks checked absent. Any fallback termination matches exact PID, backend start, unique marker, role and database; no broad backend kill. The primary failure is retained if cleanup also fails. Reports contain fixed boolean receipts only, not PIDs/queries/rows.
+
+Local22 Python controls pass, including exact-wait counterfactuals and primary-error preservation. Actual two-connection runtime is pending; previousd810 proves only serial controlled cuts. This is attestation versus irreversible canonical cleanup arbitration, not concurrent HTTP, universal races, production lease recovery or late-PUT acceptance.
