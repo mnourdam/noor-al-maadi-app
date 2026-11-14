@@ -10,26 +10,57 @@ class Tests(unittest.TestCase):
   a={'source':'source','input':hashlib.sha256(b'input').hexdigest(),'key':'unique'}
   return h,a
  def test_actual_worker_order_and_receipt(self):
-  h,a=self.fixture();self.assertTrue(w.process(h,a));self.assertEqual([x.args[0] for x in h.worker.call_args_list],['start','terminal','attest']);receipt=h.worker.call_args_list[1].args[1];self.assertEqual(receipt['bytes'],9);self.assertEqual(receipt['output'],hashlib.sha256(b'canonical').hexdigest())
+  h,a=self.fixture();self.assertTrue(w.process(h,a));self.assertEqual([x.args[0] for x in h.worker.call_args_list],['input_admit','start','terminal','attest']);receipt=h.worker.call_args_list[2].args[1];self.assertEqual(receipt['bytes'],9);self.assertEqual(receipt['output'],hashlib.sha256(b'canonical').hexdigest())
  def test_stale_before_put(self):
-  h,a=self.fixture();h.worker.return_value=False;self.assertFalse(w.process(h,a));self.assertEqual(h.storage.call_count,1)
+  h,a=self.fixture();h.worker.return_value=False;self.assertFalse(w.process(h,a));self.assertEqual(h.storage.call_count,0)
  def test_wrong_output_no_receipt(self):
   h,a=self.fixture();h.storage.side_effect=[(200,b'input'),(200,b''),(200,b'wrong')]
   with self.assertRaises(ValueError):w.process(h,a)
-  self.assertEqual(h.worker.call_count,1)
+  self.assertEqual(h.worker.call_count,2)
  def test_crash_after_put_no_receipt(self):
   h,a=self.fixture()
   with self.assertRaises(RuntimeError):w.process(h,a,lambda:(_ for _ in ()).throw(RuntimeError()))
-  self.assertEqual(h.storage.call_count,2);self.assertEqual(h.worker.call_count,1)
+  self.assertEqual(h.storage.call_count,2);self.assertEqual(h.worker.call_count,2)
  def test_failed_put_no_receipt(self):
   h,a=self.fixture();h.storage.side_effect=[(200,b'input'),(500,b'')]
   with self.assertRaises(ValueError):w.process(h,a)
-  self.assertEqual(h.worker.call_count,1)
+  self.assertEqual(h.worker.call_count,2)
  def test_source_guards(self):
   s=Path(__file__).with_name('fixture.sql').read_text()
   for text in ("auth.role() IS DISTINCT FROM 'service_role'",'REVOKE ALL ON ALL FUNCTIONS','auth.uid()','r.generation<>a.generation','a.cleaning','state=\'TERMINAL\'','REVOKE ALL ON FUNCTION'):
    self.assertIn(text,s)
   self.assertNotIn('DELETE FROM',s)
+class Cleanup(unittest.TestCase):
+ def fixture(self):
+  h=Mock();h.Q='q';h.fields={'service':'synthetic'};h.worker.return_value=True
+  h.require=lambda ok,msg:None if ok else (_ for _ in ()).throw(ValueError(msg))
+  h.object_absent=lambda r:r==(404,b'missing');h.input_metadata_absent.return_value=True
+  h.storage.side_effect=[(200,b'original'),(404,b'missing')]
+  return h,{'source':'exact','input':hashlib.sha256(b'original').hexdigest()}
+ def test_verified_remove_and_receipt(self):
+  h,a=self.fixture();self.assertTrue(w.cleanup_input(h,a));h.remove_input.assert_called_once_with('exact')
+  self.assertEqual([c.args[0] for c in h.worker.call_args_list],['input_cleanup','input_positive','input_removed'])
+ def test_unknown_writer_never_reads_or_deletes(self):
+  h,a=self.fixture();h.worker.return_value=False;self.assertFalse(w.cleanup_input(h,a));h.storage.assert_not_called();h.remove_input.assert_not_called()
+ def test_wrong_bytes_never_deletes(self):
+  h,a=self.fixture();h.storage.side_effect=[(200,b'wrong')]
+  with self.assertRaises(ValueError):w.cleanup_input(h,a)
+  h.remove_input.assert_not_called();self.assertEqual(h.worker.call_count,1)
+ def test_delete_failure_and_crash_never_ack(self):
+  for crash in (False,True):
+   h,a=self.fixture()
+   if not crash:h.remove_input.side_effect=RuntimeError()
+   with self.assertRaises(RuntimeError):w.cleanup_input(h,a,(lambda:(_ for _ in ()).throw(RuntimeError())) if crash else lambda:None)
+   self.assertNotIn('input_removed',[c.args[0] for c in h.worker.call_args_list])
+ def test_absence_needs_prior_positive_receipt(self):
+  h,a=self.fixture();h.storage.side_effect=[(404,b'missing')];h.worker.side_effect=[True,False]
+  with self.assertRaises(ValueError):w.cleanup_input(h,a)
+  h.remove_input.assert_not_called()
+ def test_decoder_infrastructure_not_rejection(self):
+  h,a=Tests().fixture();h.bound_decode.side_effect=RuntimeError('infrastructure')
+  with self.assertRaises(RuntimeError):w.process(h,a)
+  self.assertEqual([c.args[0] for c in h.worker.call_args_list],['input_admit'])
+
 class ReceiptMutation(unittest.TestCase):
  def test_exact_patch_and_diagnostic(self):
   spec=importlib.util.spec_from_file_location('experiment',Path(__file__).with_name('experiment.py'));m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)

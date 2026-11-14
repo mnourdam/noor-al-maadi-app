@@ -77,15 +77,57 @@ CREATE TABLE promotion_model.publication(id uuid PRIMARY KEY, attempt_id uuid UN
 -- Public denial surface exposes no rows and grants no mutations.
 CREATE VIEW public.fixture_promotion_receipts AS SELECT id,output_digest FROM promotion_model.attempt;
 REVOKE ALL ON public.fixture_promotion_receipts FROM PUBLIC,anon,authenticated;
+CREATE TABLE promotion_model.input_intent(aid uuid PRIMARY KEY REFERENCES promotion_model.attempt, reservation_id uuid NOT NULL, generation bigint NOT NULL, owner_id uuid NOT NULL, source_key text UNIQUE NOT NULL, digest text NOT NULL, writer_state text NOT NULL CHECK(writer_state IN('WRITING','TERMINAL')), cleaning boolean NOT NULL DEFAULT false, positive_seen boolean NOT NULL DEFAULT false, removal_observed boolean NOT NULL DEFAULT false, decode_rejected boolean NOT NULL DEFAULT false);
+CREATE FUNCTION promotion_model.input_control(op text,p jsonb) RETURNS boolean LANGUAGE plpgsql SET search_path=promotion_model,pg_temp AS $$
+DECLARE a promotion_model.attempt;r promotion_model.reservation;i promotion_model.input_intent;
+BEGIN
+ SELECT * INTO a FROM promotion_model.attempt WHERE id=(p->>'aid')::uuid;
+ SELECT * INTO r FROM promotion_model.reservation WHERE id=a.reservation_id FOR UPDATE;
+ SELECT * INTO a FROM promotion_model.attempt WHERE id=(p->>'aid')::uuid FOR UPDATE;
+ IF a.id IS NULL OR a.token IS DISTINCT FROM (p->>'token')::uuid OR a.owner_id IS DISTINCT FROM (p->>'owner')::uuid OR a.thread_id IS DISTINCT FROM (p->>'issue')::uuid OR a.internal IS DISTINCT FROM (p->>'internal')::boolean OR a.input_digest IS DISTINCT FROM p->>'input' OR a.validator IS DISTINCT FROM p->>'revision' THEN RETURN false; END IF;
+ SELECT * INTO i FROM promotion_model.input_intent WHERE aid=a.id FOR UPDATE;
+ IF op='input_begin' THEN
+  IF i.aid IS NOT NULL OR NOT r.active OR r.generation<>a.generation OR r.accepted IS NOT NULL OR p->>'source' IS DISTINCT FROM a.owner_id::text||'/'||(p->>'source_id')::uuid::text THEN RETURN false; END IF;
+  INSERT INTO promotion_model.input_intent(aid,reservation_id,generation,owner_id,source_key,digest,writer_state) VALUES(a.id,r.id,a.generation,a.owner_id,p->>'source',a.input_digest,'WRITING'); RETURN true;
+ END IF;
+ IF i.aid IS NULL OR i.source_key IS DISTINCT FROM p->>'source' OR i.digest IS DISTINCT FROM p->>'input' THEN RETURN false; END IF;
+ CASE op
+ WHEN 'input_terminal' THEN
+  IF i.cleaning OR i.writer_state<>'WRITING' THEN RETURN false; END IF;
+  UPDATE promotion_model.input_intent SET writer_state='TERMINAL' WHERE aid=a.id; RETURN true;
+ WHEN 'input_admit' THEN RETURN r.active AND r.generation=a.generation AND NOT i.cleaning AND i.writer_state='TERMINAL';
+ WHEN 'reject_input' THEN
+  IF i.cleaning OR i.writer_state<>'TERMINAL' OR NOT r.active OR r.generation<>a.generation OR r.accepted IS NOT NULL THEN RETURN false; END IF;
+  UPDATE promotion_model.input_intent SET decode_rejected=true WHERE aid=a.id;
+  PERFORM promotion_model.retire(r.id);RETURN true;
+ WHEN 'input_cleanup' THEN
+  IF i.writer_state<>'TERMINAL' OR (r.active AND NOT EXISTS(SELECT 1 FROM promotion_model.readable v JOIN promotion_model.publication pub ON pub.attempt_id=v.id WHERE v.id=a.id)) THEN RETURN false; END IF;
+  UPDATE promotion_model.input_intent SET cleaning=true WHERE aid=a.id;RETURN true;
+ WHEN 'input_positive' THEN
+  IF NOT i.cleaning OR i.writer_state<>'TERMINAL' THEN RETURN false; END IF;
+  UPDATE promotion_model.input_intent SET positive_seen=true WHERE aid=a.id; RETURN true;
+ WHEN 'input_removed' THEN
+  IF NOT i.cleaning OR NOT i.positive_seen OR i.writer_state<>'TERMINAL' THEN RETURN false; END IF;
+  UPDATE promotion_model.input_intent SET removal_observed=true WHERE aid=a.id; RETURN true;
+ WHEN 'input_retry_absence' THEN RETURN i.cleaning AND i.positive_seen AND i.writer_state='TERMINAL';
+ ELSE RETURN false;
+ END CASE;
+END $$;
+CREATE FUNCTION public.fixture_quarantine_insert(key text) RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=promotion_model,pg_temp AS $$
+ SELECT EXISTS(SELECT 1 FROM promotion_model.input_intent i JOIN promotion_model.attempt a ON a.id=i.aid JOIN promotion_model.reservation r ON r.id=i.reservation_id WHERE i.source_key=key AND i.owner_id=auth.uid() AND r.active AND r.generation=i.generation AND a.generation=i.generation AND NOT i.cleaning AND i.writer_state='WRITING')
+$$;
+DROP POLICY fixture_decode_insert ON storage.objects;
+CREATE POLICY fixture_bound_quarantine_insert ON storage.objects FOR INSERT TO authenticated WITH CHECK(bucket_id='fixture-decode-quarantine' AND public.fixture_quarantine_insert(name));
 CREATE FUNCTION public.fixture_worker(op text,p jsonb) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=promotion_model,pg_temp AS $$
 BEGIN
  IF auth.role() IS DISTINCT FROM 'service_role' THEN RAISE EXCEPTION 'service_only' USING ERRCODE='42501'; END IF;
+ IF op IN('input_begin','input_terminal','input_admit','reject_input','input_cleanup','input_positive','input_removed','input_retry_absence') THEN RETURN to_jsonb(promotion_model.input_control(op,p)); END IF;
  CASE op
  WHEN 'reserve' THEN INSERT INTO promotion_model.reservation(id,owner_id,thread_id,internal) VALUES((p->>'rid')::uuid,(p->>'owner')::uuid,(p->>'issue')::uuid,(p->>'internal')::boolean); RETURN 'true';
  WHEN 'claim' THEN RETURN to_jsonb(promotion_model.claim((p->>'rid')::uuid,(p->>'aid')::uuid,(p->>'token')::uuid,p->>'input',p->>'revision'));
- WHEN 'start' THEN RETURN to_jsonb(promotion_model.start_write((p->>'aid')::uuid,(p->>'token')::uuid));
+ WHEN 'start' THEN IF NOT promotion_model.input_control('input_admit',p) THEN RETURN 'false'; END IF; RETURN to_jsonb(promotion_model.start_write((p->>'aid')::uuid,(p->>'token')::uuid));
  WHEN 'terminal' THEN IF (p->>'bytes')::integer NOT BETWEEN 1 AND 2097152 OR p->>'bytes' IS NULL THEN RETURN 'false'; END IF; IF NOT promotion_model.terminal((p->>'aid')::uuid,(p->>'token')::uuid,(p->>'success')::boolean,p->>'output') THEN RETURN 'false'; END IF; UPDATE promotion_model.attempt SET output_size=(p->>'bytes')::integer WHERE id=(p->>'aid')::uuid; RETURN 'true';
- WHEN 'attest' THEN IF NOT EXISTS(SELECT 1 FROM promotion_model.attempt WHERE id=(p->>'aid')::uuid AND output_size=(p->>'bytes')::integer) THEN RETURN 'false'; END IF; RETURN to_jsonb(promotion_model.publish((p->>'aid')::uuid,(p->>'token')::uuid,p->>'input',p->>'output',p->>'revision',(p->>'owner')::uuid,(p->>'issue')::uuid,(p->>'internal')::boolean));
+ WHEN 'attest' THEN IF NOT promotion_model.input_control('input_admit',p) THEN RETURN 'false'; END IF; IF NOT EXISTS(SELECT 1 FROM promotion_model.attempt WHERE id=(p->>'aid')::uuid AND output_size=(p->>'bytes')::integer) THEN RETURN 'false'; END IF; RETURN to_jsonb(promotion_model.publish((p->>'aid')::uuid,(p->>'token')::uuid,p->>'input',p->>'output',p->>'revision',(p->>'owner')::uuid,(p->>'issue')::uuid,(p->>'internal')::boolean));
  WHEN 'retire' THEN PERFORM promotion_model.retire((p->>'rid')::uuid); RETURN 'true';
  WHEN 'cleanup' THEN RETURN to_jsonb(promotion_model.claim_cleanup((p->>'aid')::uuid,p->>'key',COALESCE((p->>'abandon')::boolean,false)));
  WHEN 'removed' THEN RETURN to_jsonb(promotion_model.observe_removal((p->>'aid')::uuid,p->>'key'));
@@ -118,3 +160,6 @@ REVOKE ALL ON FUNCTION public.fixture_worker(text,jsonb),public.fixture_finalize
 GRANT EXECUTE ON FUNCTION public.fixture_worker(text,jsonb) TO service_role;
 GRANT EXECUTE ON FUNCTION public.fixture_finalize(uuid,uuid,text,boolean),public.fixture_canonical_read(text) TO authenticated;
 CREATE POLICY fixture_published_canonical_read ON storage.objects FOR SELECT TO authenticated USING(bucket_id='fixture-decode-canonical' AND public.fixture_canonical_read(name));
+
+REVOKE ALL ON FUNCTION public.fixture_quarantine_insert(text) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.fixture_quarantine_insert(text) TO authenticated;

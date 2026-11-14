@@ -35,6 +35,13 @@ class Experiment(base.Experiment):
   return self.call('fixture_finalize',actor[1],{'mid':mid or str(uuid.uuid4()),'aid':a['aid'],'body':body,'inside':a['internal'] if inside is None else inside})
  def check_denied(self,result,label):
   self.check(result[0]>=400 and result[0]<500 and isinstance(result[1],dict) and result[1].get('code') in ('42501','P0001'),label)
+ def remove_input(self,source):
+  b.require(len(source.split('/'))==2 and all(str(uuid.UUID(x))==x for x in source.split('/')),'invalid cleanup key')
+  status,_=self.request('/storage/v1/object/'+self.Q,self.fields['service'],{'prefixes':[source]},'DELETE',service=True)
+  b.require(status==200,'input removal failed')
+ def input_metadata_absent(self,source):
+  b.require(len(source.split('/'))==2 and all(str(uuid.UUID(x))==x for x in source.split('/')),'invalid cleanup key')
+  return self.sql(f"SELECT count(*) FROM storage.objects WHERE bucket_id='{self.Q}' AND name='{source}';")=='0'
  def decode_probe(self):
   super().decode_probe();self.report['decode_baseline_result']=self.report['result'];self.report['result']='FAIL'
   fixture=Path(__file__).with_name('fixture.sql').read_bytes();self.sql(fixture.decode());self.sql("NOTIFY pgrst,'reload schema';")
@@ -49,11 +56,16 @@ class Experiment(base.Experiment):
   owner,other,staff=actors;self.sql(f"INSERT INTO public.user_roles VALUES('{staff[0]}','fixture_staff');")
   raw=base.subprocess.run(['node','--input-type=module','-e',"import sharp from 'sharp';process.stdout.write(await sharp({create:{width:3,height:2,channels:3,background:'#246810'}}).png().toBuffer());"],cwd=base.ROOT,env={'PATH':os.environ.get('PATH',''),'LANG':'C'},capture_output=True,timeout=8,check=True).stdout
   revision=hashlib.sha256((base.ROOT/'tests/media-decoder/child.mjs').read_bytes()).hexdigest()
-  def attempt(internal=False,reservation=None):
-   a={'rid':reservation or str(uuid.uuid4()),'aid':str(uuid.uuid4()),'token':str(uuid.uuid4()),'owner':owner[0],'issue':str(uuid.uuid4()),'internal':internal,'input':hashlib.sha256(raw).hexdigest(),'revision':revision}
+  def attempt(internal=False,reservation=None,input_bytes=None,terminal=True):
+   content=raw if input_bytes is None else input_bytes
+   a={'rid':reservation or str(uuid.uuid4()),'aid':str(uuid.uuid4()),'token':str(uuid.uuid4()),'owner':owner[0],'issue':str(uuid.uuid4()),'internal':internal,'input':hashlib.sha256(content).hexdigest(),'revision':revision}
    if reservation is None:self.worker('reserve',a)
-   a['key']=self.worker('claim',a);a['source']=owner[0]+'/'+str(uuid.uuid4())
-   self.check(self.storage(self.Q,a['source'],owner[1],'POST',raw)[0] in (200,201),'owner upload positive')
+   a['key']=self.worker('claim',a);a['source_id']=str(uuid.uuid4());a['source']=owner[0]+'/'+a['source_id']
+   self.check(self.worker('input_begin',a) is True,'durable exact input intent before upload')
+   self.check(self.storage(self.Q,a['source'],owner[1],'POST',content)[0] in (200,201),'owner upload positive')
+   if terminal:
+    self.check(self.storage(self.Q,a['source'],self.fields['service'])==(200,content),'testbench terminal PUT plus exact service read')
+    self.check(self.worker('input_terminal',a) is True,'testbench terminal writer receipt')
    return a
   def unreadable(actor,a,label):
    result=self.storage(self.C,a['key'],actor[1]);self.check(base.permission(result) or self.object_absent(result),label)
@@ -79,6 +91,9 @@ class Experiment(base.Experiment):
   expected=self.storage(self.C,a['key'],self.fields['service']);self.check(expected[0]==200,'service canonical positive')
   for actor in (owner,staff):self.check(self.storage(self.C,a['key'],actor[1])==expected,'published intended actor exact canonical bytes')
   unreadable(other,a,'other owner canonical denied')
+  self.check(w.cleanup_input(self,a) is True,'published original quarantine removed')
+  self.check(self.storage(self.C,a['key'],owner[1])==expected,'canonical remains readable after original cleanup')
+  self.check(base.permission(self.storage(self.Q,a['source'],owner[1],'POST',raw)),'cleaned original reupload denied')
   self.check(self.worker('cleanup',dict(a,key=a['key'])) is None,'published cleanup forbidden')
   self.worker('retire',a)
   for actor in actors:unreadable(actor,a,'retired canonical denied')
@@ -121,6 +136,31 @@ class Experiment(base.Experiment):
   replacement=attempt();new=dict(replacement,aid=str(uuid.uuid4()),token=str(uuid.uuid4()))
   self.worker('claim',new)
   self.check(w.process(self,replacement) is False,'new generation prevents stale output write')
+  bad=attempt(input_bytes=b'not-a-png')
+  self.check(w.process(self,bad) is False,'trusted validation rejection retires input')
+  self.check(w.cleanup_input(self,bad) is True,'rejected original exact cleanup')
+  retired=attempt();self.worker('retire',retired)
+  try:w.cleanup_input(self,retired,lambda:(_ for _ in ()).throw(Crash()))
+  except Crash:pass
+  else:raise b.Failure('cleanup crash control missing')
+  self.check(self.sql(f"SELECT positive_seen AND cleaning AND NOT removal_observed FROM promotion_model.input_intent WHERE aid='{retired['aid']}';")=='t','delete response crash retains intent')
+  self.check(w.cleanup_input(self,retired) is True,'recognized absence retry uses durable positive receipt')
+  self.check(w.cleanup_input(self,retired) is True,'completed original cleanup repeat idempotent')
+  unknown=attempt(terminal=False);self.worker('retire',unknown)
+  self.remove_input(unknown['source']) # Deliberate fixture cut, not cleanup-worker eligibility.
+  self.check(self.object_absent(self.storage(self.Q,unknown['source'],self.fields['service'])),'unknown writer fixture absence sampled')
+  self.check(w.cleanup_input(self,unknown) is False,'unknown writer404 not cleanup eligible')
+  self.check(self.worker('input_removed',unknown) is False,'unknown writer404 no acknowledgement')
+  self.check(self.sql(f"SELECT writer_state='WRITING' AND NOT removal_observed FROM promotion_model.input_intent WHERE aid='{unknown['aid']}';")=='t','unknown writer intent retained')
+  held=attempt()
+  def retire_and_clean():
+   self.worker('retire',held);self.check(w.cleanup_input(self,held) is True,'cleanup during prefetched decode')
+  self.check(w.process(self,held,after_decode=retire_and_clean) is False,'prefetched decode cannot start after cleanup')
+  self.check(self.object_absent(self.storage(self.C,held['key'],self.fields['service'])),'no stale canonical output after input cleanup')
+  wrong=attempt();self.worker('retire',wrong)
+  self.check(w.cleanup_input(self,dict(wrong,source=internal['key'])) is False,'canonical key cannot substitute input cleanup key')
+  self.check(self.storage(self.C,internal['key'],staff[1])==self.storage(self.C,internal['key'],self.fields['service']),'wrong input cleanup leaves canonical unchanged')
+  self.report['input_terminality']='Explicit harness-observed terminal PUT plus exact service read; not a production writer/lease guarantee'
   self.report['result']='LOCAL STACK PASS; SYNTHETIC WORKER PUBLICATION ONLY; ACTIVATION BLOCKED'
 if __name__=='__main__':
  try:
