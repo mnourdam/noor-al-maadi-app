@@ -44,7 +44,7 @@ class Experiment(base.Experiment):
   b.require(len(source.split('/'))==2 and all(str(uuid.UUID(x))==x for x in source.split('/')),'invalid cleanup key')
   return self.sql(f"SELECT count(*) FROM storage.objects WHERE bucket_id='{self.Q}' AND name='{source}';")=='0'
  def storage(self,bucket,path,token,method='GET',raw=None):
-  if bucket!='feedback-images-canonical':return super().storage(bucket,path,token,method,raw)
+  if bucket not in ('feedback-images-canonical','feedback-images-quarantine'):return super().storage(bucket,path,token,method,raw)
   b.require(len(path.split('/'))==2 and all(str(uuid.UUID(x))==x for x in path.split('/')),'invalid canonical key')
   self.isolation();b.require(self.endpoints_verified,'unverified local services')
   route='/storage/v1/object/'+('authenticated/' if method=='GET' else '')+bucket+'/'+path
@@ -64,8 +64,8 @@ class Experiment(base.Experiment):
   return result.get('descriptor')
  def decode_probe(self):
   super().decode_probe();self.report['decode_baseline_result']=self.report['result'];self.report['result']='FAIL'
-  self.C='feedback-images-canonical'
-  self.sql("INSERT INTO storage.buckets(id,name,public,file_size_limit) VALUES('feedback-images-canonical','feedback-images-canonical',false,2097152);")
+  self.C='feedback-images-canonical';self.Q='feedback-images-quarantine'
+  self.sql("INSERT INTO storage.buckets(id,name,public,file_size_limit) VALUES('feedback-images-canonical','feedback-images-canonical',false,2097152),('feedback-images-quarantine','feedback-images-quarantine',false,2097152);")
   fixture=Path(__file__).with_name('fixture.sql').read_bytes();self.sql(fixture.decode());self.sql("NOTIFY pgrst,'reload schema';")
   self.report['promotion_fixture_sha256']=hashlib.sha256(fixture).hexdigest()
   self.report['canonical_client_sources']={p:hashlib.sha256((base.ROOT/p).read_bytes()).hexdigest() for p in ('src/lib/feedback/canonical-image-contract.ts','tests/sql/feedback-media-promotion/client.mjs')}
@@ -79,6 +79,7 @@ class Experiment(base.Experiment):
   owner,other,staff=actors;self.sql(f"INSERT INTO public.user_roles VALUES('{staff[0]}','fixture_staff');")
   raw=base.subprocess.run(['node','--input-type=module','-e',"import sharp from 'sharp';process.stdout.write(await sharp({create:{width:3,height:2,channels:3,background:'#246810'}}).png().toBuffer());"],cwd=base.ROOT,env={'PATH':os.environ.get('PATH',''),'LANG':'C'},capture_output=True,timeout=8,check=True).stdout
   revision=hashlib.sha256((base.ROOT/'tests/media-decoder/child.mjs').read_bytes()).hexdigest()
+  self.sql(Path(__file__).with_name('sender.sql').read_text());self.sql(f"INSERT INTO promotion_model.client_config VALUES(true,'{revision}');NOTIFY pgrst,'reload schema';")
   def attempt(internal=False,reservation=None,input_bytes=None,terminal=True):
    content=raw if input_bytes is None else input_bytes
    a={'rid':reservation or str(uuid.uuid4()),'aid':str(uuid.uuid4()),'token':str(uuid.uuid4()),'owner':owner[0],'issue':str(uuid.uuid4()),'internal':internal,'input':hashlib.sha256(content).hexdigest(),'revision':revision}
@@ -223,7 +224,27 @@ class Experiment(base.Experiment):
   status,canonical=self.storage(self.C,browser_case['key'],self.fields['service']);b.require(status==200,'browser canonical source')
   dimensions=json.loads(base.subprocess.run(['node','--input-type=module','-e',"import sharp from 'sharp';const chunks=[];for await(const c of process.stdin)chunks.push(c);const m=await sharp(Buffer.concat(chunks)).metadata();process.stdout.write(JSON.stringify([m.width,m.height]));"],input=canonical,cwd=base.ROOT,env={'PATH':os.environ.get('PATH',''),'LANG':'C'},capture_output=True,check=True,timeout=8).stdout)
   browser_module=module('canonical_browser',Path(__file__).with_name('browser.py'))
-  browser_module.run(self,owner,credentials[owner[0]],browser_mid,browser_case,hashlib.sha256(canonical).hexdigest(),dimensions)
+  sender_issue=str(uuid.uuid4());self.sql(f"INSERT INTO public.feedback_issues(id,reporter_id) VALUES('{sender_issue}','{owner[0]}');")
+  sent={}
+  def sender_process(key):
+   b.require(len(key.split('/'))==2 and key.split('/')[0]==owner[0] and str(uuid.UUID(key.split('/')[1]))==key.split('/')[1],'sender key')
+   row=json.loads(self.sql(f"SELECT jsonb_build_object('rid',a.reservation_id,'aid',a.id,'token',a.token,'owner',a.owner_id,'issue',a.thread_id,'internal',a.internal,'input',a.input_digest,'revision',a.validator,'source',i.source_key,'source_id',a.id,'key',a.object_key,'expected_bytes',q.bytes,'mid',q.mid,'body',q.body) FROM promotion_model.client_request q JOIN promotion_model.attempt a ON a.id=q.image_id JOIN promotion_model.input_intent i ON i.aid=a.id WHERE q.issue_id='{sender_issue}' AND q.owner_id='{owner[0]}' AND i.source_key='{key}';"))
+   b.require(row['body']=='canonical browser send' and row['issue']==sender_issue and row['internal'] is False,'sender private binding')
+   status,uploaded=self.storage(self.Q,key,self.fields['service']);self.check(status==200 and len(uploaded)==row['expected_bytes'] and hashlib.sha256(uploaded).hexdigest()==row['input'],'browser terminal upload observed and exact service bytes')
+   self.check(self.worker('input_terminal',row) is True,'testbench only sender terminal evidence');self.check(w.process(self,row) is True,'outside client worker attests sender output')
+   status,out=self.storage(self.C,row['key'],self.fields['service']);b.require(status==200,'sender canonical positive')
+   dims=json.loads(base.subprocess.run(['node','--input-type=module','-e',"import sharp from 'sharp';const chunks=[];for await(const c of process.stdin)chunks.push(c);const m=await sharp(Buffer.concat(chunks)).metadata();process.stdout.write(JSON.stringify([m.width,m.height]));"],input=out,cwd=base.ROOT,env={'PATH':os.environ.get('PATH',''),'LANG':'C'},capture_output=True,check=True,timeout=8).stdout)
+   sent.update(row);return {'digest':hashlib.sha256(out).hexdigest(),'dimensions':dims}
+  def sender_verify():
+   self.check(self.sql(f"SELECT count(*) FROM promotion_model.publication WHERE id='{sent['mid']}' AND attempt_id='{sent['aid']}';")=='1','sender retry one exact publication')
+   payload={'p_message_id':sent['mid'],'p_issue_id':sender_issue,'p_body':sent['body'],'p_image_id':sent['aid'],'p_digest':sent['input'],'p_bytes':sent['expected_bytes']}
+   for actor in (other,staff):
+    for rpc in ('reserve_canonical_feedback_image_v1','finalize_canonical_feedback_image_v1'):
+     status,data=self.decoded(self.request('/rest/v1/rpc/'+rpc,actor[1],payload,'POST'));self.check(status==403 and isinstance(data,dict) and data.get('code')=='42501','unsupported canonical sender actor denied')
+   self.check_denied(self.decoded(self.request('/rest/v1/rpc/finalize_canonical_feedback_image_v1',owner[1],dict(payload,p_body='changed'),'POST')),'sender changed payload denied')
+   self.check(self.decoded(self.request('/rest/v1/rpc/finalize_canonical_feedback_image_v1',owner[1],payload,'POST'))==(200,{'status':'published','message_id':sent['mid']}),'sender exact replay idempotent')
+   self.check(self.sql(f"SELECT count(*) FROM promotion_model.publication WHERE id='{sent['mid']}' AND attempt_id='{sent['aid']}';")=='1','sender publication unchanged after actor denials and replay')
+  browser_module.run(self,owner,credentials[owner[0]],browser_mid,browser_case,hashlib.sha256(canonical).hexdigest(),dimensions,{'issue':sender_issue,'bytes':raw,'process':sender_process,'verify':sender_verify})
   self.check(self.report['canonical_browser']['result']=='PASS_ACTUAL_COMPONENT_DISPOSABLE_STORAGE_ONLY','actual component click decode revoke retired denial')
   self.report['input_terminality']='Explicit harness-observed terminal PUT plus exact service read; not a production writer/lease guarantee'
   self.report['result']='LOCAL STACK PASS; SYNTHETIC WORKER PUBLICATION ONLY; ACTIVATION BLOCKED'

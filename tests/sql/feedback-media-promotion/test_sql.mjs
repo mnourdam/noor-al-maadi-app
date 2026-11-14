@@ -38,5 +38,30 @@ try {
  await assert.rejects(()=>db.exec('SELECT * FROM promotion_model.attempt'),/permission denied/);
  await assert.rejects(()=>db.query('INSERT INTO public.fixture_promotion_receipts(id,output_digest) VALUES($1,$2)',[a.aid,'0'.repeat(64)]),e=>e.code==='42501');
  await assert.rejects(()=>db.query('UPDATE public.fixture_promotion_receipts SET output_digest=$1 WHERE id=$2',['0'.repeat(64),a.aid]),e=>e.code==='42501');
+ await db.exec('RESET ROLE; CREATE TABLE public.feedback_issues(id uuid PRIMARY KEY,reporter_id uuid);');
+ await db.exec(await fs.readFile(new URL('./sender.sql',import.meta.url),'utf8'));
+ await db.query('INSERT INTO promotion_model.client_config VALUES(true,$1)',['fixture']);
+ const cmid=randomUUID(),ci=randomUUID(),caid=randomUUID();await db.query('INSERT INTO public.feedback_issues VALUES($1,$2)',[ci,owner]);
+ const params=[cmid,ci,'immutable',caid,'a'.repeat(64),10];
+ const reserve=()=>one('SELECT public.reserve_canonical_feedback_image_v1($1,$2,$3,$4,$5,$6)',params);
+ const finalize=()=>one('SELECT public.finalize_canonical_feedback_image_v1($1,$2,$3,$4,$5,$6)',params);
+ await db.exec('SET ROLE authenticated;');
+ const reserved=await reserve();assert.deepEqual(reserved,{version:1,image_id:caid,path:owner+'/'+caid,status:'upload'});assert.deepEqual(await reserve(),reserved);
+ assert.equal((await finalize()).status,'pending');for(const [index,value] of [[2,'changed'],[3,randomUUID()],[4,'c'.repeat(64)],[5,11]]){const old=params[index];params[index]=value;await assert.rejects(reserve);await assert.rejects(finalize);params[index]=old;}
+ await db.exec(`SET fixture.uid='${randomUUID()}';`);await assert.rejects(reserve,e=>e.code==='42501');await assert.rejects(finalize,e=>e.code==='42501');
+ await db.exec(`RESET ROLE;SET fixture.uid='${owner}';SET fixture.role='service_role';`);
+ const row=(await db.query('SELECT token FROM promotion_model.attempt WHERE id=$1',[caid])).rows[0];
+ const ca={rid:cmid,aid:caid,token:row.token,owner,issue:ci,internal:false,input:'a'.repeat(64),revision:'fixture',source:owner+'/'+caid,source_id:caid,success:true,output:'b'.repeat(64),bytes:10};
+ assert.equal(await worker('input_terminal',ca),true);assert.equal(await worker('start',ca),true);assert.equal(await worker('terminal',ca),true);assert.equal(await worker('attest',ca),true);
+ await db.exec("SET fixture.role='authenticated';SET ROLE authenticated;");assert.equal((await reserve()).status,'ready');assert.deepEqual(await finalize(),{status:'published',message_id:cmid});assert.deepEqual(await finalize(),{status:'published',message_id:cmid});
+ await db.exec("RESET ROLE;SET fixture.role='service_role';");assert.equal(await one('SELECT count(*)::int FROM promotion_model.publication WHERE id=$1',[cmid]),1);await worker('retire',ca);await db.exec("SET fixture.role='authenticated';SET ROLE authenticated;");await assert.rejects(finalize);
+ await db.exec("RESET ROLE;SET fixture.role='service_role';");
+ const collision=randomUUID(),alien={...ca,rid:randomUUID(),aid:randomUUID(),token:randomUUID(),issue:randomUUID()};
+ await worker('reserve',alien);await worker('claim',alien);await db.query('INSERT INTO promotion_model.reservation(id,owner_id,thread_id,internal,generation) VALUES($1,$2,$3,false,1)',[collision,owner,ci]);
+ await db.query('INSERT INTO promotion_model.client_request VALUES($1,$2,$3,$4,$5,$6,$7)',[collision,owner,ci,'immutable',alien.aid,alien.input,10]);
+ const collisionArgs=[collision,ci,'immutable',alien.aid,alien.input,10];const countBefore=await one('SELECT count(*)::int FROM promotion_model.publication');
+ await db.exec("SET fixture.role='authenticated';SET ROLE authenticated;");
+ await assert.rejects(()=>one('SELECT public.reserve_canonical_feedback_image_v1($1,$2,$3,$4,$5,$6)',collisionArgs));await assert.rejects(()=>one('SELECT public.finalize_canonical_feedback_image_v1($1,$2,$3,$4,$5,$6)',collisionArgs));
+ await db.exec('RESET ROLE;');assert.equal(await one('SELECT count(*)::int FROM promotion_model.publication'),countBefore);assert.equal(await one('SELECT reservation_id FROM promotion_model.attempt WHERE id=$1',[alien.aid]),alien.rid);
  console.log('PASS real PostgreSQL fixture publication, binding, retirement, cleanup and ACL controls');
 } finally {await db.close();}

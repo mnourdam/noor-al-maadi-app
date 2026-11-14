@@ -10,14 +10,18 @@ import {
   type ImageMessageDraft,
   type PreparedImage,
 } from "@/lib/feedback/images";
+import {onOwnerChange} from '@/lib/identity/owner';
+import {sendCanonicalFeedbackImage,CanonicalImagePending} from '@/lib/feedback/canonical-send';
 /** Mount keyed by identity and thread. An uncertain image send keeps the same immutable retry ID. */
-export function FeedbackReplyComposer({
+function Composer({
   issueId,
   staff = false,
   onSent,
   onTyping,
+  imageProtocol = "legacy",
 }: {
   issueId: string;
+  imageProtocol?: "legacy" | "canonical-v1";
   staff?: boolean;
   onSent: () => void | Promise<void>;
   onTyping?: () => void;
@@ -38,10 +42,12 @@ export function FeedbackReplyComposer({
     };
   }, []);
   const alive = () => mounted.current && origin.current === currentImageScope();
+  const canonical = imageProtocol === "canonical-v1";
+  const imageLimit = canonical ? 1 : FEEDBACK_IMAGE_COUNT;
   async function pick(files: FileList | null) {
-    if (!files || lock.current || draft.current) return;
-    if (files.length + images.length > FEEDBACK_IMAGE_COUNT) {
-      setError("يمكن إرفاق 3 صور كحد أقصى");
+    if (!files || lock.current || draft.current || (canonical && staff) || !["legacy", "canonical-v1"].includes(imageProtocol)) return;
+    if (files.length + images.length > imageLimit) {
+      setError(canonical ? "يمكن إرفاق صورة واحدة في هذا المسار" : "يمكن إرفاق 3 صور كحد أقصى");
       return;
     }
     lock.current = true;
@@ -66,7 +72,11 @@ export function FeedbackReplyComposer({
     try {
       if (images.length) {
         draft.current ??= makeImageDraft(issueId, body, internal, images);
-        await sendFeedbackImages(draft.current, alive);
+        if (canonical) {
+          if (staff) throw new Error("Canonical staff sending unsupported");
+          await sendCanonicalFeedbackImage(draft.current, alive);
+        } else if (imageProtocol === "legacy") await sendFeedbackImages(draft.current, alive);
+        else throw new Error("Unknown attachment protocol");
       } else await replyToIssue(issueId, body.trim(), internal);
       if (!alive()) return;
       draft.current = null;
@@ -80,7 +90,9 @@ export function FeedbackReplyComposer({
     } catch (e) {
       if (alive())
         setError(
-          images.length
+          e instanceof CanonicalImagePending
+            ? "الصورة قيد المعالجة الآمنة؛ أعد المحاولة بنفس الرسالة."
+            : images.length
             ? "لم يتأكد إرسال الصورة. أعد المحاولة بنفس الرسالة لتجنب التكرار."
             : e instanceof Error
               ? e.message
@@ -112,14 +124,14 @@ export function FeedbackReplyComposer({
         placeholder="اكتب ردك…"
         className="w-full rounded-lg border border-white/10 bg-background/60 p-3 text-sm"
       />
-      {feedbackImagesEnabled && (
+      {feedbackImagesEnabled && ["legacy", "canonical-v1"].includes(imageProtocol) && !(canonical && staff) && (
         <label className="my-2 block text-xs">
-          إرفاق صور (حتى 3 صور، 2 ميغابايت للصورة)
+          {canonical ? "إرفاق صورة واحدة (2 ميغابايت)" : "إرفاق صور (حتى 3 صور، 2 ميغابايت للصورة)"}
           <input
             aria-label="إرفاق صور بالمحادثة"
             type="file"
             accept="image/jpeg,image/png,image/webp"
-            multiple
+            multiple={!canonical}
             disabled={busy || !!draft.current}
             onChange={(e) => {
               void pick(e.target.files);
@@ -143,7 +155,8 @@ export function FeedbackReplyComposer({
           </li>
         ))}
       </ul>
-      {staff && (
+      {canonical && staff && <p role="note">إرسال الصور بهذا المسار متاح لصاحب المحادثة فقط.</p>}
+      {staff && !canonical && (
         <label className="block text-xs">
           <input
             type="checkbox"
@@ -168,4 +181,10 @@ export function FeedbackReplyComposer({
       </button>
     </form>
   );
+}
+
+export function FeedbackReplyComposer(props: Parameters<typeof Composer>[0]) {
+ const [scope,setScope]=useState(currentImageScope);
+ useEffect(()=>onOwnerChange(()=>setScope(currentImageScope())),[]);
+ return <Composer key={`${scope}:${props.issueId}:${props.imageProtocol ?? 'legacy'}:${!!props.staff}`} {...props}/>;
 }

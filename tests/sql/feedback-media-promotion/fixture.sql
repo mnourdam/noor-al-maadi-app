@@ -117,7 +117,7 @@ CREATE FUNCTION public.fixture_quarantine_insert(key text) RETURNS boolean LANGU
  SELECT EXISTS(SELECT 1 FROM promotion_model.input_intent i JOIN promotion_model.attempt a ON a.id=i.aid JOIN promotion_model.reservation r ON r.id=i.reservation_id WHERE i.source_key=key AND i.owner_id=auth.uid() AND r.active AND r.generation=i.generation AND a.generation=i.generation AND NOT i.cleaning AND i.writer_state='WRITING')
 $$;
 DROP POLICY fixture_decode_insert ON storage.objects;
-CREATE POLICY fixture_bound_quarantine_insert ON storage.objects FOR INSERT TO authenticated WITH CHECK(bucket_id='fixture-decode-quarantine' AND public.fixture_quarantine_insert(name));
+CREATE POLICY fixture_bound_quarantine_insert ON storage.objects FOR INSERT TO authenticated WITH CHECK(bucket_id='feedback-images-quarantine' AND public.fixture_quarantine_insert(name));
 CREATE FUNCTION public.fixture_worker(op text,p jsonb) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=promotion_model,pg_temp AS $$
 BEGIN
  IF auth.role() IS DISTINCT FROM 'service_role' THEN RAISE EXCEPTION 'service_only' USING ERRCODE='42501'; END IF;

@@ -1,5 +1,6 @@
-import React from 'react';
+import React,{useState} from 'react';
 import {createRoot} from 'react-dom/client';
+import {FeedbackReplyComposer} from '@/components/feedback/FeedbackReplyComposer';
 import {FeedbackImages} from '@/components/feedback/FeedbackImages';
 import {supabase} from '@/integrations/supabase/client';
 import {setActiveOwnerInternal} from '@/lib/identity/owner';
@@ -7,6 +8,8 @@ import {parseCanonicalImage,type CanonicalImage} from '@/lib/feedback/canonical-
 const g=globalThis as any;
 let descriptor:CanonicalImage,owner:string,started=false;
 const root=createRoot(document.getElementById('root')!);
+let sent=0;
+function SenderScene({issue}:{issue:string}){const [images,setImages]=useState<unknown[]>([]);return <><FeedbackReplyComposer imageProtocol="canonical-v1" issueId={issue} onSent={async()=>{sent++;const result=await supabase.rpc('fixture_canonical_messages' as never,{p_issue_id:issue} as never);if(result.error || !Array.isArray(result.data) || result.data.length!==1)throw Error('canonical refresh');setImages(result.data.map((x:any)=>x.attachment));}}/><FeedbackImages protocol="canonical-v1" attachments={images}/></>;}
 const records:{url:string;revoked:boolean;sha256:string|null}[]=[];
 const create=URL.createObjectURL.bind(URL),revoke=URL.revokeObjectURL.bind(URL);
 URL.createObjectURL=(blob:Blob|MediaSource)=>{
@@ -27,6 +30,8 @@ g.canonicalBrowser={
   const response=await supabase.rpc('fixture_canonical_descriptor' as never,{mid:p.mid} as never);
   const parsed=parseCanonicalImage(response.data);if(response.error || !parsed || parsed.message_id!==p.mid)throw Error('actor descriptor');descriptor=parsed;show();return true;
  },
+ showSender(issue:string){root.render(<SenderScene issue={issue}/>);},
+ sent(){return sent;},
  retireIdentity(){setActiveOwnerInternal('guest:canonical-browser');},
  restoreIdentity(){setActiveOwnerInternal(`user:${owner}`);show();},
  evidence(){const image=document.querySelector('img');return {created:records.length,revoked:records.filter(r=>r.revoked).length,exactCurrentOwned:!!image && records.some(r=>r.url===image.getAttribute('src')&&!r.revoked),sha256:records.at(-1)?.sha256??null,complete:image?.complete??false,width:image?.naturalWidth??0,height:image?.naturalHeight??0};},
