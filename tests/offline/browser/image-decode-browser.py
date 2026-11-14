@@ -18,7 +18,9 @@ def main():
         assets = Path(temp) / 'assets'
         subprocess.run(['node', 'tests/offline/browser/build-image-decode.mjs', str(assets)], check=True, stdout=subprocess.DEVNULL)
         manifest = json.loads((assets / 'manifest.json').read_text())
-        assert len(manifest['paths']) == len(set(manifest['paths'])) == 2422
+        assert len(manifest['paths']) == len(set(manifest['paths'])) == 2425
+        assert manifest['counts'] == {'chapter':637,'story':1785,'interpretive':3,'total':2425}
+        assert len(manifest['interpretive']) == 3 and len(manifest['sourceHashes']) == 3
         allowed = {'/', '/index.html', '/fixture.js', '/malformed.webp', '/missing.webp'} | {'/' + p for p in manifest['paths']}
         # Build may emit lazily imported production chunks. Permit only generated JS.
         allowed |= {'/' + str(p.relative_to(assets)) for p in assets.rglob('*.js')}
@@ -59,13 +61,14 @@ def main():
                 page.evaluate('window.decodeOutcome=null;window.runDecode().then(value=>window.decodeOutcome={ok:true,value},()=>window.decodeOutcome={ok:false})')
                 page.wait_for_function('window.decodeOutcome !== null', timeout=660000)
                 result = page.evaluate('window.decodeOutcome')
-                assert result['ok'] is True and result['value']['count'] == 2422
+                assert result['ok'] is True and result['value']['count'] == 2425
+                assert {key:result['value'][key] for key in ['chapter','story','interpretive']} == {'chapter':637,'story':1785,'interpretive':3}
                 assert not page_errors and not failed_requests
                 assert not blocked and all('/' + x in seen for x in manifest['paths'])
                 assert controls['/malformed.webp'].status == 200 and controls['/malformed.webp'].body() == b'not an image'
                 assert controls['/missing.webp'].status == 404
                 assert result['value']['negativeControls'] == 2 and result['value']['forbidden'] == 0
-                evidence = {'status':'PASS','scope':'Chromium local HTTP decode, not native or airplane mode','chromium':browser.version,'referencedBytes':manifest['bytes'],'elapsedSeconds':round(time.monotonic()-started,2),'results':result['value'],'unexpectedRequests':len(blocked),'pageErrors':len(page_errors),'failedRequests':len(failed_requests)}
+                evidence = {'status':'PASS','scope':'Chromium local HTTP decode, not native or airplane mode','chromium':browser.version,'referencedBytes':manifest['bytes'],'elapsedSeconds':round(time.monotonic()-started,2),'sourceHashes':manifest['sourceHashes'],'interpretive':manifest['interpretive'],'results':result['value'],'unexpectedRequests':len(blocked),'pageErrors':len(page_errors),'failedRequests':len(failed_requests)}
                 context.close(); browser.close()
         finally:
             server.shutdown(); server.server_close()

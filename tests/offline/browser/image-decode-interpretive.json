@@ -1,0 +1,24 @@
+{
+  "source": "src/lib/campaign-art/interpretive-chapters.ts",
+  "sourceSha256": "83dbe9e1fcfabd65feb5009f20c1383d4df3d30c774a9a4514b8d3c9518169b8",
+  "assets": [
+    {
+      "campaignId": "cordoba-golden-age",
+      "chapterId": "ch5",
+      "path": "chapters/cordoba-golden-age/ch5/interpretive-v1.webp",
+      "sha256": "b8f991c4adb80ae6f3b02d44d23ca7805def2d74e89d36738707def1b36f696c"
+    },
+    {
+      "campaignId": "ottoman-golden-age",
+      "chapterId": "ch10",
+      "path": "chapters/ottoman-golden-age/ch10/interpretive-v1.webp",
+      "sha256": "4e1221e90c6cf9d1fb2972421f9869277dbbb3b235499dc8d5a1865b1ad698b6"
+    },
+    {
+      "campaignId": "rise-of-the-ottoman-state",
+      "chapterId": "ch2",
+      "path": "chapters/rise-of-the-ottoman-state/ch2/interpretive-v1.webp",
+      "sha256": "9e5575223f5eba541d53f1234f7b3cb3465c4d8cea5fed1512a911b81cb79159"
+    }
+  ]
+}
