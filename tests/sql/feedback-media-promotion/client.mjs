@@ -6,7 +6,7 @@ const p=JSON.parse(input);const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a
 const allowed=new Set(['/rest/v1/rpc/fixture_canonical_descriptor','/auth/v1/user']);
 let requests=0,storageDenial=false,allowedKey=null;
 const guardedFetch=async(url,options={})=>{
- const u=new URL(String(url));if(u.origin!==p.api || u.username || u.password || u.search || u.hash || !(allowed.has(u.pathname)||(allowedKey!==null && u.pathname==='/storage/v1/object/authenticated/feedback-images-canonical/'+allowedKey)))throw Error('route');
+ const u=new URL(String(url));if(u.origin!==p.api || u.username || u.password || u.search || u.hash || !(allowed.has(u.pathname)||(allowedKey!==null && u.pathname==='/storage/v1/object/feedback-images-canonical/'+allowedKey)))throw Error('route');
  const expectedMethod=u.pathname==='/rest/v1/rpc/fixture_canonical_descriptor'?'POST':'GET';if((options.method||'GET').toUpperCase()!==expectedMethod)throw Error('method');
  if(++requests>4)throw Error('request limit');
  const response=await fetch(u,{...options,redirect:'error',signal:AbortSignal.timeout(5000)});const reader=response.body?.getReader();let length=0;const chunks=[];
