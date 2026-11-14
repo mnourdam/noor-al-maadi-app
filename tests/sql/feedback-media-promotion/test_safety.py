@@ -72,6 +72,14 @@ class ReceiptMutation(unittest.TestCase):
   self.assertEqual(m.receipt_diagnostic(0,'PATCH',403,{'code':'42501','message':'private'})['code'],'42501')
   self.assertEqual(m.receipt_diagnostic(0,'PATCH',400,{'code':'private','details':'private'})['code'],'OTHER')
   self.assertNotIn('private',str(m.receipt_diagnostic(0,'POST',400,{'code':'private','message':'private'})))
+class ThreadAbsence(unittest.TestCase):
+ def test_explicit_absence_never_accepts_generic_server_or_route_error(self):
+  spec=importlib.util.spec_from_file_location('absence_experiment',Path(__file__).with_name('experiment.py'));m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+  self.assertEqual(m.thread_absence_diagnostic(500,{'code':'P0002','message':'secret'}),{'http_status':500,'code':'P0002'})
+  self.assertEqual(m.thread_absence_diagnostic(999,{'code':'secret','details':'secret'}),{'http_status':None,'code':'OTHER'})
+  self.assertTrue(m.thread_absent(404,{'code':'PT404','message':'not_found','details':None,'hint':None}))
+  for status,data in [(500,{'code':'P0002','message':'not_found'}),(404,{'code':'P0002','message':'not_found'}),(500,{'code':'PT404','message':'not_found'}),(404,{'code':'PGRST202','message':'not_found'}),(404,{'code':'PT404','message':'other'}),(404,None),(403,{'code':'42501','message':'forbidden'}),('404',{'code':'PT404','message':'not_found'})]:self.assertFalse(m.thread_absent(status,data))
+
 class RpcDispatch(unittest.TestCase):
  def test_actual_thread_helper_exact_actor_post_without_network(self):
   spec=importlib.util.spec_from_file_location('rpc_experiment',Path(__file__).with_name('experiment.py'));m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)

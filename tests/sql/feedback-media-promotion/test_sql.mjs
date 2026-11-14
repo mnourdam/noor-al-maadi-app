@@ -47,7 +47,7 @@ try {
  const orphan=randomUUID();await db.query('INSERT INTO public.feedback_issues(id,reporter_id) VALUES($1,NULL)',[orphan]);
  await db.exec(originalThread);assert.equal((await one('SELECT public.get_feedback_issue_thread($1)',[orphan])).issue.id,orphan); // exact original nullable comparison counterfactual
  await db.exec(threadSql.match(/CREATE OR REPLACE FUNCTION public.get_feedback_issue_thread\(p_issue_id uuid\)[\s\S]*?\$function\$;/)[0]);
- await assert.rejects(()=>one('SELECT public.get_feedback_issue_thread($1)',[orphan]),e=>e.code==='42501');await assert.rejects(()=>one('SELECT public.get_feedback_issue_thread($1)',[randomUUID()]),e=>e.code==='P0002');
+ await assert.rejects(()=>one('SELECT public.get_feedback_issue_thread($1)',[orphan]),e=>e.code==='42501');await assert.rejects(()=>one('SELECT public.get_feedback_issue_thread($1)',[randomUUID()]),e=>e.code==='PT404' && e.message==='not_found');
  await db.exec('CREATE OR REPLACE FUNCTION public.is_feedback_staff(uuid) RETURNS boolean LANGUAGE SQL AS $$SELECT NULL::boolean$$;');await assert.rejects(()=>one('SELECT public.get_feedback_issue_thread($1)',[orphan]),e=>e.code==='42501');await db.exec('CREATE OR REPLACE FUNCTION public.is_feedback_staff(uuid) RETURNS boolean LANGUAGE SQL AS $$SELECT false$$;');
 
  const cmid=randomUUID(),ci=randomUUID(),caid=randomUUID();await db.query('INSERT INTO public.feedback_issues(id,reporter_id) VALUES($1,$2)',[ci,owner]);

@@ -33,7 +33,7 @@ DECLARE
 BEGIN
   IF uid IS NULL THEN RAISE EXCEPTION 'unauthenticated' USING ERRCODE='42501'; END IF;
   SELECT * INTO v_issue FROM public.feedback_issues WHERE id = p_issue_id;
-  IF NOT FOUND THEN RAISE EXCEPTION 'not_found' USING ERRCODE='P0002'; END IF;
+  IF NOT FOUND THEN RAISE EXCEPTION 'not_found' USING ERRCODE='PT404'; END IF;
   IF is_admin IS NOT TRUE AND v_issue.reporter_id IS DISTINCT FROM uid THEN RAISE EXCEPTION 'forbidden' USING ERRCODE='42501'; END IF;
 
   SELECT COALESCE(jsonb_agg(to_jsonb(m.*) || jsonb_build_object('canonical_attachments_v1',CASE WHEN public.fixture_canonical_descriptor(m.id) IS NULL THEN '[]'::jsonb ELSE jsonb_build_array(public.fixture_canonical_descriptor(m.id)) END) ORDER BY m.created_at,m.id), '[]'::jsonb) INTO v_msgs
