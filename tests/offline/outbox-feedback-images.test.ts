@@ -98,3 +98,87 @@ it('rejects A to B to A identity epoch change during reservation',async()=>{
 it('does not finalize after nonconflict upload failure',async()=>{
  sdk.upload.mockResolvedValue({error:new Error('upload failed')});await expect(sendFeedbackImages(draft())).rejects.toThrow('upload failed');expect(sdk.rpc).toHaveBeenCalledTimes(1);
 });
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((r) => { resolve = r; });
+  return { promise, resolve };
+}
+const otherUid = '44444444-4444-4444-8444-444444444444';
+const retirements = ['switch', 'logout', 'epoch-return', 'logout-return', 'closed'] as const;
+function retire(kind: typeof retirements[number], close: () => void) {
+  if (kind === 'closed') return close();
+  setActiveOwnerInternal((kind === 'logout' || kind === 'logout-return') ? 'guest:test-device' : `user:${otherUid}`);
+  if (kind === 'epoch-return' || kind === 'logout-return') setActiveOwnerInternal(`user:${uid}`);
+}
+
+describe('pending private image identity boundaries (actual client and owner)', () => {
+  it.each(retirements)('does not acknowledge upload or finalize after %s', async (kind) => {
+    const entered = deferred<void>();
+    const pending = deferred<{ error: null }>();
+    sdk.upload.mockImplementationOnce(() => { entered.resolve(); return pending.promise; });
+    const d = draft();
+    let valid = true;
+    const result = sendFeedbackImages(d, () => valid).then(() => null, (error) => error);
+    await entered.promise;
+    expect(sdk.rpc.mock.calls.map(([name]) => name)).toEqual(['reserve_feedback_image']);
+    retire(kind, () => { valid = false; });
+    pending.resolve({ error: null });
+    expect(await result).toBeInstanceOf(Error);
+    expect(d.images[0].uploaded).toBe(false);
+    expect(sdk.upload).toHaveBeenCalledTimes(1);
+    expect(sdk.rpc.mock.calls.map(([name]) => name)).toEqual(['reserve_feedback_image']);
+    // Even a successful remote PUT must not permit this retired draft to retry.
+    await expect(sendFeedbackImages(d, () => valid)).rejects.toThrow();
+    expect(sdk.upload).toHaveBeenCalledTimes(1);
+    expect(sdk.rpc).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(retirements)('rejects late finalization acknowledgement after %s', async (kind) => {
+    const entered = deferred<void>();
+    const pending = deferred<{ data: string; error: null }>();
+    sdk.rpc.mockImplementation((name, args) => {
+      if (name === 'reserve_feedback_image') return Promise.resolve({ data: `${uid}/${issue}/${args.p_id}`, error: null });
+      entered.resolve();
+      return pending.promise;
+    });
+    const d = draft();
+    let valid = true;
+    const result = sendFeedbackImages(d, () => valid).then(() => null, (error) => error);
+    await entered.promise;
+    expect(d.images[0].uploaded).toBe(true);
+    expect(sdk.rpc.mock.calls.map(([name]) => name)).toEqual(['reserve_feedback_image', 'reply_with_feedback_images']);
+    retire(kind, () => { valid = false; });
+    // This simulates an already-dispatched server success, not remote cancellation.
+    pending.resolve({ data: d.id, error: null });
+    expect(await result).toBeInstanceOf(Error);
+    await expect(sendFeedbackImages(d, () => valid)).rejects.toThrow();
+    expect(sdk.rpc).toHaveBeenCalledTimes(2);
+    expect(sdk.upload).toHaveBeenCalledTimes(1);
+  });
+
+  it('allows a fresh B send while A upload is pending without accepting A completion', async () => {
+    const entered = deferred<void>();
+    const pending = deferred<{ error: null }>();
+    sdk.upload.mockImplementationOnce(() => { entered.resolve(); return pending.promise; });
+    const a = draft();
+    const resultA = sendFeedbackImages(a).then(() => null, (error) => error);
+    await entered.promise;
+    setActiveOwnerInternal(`user:${otherUid}`);
+    sdk.session.mockResolvedValue({ data: { session: { user: { id: otherUid } } }, error: null });
+    sdk.rpc.mockImplementation(async (name, args) => name === 'reserve_feedback_image'
+      ? { data: `${otherUid}/${issue}/${args.p_id}`, error: null }
+      : { data: args.p_message_id, error: null });
+    const bId = '55555555-5555-4555-8555-555555555555';
+    const b = makeImageDraft(issue, 'B message', false, [{ id: bId, blob: blob(), uploaded: false }]);
+    await expect(sendFeedbackImages(b)).resolves.toBeUndefined();
+    expect(b.images[0].uploaded).toBe(true);
+    pending.resolve({ error: null });
+    expect(await resultA).toBeInstanceOf(Error);
+    expect(a.images[0].uploaded).toBe(false);
+    expect(sdk.upload.mock.calls.map(([path]) => path)).toEqual([`${uid}/${issue}/${id}`, `${otherUid}/${issue}/${bId}`]);
+    const finalizations = sdk.rpc.mock.calls.filter(([name]) => name === 'reply_with_feedback_images');
+    expect(finalizations).toHaveLength(1);
+    expect(finalizations[0][1]).toEqual({ p_message_id: b.id, p_issue_id: issue, p_body: 'B message', p_internal: false, p_image_ids: [bId] });
+  });
+});
