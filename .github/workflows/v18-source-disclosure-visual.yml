@@ -1,0 +1,49 @@
+name: V18 Source Disclosure Visual Proof
+on:
+  push:
+    branches: [v18-01a-outbox-recovery]
+    paths:
+      - '.github/workflows/v18-source-disclosure-visual.yml'
+      - 'tests/offline/browser/source-disclosure-fixture.tsx'
+      - 'tests/offline/browser/build-source-disclosure.mjs'
+      - 'tests/offline/browser/source-disclosure-browser.py'
+      - 'tests/offline/browser/test-source-disclosure.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  visual:
+    if: github.ref == 'refs/heads/v18-01a-outbox-recovery'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: node --test tests/offline/browser/test-source-disclosure.mjs
+      - run: |
+          python -m pip install playwright==1.62.0
+          python -m playwright install --with-deps chromium
+      - name: One bounded actual-component visual run
+        shell: bash
+        run: |
+          set -euo pipefail
+          export CHROMIUM_EXECUTABLE_PATH="$(python -c 'from playwright.sync_api import sync_playwright; exec("with sync_playwright() as p:\n print(p.chromium.executable_path)")')"
+          python tests/offline/browser/source-disclosure-browser.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: source-disclosure-visual-evidence
+          path: |
+            source-disclosure-evidence/receipt.json
+            source-disclosure-evidence/*.png
+          if-no-files-found: error
+          retention-days: 7

@@ -1,3 +1,4 @@
+import {SourceDisclosure} from './SourceDisclosure';
 import type {OriginalReference} from '@/types/encyclopediaArticle';
 /** Link only an explicitly authored safe URL; never derive one from citation text. */
 function safeUrl(value:string){
@@ -7,7 +8,8 @@ function safeUrl(value:string){
 export function EncyclopediaOriginalReferences({references}:{references?:OriginalReference[]}){
  if(!references?.length)return null;
  return <aside lang="ar" dir="rtl" aria-label="المراجع الأصلية" className="mt-6">
-  <h2>المراجع كما وردت في المصدر الأصلي؛ عرضها لا يعني التحقق منها</h2>
+  <h2>المراجع الأصلية</h2>
+  <SourceDisclosure />
   {references.map((ref,i)=><p key={i} className="whitespace-pre-wrap">
    {typeof ref==='string' ? ref : <>
     {ref.label}{' — '}{ref.value}

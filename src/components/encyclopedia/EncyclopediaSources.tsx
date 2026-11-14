@@ -1,4 +1,5 @@
 // Sources — scholarly/external citations.
+import { SourceDisclosure } from "./SourceDisclosure";
 import { ExternalLink, Library } from "lucide-react";
 import type { ArticleSource } from "@/types/encyclopediaArticle";
 
@@ -10,6 +11,7 @@ export function EncyclopediaSources({ sources }: { sources?: ArticleSource[] }) 
         <Library className="size-4 text-gold" />
         <h2 className="font-display text-sm font-bold">المراجع</h2>
       </div>
+      <SourceDisclosure />
       <ul className="space-y-1.5 rounded-2xl border border-white/10 bg-surface/60 p-4">
         {sources.map((s, i) => (
           <li key={i} className="flex items-start gap-2 text-[12px] leading-6 text-foreground/85">
