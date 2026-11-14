@@ -7,6 +7,20 @@ class Tests(unittest.TestCase):
   a=dict(pid=101,started='one',marker='holder',role='supabase_admin',database='postgres',state='idle in transaction',query='SELECT winner',xid='42',holds_xid=True)
   b=dict(pid=102,started='two',marker='waiter',role='supabase_admin',database='postgres',query='SELECT loser',wait='transactionid',blocking=[101],wait_xid='42')
   return [a,b]
+ def test_start_sets_transaction_local_wrapper_path(self):
+  pair=object.__new__(c.Pair);pair.args=['fixed'];pair.h=Mock();pair.sessions=[]
+  process=Mock()
+  with patch.object(c.subprocess,'Popen',return_value=process):pair.start('SELECT winner')
+  wire=process.stdin.write.call_args.args[0].decode()
+  self.assertIn('BEGIN; SET LOCAL search_path=promotion_model,pg_temp;\nSELECT winner;',wire)
+  self.assertEqual(pair.sessions[0]['sql'],'SELECT winner')
+ def test_phase_category_retains_primary_without_raw_error(self):
+  pair,h=self.fake();original=OSError('secret raw message');pair.line.side_effect=original
+  with patch.object(c,'Pair',return_value=pair):
+   with self.assertRaises(OSError) as caught:c.run_order(h,'SELECT winner','t','SELECT loser','')
+  self.assertIs(caught.exception,original)
+  self.assertEqual(h.report['transaction_orders'][0]['failure'],dict(phase='holder_result',category='os_error',sqlstate='unavailable'))
+  self.assertNotIn('secret',str(h.report))
  def test_exact_wait_and_negatives(self):
   rows=self.rows();a,b=copy.deepcopy(rows)
   self.assertTrue(c.exact_wait(rows,a,b,'SELECT winner','SELECT loser'))

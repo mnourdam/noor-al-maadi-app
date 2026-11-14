@@ -16,6 +16,12 @@ try {
  await assert.rejects(()=>one('SELECT public.fixture_finalize($1,$2,$3,false)',[randomUUID(),a.aid,'body']));
  assert.equal(await worker('start',a),true);assert.equal(await worker('terminal',a),true);
  for(const delta of [{owner:randomUUID()},{input:'c'.repeat(64)},{bytes:11},{internal:true},{revision:'other'},{token:randomUUID()}])assert.equal(await worker('attest',{...a,...delta}),false);
+ // Fresh direct contender sessions do not inherit the SECURITY DEFINER wrapper path.
+ const directPublish=()=>one('SELECT promotion_model.publish($1,$2,$3,$4,$5,$6,$7,$8)',[a.aid,a.token,a.input,a.output,a.revision,a.owner,a.issue,a.internal]);
+ await db.exec('SET search_path=public;');
+ await assert.rejects(directPublish,e=>e.code==='42704');
+ await db.exec('BEGIN; SET LOCAL search_path=promotion_model,pg_temp;');
+ assert.equal(await directPublish(),true);await db.exec('ROLLBACK;');
  assert.equal(await worker('attest',a),true);assert.equal(await one('SELECT public.fixture_canonical_read($1)',[a.key]),false);
  const mid=randomUUID();assert.equal(await one('SELECT public.fixture_finalize($1,$2,$3,false)',[mid,a.aid,'body']),mid);
  assert.equal(await one('SELECT public.fixture_finalize($1,$2,$3,false)',[mid,a.aid,'body']),mid);

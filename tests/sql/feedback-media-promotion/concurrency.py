@@ -3,6 +3,13 @@ import json,os,selectors,subprocess,time,uuid
 
 def require(ok,message):
  if not ok:raise RuntimeError(message)
+def category(error):
+ if isinstance(error,subprocess.TimeoutExpired):return 'subprocess_timeout'
+ if isinstance(error,TimeoutError):return 'deadline'
+ if isinstance(error,OSError):return 'os_error'
+ if isinstance(error,RuntimeError):return 'validation_or_result'
+ if isinstance(error,(ValueError,TypeError,KeyError)):return 'shape'
+ return 'unknown'
 def quote(value):return "'"+value.replace("'","''")+"'"
 def marker():return 'irth_promotion_'+uuid.uuid4().hex
 
@@ -36,7 +43,7 @@ class Pair:
  def start(self,sql):
   name=marker();p=subprocess.Popen(self.args,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,cwd=self.h.work,env=self.h.env)
   entry={'process':p,'marker':name,'sql':sql.rstrip(';')};self.sessions.append(entry)
-  p.stdin.write(("SET application_name="+quote(name)+"; SET statement_timeout='7000ms'; SET lock_timeout='6000ms'; SET idle_in_transaction_session_timeout='10000ms'; BEGIN;\n"+sql+";\n").encode());p.stdin.flush()
+  p.stdin.write(("SET application_name="+quote(name)+"; SET statement_timeout='7000ms'; SET lock_timeout='6000ms'; SET idle_in_transaction_session_timeout='10000ms'; BEGIN; SET LOCAL search_path=promotion_model,pg_temp;\n"+sql+";\n").encode());p.stdin.flush()
   return entry
  def line(self,s,seconds=3):
   end=time.monotonic()+seconds;data=b'';p=s['process']
@@ -103,18 +110,25 @@ class Pair:
 
 def run_order(h,holder_sql,expected_holder,waiter_sql,expected_waiter):
  pair=Pair(h);primary=None;report={'holder_result_verified':False,'same_waiter_observed':False,'winner_committed':False,'loser_result_verified':False,'cleanup_verified':False}
+ phase='holder_start'
  try:
-  holder=pair.start(holder_sql);require(pair.line(holder)==expected_holder,'holder operation failed');report['holder_result_verified']=True
-  hi=pair.identity(holder);waiter=pair.start(waiter_sql);wi=pair.identity(waiter)
+  holder=pair.start(holder_sql);phase='holder_result'
+  require(pair.line(holder)==expected_holder,'holder operation failed');report['holder_result_verified']=True
+  phase='holder_identity';hi=pair.identity(holder)
+  phase='waiter_start';waiter=pair.start(waiter_sql)
+  phase='waiter_identity';wi=pair.identity(waiter)
+  phase='contention_observation'
   deadline=time.monotonic()+3
   while time.monotonic()<deadline:
    rows=pair.snapshots(min(2,max(.01,deadline-time.monotonic())))
    if time.monotonic()<=deadline and exact_wait(rows,hi,wi,holder['sql'],waiter['sql']):
     require(holder['process'].poll() is None and waiter['process'].poll() is None,'contender not pending');report['same_waiter_observed']=True;break
   require(report['same_waiter_observed'],'exact transaction wait not observed')
-  pair.commit(holder);report['winner_committed']=True
-  require(pair.line(waiter)==expected_waiter,'loser result mismatch');pair.commit(waiter);report['loser_result_verified']=True
- except BaseException as error:primary=error
+  phase='winner_commit';pair.commit(holder);report['winner_committed']=True
+  phase='loser_result';require(pair.line(waiter)==expected_waiter,'loser result mismatch')
+  phase='loser_commit';pair.commit(waiter);report['loser_result_verified']=True
+ except BaseException as error:
+  primary=error;report['failure']={'phase':phase,'category':category(error),'sqlstate':'unavailable'}
  finally:
   try:report['cleanup_verified']=pair.cleanup()
   except Exception:report['cleanup_verified']=False
