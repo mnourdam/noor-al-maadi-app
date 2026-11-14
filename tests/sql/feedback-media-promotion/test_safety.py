@@ -72,4 +72,15 @@ class ReceiptMutation(unittest.TestCase):
   self.assertEqual(m.receipt_diagnostic(0,'PATCH',403,{'code':'42501','message':'private'})['code'],'42501')
   self.assertEqual(m.receipt_diagnostic(0,'PATCH',400,{'code':'private','details':'private'})['code'],'OTHER')
   self.assertNotIn('private',str(m.receipt_diagnostic(0,'POST',400,{'code':'private','message':'private'})))
+class RpcDispatch(unittest.TestCase):
+ def test_actual_thread_helper_exact_actor_post_without_network(self):
+  spec=importlib.util.spec_from_file_location('rpc_experiment',Path(__file__).with_name('experiment.py'));m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+  h=object.__new__(m.Experiment);h.request=Mock(return_value=(200,b'{"issue":{},"messages":[]}'))
+  payload={'p_issue_id':'11111111-1111-4111-8111-111111111111'}
+  self.assertEqual(h.call('get_feedback_issue_thread','synthetic-actor',payload),(200,{'issue':{},'messages':[]}))
+  h.request.assert_called_once_with('/rest/v1/rpc/get_feedback_issue_thread','synthetic-actor',payload,'POST',service=False)
+  for name in ('unlisted','get_feedback_issue_thread?x=1','../get_feedback_issue_thread','get_feedback_issue_thread/','GET_FEEDBACK_ISSUE_THREAD'):
+   h.request.reset_mock()
+   with self.assertRaises(m.b.Failure):h.call(name,'synthetic-actor',payload)
+   h.request.assert_not_called()
 if __name__=='__main__':unittest.main()

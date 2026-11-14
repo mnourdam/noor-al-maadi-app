@@ -27,7 +27,7 @@ class Experiment(base.Experiment):
  def __init__(self):
   super().__init__();self.evidence=Path(os.environ['RUNNER_TEMP'])/'v18-feedback-media-promotion';self.evidence.mkdir(mode=0o700,exist_ok=True)
  def call(self,name,token,payload,service=False):
-  b.require(name in ('fixture_worker','fixture_finalize'),'unexpected fixture RPC')
+  b.require(name in ('fixture_worker','fixture_finalize','get_feedback_issue_thread'),'unexpected fixture RPC')
   return self.decoded(self.request('/rest/v1/rpc/'+name,token,payload,'POST',service=service))
  def worker(self,op,p):
   status,result=self.call('fixture_worker',self.fields['service'],{'op':op,'p':p},True)
