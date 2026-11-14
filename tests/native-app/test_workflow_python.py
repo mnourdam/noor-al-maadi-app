@@ -15,7 +15,7 @@ def validate_python_contract(text):
         PYTHON + " -m pip install websocket-client==1.8.0",
         PYTHON + " -m unittest discover -s tests/native-app -p 'test_*.py' -v",
         PYTHON + " tests/native-app/build-full-app.py",
-        PYTHON + " tests/native-app/runner.py",
+        PYTHON + " tests/native-app/visual_observation.py",
     ]
     start = text.index('python3 -m venv')
     for invocation in expected:
@@ -39,7 +39,7 @@ class WorkflowPython(unittest.TestCase):
             source.replace(PYTHON + " -m pip", "python3 -m pip"),
             source.replace(PYTHON + " -m unittest", "python3 -m unittest"),
             source.replace(PYTHON + " tests/native-app/build-full-app.py", "python3 tests/native-app/build-full-app.py"),
-            source.replace(PYTHON + " tests/native-app/runner.py", "python3 tests/native-app/runner.py"),
+            source.replace(PYTHON + " tests/native-app/visual_observation.py", "python3 tests/native-app/visual_observation.py"),
             source.replace("-m pip install", "-m pip install --break-system-packages"),
             source.replace("if: always()", "if: success()"),
         ]:

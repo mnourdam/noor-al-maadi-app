@@ -125,9 +125,9 @@ jobs:
           EXPECTED_APK_SHA256: ${{ needs.build.outputs.apk_sha256 }}
           EXPECTED_RECEIPT_SHA256: ${{ needs.build.outputs.receipt_sha256 }}
         run: '"$RUNNER_TEMP/irth-native-python/bin/python" tests/native-app/transfer.py verify --root "$RUNNER_TEMP/irth-apk-download"'
-      - name: Installed actual app and native journeys on fresh runner
+      - name: Independent native visual observation on fresh runner
         run: |
-          "$RUNNER_TEMP/irth-native-python/bin/python" tests/native-app/runner.py --exploratory-after-boot-failure --apk "$RUNNER_TEMP/irth-apk-download/acceptance.apk" --receipt "$RUNNER_TEMP/irth-apk-download/apk-receipt.json" --journeys tests/native-app/journeys.py --result "$RUNNER_TEMP/irth-full-app-result.json"
+          "$RUNNER_TEMP/irth-native-python/bin/python" tests/native-app/visual_observation.py --apk "$RUNNER_TEMP/irth-apk-download/acceptance.apk" --receipt "$RUNNER_TEMP/irth-apk-download/apk-receipt.json" --evidence "$RUNNER_TEMP/irth-visual-evidence"
       - name: Retain sanitized result, including blocked groups
         if: always()
         uses: actions/upload-artifact@v4
@@ -136,3 +136,12 @@ jobs:
           path: ${{ runner.temp }}/irth-full-app-result.json
           if-no-files-found: warn
           retention-days: 7
+
+      - name: Retain bounded synthetic guest screen evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: actual-android-visual-evidence
+          path: ${{ runner.temp }}/irth-visual-evidence/
+          if-no-files-found: warn
+          retention-days: 1
