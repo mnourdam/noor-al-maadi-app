@@ -2,12 +2,18 @@
 import argparse,hashlib,importlib.util,json,os,re,shutil,subprocess,zipfile
 from pathlib import Path
 spec=importlib.util.spec_from_file_location('prepare',Path(__file__).with_name('prepare-full-app.py'));p=importlib.util.module_from_spec(spec);spec.loader.exec_module(p)
-def build_env(home,sha):
+def variant_for(mode):
+ p.require(mode in ('debug','release_config'),'unsupported build mode')
+ return 'release' if mode=='release_config' else 'debug'
+
+def build_env(home,sha,mode='debug'):
+ variant=variant_for(mode)
  env={key:os.environ[key] for key in ('PATH','JAVA_HOME','ANDROID_HOME','ANDROID_SDK_ROOT','TMPDIR','SYSTEMROOT') if key in os.environ}
- env.update(HOME=str(home),LANG='C.UTF-8',NODE_OPTIONS='--max-old-space-size=1536',GITHUB_SHA=sha,ANDROID_BUILD_TYPE='debug')
+ env.update(HOME=str(home),LANG='C.UTF-8',NODE_OPTIONS='--max-old-space-size=1536',GITHUB_SHA=sha,ANDROID_BUILD_TYPE=variant)
  return env
 
-def verify_manifest(text):
+def verify_manifest(text,mode='debug'):
+ variant_for(mode)
  # aapt xmltree: inspect element-local attributes rather than unrelated substrings.
  nodes=[];stack=[]
  for line in text.splitlines():
@@ -20,7 +26,10 @@ def verify_manifest(text):
    if match:stack[-1][1]['attrs'][match.group(1)]=match.group(2)
  def quoted(value,expected):return value.startswith('"'+expected+'"')
  app=next((n for n in nodes if n['kind']=='application'),None)
- p.require(app is not None and app['attrs'].get('debuggable','').endswith('0xffffffff'),'APK is not debuggable')
+ p.require(app is not None,'application missing')
+ debug=app['attrs'].get('debuggable')
+ if mode=='debug':p.require(debug is not None and debug.endswith('0xffffffff'),'APK is not debuggable')
+ else:p.require(debug is None or re.fullmatch(r'\(type 0x12\)0x0+',debug) is not None,'release APK is debuggable or malformed')
  p.require(any(n['kind']=='activity' and quoted(n['attrs'].get('name',''),'app.lovable.irth.MainActivity') for n in nodes),'actual activity missing')
  p.require(any(n['kind']=='provider' and quoted(n['attrs'].get('authorities',''),p.APP_ID+'.fileprovider') for n in nodes),'provider authority not isolated')
  schemes=[n['attrs']['scheme'] for n in nodes if n['kind']=='data' and 'scheme' in n['attrs']]
@@ -99,13 +108,14 @@ def failure_evidence(error):
  if isinstance(error,subprocess.CalledProcessError):
   value=error.returncode
   evidence['returncode']=value if type(value) is int and -255<=value<=255 else None
- if STATE.get('stage')=='gradle_debug' and isinstance(error,(subprocess.TimeoutExpired,subprocess.CalledProcessError)):
+ if STATE.get('stage') in ('gradle_debug','gradle_release') and isinstance(error,(subprocess.TimeoutExpired,subprocess.CalledProcessError)):
   evidence['gradle_indicators']=gradle_indicators(error.stdout,error.stderr)
  return evidence
 
 def run_command(args,root,env,timeout=900):
  labels={'vite.js':'web_build','finalize-android.mjs':'web_finalize','capacitor':'native_sync','keytool':'ephemeral_signing','bash':'gradle_debug','aapt':'apk_manifest_inspection','apksigner':'apk_signer_inspection'}
  STATE['stage']=labels.get(Path(args[1] if args[0]=='node' else args[0]).name,'producer_command')
+ if args[0]=='bash' and 'assembleRelease' in args:STATE['stage']='gradle_release'
  # Capture only. Neither raw output nor command arguments enter retained evidence.
  result=subprocess.run(args,cwd=root,env=env,capture_output=True,text=True,timeout=timeout)
  if result.returncode!=0:
@@ -128,10 +138,19 @@ def remove_generated_vite_manifest(root):
  target.unlink()
  STATE['generated_vite_manifest_removed']=True
 
-def build(root):
+def build(root,mode='debug'):
+ variant=variant_for(mode)
  p.require(os.environ.get('GITHUB_ACTIONS')=='true','build requires disposable CI')
  p.require(os.environ.get('GITHUB_REF')=='refs/heads/v18-01a-outbox-recovery','isolated branch only')
- receipt=p.prepare(root);home=root/'private-home';home.mkdir(mode=0o700);env=build_env(home,receipt['source_sha'])
+ receipt=p.prepare(root);home=root/'private-home';home.mkdir(mode=0o700);env=build_env(home,receipt['source_sha'],mode)
+ release_evidence=None
+ if mode=='release_config':
+  spec=importlib.util.spec_from_file_location('release_evidence',p.ROOT/'tests/release-config/evidence.py');release_evidence=importlib.util.module_from_spec(spec);spec.loader.exec_module(release_evidence)
+  original_rules=release_evidence.source_hashes(p.ROOT)
+  for name in release_evidence.SOURCE_FILES:
+   expected=(p.ROOT/name).read_bytes()
+   if name=='android/app/build.gradle':expected=expected.replace(b'applicationId "app.lovable.irth"',b'applicationId "app.lovable.irth.acceptance"')
+   p.require((root/name).read_bytes()==expected,'release source rules changed')
  def run(args,timeout=900):
   return run_command(args,root,env,timeout)
  p.require((p.ROOT/'node_modules/.bin/vite').is_file(),'locked source dependencies missing')
@@ -149,7 +168,10 @@ def build(root):
  match=re.search(r'-----BEGIN CERTIFICATE-----\s*(.*?)\s*-----END CERTIFICATE-----',certificate,re.S);p.require(match is not None,'certificate unavailable')
  signer=hashlib.sha256(base64.b64decode(match.group(1))).hexdigest()
  gradle=root/'android/app/build.gradle'
- with gradle.open('a') as f:f.write("\nandroid { signingConfigs { acceptance { storeFile file('../../acceptance-debug.keystore'); storePassword 'android'; keyAlias 'acceptance'; keyPassword 'android' } }; buildTypes { debug { signingConfig signingConfigs.acceptance } } }\n")
+ with gradle.open('a') as f:f.write("\nandroid { signingConfigs { acceptance { storeFile file('../../acceptance-debug.keystore'); storePassword 'android'; keyAlias 'acceptance'; keyPassword 'android' } }; buildTypes { "+variant+" { signingConfig signingConfigs.acceptance } } }\n")
+ if release_evidence:
+  before_build_rules=release_evidence.source_hashes(root)
+  evidence_script=release_evidence.prepare(root)
  # Bind expected assets BEFORE packaging, not by accepting arbitrary APK contents.
  asset_root=root/'android/app/src/main/assets';assets={}
  for relative in ('public','capacitor.config.json'):
@@ -160,21 +182,28 @@ def build(root):
  p.require('assets/public/index.html' in assets and 'assets/capacitor.config.json' in assets,'missing actual packaged assets')
  cfg=json.loads((asset_root/'capacitor.config.json').read_text())
  p.require(cfg.get('appId')==p.APP_ID and cfg.get('server',{}).get('androidScheme')=='https' and not cfg.get('server',{}).get('url') and not cfg.get('server',{}).get('allowNavigation') and cfg.get('android',{}).get('allowMixedContent') is False,'unsafe native server configuration')
- run(['bash','android/gradlew','-p','android','--no-daemon','assembleDebug'],timeout=1200)
- apk=root/'android/app/build/outputs/apk/debug/app-debug.apk'
+ if mode=='debug':run(['bash','android/gradlew','-p','android','--no-daemon','assembleDebug'],timeout=1200)
+ else:
+  run(['bash','android/gradlew','-p','android','--no-daemon','--no-build-cache','--console=plain','-I',str(evidence_script),'assembleRelease'],timeout=1200)
+  STATE['stage']='release_task_and_report_evidence'
+  p.require(release_evidence.source_hashes(p.ROOT)==original_rules and release_evidence.source_hashes(root)==before_build_rules,'release rules mutated during build')
+  release_result=release_evidence.collect(root)
+  release_result['source_rule_hashes']=original_rules
+ apk=root/f'android/app/build/outputs/apk/{variant}/app-{variant}.apk'
  verify_built_assets(apk,assets)
  sdk=Path(env.get('ANDROID_SDK_ROOT') or env.get('ANDROID_HOME',''))
  tools=require_build_tools(sdk);badging=run([str(tools/'aapt'),'dump','badging',str(apk)]);permissions=run([str(tools/'aapt'),'dump','permissions',str(apk)])
  p.require("package: name='"+p.APP_ID+"'" in badging,'package isolation failed')
  p.require('android.permission.INTERNET' not in permissions,'INTERNET merged into APK')
  manifest=run([str(tools/'aapt'),'dump','xmltree',str(apk),'AndroidManifest.xml'])
- verify_manifest(manifest)
+ verify_manifest(manifest,mode)
  resources=run([str(tools/'aapt'),'dump','resources',str(apk)])
  p.require(not any(x in resources for x in ('google_app_id','default_web_client_id','google_api_key')),'production Firebase resources present')
  signatures=run([str(tools/'apksigner'),'verify','--print-certs',str(apk)])
  found=re.findall(r'Signer #\d+ certificate SHA-256 digest: ([0-9a-fA-F]+)',signatures)
  p.require(found==[signer],'unexpected APK signer')
  output={'apk_sha256':hashlib.sha256(apk.read_bytes()).hexdigest(),'signer_sha256':signer,'assets_sha256':assets,'application_id':p.APP_ID,'source_sha':receipt['source_sha'],'scope':'BUILT ONLY; SIX JOURNEYS NOT ACCEPTED','synthetic_boundaries':receipt['synthetic_boundaries']}
+ if release_evidence:output['release_config']=release_result
  (root/'apk-receipt.json').write_text(json.dumps(output,indent=2)+'\n')
  STATE.update(result='BUILT_NOT_ACCEPTED',stage='apk_receipt_verified')
  return output

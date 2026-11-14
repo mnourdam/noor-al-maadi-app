@@ -10,7 +10,7 @@ permissions:
   contents: read
 jobs:
   build:
-    if: github.ref == 'refs/heads/v18-01a-outbox-recovery'
+    if: github.ref == 'refs/heads/v18-01a-outbox-recovery' && github.event_name == 'workflow_dispatch'
     outputs:
       artifact_id: ${{ steps.upload.outputs.artifact-id }}
       artifact_digest: ${{ steps.upload.outputs.artifact-digest }}
@@ -70,7 +70,7 @@ jobs:
           retention-days: 7
   device:
     needs: build
-    if: github.ref == 'refs/heads/v18-01a-outbox-recovery' && needs.build.result == 'success'
+    if: github.ref == 'refs/heads/v18-01a-outbox-recovery' && github.event_name == 'workflow_dispatch' && needs.build.result == 'success'
     runs-on: macos-15-intel
     timeout-minutes: 40
     permissions:

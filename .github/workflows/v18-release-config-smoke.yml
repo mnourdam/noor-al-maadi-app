@@ -1,0 +1,60 @@
+name: V18 isolated release-config minify shrink smoke
+on:
+  push:
+    branches: [v18-01a-outbox-recovery]
+    paths:
+      - '.github/workflows/v18-release-config-smoke.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  release-config-build:
+    if: github.ref == 'refs/heads/v18-01a-outbox-recovery' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Initialize sanitized evidence
+        run: echo '{"result":"FAIL","stage":"setup","device_executed":false,"release_ready":false}' > "$RUNNER_TEMP/release-config-result.json"
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Require existing accepted SDK license and official compile tools only
+        run: |
+          set -euo pipefail
+          test -f "$ANDROID_HOME/licenses/android-sdk-license"
+          manager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          test -x "$manager"
+          "$manager" 'platforms;android-36' 'build-tools;35.0.0' </dev/null
+      - name: Locked dependencies and isolated verification controls
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          node --test tests/apk-images/test-source.mjs
+          PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s tests/apk-images -p 'test_*.py' -v
+          PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s tests/release-config -p 'test_*.py' -v
+          for test in test_full_app.py test_generated_manifest.py test_post_build_diagnostics.py test_producer_diagnostics.py; do
+            PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s tests/native-app -p "$test" -v
+          done
+      - name: Build release configuration once and verify shrink and packaged bytes
+        run: python tests/release-config/build.py "$RUNNER_TEMP/irth-release-config" --result "$RUNNER_TEMP/release-config-result.json"
+      - name: Retain sanitized receipt only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-config-build-result
+          path: ${{ runner.temp }}/release-config-result.json
+          if-no-files-found: error
+          retention-days: 7

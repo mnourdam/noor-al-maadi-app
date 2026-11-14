@@ -10,7 +10,7 @@ permissions:
   contents: read
 jobs:
   package-image-bytes:
-    if: github.ref == 'refs/heads/v18-01a-outbox-recovery'
+    if: github.ref == 'refs/heads/v18-01a-outbox-recovery' && github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 40
     defaults:
