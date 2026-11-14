@@ -9,7 +9,7 @@ def allowed(url,method,origin,assets,api,key):
  target=u.scheme+'://'+u.netloc
  if target==origin:return method=='GET' and not u.query and u.path in assets
  if target!=api:return False
- rules={('/rest/v1/rpc/reserve_canonical_feedback_image_v1',''):'POST',('/rest/v1/rpc/finalize_canonical_feedback_image_v1',''):'POST',('/rest/v1/rpc/fixture_canonical_messages',''):'POST',('/auth/v1/token','grant_type=password'):'POST',('/auth/v1/user',''):'GET',('/rest/v1/rpc/fixture_canonical_descriptor',''):'POST',('/storage/v1/object/feedback-images-canonical/'+key,''):'GET'}
+ rules={('/rest/v1/rpc/reserve_canonical_feedback_image_v1',''):'POST',('/rest/v1/rpc/finalize_canonical_feedback_image_v1',''):'POST',('/rest/v1/rpc/get_feedback_issue_thread',''):'POST',('/auth/v1/token','grant_type=password'):'POST',('/auth/v1/user',''):'GET',('/rest/v1/rpc/fixture_canonical_descriptor',''):'POST',('/storage/v1/object/feedback-images-canonical/'+key,''):'GET'}
  expected=rules.get((u.path,u.query));return expected is not None and method in (expected,'OPTIONS')
 
 def denied(status,body):
@@ -82,7 +82,7 @@ def run(h,actor,credentials,mid,a,digest,dimensions,sender=None):
     page.get_by_role('button',name='عرض الصورة المرفقة',exact=True).click()
     page.wait_for_function('(x)=>{const e=canonicalBrowser.evidence();return e.complete&&e.width===x.w&&e.height===x.h&&e.exactCurrentOwned&&e.sha256===x.sha}',arg={'w':ready['dimensions'][0],'h':ready['dimensions'][1],'sha':ready['digest']})
     h.require(page.get_by_role('img').is_visible() and page.evaluate('canonicalBrowser.sent()')==1,'sender final UI mismatch')
-    h.require(sender_uploads==1,'sender retry uploaded twice');sender['verify']();report['sender_pending_retry_render']=True
+    h.require(sender_uploads==1,'sender retry uploaded twice');thread=page.evaluate('globalThis.__threadEvidence');h.require(thread=={'status':'new','count':3 if sender.get('staff') else 2,'canonicalCount':1,'authorRole':'admin' if sender.get('staff') else 'player','internal':sender.get('internal',False),'legacyRetained':True},'actual thread response shape');report['actual_thread_read']=True;sender['verify']();report['sender_pending_retry_render']=True
    h.require(report['blocked']==report['page_errors']==report['failed_requests']==0,'browser unexpected traffic/error');report['result']='PASS_ACTUAL_COMPONENT_DISPOSABLE_STORAGE_ONLY'
   except BaseException as e:primary=e
   finally:

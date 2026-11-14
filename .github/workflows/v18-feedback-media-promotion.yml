@@ -14,6 +14,8 @@ on:
       - 'src/lib/feedback/canonical-send.ts'
       - 'src/lib/feedback/attachment-protocol.ts'
       - 'src/lib/feedback/types.ts'
+      - 'src/lib/feedback/api.ts'
+      - 'supabase/migrations/20260829110009_7cc3b4e1-d8dc-4f2d-8963-e5bf3e343160.sql'
       - 'src/components/feedback/FeedbackMessageImages.tsx'
       - 'src/routes/feedback.$id.tsx'
       - 'src/routes/admin.community.tsx'

@@ -220,6 +220,7 @@ class Experiment(base.Experiment):
   self.check(self.object_absent(self.storage(self.C,second['key'],self.fields['service'])),'cleanup first recognized canonical absence')
   self.check(self.sql(f"SELECT count(*) FROM storage.objects WHERE bucket_id='{self.C}' AND name='{second['key']}';")=='0','cleanup first canonical metadata absent')
   self.check(self.storage(self.C,first['key'],owner[1])==(200,first_bytes),'cleanup first unrelated published canonical preserved')
+  thread_sql=Path(__file__).with_name('thread.sql').read_bytes();self.sql(thread_sql.decode());self.report['thread_projection_sha256']=hashlib.sha256(thread_sql).hexdigest();self.sql("NOTIFY pgrst,'reload schema';")
   self.report['canonical_sender_browsers']=[]
   for sender_actor,sender_internal in ((owner,False),(staff,False),(staff,True)):
    browser_case=attempt();self.check(w.process(self,browser_case) is True,'browser actual worker attested')
@@ -228,6 +229,8 @@ class Experiment(base.Experiment):
    dimensions=json.loads(base.subprocess.run(['node','--input-type=module','-e',"import sharp from 'sharp';const chunks=[];for await(const c of process.stdin)chunks.push(c);const m=await sharp(Buffer.concat(chunks)).metadata();process.stdout.write(JSON.stringify([m.width,m.height]));"],input=canonical,cwd=base.ROOT,env={'PATH':os.environ.get('PATH',''),'LANG':'C'},capture_output=True,check=True,timeout=8).stdout)
    browser_module=module('canonical_browser',Path(__file__).with_name('browser.py'))
    sender_issue=str(uuid.uuid4());self.sql(f"INSERT INTO public.feedback_issues(id,reporter_id) VALUES('{sender_issue}','{owner[0]}');")
+   legacy_public=str(uuid.uuid4());legacy_internal=str(uuid.uuid4())
+   self.sql(f"INSERT INTO public.feedback_messages(id,issue_id,author_id,author_role,body,is_internal,attachments,created_at) VALUES('{legacy_public}','{sender_issue}','{owner[0]}','player','legacy public',false,'[{{\"legacy_fixture\":true}}]','2026-01-01T00:00:00Z'),('{legacy_internal}','{sender_issue}','{staff[0]}','admin','legacy internal',true,'[]','2026-01-02T00:00:00Z');")
    sent={}
    def sender_reserved(key):
     for wrong in (other,staff if sender_actor==owner else owner):self.check(base.permission(self.storage(self.Q,key,wrong[1],'POST',raw)),'wrong uploader quarantine INSERT denied before positive upload')
@@ -255,14 +258,34 @@ class Experiment(base.Experiment):
     if sender_internal:self.check(self.object_absent(self.storage(self.C,sent['key'],owner[1])),'internal sender recipient denied')
     else:self.check(self.storage(self.C,sent['key'],owner[1])==(200,out),'public sender recipient exact bytes')
     self.check(self.object_absent(self.storage(self.C,sent['key'],other[1])),'other recipient sender denied')
+    for reader in (owner,staff):
+     status,thread=self.call('get_feedback_issue_thread',reader[1],{'p_issue_id':sender_issue})
+     issue_keys={'id','reporter_id','device_id','category','title','description','status','context','assigned_to','last_reply_at','last_reply_by','player_unread','admin_unread','created_at','updated_at','player_rating','player_rating_at'}
+     self.check(status==200 and set(thread)=={'issue','messages'} and set(thread['issue'])==issue_keys and thread['issue']['id']==sender_issue and thread['issue']['reporter_id']==owner[0] and thread['issue']['status']=='new','actual thread complete issue shape')
+     messages=thread['messages'];expected_ids=[legacy_public]+([legacy_internal] if reader==staff else [])+([sent['mid']] if reader==staff or not sender_internal else [])
+     self.check([m['id'] for m in messages]==expected_ids,'actual thread author and internal ordering')
+     self.check(messages[0]['attachments']==[{'legacy_fixture':True}] and messages[0]['author_id']==owner[0] and messages[0]['author_role']=='player' and messages[0]['canonical_attachments_v1']==[],'actual thread legacy retained without relabeling')
+     message_keys={'id','issue_id','author_id','author_role','body','is_internal','attachments','created_at','canonical_attachments_v1'}
+     self.check(all(set(m)==message_keys for m in messages),'actual thread complete message shape')
+     canonical_messages=[m for m in messages if m['id']==sent['mid']]
+     if canonical_messages:
+      m=canonical_messages[0];self.check(m['author_id']==sender_actor[0] and m['author_role']==('admin' if sender_actor==staff else 'player') and m['is_internal']==sender_internal and m['attachments']==[] and len(m['canonical_attachments_v1'])==1 and m['canonical_attachments_v1'][0]['key']==sent['key'],'actual thread exact canonical author descriptor')
+    status,data=self.call('get_feedback_issue_thread',other[1],{'p_issue_id':sender_issue});self.check(status==403 and data.get('code')=='42501','actual thread unrelated denied')
+    status,data=self.call('get_feedback_issue_thread',owner[1],{'p_issue_id':str(uuid.uuid4())});self.check(status==404 and data.get('code')=='P0002','actual thread absent distinct from empty')
+    orphan=str(uuid.uuid4());self.sql(f"INSERT INTO public.feedback_issues(id,reporter_id) VALUES('{orphan}',NULL);")
+    status,data=self.call('get_feedback_issue_thread',owner[1],{'p_issue_id':orphan});self.check(status==403 and data.get('code')=='42501','actual thread orphan player denied')
+    status,data=self.call('get_feedback_issue_thread',staff[1],{'p_issue_id':orphan});self.check(status==200 and data['messages']==[],'actual thread staff orphan visible empty')
     if sender_actor==staff:
      self.sql(f"DELETE FROM public.user_roles WHERE user_id='{staff[0]}';")
      try:
       status,data=self.decoded(self.request('/rest/v1/rpc/finalize_canonical_feedback_image_v1',staff[1],payload,'POST'));self.check(status==403 and isinstance(data,dict) and data.get('code')=='42501','staff role retirement denies sender retry')
+      status,data=self.call('get_feedback_issue_thread',staff[1],{'p_issue_id':sender_issue});self.check(status==403 and data.get('code')=='42501','actual thread staff role loss denied')
      finally:self.sql(f"INSERT INTO public.user_roles VALUES('{staff[0]}','fixture_staff');")
 
    browser_module.run(self,sender_actor,credentials[sender_actor[0]],browser_mid,browser_case,hashlib.sha256(canonical).hexdigest(),dimensions,{'issue':sender_issue,'staff':sender_actor==staff,'internal':sender_internal,'recipient':owner[0],'bytes':raw,'reserved':sender_reserved,'process':sender_process,'verify':sender_verify})
    self.check(self.report['canonical_browser']['result']=='PASS_ACTUAL_COMPONENT_DISPOSABLE_STORAGE_ONLY','actual component click decode revoke retired denial')
+   self.check(self.worker('retire',sent) is True,'thread sender reservation retired')
+   status,thread=self.call('get_feedback_issue_thread',staff[1],{'p_issue_id':sender_issue});self.check(status==200 and all(m['canonical_attachments_v1']==[] for m in thread['messages']),'actual thread retirement removes canonical descriptors')
    self.report['canonical_sender_browsers'].append(dict(self.report['canonical_browser'],staff=sender_actor==staff,internal=sender_internal))
   self.report['input_terminality']='Explicit harness-observed terminal PUT plus exact service read; not a production writer/lease guarantee'
   self.report['result']='LOCAL STACK PASS; SYNTHETIC WORKER PUBLICATION ONLY; ACTIVATION BLOCKED'

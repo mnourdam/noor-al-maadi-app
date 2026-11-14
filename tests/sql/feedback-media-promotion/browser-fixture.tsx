@@ -1,6 +1,7 @@
 import React,{useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import {FeedbackReplyComposer} from '@/components/feedback/FeedbackReplyComposer';
+import {getIssueThread} from '@/lib/feedback/api';
 import {FeedbackMessageImages} from '@/components/feedback/FeedbackMessageImages';
 import {feedbackAttachmentProtocol} from '@/lib/feedback/attachment-protocol';
 import {FeedbackImages} from '@/components/feedback/FeedbackImages';
@@ -11,7 +12,7 @@ const g=globalThis as any;
 let descriptor:CanonicalImage,owner:string,started=false;
 const root=createRoot(document.getElementById('root')!);
 let sent=0;
-function SenderScene({issue,staff}:{issue:string;staff:boolean}){const [messages,setMessages]=useState<any[]>([]);return <><FeedbackReplyComposer imageProtocol={feedbackAttachmentProtocol} staff={staff} issueId={issue} onSent={async()=>{sent++;const result=await supabase.rpc('fixture_canonical_messages' as never,{p_issue_id:issue} as never);if(result.error || !Array.isArray(result.data) || result.data.length!==1)throw Error('canonical refresh');setMessages(result.data);}}/>{messages.map(m=><FeedbackMessageImages key={m.id} message={m}/>)}</>;}
+function SenderScene({issue,staff}:{issue:string;staff:boolean}){const [messages,setMessages]=useState<any[]>([]);return <><FeedbackReplyComposer imageProtocol={feedbackAttachmentProtocol} staff={staff} issueId={issue} onSent={async()=>{sent++;const result=await getIssueThread(issue);if(result.issue.id!==issue || result.issue.status!=='new' || !Array.isArray(result.messages) || result.messages.length!==(staff?3:2))throw Error('canonical refresh');const canonical=result.messages.filter(m=>m.canonical_attachments_v1?.length);if(canonical.length!==1 || canonical[0].body!=='canonical browser send')throw Error('canonical thread projection');g.__threadEvidence={status:result.issue.status,count:result.messages.length,canonicalCount:canonical.length,authorRole:canonical[0].author_role,internal:canonical[0].is_internal,legacyRetained:result.messages.some(m=>m.body==='legacy public'&&JSON.stringify(m.attachments)==='[{"legacy_fixture":true}]')};setMessages(result.messages);}}/>{messages.map(m=><section key={m.id}><p>{m.body}</p><FeedbackMessageImages message={m}/></section>)}</>;}
 const records:{url:string;revoked:boolean;sha256:string|null}[]=[];
 const create=URL.createObjectURL.bind(URL),revoke=URL.revokeObjectURL.bind(URL);
 URL.createObjectURL=(blob:Blob|MediaSource)=>{
