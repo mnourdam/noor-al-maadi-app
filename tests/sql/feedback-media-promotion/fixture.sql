@@ -1,0 +1,120 @@
+-- Disposable transaction model ONLY. Not a migration, production API or ACL design.
+CREATE SCHEMA promotion_model;
+SET search_path=promotion_model;
+CREATE TABLE reservation(id uuid PRIMARY KEY, owner_id uuid NOT NULL, thread_id uuid NOT NULL, internal boolean NOT NULL, generation bigint NOT NULL DEFAULT 0, active boolean NOT NULL DEFAULT true, accepted uuid);
+CREATE TABLE attempt(id uuid PRIMARY KEY, reservation_id uuid NOT NULL REFERENCES reservation, generation bigint NOT NULL, token uuid UNIQUE NOT NULL, owner_id uuid NOT NULL, thread_id uuid NOT NULL, internal boolean NOT NULL, object_key text UNIQUE NOT NULL, input_digest text NOT NULL CHECK(length(input_digest)=64), validator text NOT NULL, state text NOT NULL CHECK(state IN('PREPARED','WRITING','TERMINAL')), put_success boolean, output_digest text, cleanup_due boolean NOT NULL DEFAULT true, cleaning boolean NOT NULL DEFAULT false, removal_observed boolean NOT NULL DEFAULT false);
+CREATE FUNCTION claim(rid uuid,aid uuid,tok uuid,digest text,revision text) RETURNS text LANGUAGE plpgsql AS $$
+DECLARE r reservation; path text;
+BEGIN
+ SELECT * INTO r FROM reservation WHERE id=rid FOR UPDATE;
+ IF NOT FOUND OR NOT r.active OR r.accepted IS NOT NULL THEN RAISE EXCEPTION 'claim_denied'; END IF;
+ path:=r.owner_id::text||'/'||aid::text;
+ UPDATE reservation SET generation=generation+1 WHERE id=rid;
+ INSERT INTO attempt(id,reservation_id,generation,token,owner_id,thread_id,internal,object_key,input_digest,validator,state,put_success,output_digest,cleanup_due,cleaning,removal_observed) VALUES(aid,rid,r.generation+1,tok,r.owner_id,r.thread_id,r.internal,path,digest,revision,'PREPARED',NULL,NULL,true,false,false);
+ RETURN path;
+END $$;
+CREATE FUNCTION start_write(aid uuid,tok uuid) RETURNS boolean LANGUAGE plpgsql AS $$
+DECLARE a attempt; r reservation;
+BEGIN
+ SELECT * INTO a FROM attempt WHERE id=aid;
+ SELECT * INTO r FROM reservation WHERE id=a.reservation_id FOR UPDATE;
+ IF NOT FOUND OR NOT r.active OR r.accepted IS NOT NULL OR r.generation<>a.generation OR a.token IS DISTINCT FROM tok THEN RETURN false; END IF;
+ UPDATE attempt SET state='WRITING' WHERE id=aid AND state='PREPARED';
+ RETURN FOUND;
+END $$;
+-- Terminal observation may arrive from a retired worker. It never grants publication.
+CREATE FUNCTION terminal(aid uuid,tok uuid,success boolean,digest text) RETURNS boolean LANGUAGE plpgsql AS $$
+BEGIN
+ IF success IS NULL OR (success AND (digest IS NULL OR length(digest)<>64)) THEN RETURN false; END IF;
+ UPDATE attempt SET state='TERMINAL',put_success=success,output_digest=CASE WHEN success THEN digest ELSE NULL END WHERE id=aid AND token=tok AND state='WRITING';
+ RETURN FOUND;
+END $$;
+CREATE FUNCTION publish(aid uuid,tok uuid,input_hash text,output_hash text,revision text,owner uuid,thread uuid,inside boolean) RETURNS boolean LANGUAGE plpgsql AS $$
+DECLARE a attempt; r reservation;
+BEGIN
+ SELECT * INTO a FROM attempt WHERE id=aid;
+ SELECT * INTO r FROM reservation WHERE id=a.reservation_id FOR UPDATE;
+ SELECT * INTO a FROM attempt WHERE id=aid FOR UPDATE;
+ IF r.id IS NULL OR NOT r.active OR r.accepted IS NOT NULL OR r.generation<>a.generation OR a.token IS DISTINCT FROM tok OR a.state<>'TERMINAL' OR a.cleaning OR a.put_success IS DISTINCT FROM true OR a.input_digest IS DISTINCT FROM input_hash OR a.output_digest IS DISTINCT FROM output_hash OR a.validator IS DISTINCT FROM revision OR a.owner_id IS DISTINCT FROM owner OR a.thread_id IS DISTINCT FROM thread OR a.internal IS DISTINCT FROM inside THEN RETURN false; END IF;
+ UPDATE reservation SET accepted=aid WHERE id=r.id;
+ UPDATE attempt SET cleanup_due=false WHERE id=aid;
+ RETURN true;
+END $$;
+CREATE FUNCTION retire(rid uuid) RETURNS void LANGUAGE plpgsql AS $$
+BEGIN
+ PERFORM 1 FROM reservation WHERE id=rid FOR UPDATE;
+ UPDATE reservation SET active=false,generation=generation+1,accepted=NULL WHERE id=rid;
+ UPDATE attempt SET cleanup_due=true WHERE reservation_id=rid;
+END $$;
+CREATE VIEW readable AS SELECT a.id,a.object_key,a.output_digest,a.validator,a.owner_id,a.thread_id,a.internal FROM reservation r JOIN attempt a ON a.id=r.accepted AND a.reservation_id=r.id AND a.generation=r.generation WHERE r.active AND a.state='TERMINAL' AND a.put_success AND NOT a.cleanup_due;
+-- Irreversible cleanup claim serializes with publication on reservation first.
+-- Durable obligation alone is NOT permission to remove a publishable candidate.
+CREATE FUNCTION claim_cleanup(aid uuid,expected_key text,abandon boolean DEFAULT false) RETURNS text LANGUAGE plpgsql AS $$
+DECLARE a attempt; r reservation;
+BEGIN
+ SELECT * INTO a FROM attempt WHERE id=aid;
+ SELECT * INTO r FROM reservation WHERE id=a.reservation_id FOR UPDATE;
+ SELECT * INTO a FROM attempt WHERE id=aid FOR UPDATE;
+ IF a.id IS NULL OR a.object_key IS DISTINCT FROM expected_key OR NOT a.cleanup_due OR a.state<>'TERMINAL' THEN RETURN NULL; END IF;
+ IF r.active AND r.generation=a.generation AND a.put_success AND NOT a.cleaning THEN
+  IF abandon IS DISTINCT FROM true OR r.accepted IS NOT NULL THEN RETURN NULL; END IF;
+  -- Explicitly abandon current authority before allowing any external removal.
+  UPDATE reservation SET generation=generation+1 WHERE id=r.id;
+ END IF;
+ UPDATE attempt SET cleaning=true WHERE id=aid;
+ RETURN a.object_key;
+END $$;
+-- Never deletes obligations. Removal observation is not physical erasure proof.
+CREATE FUNCTION observe_removal(aid uuid,expected_key text) RETURNS boolean LANGUAGE plpgsql AS $$
+BEGIN
+ UPDATE attempt SET removal_observed=true WHERE id=aid AND object_key=expected_key AND cleanup_due AND cleaning AND state='TERMINAL';
+ RETURN FOUND;
+END $$;
+
+RESET search_path;
+ALTER TABLE promotion_model.attempt ADD COLUMN output_size integer CHECK(output_size BETWEEN 1 AND 2097152);
+CREATE TABLE promotion_model.publication(id uuid PRIMARY KEY, attempt_id uuid UNIQUE NOT NULL REFERENCES promotion_model.attempt, author_id uuid NOT NULL, body text NOT NULL, internal boolean NOT NULL);
+-- Public denial surface exposes no rows and grants no mutations.
+CREATE VIEW public.fixture_promotion_receipts AS SELECT id,output_digest FROM promotion_model.attempt;
+REVOKE ALL ON public.fixture_promotion_receipts FROM PUBLIC,anon,authenticated;
+CREATE FUNCTION public.fixture_worker(op text,p jsonb) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=promotion_model,pg_temp AS $$
+BEGIN
+ IF auth.role() IS DISTINCT FROM 'service_role' THEN RAISE EXCEPTION 'service_only' USING ERRCODE='42501'; END IF;
+ CASE op
+ WHEN 'reserve' THEN INSERT INTO promotion_model.reservation(id,owner_id,thread_id,internal) VALUES((p->>'rid')::uuid,(p->>'owner')::uuid,(p->>'issue')::uuid,(p->>'internal')::boolean); RETURN 'true';
+ WHEN 'claim' THEN RETURN to_jsonb(promotion_model.claim((p->>'rid')::uuid,(p->>'aid')::uuid,(p->>'token')::uuid,p->>'input',p->>'revision'));
+ WHEN 'start' THEN RETURN to_jsonb(promotion_model.start_write((p->>'aid')::uuid,(p->>'token')::uuid));
+ WHEN 'terminal' THEN IF (p->>'bytes')::integer NOT BETWEEN 1 AND 2097152 OR p->>'bytes' IS NULL THEN RETURN 'false'; END IF; IF NOT promotion_model.terminal((p->>'aid')::uuid,(p->>'token')::uuid,(p->>'success')::boolean,p->>'output') THEN RETURN 'false'; END IF; UPDATE promotion_model.attempt SET output_size=(p->>'bytes')::integer WHERE id=(p->>'aid')::uuid; RETURN 'true';
+ WHEN 'attest' THEN IF NOT EXISTS(SELECT 1 FROM promotion_model.attempt WHERE id=(p->>'aid')::uuid AND output_size=(p->>'bytes')::integer) THEN RETURN 'false'; END IF; RETURN to_jsonb(promotion_model.publish((p->>'aid')::uuid,(p->>'token')::uuid,p->>'input',p->>'output',p->>'revision',(p->>'owner')::uuid,(p->>'issue')::uuid,(p->>'internal')::boolean));
+ WHEN 'retire' THEN PERFORM promotion_model.retire((p->>'rid')::uuid); RETURN 'true';
+ WHEN 'cleanup' THEN RETURN to_jsonb(promotion_model.claim_cleanup((p->>'aid')::uuid,p->>'key',COALESCE((p->>'abandon')::boolean,false)));
+ WHEN 'removed' THEN RETURN to_jsonb(promotion_model.observe_removal((p->>'aid')::uuid,p->>'key'));
+ ELSE RAISE EXCEPTION 'unknown_operation';
+ END CASE;
+END $$;
+CREATE FUNCTION public.fixture_finalize(mid uuid,aid uuid,body text,inside boolean) RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path=promotion_model,pg_temp AS $$
+DECLARE a promotion_model.attempt; r promotion_model.reservation; previous promotion_model.publication; u uuid:=auth.uid();
+BEGIN
+ IF u IS NULL OR body IS NULL OR length(body)>5000 OR inside IS NULL THEN RAISE EXCEPTION 'invalid'; END IF;
+ SELECT * INTO a FROM promotion_model.attempt WHERE id=aid;
+ SELECT * INTO r FROM promotion_model.reservation WHERE id=a.reservation_id FOR UPDATE;
+ SELECT * INTO a FROM promotion_model.attempt WHERE id=aid FOR UPDATE;
+ IF NOT EXISTS(SELECT 1 FROM promotion_model.readable WHERE id=aid) OR inside IS DISTINCT FROM a.internal OR NOT(u=a.owner_id OR public.is_feedback_staff(u)) OR (inside AND NOT public.is_feedback_staff(u)) THEN RAISE EXCEPTION 'unattested_or_forbidden'; END IF;
+ SELECT * INTO previous FROM promotion_model.publication WHERE id=mid;
+ IF FOUND THEN
+  IF previous.attempt_id IS DISTINCT FROM aid OR previous.author_id IS DISTINCT FROM u OR previous.body IS DISTINCT FROM body OR previous.internal IS DISTINCT FROM inside THEN RAISE EXCEPTION 'message_conflict'; END IF;
+  RETURN mid;
+ END IF;
+ INSERT INTO promotion_model.publication VALUES(mid,aid,u,body,inside);
+ RETURN mid;
+END $$;
+CREATE FUNCTION public.fixture_canonical_read(key text) RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=promotion_model,pg_temp AS $$
+ SELECT EXISTS(SELECT 1 FROM promotion_model.readable a JOIN promotion_model.publication p ON p.attempt_id=a.id WHERE a.object_key=key AND auth.uid() IS NOT NULL AND (a.owner_id=auth.uid() OR public.is_feedback_staff(auth.uid())) AND (NOT a.internal OR public.is_feedback_staff(auth.uid())))
+$$;
+REVOKE ALL ON SCHEMA promotion_model FROM PUBLIC,anon,authenticated;
+REVOKE ALL ON ALL TABLES IN SCHEMA promotion_model FROM PUBLIC,anon,authenticated;
+REVOKE ALL ON ALL FUNCTIONS IN SCHEMA promotion_model FROM PUBLIC,anon,authenticated;
+REVOKE ALL ON FUNCTION public.fixture_worker(text,jsonb),public.fixture_finalize(uuid,uuid,text,boolean),public.fixture_canonical_read(text) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.fixture_worker(text,jsonb) TO service_role;
+GRANT EXECUTE ON FUNCTION public.fixture_finalize(uuid,uuid,text,boolean),public.fixture_canonical_read(text) TO authenticated;
+CREATE POLICY fixture_published_canonical_read ON storage.objects FOR SELECT TO authenticated USING(bucket_id='fixture-decode-canonical' AND public.fixture_canonical_read(name));

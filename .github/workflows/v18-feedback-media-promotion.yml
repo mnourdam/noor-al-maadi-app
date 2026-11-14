@@ -1,0 +1,52 @@
+name: V18 Disposable Trusted Attachment Publication Prototype
+on:
+  push:
+    branches: [v18-01a-outbox-recovery]
+    paths:
+      - '.github/workflows/v18-feedback-media-promotion.yml'
+      - 'tests/sql/feedback-media-promotion/**'
+      - 'tests/sql/feedback-media-decode/**'
+      - 'tests/media-decoder/**'
+      - 'tests/sql/feedback-private-images-local-supabase/**'
+      - 'docs/proposals/v18-feedback-private-images.sql'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  disposable-decode:
+    if: github.ref == 'refs/heads/v18-01a-outbox-recovery'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - uses: supabase/setup-cli@689adcfb80d947100a1eab127289b97d1fb07b13
+        with:
+          version: '2.122.1'
+      - name: Offline decoder and boundary controls
+        run: |
+          node --test tests/media-decoder/test.mjs
+          npm install --prefix "$RUNNER_TEMP/promotion-sql-tools" --ignore-scripts --no-audit --no-fund @electric-sql/pglite@0.3.14
+          PGLITE_MODULE="$RUNNER_TEMP/promotion-sql-tools/node_modules/@electric-sql/pglite/dist/index.js" node tests/sql/feedback-media-promotion/test_sql.mjs
+          python3 -m unittest discover -s tests/sql/feedback-media-decode -p 'test_*.py' -v
+          python3 -m unittest discover -s tests/sql/feedback-media-promotion -p 'test_*.py' -v
+      - name: Real disposable Storage decode boundary
+        run: python3 tests/sql/feedback-media-promotion/experiment.py run
+      - name: Cleanup unique run without backups
+        if: always()
+        run: python3 tests/sql/feedback-media-promotion/experiment.py cleanup
+      - name: Retain sanitized result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: feedback-media-promotion-evidence
+          path: ${{ runner.temp }}/v18-feedback-media-promotion/acceptance.json
+          if-no-files-found: warn
+          retention-days: 7

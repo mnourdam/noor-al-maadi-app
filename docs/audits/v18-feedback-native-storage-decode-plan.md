@@ -1,6 +1,6 @@
 # Disposable native Storage to trusted decoder boundary
 
-Prepared test-only lane. Not executed against Storage in this revision; no application activation, hosted access, migrations or production edits. Base local17c166d is coordinator-verified current public6dcb tree.
+Test-only lane, with exact-public-revision disposable runtime verified below; no application activation, hosted access, migrations or production edits. Base local17c166d is coordinator-verified current public6dcb tree.
 
 ## Provenance
 
@@ -20,6 +20,19 @@ HTTP calls use a fixed-size shared memory response buffer and owned child join d
 
 ## Verification and limits
 
-Author14 decoder tests PASS,13 new lane Python controls PASS,13 inherited isolation controls PASS. These include actual valid/malformed decoder execution, substituted-byte no-decoder control, infrastructure exit/signal, cleanup failures, response caps and workflow dependency coverage. Runtime remains pending independent review and coordinator-owned disposable CI. No local Docker/server run.
+Author14 decoder tests PASS,13 new lane Python controls PASS,13 inherited isolation controls PASS. These include actual valid/malformed decoder execution, substituted-byte no-decoder control, infrastructure exit/signal, cleanup failures, response caps and workflow dependency coverage. These local controls preceded the independently verified disposable CI execution below. No local Docker/server run was performed by the author.
 
 This is service-mediated byte processing under synthetic policy prerequisites, not an installed trusted worker, publication CAS, retention SLA, late-write reconciliation, crash-safe cleanup scheduler, full account deletion, deployed policy acceptance or native app acceptance. Native decoder memory is not fully constrained by the V8 limit. Canonical output is deliberately unreadable to all actors; attachment publication is not implemented. Picker remains OFF; no feature or production promise follows.
+
+
+## Verified disposable runtime (current evidence)
+
+Exact public source `c05c63fbcfd4b16da1df3e4e12f497fb04e41966`, coordinator-recorded tree `9a591abd`, run `43574611453`, job `132386026584`: SUCCESS. Artifact `14106091157` (2,412 bytes), SHA256 `51e349b9968b7bcdb4253cf087e2ee713410312f2626b0c719312ebe8ed39096`; independent reviewer verified archive digest, clean ZIP CRC, sole `acceptance.json`, exact source and source hashes. All 74 sequential records passed (44 inherited baseline plus 30 added records), not 74 independent scenarios.
+
+The actual disposable Auth/Storage route accepted owner quarantine uploads, denied actor quarantine reads, fetched exact trusted-input-bound bytes with service credentials, ran the real Sharp child process, uploaded canonical output, verified service byte equality, and denied actor canonical access. Malformed/truncated quarantine controls produced no canonical object. CLI was 2.122.1; Storage was v1.84.19, image ID `sha256:2b7ca2e35a0c54663fd0942a0fe99650d138515e4f3a3e36697a5104e99c5bd2`. Unique-project cleanup completed without backups. Decoder runner/child/CLI hashes, proposal SHA9c503b31… and fixture SHA466820f8… were independently matched to the reviewed source.
+
+The inherited report field `not_proven: server image decoding` is not a denial of this measured child-process execution. It identifies the still-unproven **production-integrated trusted worker and publication authority**. This run does not install that worker, make canonical output actor-readable, prove deployed policies, retention/late-PUT reconciliation, account deletion or native behavior. Its explicit result remains `LOCAL STACK PASS; DECODED BYTE ISOLATION ONLY; ACTIVATION BLOCKED`.
+
+### Concrete remaining delivery boundary (read-only source finding)
+
+The unchanged dormant proposal `reply_with_feedback_images` still selects the original `feedback-images` object and accepts storage metadata MIME/size (proposal lines90–92). It does not require a service-attested decoder result or point the message at canonical output. The current client still uploads directly to that original bucket. Therefore this isolated successful route is not yet the product attachment path. A next narrow disposable regression should first demonstrate that metadata-only boundary, then test a service-attested publication requirement while retaining owner/issue/internal/idempotency semantics. No production proposal, client or permission edits are part of this evidence update.
