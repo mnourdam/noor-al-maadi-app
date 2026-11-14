@@ -8,7 +8,7 @@ import { Route as Chapter } from "@/routes/campaigns.imported.$id.chapter.$chapt
 import { setActiveOwnerInternal } from "@/lib/identity/owner";
 import { installIdentityPartition, isPersonalKey } from "@/lib/identity/partition";
 import { recordActivity, getCampaignProgress } from "@/lib/importedCampaignProgress";
-import { campaign, profile, metrics, snapshot, syntheticFeed } from "./completed-reread-boundary";
+import { campaign as baseCampaign, profile, metrics, snapshot, syntheticFeed } from "./completed-reread-boundary";
 import "@/styles.css";
 const rootRoute = createRootRoute({ component: Outlet });
 const overview = Overview.update({getParentRoute:()=>rootRoute,path:"/campaigns/imported/$id/"} as any);
@@ -16,11 +16,14 @@ const chapter = Chapter.update({getParentRoute:()=>rootRoute,path:"/campaigns/im
 let started = false;
 Object.assign(window, { completedReread: {
   metrics, snapshot,
-  async start(mode: "review"|"forged"|"normal"|"active") {
+  async start(mode: "review"|"forged"|"normal"|"active"|"art") {
     if (started) throw Error("one scenario per page");
     started = true;
+    // Exact image binding identity, but deliberately synthetic activity/reading content.
+    const campaign = mode === "art" ? {...baseCampaign, id:"cordoba-golden-age", title:"قرطبة — بيانات اختبار",
+      chapters:baseCampaign.chapters.map((ch,index)=>index===0?{...ch,id:"ch5",title:"مدينة الكتب",imageUrl:null}:ch)} : baseCampaign;
     setActiveOwnerInternal("user:synthetic-reread"); installIdentityPartition();
-    profile.hearts = mode === "active" || mode === "normal" ? 5 : 0;
+    profile.hearts = mode === "active" || mode === "normal" || mode === "art" ? 5 : 0;
     if (mode === "review" || mode === "normal") recordActivity(campaign,campaign.chapters[0],campaign.chapters[0].activities[0],true);
     const progress=getCampaignProgress(campaign.id);
     if(mode === "review" || mode === "normal") {
@@ -50,7 +53,7 @@ Object.assign(window, { completedReread: {
       if(this===localStorage && Object.keys(localStorage).some(personal)) metrics.storage=(metrics.storage??0)+1;
       return originalClear.call(this);
     };
-    const href = mode === "review" ? "/campaigns/imported/synthetic-reread/" :
+    const href = mode === "art" ? "/campaigns/imported/cordoba-golden-age/chapter/ch5" : mode === "review" ? "/campaigns/imported/synthetic-reread/" :
       "/campaigns/imported/synthetic-reread/chapter/one"+(mode === "forged" ? "?review=chapter" : "");
     const history=createMemoryHistory({initialEntries:[href]});
     const router=createRouter({routeTree:rootRoute.addChildren([overview,chapter]),history,defaultPreload:false});

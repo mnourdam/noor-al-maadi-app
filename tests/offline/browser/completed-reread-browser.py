@@ -1,10 +1,10 @@
 """Actual completed chapter routes with memory routing. Synthetic boundaries; no native/full-app claim."""
-import asyncio, functools, http.server, json, os, re, subprocess, tempfile, threading, sys
+import asyncio, functools, http.server, json, os, re, subprocess, tempfile, threading, sys, hashlib
 from pathlib import Path
 from urllib.parse import urlsplit
 ROOT=Path(__file__).resolve().parents[3]
 
-STAGES=frozenset(('initial','build','assets','server','launch','setup','review-start','review-link','review-link-count','review-href','snapshot-invariant','metrics-invariant','review-enter','review-invariants','forged-start','forged-invariants','normal-start','normal-invariants','active-start','input-fill','reading-open','reading-close','reading-invariants','answer-submit','answer-next','completion-invariants','browser-version','final-invariants'))
+STAGES=frozenset(('initial','build','assets','server','launch','setup','review-start','review-link','review-link-count','review-href','snapshot-invariant','metrics-invariant','review-enter','review-invariants','forged-start','forged-invariants','normal-start','normal-invariants','active-start','input-fill','reading-open','reading-close','reading-invariants','answer-submit','answer-next','completion-invariants','art-start','art-pixels','art-reading','browser-version','final-invariants'))
 DIAGNOSTICS={'stage':'initial','blocked_requests':0,'page_errors':0,'failed_requests':0,'completed_checks':0}
 def stage(value):
     if value not in STAGES:raise ValueError('unknown diagnostic stage')
@@ -60,6 +60,8 @@ async def acceptance(directory,origin,paths):
             async def ws(socket):blocked.append('websocket');await socket.close()
             await context.route('**/*',route);await context.route_web_socket('**/*',ws)
             page=await context.new_page()
+            art_responses=[]
+            page.on('response',lambda response:art_responses.append(response) if response.url==origin+'/campaign-key-art/chapters/cordoba-golden-age/ch5/interpretive-v1.webp' else None)
             page.on('requestfailed',lambda _:failed.append('requestfailed'))
             page.on('pageerror',lambda _:errors.append('pageerror'))
             page.on('console',lambda msg:errors.append('consoleerror') if msg.type=='error' else None)
@@ -139,6 +141,37 @@ async def acceptance(directory,origin,paths):
             stage('completion-invariants')
             assert await page.evaluate('completedReread.metrics.save===1 && (completedReread.metrics.unexpected??0)===0')
             checks.append('actual activity answer then Next preserves ordinary chapter completion, with only explicit synthetic save boundary')
+            stage('art-start')
+            await start('art')
+            assert await page.evaluate('completedReread.location()')=='/campaigns/imported/cordoba-golden-age/chapter/ch5'
+            await expect(page.get_by_role('heading',name='مدينة الكتب',exact=True)).to_be_visible()
+            image=page.locator('img[src="/campaign-key-art/chapters/cordoba-golden-age/ch5/interpretive-v1.webp"]')
+            stage('art-pixels')
+            await expect(image).to_have_count(1)
+            await expect(image).to_be_visible()
+            await image.scroll_into_view_if_needed()
+            await page.wait_for_function('(()=>{const i=document.querySelector("img");return i?.complete&&i.naturalWidth===1600&&i.naturalHeight===900})()')
+            assert await image.evaluate('(i)=>i.complete&&i.naturalWidth===1600&&i.naturalHeight===900')
+            assert await image.evaluate('async(i)=>{await Promise.race([i.decode(),new Promise((_,reject)=>setTimeout(()=>reject(Error("image deadline")),15000))]);return i.naturalWidth===1600&&i.naturalHeight===900}')
+            assert len(art_responses)==1 and art_responses[0].status==200
+            assert art_responses[0].headers.get('content-type','').split(';')[0]=='image/webp'
+            assert hashlib.sha256(await art_responses[0].body()).hexdigest()=='b8f991c4adb80ae6f3b02d44d23ca7805def2d74e89d36738707def1b36f696c'
+
+            answer=page.get_by_placeholder('اكتب إجابتك…')
+            await answer.fill('إجابة الصورة غير المرسلة')
+            await page.evaluate('window.artInput=document.querySelector("input");window.artImage=document.querySelector("img");window.artBaseline=JSON.stringify(completedReread.snapshot());window.artMetrics=JSON.stringify(completedReread.metrics)')
+            stage('art-reading')
+            trigger=page.get_by_role('button',name='إعادة قراءة نص الفصل',exact=True)
+            await trigger.click()
+            dialog=page.get_by_role('dialog')
+            await expect(dialog.get_by_text('قراءة تاريخية تجريبية محفوظة.',exact=True)).to_be_visible()
+            await dialog.get_by_role('button',name='العودة إلى النشاط',exact=True).click()
+            await expect(dialog).not_to_be_visible()
+            await expect(answer).to_have_value('إجابة الصورة غير المرسلة')
+            assert await page.evaluate('artInput===document.querySelector("input")&&artImage===document.querySelector("img")&&artImage.complete&&artImage.naturalWidth===1600&&artImage.naturalHeight===900')
+            assert await page.evaluate('artBaseline===JSON.stringify(completedReread.snapshot())&&artMetrics===JSON.stringify(completedReread.metrics)&&(completedReread.metrics.unexpected??0)===0')
+            await expect(image).to_be_visible()
+            checks.append('actual chapter/CachedImage/resolver exact Cordoba fallback decodes1600x900; synthetic reading preserves same unsent input/image and post-setup personal state')
             stage('browser-version')
             cdp=await context.new_cdp_session(page);version=(await cdp.send('Browser.getVersion'))['product'];await cdp.detach()
         finally:
@@ -146,8 +179,8 @@ async def acceptance(directory,origin,paths):
             primary=sys.exc_info()[0] is not None
             await close_preserving_primary(context.close, primary)
     stage('final-invariants')
-    assert len(checks)==5 and not blocked and not errors and not failed
-    return {'result':'PASS','chromium':version,'checks':checks,'blocked_requests':len(blocked),'page_errors':len(errors),'failed_requests':len(failed),'limits':'Actual overview/chapter routes, memory router, activity/input/reading components, identity/partition/progress/ledger. Synthetic content, profile/save/memory boundaries and ancillary shells. Not browser history/deep-link reload, native, backend, full-app or release acceptance.'}
+    assert len(checks)==6 and not blocked and not errors and not failed
+    return {'result':'PASS','chromium':version,'checks':checks,'blocked_requests':len(blocked),'page_errors':len(errors),'failed_requests':len(failed),'art':{'campaign':'cordoba-golden-age','chapter':'ch5','sha256':'b8f991c4adb80ae6f3b02d44d23ca7805def2d74e89d36738707def1b36f696c','width':1600,'height':900},'limits':'Actual overview/chapter routes, memory router, activity/input/reading components, identity/partition/progress/ledger. Synthetic content, profile/save/memory boundaries and ancillary shells. Not browser history/deep-link reload, native, backend, full-app or release acceptance.'}
 
 def main():
     with tempfile.TemporaryDirectory(prefix='irth-completed-reread-') as temp:

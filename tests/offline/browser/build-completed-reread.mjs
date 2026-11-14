@@ -19,9 +19,24 @@ export function validateOutput(output) {
   return output;
 }
 
+export const ART_PATH = "campaign-key-art/chapters/cordoba-golden-age/ch5/interpretive-v1.webp";
+export const ART_SHA = "b8f991c4adb80ae6f3b02d44d23ca7805def2d74e89d36738707def1b36f696c";
+export function verifiedArt(root) {
+  const file = path.join(root, "public", ART_PATH);
+  for (let p=file;p!==path.dirname(root);p=path.dirname(p)) {
+    if (fs.lstatSync(p).isSymbolicLink()) throw Error("symlink art prohibited");
+    if (p===root) break;
+  }
+  const bytes=fs.readFileSync(file);
+  if(bytes.toString("ascii",0,4)!=="RIFF"||bytes.toString("ascii",8,12)!=="WEBP")throw Error("WebP required");
+  if(createHash("sha256").update(bytes).digest("hex")!==ART_SHA)throw Error("art bytes changed");
+  return bytes;
+}
+
 export async function buildFixture(output) {
   validateOutput(output);
   const root=process.cwd();
+  const art=verifiedArt(root);
   const fixture=path.resolve("tests/offline/browser/completed-reread-boundary.ts");
   const pre=`import React from 'react';import {campaign,profile,metrics,count,unexpected,supabase} from ${JSON.stringify(fixture)};`;
   const stubs=new Map();
@@ -42,7 +57,6 @@ export async function buildFixture(output) {
   add("src/components/AppShell.tsx","export const AppShell=({children})=>React.createElement('main',null,children);");
   add("src/components/ReadingScale.tsx","export const ReadingScale=({children})=>children;");
   add("src/components/feedback/FeedbackCTA.tsx","export const FeedbackCTA=()=>null;");
-  add("src/components/CachedImage.tsx","export const CachedImage=()=>null;");
   add("src/components/imported-campaign/UnlockList.tsx","export const UnlockList=()=>null;");
   add("src/components/imported-campaign/OutOfHeartsModal.tsx","export const OutOfHeartsModal=({open})=>open?React.createElement('div',{'data-testid':'hearts-modal'},'hearts'):null;");
   add("src/components/imported-campaign/CampaignCompleteModal.tsx","export const CampaignCompleteModal=({open})=>open?React.createElement('div',{'data-testid':'completion-modal'},'completion'):null;");
@@ -52,7 +66,7 @@ export async function buildFixture(output) {
   add("src/lib/navigation/engine.ts","export const useOverlayDismiss=()=>{};");
   add("src/lib/navigation/overlay-registration.tsx","export const OverlayDismissRegistration=()=>null;");
   add("src/lib/display-names.ts","export const displayBadgeName=x=>x;export const displayArtifactName=x=>x;");
-  const expected=["src/routes/campaigns.imported.$id.index.tsx","src/routes/campaigns.imported.$id.chapter.$chapter.tsx","src/lib/identity/owner.ts","src/lib/identity/partition.ts","src/lib/importedCampaignProgress.ts","src/lib/campaignLedger.ts","src/lib/campaignRewardsGranted.ts","src/components/imported-campaign/ActivityRenderer.tsx","src/components/imported-campaign/ActivityReviewCard.tsx","src/components/imported-campaign/ChapterReadingReview.tsx","src/components/imported-campaign/RichReadingText.tsx","src/styles.css"];
+  const expected=["src/routes/campaigns.imported.$id.index.tsx","src/routes/campaigns.imported.$id.chapter.$chapter.tsx","src/lib/identity/owner.ts","src/lib/identity/partition.ts","src/lib/importedCampaignProgress.ts","src/lib/campaignLedger.ts","src/lib/campaignRewardsGranted.ts","src/components/imported-campaign/ActivityRenderer.tsx","src/components/imported-campaign/ActivityReviewCard.tsx","src/components/imported-campaign/ChapterReadingReview.tsx","src/components/imported-campaign/RichReadingText.tsx","src/styles.css","src/components/CachedImage.tsx","src/lib/image-cache.ts","src/lib/campaign-art/interpretive-chapters.ts"];
   const seen = new Set();
   const boundary = {
     name: "synthetic-completed-reread-boundary",
@@ -98,6 +112,8 @@ export async function buildFixture(output) {
       },
     },
   });
+  const artTarget=path.join(output,ART_PATH);fs.mkdirSync(path.dirname(artTarget),{recursive:true});fs.writeFileSync(artTarget,art);
+  if(!fs.readFileSync(artTarget).equals(art))throw Error("copied art mismatch");
   const css = fs.readdirSync(path.join(output, "assets")).filter((x) => x.endsWith(".css"));
   if (!css.length) throw Error("production CSS absent");
   fs.writeFileSync(

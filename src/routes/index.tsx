@@ -12,6 +12,7 @@ import { Avatar } from "@/components/Avatar";
 import { DEFAULT_AVATAR_ID } from "@/lib/avatars";
 
 
+import { chapterImageForDisplay } from "@/lib/campaign-art/interpretive-chapters";
 import { CachedImage } from "@/components/CachedImage";
 import {
   levelFor,
@@ -1164,7 +1165,7 @@ function EmptyState({ icon, title, body }: { icon: React.ReactNode; title: strin
 }
 
 // ----- Continue Journey premium CTA -----
-function ContinueJourneyCard({ sel }: {
+export function ContinueJourneyCard({ sel }: {
   sel: {
     campaign: ImportedCampaign;
     completedChapters: number;
@@ -1184,10 +1185,12 @@ function ContinueJourneyCard({ sel }: {
   const { url: campaignCover } = useCampaignArtworkUrl(campaign, "continue-journey", fallbackCover);
   // V17-09: the artwork always belongs to the exact chapter this card
   // resumes. Chapters with no image keep the campaign artwork untouched.
-  const chapterImage =
-    typeof nextChapter?.imageUrl === "string" && nextChapter.imageUrl.trim()
-      ? nextChapter.imageUrl.trim()
-      : null;
+  const chapterSource = nextChapter
+    ? chapterImageForDisplay(campaign.id, nextChapter.id, nextChapter.imageUrl)
+    : null;
+  const chapterImage = typeof chapterSource === "string" && chapterSource.trim()
+    ? chapterSource.trim()
+    : null;
   const cover = chapterImage ?? campaignCover;
   return (
     <section className="mt-12 px-5">
