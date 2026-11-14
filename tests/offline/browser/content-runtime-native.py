@@ -1,17 +1,18 @@
 """Browser-only real content runtime acceptance. No APK, production or JWT claims."""
-import asyncio,functools,http.server,json,os,subprocess,tempfile,threading,argparse
+import asyncio,functools,http.server,json,os,subprocess,tempfile,threading,argparse,hashlib,re
 from pathlib import Path
 from urllib.parse import urlparse,parse_qs
 from playwright.async_api import async_playwright
 ROOT=Path(__file__).resolve().parents[3]
 class Service(http.server.SimpleHTTPRequestHandler):
     protocol_version='HTTP/1.1'
-    entered=threading.Event();release=threading.Event();drained=threading.Event();interrupt=True;requests=0;title="updated"
+    entered=threading.Event();release=threading.Event();drained=threading.Event();interrupt=True;requests=0;transport_requests=0;title="updated"
     def log_message(self,*args):pass
     def reply(self,data,head=False):
         body=json.dumps(data).encode();self.send_response(200);self.send_header('Content-Type','application/json');self.send_header('Content-Length',str(len(body)));self.end_headers()
         if not head:self.wfile.write(body)
     def do_POST(self):
+        type(self).transport_requests+=1
         n=int(self.headers.get('Content-Length','0'));self.rfile.read(n)
         if self.path.endswith('/get_content_manifest'):return self.reply([])
         if self.path.endswith('/stories_snapshot_manifest_v2'):return self.reply({'ok':True,'stories':[],'story_scenes':[],'story_media':[],'story_collections':[]})
@@ -19,6 +20,7 @@ class Service(http.server.SimpleHTTPRequestHandler):
     def do_HEAD(self):return self.dispatch(True)
     def do_GET(self):return self.dispatch(False)
     def dispatch(self,head):
+        type(self).transport_requests+=1
         parsed=urlparse(self.path)
         if parsed.path=='/health':return self.reply({'ok':True},head)
         if not parsed.path.startswith('/api/rest/v1/'):
@@ -39,21 +41,55 @@ class Service(http.server.SimpleHTTPRequestHandler):
             finally:type(self).drained.set()
             return
         self.reply(rows)
+def static_boot_inventory(assets):
+    rows=json.loads((assets/'static-boot.json').read_text());result={}
+    for row in rows:
+        name=row['file']
+        if name!='index.html' and name!='fixture.js' and not re.fullmatch(r'assets/[A-Za-z0-9_-]+\.js',name):raise ValueError('invalid static file')
+        key='/offline-reopen.html' if name=='index.html' else '/'+name
+        if key in result or (assets/name).is_symlink():raise ValueError('duplicate or symlink static file')
+        body=(assets/name).read_bytes()
+        if hashlib.sha256(body).hexdigest()!=row['sha256']:raise ValueError('static hash mismatch')
+        result[key]=(body,'text/html' if name=='index.html' else 'text/javascript')
+    if '/offline-reopen.html' not in result or '/fixture.js' not in result:raise ValueError('missing static entry')
+    return result
+
+async def finish_launch(context,origin,offline,route,deny_socket,errors):
+    try:
+        if offline:await context.set_offline(True)
+        await context.route('**/*',route)
+        await context.route_web_socket('**/*',deny_socket)
+        page=await context.new_page();page.on('pageerror',lambda e:errors.append(str(e)))
+        await page.goto(origin+('/offline-reopen.html' if offline else ''))
+        await page.wait_for_function('window.ready===true')
+        return context,page
+    except BaseException as primary:
+        try:await context.close()
+        except BaseException:
+            primary.add_note("owned browser context cleanup incomplete")
+        raise
+
 async def run(directory,origin,counterfactual=False):
     async with async_playwright() as p:
         executable=os.environ.get('CHROMIUM_EXECUTABLE_PATH') or ('/usr/bin/chromium' if Path('/usr/bin/chromium').exists() else p.chromium.executable_path)
         external=[];errors=[];checks=[]
-        async def launch():
+        offline_attempts=[];static_boot=[];boot_files=static_boot_inventory(directory/'assets')
+        async def launch(offline=False):
             context=await p.chromium.launch_persistent_context(str(directory/'profile'),executable_path=executable,headless=True,service_workers='block',args=['--disable-background-networking'])
             async def route(r):
+                if offline:
+                    parsed=urlparse(r.request.url)
+                    if r.request.method=='GET' and not parsed.query and r.request.url==origin+parsed.path and parsed.path in boot_files:
+                        body,mime=boot_files[parsed.path];static_boot.append(parsed.path)
+                        await r.fulfill(status=200,content_type=mime,body=body);return
+                    offline_attempts.append(parsed.path if r.request.url.startswith(origin+'/') else 'external')
+                    if not r.request.url.startswith(origin+'/'):external.append('offline external request')
+                    await r.abort('internetdisconnected');return
                 if r.request.url.startswith(origin+'/'):await r.continue_()
                 else:external.append(r.request.url);await r.abort()
-            await context.route('**/*',route)
             async def deny_socket(socket):
                 external.append('blocked-websocket');await socket.close()
-            await context.route_web_socket('**/*',deny_socket)
-            page=await context.new_page();page.on('pageerror',lambda e:errors.append(str(e)));await page.goto(origin);await page.wait_for_function('window.ready===true')
-            return context,page
+            return await finish_launch(context,origin,offline,route,deny_socket,errors)
         context,page=await launch()
         try:
             assert await page.evaluate('runtime.local().title')=='baseline';checks.append('actual local store hydrated baseline')
@@ -129,8 +165,28 @@ async def run(directory,origin,counterfactual=False):
             checks.append('same page actual useOnline recovers; real SDK update retry activates exact new content and subsequent HTTP works without reload')
             await context.close();context,page=await launch()
             assert await page.evaluate('runtime.durable()')==before;assert await page.evaluate('runtime.local().title')=='reconnected';checks.append('orderly browser close/reopen same profile and origin retains content')
+            previous_boot=await page.evaluate('runtime.boot().nonce')
+            await context.close()
+            server_requests=Service.requests;server_transport=Service.transport_requests
+            context,page=await launch(offline=True)
+            await page.wait_for_function('navigator.onLine===false && window.observedOnline===false')
+            boot=await page.evaluate('runtime.boot()')
+            assert boot['nonce']!=previous_boot and boot['offlineBoot'] is True
+            assert boot['seedCalls']==0 and boot['applyCalls']==0
+            assert await page.evaluate('typeof window.sameContextToken')=='undefined'
+            assert await page.evaluate('runtime.durable()')==before
+            assert await page.evaluate('runtime.local()')=={'count':1500,'title':'reconnected'}
+            assert await page.evaluate('runtime.active()')=={'version':before['version'],'titles':['reconnected']}
+            assert await page.evaluate("fetch('/health').then(()=>false,()=>true)") is True
+            assert '/health' in offline_attempts and Service.requests==server_requests
+            assert Service.transport_requests==server_transport
+            assert set(offline_attempts)<= {'/health','/offline-snapshot.json','/favicon.ico'}
+            assert '/offline-reopen.html' in static_boot and '/fixture.js' in static_boot
+            assert len(static_boot)==len(set(static_boot)) and set(static_boot)<=set(boot_files)
+            assert not any(path.startswith('/api/') for path in offline_attempts)
+            checks.append('fresh offline JS context hydrates exact persisted updated snapshot without seed/apply; only static test boot fulfilled')
             assert not external and not errors
-            print(json.dumps({'result':'PASS_BROWSER_ONLY','browser':(await (await context.new_cdp_session(page)).send('Browser.getVersion'))['product'],'checks':checks,'externalRequests':len(external),'pageErrors':len(errors),'android':'NOT_TESTED','forceStop':'NOT_TESTED'}))
+            print(json.dumps({'result':'PASS_BROWSER_ONLY','browser':(await (await context.new_cdp_session(page)).send('Browser.getVersion'))['product'],'checks':checks,'offlineStaticBootRequests':len(static_boot),'offlineDeniedRequests':len(offline_attempts),'offlineBundledDenied':offline_attempts.count('/offline-snapshot.json'),'offlineServerContentRequests':Service.requests-server_requests,'offlineServerAllRequests':Service.transport_requests-server_transport,'externalRequests':len(external),'pageErrors':len(errors),'android':'NOT_TESTED','forceStop':'NOT_TESTED'}))
         finally:Service.release.set();await context.close()
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('--counterfactual-no-query-abort',action='store_true');args=parser.parse_args()

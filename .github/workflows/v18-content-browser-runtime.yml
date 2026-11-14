@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/v18-content-browser-runtime.yml'
       - 'tests/offline/browser/*content-runtime*'
+      - 'tests/offline/outbox-content-offline-startup.test.ts'
       - 'src/lib/offline-*'
       - 'src/lib/local-first-store.ts'
       - 'src/lib/stories/content-identity*'
@@ -32,11 +33,14 @@ jobs:
           python-version: '3.12'
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Verify fail-closed build target guards
-        run: node --test tests/offline/browser/test-content-runtime-build.mjs
+        run: |
+          node --test tests/offline/browser/test-content-runtime-build.mjs
+          npx vitest run --config vitest.outbox.config.ts tests/offline/outbox-content-offline-startup.test.ts
       - name: Install official pinned browser tooling
         run: |
           python -m pip install playwright==1.62.0
           python -m playwright install --with-deps chromium
+      - run: python tests/offline/browser/test-content-runtime-offline.py
       - name: Actual browser, local server and durable content lifecycle
         shell: bash
         run: |
