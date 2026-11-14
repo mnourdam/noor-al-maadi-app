@@ -6,6 +6,7 @@ const output=process.argv[2];
 if(!output || !path.isAbsolute(output) || !path.resolve(output).startsWith('/tmp/irth-reread-shell-'))throw Error('isolated temporary output required');
 const root=process.cwd();
 const stubs=new Map([
+ [path.resolve('src/lib/profile.tsx'),'export const useProfileQuotaExceeded=()=>false;'],
  ['@tanstack/react-router',`import React from 'react';export const Link=({to,children,...props})=>React.createElement('a',{...props,href:to},children);export const useRouterState=({select})=>select({location:{pathname:'/synthetic'}});`],
  [path.resolve('src/components/HUD.tsx'),'export const HUD=()=>null;'],
  [path.resolve('src/components/FriendNotificationsPoller.tsx'),'export const FriendNotificationsPoller=()=>null;'],

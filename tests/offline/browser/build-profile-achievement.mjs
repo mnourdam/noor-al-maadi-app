@@ -29,7 +29,7 @@ export async function buildFixture(output) {
     `import React from 'react'; export const createFileRoute=()=>options=>({options,useSearch:()=>({tab:'achievements'}),useNavigate:()=>()=>{}});export const useNavigate=()=>()=>{};export const Link=({to,children,...props})=>React.createElement('a',{...props,href:to},children);export const useRouterState=({select})=>select({location:{pathname:'/profile'}});`,
   );
   add("src/integrations/supabase/client.ts", boundaryImport + "export {supabase};");
-  add("src/lib/profile.tsx", boundaryImport + "export {useProfile};");
+  add("src/lib/profile.tsx", boundaryImport + "export {useProfile};export const useProfileQuotaExceeded=()=>false;");
   add("src/lib/account.tsx", boundaryImport + "export {useAccount};");
   add(
     "src/lib/achievements/v2/claim.functions.ts",
