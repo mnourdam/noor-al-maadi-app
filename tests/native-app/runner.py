@@ -251,7 +251,9 @@ def fixed_value(value,allowed):
     return value if value in allowed else ('empty' if not value else 'other')
 
 class Device:
-    def __init__(self,sdk,root):
+    def __init__(self,sdk,root,guest_cores=None):
+        if guest_cores is not None and (type(guest_cores) is not int or guest_cores!=2):raise Failure('check_schema')
+        self.guest_cores=guest_cores
         self.sdk=sdk; self.root=root; self.emulator=None;self.created=False;self.serial='emulator-5580';self.actions=[];self.output=EmulatorOutput();self.boot_observations={'sys_boot_completed':'not_observed','poll_command_failure':False,'poll_timeout':False}
     def adb(self,*args,timeout=15):return command([self.sdk/'platform-tools/adb','-s',self.serial,*args],timeout)
     def provision(self):
@@ -277,7 +279,7 @@ class Device:
         self.root.mkdir(mode=0o700);self.created=True
         os.environ['ANDROID_AVD_HOME']=str(self.root)
         command([self.sdk/'cmdline-tools/latest/bin/avdmanager','create','avd','-n','irth-full-acceptance','-k',IMAGE],60,input=b'no\n')
-        self.emulator=subprocess.Popen([str(self.sdk/'emulator/emulator'),'-avd','irth-full-acceptance','-port','5580','-accel','on','-no-window','-no-audio','-no-snapshot','-no-boot-anim','-gpu','swiftshader_indirect'],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+        self.emulator=subprocess.Popen([str(self.sdk/'emulator/emulator'),'-avd','irth-full-acceptance','-port','5580','-accel','on','-no-window','-no-audio','-no-snapshot','-no-boot-anim','-gpu','swiftshader_indirect']+(['-cores','2'] if self.guest_cores==2 else []),stdout=subprocess.PIPE,stderr=subprocess.PIPE)
         self.output.start(self.emulator.stdout,self.emulator.stderr)
         self.await_boot()
     def await_boot(self):
