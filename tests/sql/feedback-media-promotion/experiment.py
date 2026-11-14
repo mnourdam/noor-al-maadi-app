@@ -219,33 +219,50 @@ class Experiment(base.Experiment):
   self.check(self.object_absent(self.storage(self.C,second['key'],self.fields['service'])),'cleanup first recognized canonical absence')
   self.check(self.sql(f"SELECT count(*) FROM storage.objects WHERE bucket_id='{self.C}' AND name='{second['key']}';")=='0','cleanup first canonical metadata absent')
   self.check(self.storage(self.C,first['key'],owner[1])==(200,first_bytes),'cleanup first unrelated published canonical preserved')
-  browser_case=attempt();self.check(w.process(self,browser_case) is True,'browser actual worker attested')
-  browser_mid=str(uuid.uuid4());self.check(self.finalize(owner,browser_case,browser_mid)==(200,browser_mid),'browser canonical publication')
-  status,canonical=self.storage(self.C,browser_case['key'],self.fields['service']);b.require(status==200,'browser canonical source')
-  dimensions=json.loads(base.subprocess.run(['node','--input-type=module','-e',"import sharp from 'sharp';const chunks=[];for await(const c of process.stdin)chunks.push(c);const m=await sharp(Buffer.concat(chunks)).metadata();process.stdout.write(JSON.stringify([m.width,m.height]));"],input=canonical,cwd=base.ROOT,env={'PATH':os.environ.get('PATH',''),'LANG':'C'},capture_output=True,check=True,timeout=8).stdout)
-  browser_module=module('canonical_browser',Path(__file__).with_name('browser.py'))
-  sender_issue=str(uuid.uuid4());self.sql(f"INSERT INTO public.feedback_issues(id,reporter_id) VALUES('{sender_issue}','{owner[0]}');")
-  sent={}
-  def sender_process(key):
-   b.require(len(key.split('/'))==2 and key.split('/')[0]==owner[0] and str(uuid.UUID(key.split('/')[1]))==key.split('/')[1],'sender key')
-   row=json.loads(self.sql(f"SELECT jsonb_build_object('rid',a.reservation_id,'aid',a.id,'token',a.token,'owner',a.owner_id,'issue',a.thread_id,'internal',a.internal,'input',a.input_digest,'revision',a.validator,'source',i.source_key,'source_id',a.id,'key',a.object_key,'expected_bytes',q.bytes,'mid',q.mid,'body',q.body) FROM promotion_model.client_request q JOIN promotion_model.attempt a ON a.id=q.image_id JOIN promotion_model.input_intent i ON i.aid=a.id WHERE q.issue_id='{sender_issue}' AND q.owner_id='{owner[0]}' AND i.source_key='{key}';"))
-   b.require(row['body']=='canonical browser send' and row['issue']==sender_issue and row['internal'] is False,'sender private binding')
-   status,uploaded=self.storage(self.Q,key,self.fields['service']);self.check(status==200 and len(uploaded)==row['expected_bytes'] and hashlib.sha256(uploaded).hexdigest()==row['input'],'browser terminal upload observed and exact service bytes')
-   self.check(self.worker('input_terminal',row) is True,'testbench only sender terminal evidence');self.check(w.process(self,row) is True,'outside client worker attests sender output')
-   status,out=self.storage(self.C,row['key'],self.fields['service']);b.require(status==200,'sender canonical positive')
-   dims=json.loads(base.subprocess.run(['node','--input-type=module','-e',"import sharp from 'sharp';const chunks=[];for await(const c of process.stdin)chunks.push(c);const m=await sharp(Buffer.concat(chunks)).metadata();process.stdout.write(JSON.stringify([m.width,m.height]));"],input=out,cwd=base.ROOT,env={'PATH':os.environ.get('PATH',''),'LANG':'C'},capture_output=True,check=True,timeout=8).stdout)
-   sent.update(row);return {'digest':hashlib.sha256(out).hexdigest(),'dimensions':dims}
-  def sender_verify():
-   self.check(self.sql(f"SELECT count(*) FROM promotion_model.publication WHERE id='{sent['mid']}' AND attempt_id='{sent['aid']}';")=='1','sender retry one exact publication')
-   payload={'p_message_id':sent['mid'],'p_issue_id':sender_issue,'p_body':sent['body'],'p_image_id':sent['aid'],'p_digest':sent['input'],'p_bytes':sent['expected_bytes']}
-   for actor in (other,staff):
-    for rpc in ('reserve_canonical_feedback_image_v1','finalize_canonical_feedback_image_v1'):
-     status,data=self.decoded(self.request('/rest/v1/rpc/'+rpc,actor[1],payload,'POST'));self.check(status==403 and isinstance(data,dict) and data.get('code')=='42501','unsupported canonical sender actor denied')
-   self.check_denied(self.decoded(self.request('/rest/v1/rpc/finalize_canonical_feedback_image_v1',owner[1],dict(payload,p_body='changed'),'POST')),'sender changed payload denied')
-   self.check(self.decoded(self.request('/rest/v1/rpc/finalize_canonical_feedback_image_v1',owner[1],payload,'POST'))==(200,{'status':'published','message_id':sent['mid']}),'sender exact replay idempotent')
-   self.check(self.sql(f"SELECT count(*) FROM promotion_model.publication WHERE id='{sent['mid']}' AND attempt_id='{sent['aid']}';")=='1','sender publication unchanged after actor denials and replay')
-  browser_module.run(self,owner,credentials[owner[0]],browser_mid,browser_case,hashlib.sha256(canonical).hexdigest(),dimensions,{'issue':sender_issue,'bytes':raw,'process':sender_process,'verify':sender_verify})
-  self.check(self.report['canonical_browser']['result']=='PASS_ACTUAL_COMPONENT_DISPOSABLE_STORAGE_ONLY','actual component click decode revoke retired denial')
+  self.report['canonical_sender_browsers']=[]
+  for sender_actor,sender_internal in ((owner,False),(staff,False),(staff,True)):
+   browser_case=attempt();self.check(w.process(self,browser_case) is True,'browser actual worker attested')
+   browser_mid=str(uuid.uuid4());self.check(self.finalize(owner,browser_case,browser_mid)==(200,browser_mid),'browser canonical publication')
+   status,canonical=self.storage(self.C,browser_case['key'],self.fields['service']);b.require(status==200,'browser canonical source')
+   dimensions=json.loads(base.subprocess.run(['node','--input-type=module','-e',"import sharp from 'sharp';const chunks=[];for await(const c of process.stdin)chunks.push(c);const m=await sharp(Buffer.concat(chunks)).metadata();process.stdout.write(JSON.stringify([m.width,m.height]));"],input=canonical,cwd=base.ROOT,env={'PATH':os.environ.get('PATH',''),'LANG':'C'},capture_output=True,check=True,timeout=8).stdout)
+   browser_module=module('canonical_browser',Path(__file__).with_name('browser.py'))
+   sender_issue=str(uuid.uuid4());self.sql(f"INSERT INTO public.feedback_issues(id,reporter_id) VALUES('{sender_issue}','{owner[0]}');")
+   sent={}
+   def sender_reserved(key):
+    for wrong in (other,staff if sender_actor==owner else owner):self.check(base.permission(self.storage(self.Q,key,wrong[1],'POST',raw)),'wrong uploader quarantine INSERT denied before positive upload')
+   def sender_process(key):
+    b.require(len(key.split('/'))==2 and key.split('/')[0]==sender_actor[0] and str(uuid.UUID(key.split('/')[1]))==key.split('/')[1],'sender key')
+    row=json.loads(self.sql(f"SELECT jsonb_build_object('rid',a.reservation_id,'aid',a.id,'token',a.token,'owner',a.owner_id,'uploader',a.uploader_id,'issue',a.thread_id,'internal',a.internal,'input',a.input_digest,'revision',a.validator,'source',i.source_key,'source_id',a.id,'key',a.object_key,'expected_bytes',q.bytes,'mid',q.mid,'body',q.body) FROM promotion_model.client_request q JOIN promotion_model.attempt a ON a.id=q.image_id JOIN promotion_model.input_intent i ON i.aid=a.id WHERE q.issue_id='{sender_issue}' AND q.owner_id='{owner[0]}' AND q.uploader_id='{sender_actor[0]}' AND i.source_key='{key}';"))
+    b.require(row['body']=='canonical browser send' and row['issue']==sender_issue and row['internal'] is sender_internal and row['uploader']==sender_actor[0] and row['owner']==owner[0],'sender private binding')
+    status,uploaded=self.storage(self.Q,key,self.fields['service']);self.check(status==200 and len(uploaded)==row['expected_bytes'] and hashlib.sha256(uploaded).hexdigest()==row['input'],'browser terminal upload observed and exact service bytes')
+    self.check(self.worker('input_terminal',row) is True,'testbench only sender terminal evidence');self.check(w.process(self,row) is True,'outside client worker attests sender output')
+    status,out=self.storage(self.C,row['key'],self.fields['service']);b.require(status==200,'sender canonical positive')
+    dims=json.loads(base.subprocess.run(['node','--input-type=module','-e',"import sharp from 'sharp';const chunks=[];for await(const c of process.stdin)chunks.push(c);const m=await sharp(Buffer.concat(chunks)).metadata();process.stdout.write(JSON.stringify([m.width,m.height]));"],input=out,cwd=base.ROOT,env={'PATH':os.environ.get('PATH',''),'LANG':'C'},capture_output=True,check=True,timeout=8).stdout)
+    sent.update(row);return {'key':row['key'],'digest':hashlib.sha256(out).hexdigest(),'dimensions':dims}
+   def sender_verify():
+    self.check(self.sql(f"SELECT count(*) FROM promotion_model.publication WHERE id='{sent['mid']}' AND attempt_id='{sent['aid']}';")=='1','sender retry one exact publication')
+    payload={'p_message_id':sent['mid'],'p_issue_id':sender_issue,'p_body':sent['body'],'p_image_id':sent['aid'],'p_digest':sent['input'],'p_bytes':sent['expected_bytes'],'p_internal':sender_internal}
+    for actor in (other,staff if sender_actor==owner else owner):
+     for rpc in ('reserve_canonical_feedback_image_v1','finalize_canonical_feedback_image_v1'):
+      status,data=self.decoded(self.request('/rest/v1/rpc/'+rpc,actor[1],payload,'POST'));self.check(status==403 and isinstance(data,dict) and data.get('code')=='42501','unsupported canonical sender actor denied')
+    self.check_denied(self.decoded(self.request('/rest/v1/rpc/finalize_canonical_feedback_image_v1',sender_actor[1],dict(payload,p_body='changed'),'POST')),'sender changed payload denied')
+    self.check(self.decoded(self.request('/rest/v1/rpc/finalize_canonical_feedback_image_v1',sender_actor[1],payload,'POST'))==(200,{'status':'published','message_id':sent['mid']}),'sender exact replay idempotent')
+    self.check(self.sql(f"SELECT count(*) FROM promotion_model.publication WHERE id='{sent['mid']}' AND attempt_id='{sent['aid']}';")=='1','sender publication unchanged after actor denials and replay')
+    self.check_denied(self.decoded(self.request('/rest/v1/rpc/finalize_canonical_feedback_image_v1',sender_actor[1],dict(payload,p_internal=not sender_internal),'POST')),'sender internal replay change denied')
+    status,out=self.storage(self.C,sent['key'],self.fields['service']);self.check(status==200,'sender service byte positive')
+    self.check(self.storage(self.C,sent['key'],staff[1])==(200,out),'staff reads exact canonical sender bytes')
+    if sender_internal:self.check(self.object_absent(self.storage(self.C,sent['key'],owner[1])),'internal sender recipient denied')
+    else:self.check(self.storage(self.C,sent['key'],owner[1])==(200,out),'public sender recipient exact bytes')
+    self.check(self.object_absent(self.storage(self.C,sent['key'],other[1])),'other recipient sender denied')
+    if sender_actor==staff:
+     self.sql(f"DELETE FROM public.user_roles WHERE user_id='{staff[0]}';")
+     try:
+      status,data=self.decoded(self.request('/rest/v1/rpc/finalize_canonical_feedback_image_v1',staff[1],payload,'POST'));self.check(status==403 and isinstance(data,dict) and data.get('code')=='42501','staff role retirement denies sender retry')
+     finally:self.sql(f"INSERT INTO public.user_roles VALUES('{staff[0]}','fixture_staff');")
+
+   browser_module.run(self,sender_actor,credentials[sender_actor[0]],browser_mid,browser_case,hashlib.sha256(canonical).hexdigest(),dimensions,{'issue':sender_issue,'staff':sender_actor==staff,'internal':sender_internal,'recipient':owner[0],'bytes':raw,'reserved':sender_reserved,'process':sender_process,'verify':sender_verify})
+   self.check(self.report['canonical_browser']['result']=='PASS_ACTUAL_COMPONENT_DISPOSABLE_STORAGE_ONLY','actual component click decode revoke retired denial')
+   self.report['canonical_sender_browsers'].append(dict(self.report['canonical_browser'],staff=sender_actor==staff,internal=sender_internal))
   self.report['input_terminality']='Explicit harness-observed terminal PUT plus exact service read; not a production writer/lease guarantee'
   self.report['result']='LOCAL STACK PASS; SYNTHETIC WORKER PUBLICATION ONLY; ACTIVATION BLOCKED'
 if __name__=='__main__':

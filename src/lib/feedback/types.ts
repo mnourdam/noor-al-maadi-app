@@ -54,6 +54,8 @@ export interface FeedbackMessage {
   body: string;
   is_internal: boolean;
   attachments: unknown[];
+  /** Explicit canonical-v1 server field, dormant until authorized API deployment. */
+  canonical_attachments_v1?: unknown[];
   created_at: string;
 }
 

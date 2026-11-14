@@ -1,8 +1,8 @@
 -- Disposable transaction model ONLY. Not a migration, production API or ACL design.
 CREATE SCHEMA promotion_model;
 SET search_path=promotion_model;
-CREATE TABLE reservation(id uuid PRIMARY KEY, owner_id uuid NOT NULL, thread_id uuid NOT NULL, internal boolean NOT NULL, generation bigint NOT NULL DEFAULT 0, active boolean NOT NULL DEFAULT true, accepted uuid);
-CREATE TABLE attempt(id uuid PRIMARY KEY, reservation_id uuid NOT NULL REFERENCES reservation, generation bigint NOT NULL, token uuid UNIQUE NOT NULL, owner_id uuid NOT NULL, thread_id uuid NOT NULL, internal boolean NOT NULL, object_key text UNIQUE NOT NULL, input_digest text NOT NULL CHECK(length(input_digest)=64), validator text NOT NULL, state text NOT NULL CHECK(state IN('PREPARED','WRITING','TERMINAL')), put_success boolean, output_digest text, cleanup_due boolean NOT NULL DEFAULT true, cleaning boolean NOT NULL DEFAULT false, removal_observed boolean NOT NULL DEFAULT false);
+CREATE TABLE reservation(id uuid PRIMARY KEY, owner_id uuid NOT NULL, uploader_id uuid, thread_id uuid NOT NULL, internal boolean NOT NULL, generation bigint NOT NULL DEFAULT 0, active boolean NOT NULL DEFAULT true, accepted uuid);
+CREATE TABLE attempt(id uuid PRIMARY KEY, reservation_id uuid NOT NULL REFERENCES reservation, generation bigint NOT NULL, token uuid UNIQUE NOT NULL, owner_id uuid NOT NULL, uploader_id uuid, thread_id uuid NOT NULL, internal boolean NOT NULL, object_key text UNIQUE NOT NULL, input_digest text NOT NULL CHECK(length(input_digest)=64), validator text NOT NULL, state text NOT NULL CHECK(state IN('PREPARED','WRITING','TERMINAL')), put_success boolean, output_digest text, cleanup_due boolean NOT NULL DEFAULT true, cleaning boolean NOT NULL DEFAULT false, removal_observed boolean NOT NULL DEFAULT false);
 CREATE FUNCTION claim(rid uuid,aid uuid,tok uuid,digest text,revision text) RETURNS text LANGUAGE plpgsql AS $$
 DECLARE r reservation; path text;
 BEGIN
@@ -10,7 +10,7 @@ BEGIN
  IF NOT FOUND OR NOT r.active OR r.accepted IS NOT NULL THEN RAISE EXCEPTION 'claim_denied'; END IF;
  path:=r.owner_id::text||'/'||aid::text;
  UPDATE reservation SET generation=generation+1 WHERE id=rid;
- INSERT INTO attempt(id,reservation_id,generation,token,owner_id,thread_id,internal,object_key,input_digest,validator,state,put_success,output_digest,cleanup_due,cleaning,removal_observed) VALUES(aid,rid,r.generation+1,tok,r.owner_id,r.thread_id,r.internal,path,digest,revision,'PREPARED',NULL,NULL,true,false,false);
+ INSERT INTO attempt(id,reservation_id,generation,token,owner_id,uploader_id,thread_id,internal,object_key,input_digest,validator,state,put_success,output_digest,cleanup_due,cleaning,removal_observed) VALUES(aid,rid,r.generation+1,tok,r.owner_id,coalesce(r.uploader_id,r.owner_id),r.thread_id,r.internal,path,digest,revision,'PREPARED',NULL,NULL,true,false,false);
  RETURN path;
 END $$;
 CREATE FUNCTION start_write(aid uuid,tok uuid) RETURNS boolean LANGUAGE plpgsql AS $$
@@ -77,20 +77,20 @@ CREATE TABLE promotion_model.publication(id uuid PRIMARY KEY, attempt_id uuid UN
 -- Public denial surface exposes no rows and grants no mutations.
 CREATE VIEW public.fixture_promotion_receipts AS SELECT id,output_digest FROM promotion_model.attempt;
 REVOKE ALL ON public.fixture_promotion_receipts FROM PUBLIC,anon,authenticated;
-CREATE TABLE promotion_model.input_intent(aid uuid PRIMARY KEY REFERENCES promotion_model.attempt, reservation_id uuid NOT NULL, generation bigint NOT NULL, owner_id uuid NOT NULL, source_key text UNIQUE NOT NULL, digest text NOT NULL, writer_state text NOT NULL CHECK(writer_state IN('WRITING','TERMINAL')), cleaning boolean NOT NULL DEFAULT false, positive_seen boolean NOT NULL DEFAULT false, removal_observed boolean NOT NULL DEFAULT false, decode_rejected boolean NOT NULL DEFAULT false);
+CREATE TABLE promotion_model.input_intent(aid uuid PRIMARY KEY REFERENCES promotion_model.attempt, reservation_id uuid NOT NULL, generation bigint NOT NULL, owner_id uuid NOT NULL, uploader_id uuid NOT NULL, source_key text UNIQUE NOT NULL, digest text NOT NULL, writer_state text NOT NULL CHECK(writer_state IN('WRITING','TERMINAL')), cleaning boolean NOT NULL DEFAULT false, positive_seen boolean NOT NULL DEFAULT false, removal_observed boolean NOT NULL DEFAULT false, decode_rejected boolean NOT NULL DEFAULT false);
 CREATE FUNCTION promotion_model.input_control(op text,p jsonb) RETURNS boolean LANGUAGE plpgsql SET search_path=promotion_model,pg_temp AS $$
 DECLARE a promotion_model.attempt;r promotion_model.reservation;i promotion_model.input_intent;
 BEGIN
  SELECT * INTO a FROM promotion_model.attempt WHERE id=(p->>'aid')::uuid;
  SELECT * INTO r FROM promotion_model.reservation WHERE id=a.reservation_id FOR UPDATE;
  SELECT * INTO a FROM promotion_model.attempt WHERE id=(p->>'aid')::uuid FOR UPDATE;
- IF a.id IS NULL OR a.token IS DISTINCT FROM (p->>'token')::uuid OR a.owner_id IS DISTINCT FROM (p->>'owner')::uuid OR a.thread_id IS DISTINCT FROM (p->>'issue')::uuid OR a.internal IS DISTINCT FROM (p->>'internal')::boolean OR a.input_digest IS DISTINCT FROM p->>'input' OR a.validator IS DISTINCT FROM p->>'revision' THEN RETURN false; END IF;
+ IF a.id IS NULL OR a.uploader_id IS DISTINCT FROM coalesce(r.uploader_id,r.owner_id) OR a.uploader_id IS DISTINCT FROM coalesce((p->>'uploader')::uuid,a.owner_id) OR a.token IS DISTINCT FROM (p->>'token')::uuid OR a.owner_id IS DISTINCT FROM (p->>'owner')::uuid OR a.thread_id IS DISTINCT FROM (p->>'issue')::uuid OR a.internal IS DISTINCT FROM (p->>'internal')::boolean OR a.input_digest IS DISTINCT FROM p->>'input' OR a.validator IS DISTINCT FROM p->>'revision' THEN RETURN false; END IF;
  SELECT * INTO i FROM promotion_model.input_intent WHERE aid=a.id FOR UPDATE;
  IF op='input_begin' THEN
-  IF i.aid IS NOT NULL OR NOT r.active OR r.generation<>a.generation OR r.accepted IS NOT NULL OR p->>'source' IS DISTINCT FROM a.owner_id::text||'/'||(p->>'source_id')::uuid::text THEN RETURN false; END IF;
-  INSERT INTO promotion_model.input_intent(aid,reservation_id,generation,owner_id,source_key,digest,writer_state) VALUES(a.id,r.id,a.generation,a.owner_id,p->>'source',a.input_digest,'WRITING'); RETURN true;
+  IF i.aid IS NOT NULL OR NOT r.active OR r.generation<>a.generation OR r.accepted IS NOT NULL OR p->>'source' IS DISTINCT FROM a.uploader_id::text||'/'||(p->>'source_id')::uuid::text THEN RETURN false; END IF;
+  INSERT INTO promotion_model.input_intent(aid,reservation_id,generation,owner_id,uploader_id,source_key,digest,writer_state) VALUES(a.id,r.id,a.generation,a.owner_id,a.uploader_id,p->>'source',a.input_digest,'WRITING'); RETURN true;
  END IF;
- IF i.aid IS NULL OR i.source_key IS DISTINCT FROM p->>'source' OR i.digest IS DISTINCT FROM p->>'input' THEN RETURN false; END IF;
+ IF i.aid IS NULL OR i.owner_id IS DISTINCT FROM a.owner_id OR i.uploader_id IS DISTINCT FROM a.uploader_id OR i.source_key IS DISTINCT FROM p->>'source' OR i.digest IS DISTINCT FROM p->>'input' THEN RETURN false; END IF;
  CASE op
  WHEN 'input_terminal' THEN
   IF i.cleaning OR i.writer_state<>'WRITING' THEN RETURN false; END IF;
@@ -114,7 +114,7 @@ BEGIN
  END CASE;
 END $$;
 CREATE FUNCTION public.fixture_quarantine_insert(key text) RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=promotion_model,pg_temp AS $$
- SELECT EXISTS(SELECT 1 FROM promotion_model.input_intent i JOIN promotion_model.attempt a ON a.id=i.aid JOIN promotion_model.reservation r ON r.id=i.reservation_id WHERE i.source_key=key AND i.owner_id=auth.uid() AND r.active AND r.generation=i.generation AND a.generation=i.generation AND NOT i.cleaning AND i.writer_state='WRITING')
+ SELECT EXISTS(SELECT 1 FROM promotion_model.input_intent i JOIN promotion_model.attempt a ON a.id=i.aid JOIN promotion_model.reservation r ON r.id=i.reservation_id WHERE i.source_key=key AND i.uploader_id=auth.uid() AND (i.owner_id=auth.uid() OR public.is_feedback_staff(auth.uid())) AND (NOT a.internal OR public.is_feedback_staff(auth.uid())) AND a.uploader_id=i.uploader_id AND a.owner_id=i.owner_id AND r.active AND r.generation=i.generation AND a.generation=i.generation AND NOT i.cleaning AND i.writer_state='WRITING')
 $$;
 DROP POLICY fixture_decode_insert ON storage.objects;
 CREATE POLICY fixture_bound_quarantine_insert ON storage.objects FOR INSERT TO authenticated WITH CHECK(bucket_id='feedback-images-quarantine' AND public.fixture_quarantine_insert(name));
@@ -134,9 +134,12 @@ BEGIN
  ELSE RAISE EXCEPTION 'unknown_operation';
  END CASE;
 END $$;
+-- Sender extension replaces this private guard; checked before both replay and insert.
+CREATE FUNCTION promotion_model.client_publication_allowed(mid uuid,aid uuid,body text,inside boolean) RETURNS boolean LANGUAGE sql STABLE AS $$ SELECT true $$;
 CREATE FUNCTION public.fixture_finalize(mid uuid,aid uuid,body text,inside boolean) RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path=promotion_model,pg_temp AS $$
 DECLARE a promotion_model.attempt; r promotion_model.reservation; previous promotion_model.publication; u uuid:=auth.uid();
 BEGIN
+ IF NOT promotion_model.client_publication_allowed(mid,aid,body,inside) THEN RAISE EXCEPTION 'client_publication_binding' USING ERRCODE='42501';END IF;
  IF u IS NULL OR body IS NULL OR length(body)>5000 OR inside IS NULL THEN RAISE EXCEPTION 'invalid'; END IF;
  SELECT * INTO a FROM promotion_model.attempt WHERE id=aid;
  SELECT * INTO r FROM promotion_model.reservation WHERE id=a.reservation_id FOR UPDATE;

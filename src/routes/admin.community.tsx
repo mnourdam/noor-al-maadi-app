@@ -1,6 +1,7 @@
 import { onOwnerChange } from "@/lib/identity/owner";
 import { currentImageScope } from "@/lib/feedback/images";
-import { FeedbackImages } from "@/components/feedback/FeedbackImages";
+import { FeedbackMessageImages } from "@/components/feedback/FeedbackMessageImages";
+import {feedbackAttachmentProtocol} from "@/lib/feedback/attachment-protocol";
 import { FeedbackReplyComposer } from "@/components/feedback/FeedbackReplyComposer";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
@@ -455,7 +456,7 @@ function AdminIssueDrawerContent({ id, onClose }: { id: string; onClose: () => v
                       <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-100">
                         {m.body}
                       </p>
-                      <FeedbackImages attachments={m.attachments ?? []} />
+                      <FeedbackMessageImages message={m} />
                     </div>
                   </li>
                 );
@@ -463,7 +464,7 @@ function AdminIssueDrawerContent({ id, onClose }: { id: string; onClose: () => v
             </ul>
 
             <div className="border-t border-slate-800 bg-slate-900/60 p-3">
-              <FeedbackReplyComposer issueId={id} staff onSent={load} onTyping={markTyping} />
+              <FeedbackReplyComposer imageProtocol={feedbackAttachmentProtocol} issueId={id} staff onSent={load} onTyping={markTyping} />
             </div>
           </div>
         )}

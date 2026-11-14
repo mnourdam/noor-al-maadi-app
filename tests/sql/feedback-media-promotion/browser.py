@@ -33,12 +33,12 @@ def run(h,actor,credentials,mid,a,digest,dimensions,sender=None):
      super().do_GET()
    server=http.server.ThreadingHTTPServer(('127.0.0.1',0),functools.partial(Handler,directory=str(assets)));threading.Thread(target=server.serve_forever,daemon=True).start();origin=f'http://127.0.0.1:{server.server_port}'
    report['stage']='browser';pw=sync_playwright().start();browser=pw.chromium.launch(headless=True,env=env);version=browser.version;h.require(bool(re.fullmatch(r'[0-9]+(?:\.[0-9]+){1,3}',version)),'browser version shape');report['chromium_version']=version;context=browser.new_context(service_workers='block');context.set_default_timeout(15000)
-   sender_key=None;sender_uploads=0
+   sender_key=None;sender_canonical_key=None;sender_uploads=0
    def route(r):
     nonlocal sender_uploads
     u=urlsplit(r.request.url);sender_route=False
     if sender is not None and u.scheme+'://'+u.netloc==h.fields['api'] and not u.query and not u.fragment and not u.username and not u.password:
-     sender_route=(sender_key is not None and ((u.path=='/storage/v1/object/feedback-images-quarantine/'+sender_key and r.request.method in ('POST','OPTIONS')) or (u.path=='/storage/v1/object/feedback-images-canonical/'+sender_key and r.request.method in ('GET','OPTIONS'))))
+     sender_route=(sender_key is not None and ((u.path=='/storage/v1/object/feedback-images-quarantine/'+sender_key and r.request.method in ('POST','OPTIONS')) or (sender_canonical_key is not None and u.path=='/storage/v1/object/feedback-images-canonical/'+sender_canonical_key and r.request.method in ('GET','OPTIONS'))))
     if not sender_route and not allowed(r.request.url,r.request.method,origin,files,h.fields['api'],a['key']):report['blocked']+=1;r.abort();return
     if r.request.redirected_from is not None:report['blocked']+=1;r.abort();return
     if urlsplit(r.request.url).path.startswith('/storage/') and r.request.method=='GET':report['storage_gets']+=1
@@ -58,20 +58,25 @@ def run(h,actor,credentials,mid,a,digest,dimensions,sender=None):
    observed=response.value;h.require(denied(observed.status,observed.json()),'unrecognized retired Storage result');report['retired_denials']=1
    page.get_by_role('button',name='تعذر التحميل؛ حاول مجدداً').wait_for(state='visible');h.require(page.get_by_role('img').count()==0 and page.evaluate('canonicalBrowser.evidence().created')==1 and report['storage_gets']==2,'retired image leak')
    if sender is not None:
-    report['stage']='composer_pending';page.evaluate('(issue)=>canonicalBrowser.showSender(issue)',sender['issue'])
+    report['stage']='composer_pending';page.evaluate('(p)=>canonicalBrowser.showSender(p)',{'issue':sender['issue'],'staff':sender.get('staff',False)})
     page.get_by_label('نص الرد').fill('canonical browser send')
+    if sender.get('internal',False):page.get_by_role('checkbox').check()
     # File preparation and upload are actual product code; exact key is admitted only from the validated reserve RPC response.
     def reservation(response):
      nonlocal sender_key
      if urlsplit(response.url).path=='/rest/v1/rpc/reserve_canonical_feedback_image_v1' and response.request.method=='POST' and response.status==200:
       value=response.json();candidate=value.get('path') if isinstance(value,dict) else None
-      if isinstance(candidate,str) and re.fullmatch(actor[0]+r'/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}',candidate) and value.get('image_id')==candidate.split('/')[1] and value.get('version')==1 and value.get('status') in ('upload','ready'):sender_key=candidate
+      if isinstance(candidate,str) and re.fullmatch(actor[0]+r'/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}',candidate) and value.get('image_id')==candidate.split('/')[1] and value.get('version')==1 and value.get('status') in ('upload','ready'):
+       if sender_key is None:sender['reserved'](candidate)
+       sender_key=candidate
     page.on('response',reservation)
     page.get_by_label('إرفاق صور بالمحادثة').set_input_files({'name':'synthetic.png','mimeType':'image/png','buffer':sender['bytes']})
     page.get_by_label('إزالة الصورة 1').wait_for(state='visible');page.get_by_role('button',name='إرسال الرد',exact=True).click()
     page.get_by_role('alert').filter(has_text='قيد المعالجة الآمنة').wait_for(state='visible');h.require(page.evaluate('canonicalBrowser.sent()')==0,'pending falsely acknowledged')
     h.require(page.get_by_label('نص الرد').input_value()=='canonical browser send' and page.get_by_label('نص الرد').is_disabled(),'pending draft lost');h.require(sender_key is not None and sender_uploads==1,'sender upload key/count')
     ready=sender['process'](sender_key)
+    sender_canonical_key=ready['key']
+    h.require(sender_canonical_key==sender['recipient']+'/'+sender_key.split('/')[1],'canonical recipient key')
     report['stage']='composer_retry';page.get_by_role('button',name='إعادة محاولة الإرسال',exact=True).click();page.wait_for_function('canonicalBrowser.sent()===1')
     page.get_by_role('button',name='عرض الصورة المرفقة',exact=True).wait_for(state='visible');h.require(page.get_by_label('نص الرد').input_value()=='','sent draft not cleared')
     page.get_by_role('button',name='عرض الصورة المرفقة',exact=True).click()

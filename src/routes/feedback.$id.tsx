@@ -1,6 +1,7 @@
 import { onOwnerChange } from "@/lib/identity/owner";
 import { currentImageScope } from "@/lib/feedback/images";
-import { FeedbackImages } from "@/components/feedback/FeedbackImages";
+import { FeedbackMessageImages } from "@/components/feedback/FeedbackMessageImages";
+import {feedbackAttachmentProtocol} from "@/lib/feedback/attachment-protocol";
 import { FeedbackReplyComposer } from "@/components/feedback/FeedbackReplyComposer";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, useCallback, useSyncExternalStore } from "react";
@@ -147,7 +148,7 @@ function FeedbackThreadContent() {
                 onRated={() => void load()}
               />
             ) : (
-              <FeedbackReplyComposer issueId={id} onSent={load} onTyping={markTyping} />
+              <FeedbackReplyComposer imageProtocol={feedbackAttachmentProtocol} issueId={id} onSent={load} onTyping={markTyping} />
             )}
           </>
         )}
@@ -235,7 +236,7 @@ function MessageBubble({ message, reporterId }: { message: FeedbackMessage; repo
           <span>{new Date(message.created_at).toLocaleString("ar", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
         </div>
         <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.body}</p>
-        <FeedbackImages attachments={message.attachments ?? []} />
+        <FeedbackMessageImages message={message} />
       </div>
     </li>
   );

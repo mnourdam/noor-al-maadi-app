@@ -1,6 +1,8 @@
 import React,{useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import {FeedbackReplyComposer} from '@/components/feedback/FeedbackReplyComposer';
+import {FeedbackMessageImages} from '@/components/feedback/FeedbackMessageImages';
+import {feedbackAttachmentProtocol} from '@/lib/feedback/attachment-protocol';
 import {FeedbackImages} from '@/components/feedback/FeedbackImages';
 import {supabase} from '@/integrations/supabase/client';
 import {setActiveOwnerInternal} from '@/lib/identity/owner';
@@ -9,7 +11,7 @@ const g=globalThis as any;
 let descriptor:CanonicalImage,owner:string,started=false;
 const root=createRoot(document.getElementById('root')!);
 let sent=0;
-function SenderScene({issue}:{issue:string}){const [images,setImages]=useState<unknown[]>([]);return <><FeedbackReplyComposer imageProtocol="canonical-v1" issueId={issue} onSent={async()=>{sent++;const result=await supabase.rpc('fixture_canonical_messages' as never,{p_issue_id:issue} as never);if(result.error || !Array.isArray(result.data) || result.data.length!==1)throw Error('canonical refresh');setImages(result.data.map((x:any)=>x.attachment));}}/><FeedbackImages protocol="canonical-v1" attachments={images}/></>;}
+function SenderScene({issue,staff}:{issue:string;staff:boolean}){const [messages,setMessages]=useState<any[]>([]);return <><FeedbackReplyComposer imageProtocol={feedbackAttachmentProtocol} staff={staff} issueId={issue} onSent={async()=>{sent++;const result=await supabase.rpc('fixture_canonical_messages' as never,{p_issue_id:issue} as never);if(result.error || !Array.isArray(result.data) || result.data.length!==1)throw Error('canonical refresh');setMessages(result.data);}}/>{messages.map(m=><FeedbackMessageImages key={m.id} message={m}/>)}</>;}
 const records:{url:string;revoked:boolean;sha256:string|null}[]=[];
 const create=URL.createObjectURL.bind(URL),revoke=URL.revokeObjectURL.bind(URL);
 URL.createObjectURL=(blob:Blob|MediaSource)=>{
@@ -30,7 +32,7 @@ g.canonicalBrowser={
   const response=await supabase.rpc('fixture_canonical_descriptor' as never,{mid:p.mid} as never);
   const parsed=parseCanonicalImage(response.data);if(response.error || !parsed || parsed.message_id!==p.mid)throw Error('actor descriptor');descriptor=parsed;show();return true;
  },
- showSender(issue:string){root.render(<SenderScene issue={issue}/>);},
+ showSender(p:{issue:string;staff:boolean}){root.render(<SenderScene issue={p.issue} staff={p.staff}/>);},
  sent(){return sent;},
  retireIdentity(){setActiveOwnerInternal('guest:canonical-browser');},
  restoreIdentity(){setActiveOwnerInternal(`user:${owner}`);show();},

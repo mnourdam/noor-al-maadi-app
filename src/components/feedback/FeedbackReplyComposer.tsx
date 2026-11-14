@@ -45,7 +45,7 @@ function Composer({
   const canonical = imageProtocol === "canonical-v1";
   const imageLimit = canonical ? 1 : FEEDBACK_IMAGE_COUNT;
   async function pick(files: FileList | null) {
-    if (!files || lock.current || draft.current || (canonical && staff) || !["legacy", "canonical-v1"].includes(imageProtocol)) return;
+    if (!files || lock.current || draft.current || !["legacy", "canonical-v1"].includes(imageProtocol)) return;
     if (files.length + images.length > imageLimit) {
       setError(canonical ? "يمكن إرفاق صورة واحدة في هذا المسار" : "يمكن إرفاق 3 صور كحد أقصى");
       return;
@@ -73,7 +73,6 @@ function Composer({
       if (images.length) {
         draft.current ??= makeImageDraft(issueId, body, internal, images);
         if (canonical) {
-          if (staff) throw new Error("Canonical staff sending unsupported");
           await sendCanonicalFeedbackImage(draft.current, alive);
         } else if (imageProtocol === "legacy") await sendFeedbackImages(draft.current, alive);
         else throw new Error("Unknown attachment protocol");
@@ -124,7 +123,7 @@ function Composer({
         placeholder="اكتب ردك…"
         className="w-full rounded-lg border border-white/10 bg-background/60 p-3 text-sm"
       />
-      {feedbackImagesEnabled && ["legacy", "canonical-v1"].includes(imageProtocol) && !(canonical && staff) && (
+      {feedbackImagesEnabled && ["legacy", "canonical-v1"].includes(imageProtocol) && (
         <label className="my-2 block text-xs">
           {canonical ? "إرفاق صورة واحدة (2 ميغابايت)" : "إرفاق صور (حتى 3 صور، 2 ميغابايت للصورة)"}
           <input
@@ -155,8 +154,7 @@ function Composer({
           </li>
         ))}
       </ul>
-      {canonical && staff && <p role="note">إرسال الصور بهذا المسار متاح لصاحب المحادثة فقط.</p>}
-      {staff && !canonical && (
+      {staff && (
         <label className="block text-xs">
           <input
             type="checkbox"

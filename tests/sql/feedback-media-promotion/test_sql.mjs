@@ -58,10 +58,28 @@ try {
  await db.exec("RESET ROLE;SET fixture.role='service_role';");
  const collision=randomUUID(),alien={...ca,rid:randomUUID(),aid:randomUUID(),token:randomUUID(),issue:randomUUID()};
  await worker('reserve',alien);await worker('claim',alien);await db.query('INSERT INTO promotion_model.reservation(id,owner_id,thread_id,internal,generation) VALUES($1,$2,$3,false,1)',[collision,owner,ci]);
- await db.query('INSERT INTO promotion_model.client_request VALUES($1,$2,$3,$4,$5,$6,$7)',[collision,owner,ci,'immutable',alien.aid,alien.input,10]);
+ await db.query('INSERT INTO promotion_model.client_request(mid,owner_id,uploader_id,internal,issue_id,body,image_id,digest,bytes) VALUES($1,$2,$2,false,$3,$4,$5,$6,$7)',[collision,owner,ci,'immutable',alien.aid,alien.input,10]);
  const collisionArgs=[collision,ci,'immutable',alien.aid,alien.input,10];const countBefore=await one('SELECT count(*)::int FROM promotion_model.publication');
  await db.exec("SET fixture.role='authenticated';SET ROLE authenticated;");
  await assert.rejects(()=>one('SELECT public.reserve_canonical_feedback_image_v1($1,$2,$3,$4,$5,$6)',collisionArgs));await assert.rejects(()=>one('SELECT public.finalize_canonical_feedback_image_v1($1,$2,$3,$4,$5,$6)',collisionArgs));
  await db.exec('RESET ROLE;');assert.equal(await one('SELECT count(*)::int FROM promotion_model.publication'),countBefore);assert.equal(await one('SELECT reservation_id FROM promotion_model.attempt WHERE id=$1',[alien.aid]),alien.rid);
+ // Staff uploader is distinct from recipient; roles derive from auth, not request data.
+ const staff=randomUUID(),staff2=randomUUID();await db.exec(`CREATE OR REPLACE FUNCTION public.is_feedback_staff(uuid) RETURNS boolean LANGUAGE SQL AS $$SELECT $1 IN ('${staff}'::uuid,'${staff2}'::uuid) AND current_setting('fixture.staff_active',true) IS DISTINCT FROM 'false'$$;SET fixture.staff_active='true';`);
+ for(const inside of [false,true]){
+  const smid=randomUUID(),said=randomUUID(),args=[smid,ci,'staff immutable',said,'d'.repeat(64),10,inside];
+  const sr=()=>one('SELECT public.reserve_canonical_feedback_image_v1($1,$2,$3,$4,$5,$6,$7)',args),sf=()=>one('SELECT public.finalize_canonical_feedback_image_v1($1,$2,$3,$4,$5,$6,$7)',args);
+  await db.exec(`SET fixture.uid='${staff}';SET fixture.role='authenticated';SET ROLE authenticated;`);assert.equal((await sr()).path,staff+'/'+said);assert.equal((await sf()).status,'pending');assert.equal(await one('SELECT public.fixture_quarantine_insert($1)',[staff+'/'+said]),true);
+  await db.exec(`SET fixture.uid='${owner}';`);assert.equal(await one('SELECT public.fixture_quarantine_insert($1)',[staff+'/'+said]),false);await assert.rejects(sr);await assert.rejects(sf);
+  await db.exec(`SET fixture.uid='${staff2}';`);await assert.rejects(sr);await assert.rejects(sf);
+  await db.exec(`RESET ROLE;SET fixture.uid='${staff}';SET fixture.role='service_role';`);const t=(await db.query('SELECT * FROM promotion_model.attempt WHERE id=$1',[said])).rows[0];assert.equal(t.owner_id,owner);assert.equal(t.uploader_id,staff);assert.equal(t.object_key,owner+'/'+said);
+  const sa={rid:smid,aid:said,token:t.token,owner,uploader:staff,issue:ci,internal:inside,input:'d'.repeat(64),revision:'fixture',source:staff+'/'+said,source_id:said,success:true,output:'e'.repeat(64),bytes:10};
+  assert.equal(await worker('input_terminal',{...sa,uploader:owner}),false);assert.equal(await worker('input_terminal',sa),true);assert.equal(await worker('start',{...sa,uploader:owner}),false);assert.equal(await worker('start',sa),true);assert.equal(await worker('terminal',sa),true);assert.equal(await worker('attest',{...sa,uploader:owner}),false);assert.equal(await worker('attest',sa),true);
+  await db.exec(`SET fixture.role='authenticated';SET ROLE authenticated;SET fixture.uid='${owner}';`);await assert.rejects(()=>one('SELECT public.fixture_finalize($1,$2,$3,$4)',[smid,said,'staff immutable',inside]));
+  await db.exec(`SET fixture.uid='${staff}';`);await assert.rejects(()=>one('SELECT public.fixture_finalize($1,$2,$3,$4)',[randomUUID(),said,'staff immutable',inside]));await assert.rejects(()=>one('SELECT public.fixture_finalize($1,$2,$3,$4)',[smid,said,'changed',inside]));
+  await db.exec("SET fixture.staff_active='false';");await assert.rejects(sf,e=>e.code==='42501');await db.exec("SET fixture.staff_active='true';");
+  await db.exec('RESET ROLE;');await db.query('UPDATE public.feedback_issues SET reporter_id=$1 WHERE id=$2',[randomUUID(),ci]);await db.exec('SET ROLE authenticated;');await assert.rejects(sf);await db.exec('RESET ROLE;');await db.query('UPDATE public.feedback_issues SET reporter_id=$1 WHERE id=$2',[owner,ci]);await db.exec('SET ROLE authenticated;');
+  assert.equal((await sf()).status,'published');assert.equal((await sf()).status,'published');await db.exec('RESET ROLE;');await db.query('UPDATE public.feedback_issues SET reporter_id=$1 WHERE id=$2',[randomUUID(),ci]);await db.exec('SET ROLE authenticated;');await assert.rejects(()=>one('SELECT public.fixture_finalize($1,$2,$3,$4)',[smid,said,'staff immutable',inside]));await db.exec('RESET ROLE;');await db.query('UPDATE public.feedback_issues SET reporter_id=$1 WHERE id=$2',[owner,ci]);await db.exec('SET ROLE authenticated;');const previous=args[6];args[6]=!inside;await assert.rejects(sr);await assert.rejects(sf);args[6]=previous;
+  assert.equal(await one('SELECT public.fixture_canonical_read($1)',[t.object_key]),true);await db.exec(`SET fixture.uid='${owner}';`);assert.equal(await one('SELECT public.fixture_canonical_read($1)',[t.object_key]),!inside);await db.exec(`SET fixture.uid='${randomUUID()}';`);assert.equal(await one('SELECT public.fixture_canonical_read($1)',[t.object_key]),false);await db.exec('RESET ROLE;');
+ }
  console.log('PASS real PostgreSQL fixture publication, binding, retirement, cleanup and ACL controls');
 } finally {await db.close();}
