@@ -6,7 +6,7 @@ from playwright.async_api import async_playwright
 ROOT=Path(__file__).resolve().parents[3]
 class Service(http.server.SimpleHTTPRequestHandler):
     protocol_version='HTTP/1.1'
-    entered=threading.Event();release=threading.Event();drained=threading.Event();interrupt=True;requests=0
+    entered=threading.Event();release=threading.Event();drained=threading.Event();interrupt=True;requests=0;title="updated"
     def log_message(self,*args):pass
     def reply(self,data,head=False):
         body=json.dumps(data).encode();self.send_response(200);self.send_header('Content-Type','application/json');self.send_header('Content-Length',str(len(body)));self.end_headers()
@@ -28,7 +28,7 @@ class Service(http.server.SimpleHTTPRequestHandler):
         if head:
             self.send_response(200);self.send_header('Content-Range',f'0-0/{count}');self.send_header('Content-Length','0');self.end_headers();return
         query=parse_qs(parsed.query);offset=int(query.get('offset',['0'])[0]);limit=int(query.get('limit',['100'])[0])
-        rows=[{'id':str(i),'title':'updated','enabled':True,'body':'synthetic '*1024} for i in range(offset,min(offset+limit,count))] if table=='encyclopedia_entities' else [{'id':'campaign','slug':'campaign','status':'published','data':{'chapters':[]}}] if table=='campaigns_public' else []
+        rows=[{'id':str(i),'title':type(self).title,'enabled':True,'body':'synthetic '*1024} for i in range(offset,min(offset+limit,count))] if table=='encyclopedia_entities' else [{'id':'campaign','slug':'campaign','status':'published','data':{'chapters':[]}}] if table=='campaigns_public' else []
         if table=='encyclopedia_entities' and type(self).interrupt:
             type(self).interrupt=False
             body=json.dumps(rows).encode();self.send_response(200);self.send_header('Content-Type','application/json');self.send_header('Content-Length',str(len(body)));self.end_headers();self.wfile.write(body[:128]);self.wfile.flush();type(self).entered.set()
@@ -89,9 +89,46 @@ async def run(directory,origin,counterfactual=False):
             assert await page.evaluate("fetch('/health').then(r=>r.json()).then(x=>x.ok)") is True;checks.append('late stream cannot overwrite retry; ordinary HTTP works without restart')
             cdp=await context.new_cdp_session(page);await cdp.send('Page.setWebLifecycleState',{'state':'frozen'});await cdp.send('Page.setWebLifecycleState',{'state':'active'})
             assert await page.evaluate('runtime.local().title')=='updated';checks.append('CDP browser freeze/resume retains local content; not Android lifecycle')
-            await context.set_offline(True);assert await page.evaluate("fetch('/health').then(()=>false,()=>true)") is True;assert await page.evaluate('runtime.durable()')==before;assert await page.evaluate('runtime.local().count')==1500;checks.append('browser offline retains IDB and local reads')
+            # Same live page/context: actual useOnline must recover independently
+            # of controller results; no reload, reinitialization or replacement.
+            same_page=page;same_context=context
+            token=await page.evaluate("window.sameContextToken=crypto.randomUUID()")
+            await page.wait_for_function('window.observedOnline===true')
+            await context.set_offline(True)
+            await page.wait_for_function('navigator.onLine===false && window.observedOnline===false')
+            assert await page.evaluate("fetch('/health').then(()=>false,()=>true)") is True
+            assert await page.evaluate('runtime.durable()')==before
+            active_before=await page.evaluate('runtime.active()')
+            assert active_before=={'version':before['version'],'titles':['updated']}
+            assert await page.evaluate('runtime.local()')=={'count':1500,'title':'updated'}
+            requests_before=Service.requests
+            assert await page.evaluate('runtime.apply(15000)') is False
+            state=await page.evaluate('runtime.state()')
+            assert state['applying'] is False and isinstance(state['error'],str) and state['error']
+            assert await page.evaluate('runtime.durable()')==before
+            assert await page.evaluate('runtime.active()')==active_before
+            assert Service.requests==requests_before
+            checks.append('offline actual update fails and settles without changing durable or active content')
+            Service.title='reconnected'
+            await context.set_offline(False)
+            await page.wait_for_function('navigator.onLine===true && window.observedOnline===true')
+            assert page is same_page and context is same_context
+            assert await page.evaluate('window.sameContextToken')==token
+            assert await page.evaluate('runtime.apply(15000)') is True
+            reconnected=await page.evaluate('runtime.durable()')
+            assert reconnected['title']=='reconnected' and reconnected['count']==1500
+            assert reconnected['checksum'] and reconnected['checksum']!=before['checksum']
+            assert await page.evaluate('runtime.local()')=={'count':1500,'title':'reconnected'}
+            assert await page.evaluate('runtime.active()')=={'version':reconnected['version'],'titles':['reconnected']}
+            assert (await page.evaluate('runtime.state()'))['error'] is None
+            assert Service.requests>requests_before
+            assert await page.evaluate("fetch('/health').then(r=>r.json()).then(x=>x.ok)") is True
+            assert await page.evaluate('window.sameContextToken')==token
+            assert page is same_page and context is same_context
+            before=reconnected
+            checks.append('same page actual useOnline recovers; real SDK update retry activates exact new content and subsequent HTTP works without reload')
             await context.close();context,page=await launch()
-            assert await page.evaluate('runtime.durable()')==before;assert await page.evaluate('runtime.local().title')=='updated';checks.append('orderly browser close/reopen same profile and origin retains content')
+            assert await page.evaluate('runtime.durable()')==before;assert await page.evaluate('runtime.local().title')=='reconnected';checks.append('orderly browser close/reopen same profile and origin retains content')
             assert not external and not errors
             print(json.dumps({'result':'PASS_BROWSER_ONLY','browser':(await (await context.new_cdp_session(page)).send('Browser.getVersion'))['product'],'checks':checks,'externalRequests':len(external),'pageErrors':len(errors),'android':'NOT_TESTED','forceStop':'NOT_TESTED'}))
         finally:Service.release.set();await context.close()
