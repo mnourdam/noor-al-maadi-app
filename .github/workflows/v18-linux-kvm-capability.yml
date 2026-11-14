@@ -1,0 +1,94 @@
+name: V18 Linux KVM Capability Only
+on:
+  push:
+    branches: [v18-01a-outbox-recovery]
+    paths: ['.github/workflows/v18-linux-kvm-capability.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  capability:
+    if: github.ref == 'refs/heads/v18-01a-outbox-recovery'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Observe existing KVM access without creating a VM
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import errno, fcntl, json, os, signal, stat
+
+          class ProbeDeadline(Exception):
+              pass
+
+          def expired(*_):
+              raise ProbeDeadline()
+
+          receipt = {
+              'schema': 'v18-kvm-capability-v1',
+              'source_sha': os.environ['SOURCE_SHA'],
+              'result': 'NOT_AVAILABLE',
+              'category': 'open_error',
+              'character_device': False,
+              'access_read_advisory': False,
+              'access_write_advisory': False,
+              'api_version_12': False,
+              'cleanup_complete': True,
+          }
+          fd = None
+          phase = 'open'
+          signal.signal(signal.SIGALRM, expired)
+          signal.alarm(10)
+          try:
+              info = os.stat('/dev/kvm', follow_symlinks=False)
+              receipt['character_device'] = stat.S_ISCHR(info.st_mode)
+              if not receipt['character_device']:
+                  receipt['category'] = 'not_character'
+              else:
+                  receipt['access_read_advisory'] = os.access('/dev/kvm', os.R_OK)
+                  receipt['access_write_advisory'] = os.access('/dev/kvm', os.W_OK)
+                  fd = os.open('/dev/kvm', os.O_RDWR | os.O_CLOEXEC | os.O_NOFOLLOW)
+                  if not stat.S_ISCHR(os.fstat(fd).st_mode):
+                      receipt['category'] = 'not_character'
+                  else:
+                      phase = 'ioctl'
+                      version = fcntl.ioctl(fd, 0xAE00)
+                      receipt['api_version_12'] = version == 12
+                      receipt['category'] = 'supported' if version == 12 else 'unexpected_version'
+                      receipt['result'] = 'SUPPORTED' if version == 12 else 'NOT_AVAILABLE'
+          except ProbeDeadline:
+              receipt['api_version_12'] = False
+              receipt['result'] = 'NOT_AVAILABLE'
+              receipt['category'] = 'timeout'
+          except OSError as exc:
+              receipt['api_version_12'] = False
+              receipt['result'] = 'NOT_AVAILABLE'
+              if exc.errno == errno.ENOENT:
+                  receipt['category'] = 'absent'
+              elif exc.errno in (errno.EACCES, errno.EPERM):
+                  receipt['category'] = 'permission_denied'
+              else:
+                  receipt['category'] = 'ioctl_error' if phase == 'ioctl' else 'open_error'
+          finally:
+              signal.alarm(0)
+              if fd is not None:
+                  try:
+                      os.close(fd)
+                  except OSError:
+                      receipt['cleanup_complete'] = False
+              if not receipt['cleanup_complete']:
+                  receipt['result'] = 'NOT_AVAILABLE'
+                  receipt['category'] = 'cleanup_error'
+              with open('kvm-capability.json', 'x', encoding='utf-8') as output:
+                  json.dump(receipt, output, sort_keys=True, indent=2)
+                  output.write('\n')
+          # Capability observation only: no VM, guest, performance or future-job guarantee.
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-kvm-capability
+          path: kvm-capability.json
+          if-no-files-found: error
+          retention-days: 7
