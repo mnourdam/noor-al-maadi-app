@@ -43,10 +43,32 @@ class Experiment(base.Experiment):
  def input_metadata_absent(self,source):
   b.require(len(source.split('/'))==2 and all(str(uuid.UUID(x))==x for x in source.split('/')),'invalid cleanup key')
   return self.sql(f"SELECT count(*) FROM storage.objects WHERE bucket_id='{self.Q}' AND name='{source}';")=='0'
+ def storage(self,bucket,path,token,method='GET',raw=None):
+  if bucket!='feedback-images-canonical':return super().storage(bucket,path,token,method,raw)
+  b.require(len(path.split('/'))==2 and all(str(uuid.UUID(x))==x for x in path.split('/')),'invalid canonical key')
+  self.isolation();b.require(self.endpoints_verified,'unverified local services')
+  route='/storage/v1/object/'+('authenticated/' if method=='GET' else '')+bucket+'/'+path
+  def request():
+   req=base.urllib.request.Request(self.fields['api']+route,data=raw,headers={'apikey':self.fields['anon'],'Authorization':'Bearer '+token,'Content-Type':'image/jpeg'},method=method)
+   try:
+    with self.http.open(req,timeout=5) as response:status,body=response.status,response.read(base.MAX+1)
+   except base.urllib.error.HTTPError as error:status,body=error.code,error.read(base.MAX+1)
+   b.require(len(body)<=base.MAX,'canonical response limit');return status,body
+  return base.bounded(request)
+ def client(self,actor,mid,expect,expected=None,stale=None):
+  self.isolation();b.require(self.endpoints_verified,'unverified client endpoint')
+  data={'api':self.fields['api'],'anon':self.fields['anon'],'token':actor[1],'uid':actor[0],'mid':mid,'expect':expect,'expected':expected,'stale':stale}
+  r=base.subprocess.run(['node',str(Path(__file__).with_name('client.mjs'))],input=json.dumps(data).encode(),cwd=base.ROOT,env={'PATH':os.environ.get('PATH',''),'LANG':'C'},capture_output=True,timeout=20)
+  b.require(r.returncode==0 and len(r.stdout)<2048,'actual canonical client failed');result=json.loads(r.stdout)
+  self.check(result['result']=={'valid':'canonical_verified','denied':'descriptor_denied','retired':'retired_denied'}[expect],'actual actor SDK canonical contract '+expect)
+  return result.get('descriptor')
  def decode_probe(self):
   super().decode_probe();self.report['decode_baseline_result']=self.report['result'];self.report['result']='FAIL'
+  self.C='feedback-images-canonical'
+  self.sql("INSERT INTO storage.buckets(id,name,public,file_size_limit) VALUES('feedback-images-canonical','feedback-images-canonical',false,2097152);")
   fixture=Path(__file__).with_name('fixture.sql').read_bytes();self.sql(fixture.decode());self.sql("NOTIFY pgrst,'reload schema';")
   self.report['promotion_fixture_sha256']=hashlib.sha256(fixture).hexdigest()
+  self.report['canonical_client_sources']={p:hashlib.sha256((base.ROOT/p).read_bytes()).hexdigest() for p in ('src/lib/feedback/canonical-image-contract.ts','tests/sql/feedback-media-promotion/client.mjs')}
   self.report['worker_sha256']=hashlib.sha256(Path(__file__).with_name('worker.py').read_bytes()).hexdigest()
   self.report['stage']='actual attestation and publication'
   actors=[]
@@ -70,7 +92,9 @@ class Experiment(base.Experiment):
    return a
   def unreadable(actor,a,label):
    result=self.storage(self.C,a['key'],actor[1]);self.check(base.permission(result) or self.object_absent(result),label)
-  a=attempt();self.check_denied(self.finalize(owner,a),'unattested finalize denied')
+  a=attempt();self.client(owner,str(uuid.uuid4()),'denied')
+  for actor in actors:self.check(base.permission(self.storage(self.C,actor[0]+'/'+str(uuid.uuid4()),actor[1],'POST',raw)),'v1 canonical actor write denied')
+  self.check_denied(self.finalize(owner,a),'unattested finalize denied')
   for actor_index,actor in enumerate(actors):
    self.check_denied(self.call('fixture_worker',actor[1],{'op':'terminal','p':a}),'actor worker RPC denied')
    for method in ('POST','PATCH'):
@@ -91,12 +115,16 @@ class Experiment(base.Experiment):
   self.check_denied(self.finalize(owner,a,mid,'changed'),'changed message replay denied')
   expected=self.storage(self.C,a['key'],self.fields['service']);self.check(expected[0]==200,'service canonical positive')
   for actor in (owner,staff):self.check(self.storage(self.C,a['key'],actor[1])==expected,'published intended actor exact canonical bytes')
+  digest=hashlib.sha256(expected[1]).hexdigest()
+  descriptor=self.client(owner,mid,'valid',digest)
+  self.client(staff,mid,'valid',digest);self.client(other,mid,'denied')
   unreadable(other,a,'other owner canonical denied')
   self.check(w.cleanup_input(self,a) is True,'published original quarantine removed')
   self.check(self.storage(self.C,a['key'],owner[1])==expected,'canonical remains readable after original cleanup')
   self.check(base.permission(self.storage(self.Q,a['source'],owner[1],'POST',raw)),'cleaned original reupload denied')
   self.check(self.worker('cleanup',dict(a,key=a['key'])) is None,'published cleanup forbidden')
   self.worker('retire',a)
+  self.client(owner,mid,'retired',stale=descriptor)
   for actor in actors:unreadable(actor,a,'retired canonical denied')
   self.check_denied(self.finalize(owner,a,mid),'retired replay denied')
   self.check(self.worker('cleanup',a)==a['key'],'retired exact cleanup claim')
@@ -107,7 +135,9 @@ class Experiment(base.Experiment):
   internal=attempt(True);self.check(w.process(self,internal) is True,'internal canonical attested')
   self.check_denied(self.finalize(owner,internal),'owner internal publication denied');mid=str(uuid.uuid4());self.check(self.finalize(staff,internal,mid)==(200,mid),'staff internal publishes')
   self.check(self.storage(self.C,internal['key'],staff[1])==self.storage(self.C,internal['key'],self.fields['service']),'staff internal exact read')
-  for actor in (owner,other):unreadable(actor,internal,'player internal denied')
+  for actor in (owner,other):
+   unreadable(actor,internal,'player internal denied');self.client(actor,mid,'denied')
+  self.client(staff,mid,'valid',hashlib.sha256(self.storage(self.C,internal['key'],self.fields['service'])[1]).hexdigest())
   stale=attempt();self.check(w.process(self,stale,lambda:self.worker('retire',stale)) is False,'retire after terminal PUT fences attestation')
   self.check_denied(self.finalize(owner,stale),'stale finalize denied')
   crash=attempt()

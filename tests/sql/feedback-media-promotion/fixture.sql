@@ -159,7 +159,17 @@ REVOKE ALL ON ALL FUNCTIONS IN SCHEMA promotion_model FROM PUBLIC,anon,authentic
 REVOKE ALL ON FUNCTION public.fixture_worker(text,jsonb),public.fixture_finalize(uuid,uuid,text,boolean),public.fixture_canonical_read(text) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.fixture_worker(text,jsonb) TO service_role;
 GRANT EXECUTE ON FUNCTION public.fixture_finalize(uuid,uuid,text,boolean),public.fixture_canonical_read(text) TO authenticated;
-CREATE POLICY fixture_published_canonical_read ON storage.objects FOR SELECT TO authenticated USING(bucket_id='fixture-decode-canonical' AND public.fixture_canonical_read(name));
+CREATE POLICY fixture_published_canonical_read ON storage.objects FOR SELECT TO authenticated USING(bucket_id='feedback-images-canonical' AND public.fixture_canonical_read(name));
 
 REVOKE ALL ON FUNCTION public.fixture_quarantine_insert(text) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.fixture_quarantine_insert(text) TO authenticated;
+
+-- Actor-derived descriptor for the inactive v1 client contract, not a deployed RPC.
+CREATE FUNCTION public.fixture_canonical_descriptor(mid uuid) RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER SET search_path=promotion_model,pg_temp AS $$
+ SELECT jsonb_build_object('version',1,'id',a.id,'message_id',p.id,'key',a.object_key,'mime','image/jpeg','bytes',t.output_size,'sha256',a.output_digest)
+ FROM promotion_model.readable a JOIN promotion_model.publication p ON p.attempt_id=a.id
+ JOIN promotion_model.attempt t ON t.id=a.id
+ WHERE p.id=mid AND auth.uid() IS NOT NULL AND (a.owner_id=auth.uid() OR public.is_feedback_staff(auth.uid())) AND (NOT a.internal OR public.is_feedback_staff(auth.uid()))
+$$;
+REVOKE ALL ON FUNCTION public.fixture_canonical_descriptor(uuid) FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION public.fixture_canonical_descriptor(uuid) TO authenticated;

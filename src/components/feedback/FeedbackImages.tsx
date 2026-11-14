@@ -5,22 +5,24 @@ import {
   parseFeedbackImage,
 } from "@/lib/feedback/images";
 import { onOwnerChange } from "@/lib/identity/owner";
-export function FeedbackImages({ attachments }: { attachments: unknown[] }) {
+import {parseCanonicalImage,downloadCanonicalImage,type CanonicalImage} from '@/lib/feedback/canonical-images';
+type Protocol = 'legacy' | 'canonical-v1';
+export function FeedbackImages({ attachments, protocol = 'legacy' }: { attachments: unknown[]; protocol?: Protocol }) {
   const [scope, setScope] = useState(currentImageScope);
   useEffect(() => onOwnerChange(() => setScope(currentImageScope())), []);
   return (
     <div className="mt-2 space-y-2">
       {(Array.isArray(attachments) ? attachments : [])
         .slice(0, 3)
-        .map(parseFeedbackImage)
+        .map((value) => protocol === 'legacy' ? parseFeedbackImage(value) : protocol === 'canonical-v1' ? parseCanonicalImage(value) : null)
         .filter((x) => x !== null)
         .map((image) => (
-          <PrivateImage key={`${scope}:${image.id}`} image={image} />
+          <PrivateImage key={`${scope}:${protocol}:${protocol === "canonical-v1" ? JSON.stringify(image) : image.id}`} image={image} protocol={protocol} />
         ))}
     </div>
   );
 }
-function PrivateImage({ image }: { image: NonNullable<ReturnType<typeof parseFeedbackImage>> }) {
+function PrivateImage({ image, protocol }: { image: NonNullable<ReturnType<typeof parseFeedbackImage>> | CanonicalImage; protocol: Protocol }) {
   const [url, setUrl] = useState<string | null>(null),
     [failed, setFailed] = useState(false),
     [loading, setLoading] = useState(false);
@@ -41,7 +43,7 @@ function PrivateImage({ image }: { image: NonNullable<ReturnType<typeof parseFee
   async function load() {
     setLoading(true);
     try {
-      const blob = await downloadFeedbackImage(image);
+      const blob = protocol === 'canonical-v1' ? await downloadCanonicalImage(image as CanonicalImage) : await downloadFeedbackImage(image as NonNullable<ReturnType<typeof parseFeedbackImage>>);
       if (!mounted.current || scope !== currentImageScope()) return;
       setUrl(URL.createObjectURL(blob));
     } catch {

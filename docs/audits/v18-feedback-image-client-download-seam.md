@@ -1,0 +1,9 @@
+# Private attachment display: actual client seam
+
+Test-only coverage joins unchanged `FeedbackImages` with actual `downloadFeedbackImage`, descriptor parsing, header/MIME/size validation, and owner/epoch logic. Only Supabase auth/Storage transport and object-URL allocation are simulated. The identity setter is a test stimulus, not proof of full production account-switch orchestration. No flags, application code, proposal or policy changes.
+
+Eight focused cases cover explicit click/no eager request; exact bucket/path and returned Blob passed to object URL; invalid MIME, size and signature followed by successful same-owner retry; pending owner switch and same-UID ABA retirement; exact visible URL revocation; and invalid descriptors filtered without SDK calls. The fixture is a complete tiny PNG. JSDOM does not decode pixels: image source assignment and exact Blob identity are asserted, not browser rendering or trusted decoding. Server-side actual Sharp validation remains separate evidence.
+
+Concrete integration blocker remains: client upload/download uses `feedback-images` and owner/issue/image three-UUID paths, plus `reserve_feedback_image` and `reply_with_feedback_images`. The trusted prototype uses service-attested attempts, `fixture_finalize`, and canonical owner/attempt two-segment keys in `fixture-decode-canonical`. This test does not translate those paths or pretend the contracts are compatible. It verifies the existing user-visible download seam; connecting trusted canonical publication to a production client requires a separately reviewed authority/descriptor contract. Picker remains disabled.
+
+Focused command: `npx vitest run --config vitest.outbox.config.ts tests/offline/outbox-feedback-images-client-seam.test.tsx`. No hosted request, Android, pixel decode or worker-to-client acceptance is claimed.

@@ -25,10 +25,11 @@ try {
  assert.equal(await worker('attest',a),true);assert.equal(await one('SELECT public.fixture_canonical_read($1)',[a.key]),false);
  const mid=randomUUID();assert.equal(await one('SELECT public.fixture_finalize($1,$2,$3,false)',[mid,a.aid,'body']),mid);
  assert.equal(await one('SELECT public.fixture_finalize($1,$2,$3,false)',[mid,a.aid,'body']),mid);
+ const desc=await one('SELECT public.fixture_canonical_descriptor($1)',[mid]);assert.equal(desc.id,a.aid);assert.equal(desc.message_id,mid);assert.equal(desc.sha256,a.output);assert.equal(desc.bytes,a.bytes);
  await assert.rejects(()=>one('SELECT public.fixture_finalize($1,$2,$3,false)',[mid,a.aid,'changed']));
  assert.equal(await one('SELECT public.fixture_canonical_read($1)',[a.key]),true);assert.equal(await worker('cleanup',a),null);
  assert.equal(await worker('input_cleanup',{...a,source:'wrong'}),false);assert.equal(await worker('input_cleanup',a),true);assert.equal(await worker('input_admit',a),false);assert.equal(await one('SELECT public.fixture_canonical_read($1)',[a.key]),true);assert.equal(await worker('input_removed',a),false);assert.equal(await worker('input_positive',a),true);assert.equal(await worker('input_removed',a),true);assert.equal(await worker('input_retry_absence',a),true);
- await worker('retire',a);assert.equal(await one('SELECT public.fixture_canonical_read($1)',[a.key]),false);
+ await worker('retire',a);assert.equal(await one('SELECT public.fixture_canonical_descriptor($1)',[mid]),null);assert.equal(await one('SELECT public.fixture_canonical_read($1)',[a.key]),false);
  assert.equal(await worker('cleanup',a),a.key);assert.equal(await worker('attest',a),false);assert.equal(await worker('removed',a),true);
  assert.equal(await one('SELECT count(*)::int FROM promotion_model.attempt'),1);
  const unknown={...a,rid:randomUUID(),aid:randomUUID(),token:randomUUID(),source_id:randomUUID()};unknown.source=owner+'/'+unknown.source_id;await worker('reserve',unknown);unknown.key=await worker('claim',unknown);assert.equal(await worker('input_begin',unknown),true);assert.equal(await worker('input_begin',unknown),false);await worker('retire',unknown);assert.equal(await worker('input_cleanup',unknown),false);assert.equal(await worker('input_removed',unknown),false);
