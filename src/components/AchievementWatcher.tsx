@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAchievementViews } from "@/lib/achievements/v2/driver";
-import { markAchievementsPresented, onAchievementTransition } from "@/lib/achievements/v2";
+import { getEvaluation, getPersisted } from "@/lib/achievements/v2/engine";
+import { buildViews } from "@/lib/achievements/v2/viewModel";
+import { getUiLanguage } from "@/lib/ui-language/store";
+import { markAchievementsPresented, onAchievementTransition, registry } from "@/lib/achievements/v2";
 import type { AchievementView } from "@/lib/achievements/v2";
 
 /**
@@ -47,8 +49,6 @@ const XP_BY_RARITY: Record<string, number> = {
 };
 
 export function AchievementWatcher() {
-  const views = useAchievementViews();
-  const viewsById = useMemo(() => new Map(views.map((v) => [v.id, v])), [views]);
 
   // Session-scoped set of transition ids we've already surfaced. Stable
   // ids (`achievement:<uid>:<id>`) ensure repeat renders / realtime
@@ -77,12 +77,20 @@ export function AchievementWatcher() {
       const uid = authUidRef.current;
       const transitionId = `achievement:${uid ?? "guest"}:${transition.achievementId}`;
       if (notifiedTransitionsRef.current.has(transitionId)) return;
-      const v = viewsById.get(transition.achievementId);
+      // The engine emits before React receives its next view update. Read the
+      // current canonical state synchronously, not the previous rendered view.
+      // Ownership-only museum presentation is not notification eligibility.
+      const v = buildViews({
+        registry,
+        evaluation: getEvaluation(),
+        persisted: getPersisted(),
+        locale: getUiLanguage(),
+      }).find((view) => view.id === transition.achievementId);
       if (!v || (v.state !== "unlocked" && v.state !== "claimed")) return;
       notifiedTransitionsRef.current.add(transitionId);
       void notifyAchievementUnlocked(v, transitionId, uid);
     });
-  }, [viewsById]);
+  }, []);
 
   return null;
 }
