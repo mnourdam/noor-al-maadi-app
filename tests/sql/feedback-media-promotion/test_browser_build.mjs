@@ -1,0 +1,2 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import {outputPath} from './build-browser.mjs';
+test('browser build only fresh isolated output',()=>{const temp=fs.mkdtempSync('/tmp/irth-canonical-browser-');try{assert.equal(outputPath(temp+'/assets'),temp+'/assets');for(const p of ['/tmp/assets',temp+'/../assets','relative',temp+'/assets/extra'])assert.throws(()=>outputPath(p));fs.mkdirSync(temp+'/assets');assert.throws(()=>outputPath(temp+'/assets'));}finally{fs.rmSync(temp,{recursive:true});}});

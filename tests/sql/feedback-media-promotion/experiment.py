@@ -71,11 +71,11 @@ class Experiment(base.Experiment):
   self.report['canonical_client_sources']={p:hashlib.sha256((base.ROOT/p).read_bytes()).hexdigest() for p in ('src/lib/feedback/canonical-image-contract.ts','tests/sql/feedback-media-promotion/client.mjs')}
   self.report['worker_sha256']=hashlib.sha256(Path(__file__).with_name('worker.py').read_bytes()).hexdigest()
   self.report['stage']='actual attestation and publication'
-  actors=[]
+  actors=[];credentials={}
   for n in range(3):
    email=f'promotion-{uuid.uuid4()}@example.invalid';password=secrets.token_urlsafe(32)
    status,data=self.decoded(self.request('/auth/v1/admin/users',self.fields['service'],{'email':email,'password':password,'email_confirm':True},'POST',service=True));b.require(status in (200,201),'actor create')
-   uid=str(uuid.UUID(data['id']));status,data=self.decoded(self.request('/auth/v1/token?grant_type=password',payload={'email':email,'password':password},method='POST'));b.require(status==200,'actor login');actors.append((uid,data['access_token']))
+   uid=str(uuid.UUID(data['id']));status,data=self.decoded(self.request('/auth/v1/token?grant_type=password',payload={'email':email,'password':password},method='POST'));b.require(status==200,'actor login');actors.append((uid,data['access_token']));credentials[uid]=(email,password)
   owner,other,staff=actors;self.sql(f"INSERT INTO public.user_roles VALUES('{staff[0]}','fixture_staff');")
   raw=base.subprocess.run(['node','--input-type=module','-e',"import sharp from 'sharp';process.stdout.write(await sharp({create:{width:3,height:2,channels:3,background:'#246810'}}).png().toBuffer());"],cwd=base.ROOT,env={'PATH':os.environ.get('PATH',''),'LANG':'C'},capture_output=True,timeout=8,check=True).stdout
   revision=hashlib.sha256((base.ROOT/'tests/media-decoder/child.mjs').read_bytes()).hexdigest()
@@ -218,6 +218,13 @@ class Experiment(base.Experiment):
   self.check(self.object_absent(self.storage(self.C,second['key'],self.fields['service'])),'cleanup first recognized canonical absence')
   self.check(self.sql(f"SELECT count(*) FROM storage.objects WHERE bucket_id='{self.C}' AND name='{second['key']}';")=='0','cleanup first canonical metadata absent')
   self.check(self.storage(self.C,first['key'],owner[1])==(200,first_bytes),'cleanup first unrelated published canonical preserved')
+  browser_case=attempt();self.check(w.process(self,browser_case) is True,'browser actual worker attested')
+  browser_mid=str(uuid.uuid4());self.check(self.finalize(owner,browser_case,browser_mid)==(200,browser_mid),'browser canonical publication')
+  status,canonical=self.storage(self.C,browser_case['key'],self.fields['service']);b.require(status==200,'browser canonical source')
+  dimensions=json.loads(base.subprocess.run(['node','--input-type=module','-e',"import sharp from 'sharp';const chunks=[];for await(const c of process.stdin)chunks.push(c);const m=await sharp(Buffer.concat(chunks)).metadata();process.stdout.write(JSON.stringify([m.width,m.height]));"],input=canonical,cwd=base.ROOT,env={'PATH':os.environ.get('PATH',''),'LANG':'C'},capture_output=True,check=True,timeout=8).stdout)
+  browser_module=module('canonical_browser',Path(__file__).with_name('browser.py'))
+  browser_module.run(self,owner,credentials[owner[0]],browser_mid,browser_case,hashlib.sha256(canonical).hexdigest(),dimensions)
+  self.check(self.report['canonical_browser']['result']=='PASS_ACTUAL_COMPONENT_DISPOSABLE_STORAGE_ONLY','actual component click decode revoke retired denial')
   self.report['input_terminality']='Explicit harness-observed terminal PUT plus exact service read; not a production writer/lease guarantee'
   self.report['result']='LOCAL STACK PASS; SYNTHETIC WORKER PUBLICATION ONLY; ACTIVATION BLOCKED'
 if __name__=='__main__':

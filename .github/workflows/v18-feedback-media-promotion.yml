@@ -43,12 +43,19 @@ jobs:
       - name: Offline decoder and boundary controls
         run: |
           node --test tests/media-decoder/test.mjs
-          node --test tests/sql/feedback-media-promotion/test_client.mjs
+          node --test tests/sql/feedback-media-promotion/test_client.mjs tests/sql/feedback-media-promotion/test_browser_build.mjs
           npx vitest run --config vitest.outbox.config.ts tests/offline/outbox-feedback-images-canonical.test.tsx tests/offline/outbox-feedback-images-client-seam.test.tsx tests/offline/outbox-feedback-images-renderer.test.tsx
           npm install --prefix "$RUNNER_TEMP/promotion-sql-tools" --ignore-scripts --no-audit --no-fund @electric-sql/pglite@0.3.14
           PGLITE_MODULE="$RUNNER_TEMP/promotion-sql-tools/node_modules/@electric-sql/pglite/dist/index.js" node tests/sql/feedback-media-promotion/test_sql.mjs
           python3 -m unittest discover -s tests/sql/feedback-media-decode -p 'test_*.py' -v
           python3 -m unittest discover -s tests/sql/feedback-media-promotion -p 'test_*.py' -v
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned official browser tooling
+        run: |
+          python -m pip install playwright==1.62.0
+          python -m playwright install --with-deps chromium
       - name: Real disposable Storage decode boundary
         run: python3 tests/sql/feedback-media-promotion/experiment.py run
       - name: Cleanup unique run without backups
