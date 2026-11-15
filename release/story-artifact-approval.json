@@ -4,10 +4,10 @@
     "Written ONLY by a release preparation run that regenerated content from live production.",
     "Never edit by hand — a keyless release run verifies these hashes before it is allowed to proceed."
   ],
-  "approved_at": "2026-10-07T13:44:50.732Z",
+  "approved_at": "2026-11-15T19:41:41.603Z",
   "baseline": {
-    "version": 1791380625947,
-    "generated_at": "2026-10-07T13:43:45.947Z",
+    "version": 1794771699981,
+    "generated_at": "2026-11-15T19:41:39.981Z",
     "source": "live",
     "library_stories": 116,
     "campaign_intro_stories": 70,
@@ -16,12 +16,12 @@
     "story_media": 1797,
     "story_collections": 12,
     "games": 703,
-    "sha256": "6db08b77e1625264a3f3b55b070e2088830cedc78e7e8d6e11f6626fc489012b"
+    "sha256": "98e4cbe0e32ea118bbd6d1b679cebeae703cee4558551f7b143f405e1a155018"
   },
   "story_media": {
-    "generated_at": "2026-10-07T13:43:48.827Z",
+    "generated_at": "2026-11-15T19:41:22.846Z",
     "assets": 1785,
     "bytes": 75846730,
-    "sha256": "237ec6162b917a02557b04675e4cc63d9a40587aadee145c3e4fb5f4ff005c05"
+    "sha256": "d2e2d0ad31c5eb16bcd2aec933056b9505b24faa01c825929ac8b4f20edae3a8"
   }
 }
