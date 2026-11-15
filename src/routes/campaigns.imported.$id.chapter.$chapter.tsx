@@ -650,6 +650,7 @@ function ImportedChapterPlayer() {
                     <ActivityRenderer
                       key={JSON.stringify([owner, ownerEpoch, activity.id, wrongAttempts])}
                       activity={activity}
+                      completionAcknowledged={currentAck === "correct"}
                       onResolve={onResolve}
                       onAdvance={acknowledgeAndAdvance}
                       alreadyDone={chProgress?.completedActivityIds.includes(activity.id) && currentAck !== "correct"}

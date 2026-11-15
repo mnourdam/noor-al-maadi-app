@@ -70,7 +70,7 @@ export interface RendererProps {
    *   advancing via the "متابعة" button after the answer was auto-revealed,
    *   so the parent should apply the minimum reward tier.
    */
-  onResolve: (correct: boolean, meta?: ResolveMeta) => void;
+  onResolve: (correct: boolean, meta?: ResolveMeta) => void | Promise<void>;
   /**
    * Advances to the next activity. Provided by the chapter player.
    * Only renderers that own their own "التالي" button (reflection
@@ -79,6 +79,8 @@ export interface RendererProps {
    */
   onAdvance?: () => void;
   alreadyDone?: boolean;
+  /** Parent confirmed that this attempt was accepted; not an optimistic click. */
+  completionAcknowledged?: boolean;
   /** Owning campaign id — required by data-driven Reflective Moments so
    *  auxiliary state (chosen option, personal note) can be keyed and
    *  restored on resume. Optional for other renderers. */
@@ -144,7 +146,8 @@ function HintRow({ hint }: { hint?: string }) {
 //   2nd wrong → reveal correct answer, highlight wrong picks, lock the
 //   question, surface a "متابعة" button. The player learns the correct
 //   answer before moving on; parent applies the minimum reward tier.
-function MultipleChoiceRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
+function MultipleChoiceRenderer(props: RendererProps) {
+  const { activity, onResolve, alreadyDone } = props;
   const [picked, setPicked] = useState<number | null>(null);
   const [resolved, setResolved] = useState(alreadyDone ?? false);
   const [revealed, setRevealed] = useState(false);
@@ -167,7 +170,7 @@ function MultipleChoiceRenderer({ activity, onResolve, alreadyDone }: RendererPr
     [activity.id, authoredOptions.length, authoredCorrectIndex],
   );
 
-  if (!authoredOptions.length) return <FallbackRenderer activity={activity} onResolve={onResolve} alreadyDone={alreadyDone} />;
+  if (!authoredOptions.length) return <FallbackRenderer {...props} />;
 
   const options = shuffled.options;
   const correctIndex = shuffled.correctIndex;
@@ -371,7 +374,8 @@ function TrueFalseRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
 // progress — the player still has to order everything else.
 const ARRANGE_HINT_COST = 20;
 
-function ArrangeEventsRenderer({ activity, onResolve, alreadyDone, campaignId, chapterId }: RendererProps & { campaignId?: string; chapterId?: string }) {
+function ArrangeEventsRenderer(props: RendererProps) {
+  const { activity, onResolve, alreadyDone, campaignId, chapterId } = props;
   const correctOrder = activity.correctOrder ?? activity.options ?? [];
   // V16: the chapter id MUST come from the route (never from activity JSON —
   // activities carry no `chapterId`), otherwise this key can never match the
@@ -434,7 +438,7 @@ function ArrangeEventsRenderer({ activity, onResolve, alreadyDone, campaignId, c
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  if (!correctOrder.length) return <FallbackRenderer activity={activity} onResolve={onResolve} alreadyDone={alreadyDone} />;
+  if (!correctOrder.length) return <FallbackRenderer {...props} />;
 
   const labelById = (id: string) => items.find((it) => it.id === id)?.label ?? "";
 
@@ -667,11 +671,12 @@ function SortableArrangeRow({
 }
 
 // ---------- Decision Choice (no wrong answer) ----------
-function DecisionRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
+function DecisionRenderer(props: RendererProps) {
+  const { activity, onResolve, alreadyDone } = props;
   const [picked, setPicked] = useState<number | null>(null);
   const [resolved, setResolved] = useState(alreadyDone ?? false);
   const options = activity.options ?? [];
-  if (!options.length) return <FallbackRenderer activity={activity} onResolve={onResolve} alreadyDone={alreadyDone} />;
+  if (!options.length) return <FallbackRenderer {...props} />;
 
   const submit = (i: number) => {
     if (resolved) return;
@@ -708,14 +713,15 @@ function DecisionRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
 }
 
 // ---------- Match Pairs ----------
-function MatchPairsRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
+function MatchPairsRenderer(props: RendererProps) {
+  const { activity, onResolve, alreadyDone } = props;
   const pairs = activity.pairs ?? [];
   const rights = useMemo(() => utilsShuffle(pairs.map(p => p.right)), [pairs]);
   const [mapping, setMapping] = useState<Record<string, string>>({});
   const [resolved, setResolved] = useState(alreadyDone ?? false);
   const [feedback, setFeedback] = useState<"ok" | "err" | null>(alreadyDone ? "ok" : null);
 
-  if (!pairs.length) return <FallbackRenderer activity={activity} onResolve={onResolve} alreadyDone={alreadyDone} />;
+  if (!pairs.length) return <FallbackRenderer {...props} />;
 
   const submit = () => {
     if (resolved) return;
@@ -852,14 +858,38 @@ function FillBlankRenderer({ activity, onResolve, alreadyDone }: RendererProps) 
   );
 }
 
+// Reading and fallback steps must not hide their retry button before the
+// parent accepts persistence. A fulfilled callback alone is not acceptance:
+// the route catches storage/network failures and reports them to the player.
+function useAcknowledgedCompletion({ onResolve, alreadyDone, completionAcknowledged }: RendererProps) {
+  const [pending, setPending] = useState(false);
+  const inFlight = useRef(false);
+  const resolved = !!alreadyDone || !!completionAcknowledged;
+  const submit = async () => {
+    if (resolved || inFlight.current) return;
+    inFlight.current = true;
+    setPending(true);
+    try {
+      await onResolve(true);
+    } catch {
+      // Do not convert a rejected save into completion. The route owns errors.
+    } finally {
+      inFlight.current = false;
+      setPending(false);
+    }
+  };
+  return { resolved, pending, submit };
+}
+
 // ---------- Reading passage (reading_then_question with no options) ----------
 // The authored corpus ships `reading_then_question` activities that carry a
 // reading passage (`contextText`) + a framing prompt but no `options`. Before
 // this renderer existed they fell through to FallbackRenderer and were shown
 // to the player as «نشاطٌ تأمّلي — لا توجد إجابة آلية» with tiny body text.
 // They are now presented as what they are: a reading step.
-function ReadingRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
-  const [resolved, setResolved] = useState(alreadyDone ?? false);
+function ReadingRenderer(props: RendererProps) {
+  const { activity } = props;
+  const { resolved, pending, submit } = useAcknowledgedCompletion(props);
   const body = coerceRichText(activity.contextText).trim();
   return (
     <div className="motion-page">
@@ -875,7 +905,9 @@ function ReadingRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
       <HintRow hint={activity.hint} />
       {!resolved && (
         <button
-          onClick={() => { setResolved(true); onResolve(true); }}
+          disabled={pending}
+          aria-busy={pending}
+          onClick={() => { void submit(); }}
           className="motion-tap mt-4 w-full rounded-xl bg-gradient-gold py-2 text-xs font-bold text-primary-foreground shadow-gold"
         >
           أتممتُ القراءة — متابعة
@@ -891,8 +923,9 @@ function ReadingRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
 // ---------- Fallback ----------
 // Renders anything we don't know how to score. Author marks completion.
 
-function FallbackRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
-  const [resolved, setResolved] = useState(alreadyDone ?? false);
+function FallbackRenderer(props: RendererProps) {
+  const { activity } = props;
+  const { resolved, pending, submit } = useAcknowledgedCompletion(props);
   return (
     <div className="motion-page">
       <ContextBlock text={activity.contextText} />
@@ -907,7 +940,9 @@ function FallbackRenderer({ activity, onResolve, alreadyDone }: RendererProps) {
       </p>
       {!resolved && (
         <button
-          onClick={() => { setResolved(true); onResolve(true); }}
+          disabled={pending}
+          aria-busy={pending}
+          onClick={() => { void submit(); }}
           className="motion-tap mt-3 w-full rounded-xl border border-gold/40 bg-gold/10 py-2 text-xs font-bold text-gold"
         >
           تم — وضع علامة كمكتمل
