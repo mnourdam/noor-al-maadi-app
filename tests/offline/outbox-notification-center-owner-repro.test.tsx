@@ -13,6 +13,7 @@ vi.mock('@/components/AppShell', () => ({
 }));
 vi.mock('@/lib/navigation', () => ({ useStashCurrentAsOrigin: () => () => {} }));
 vi.mock('@/lib/notifications/server', () => ({
+  peekWarmNotificationCenter: () => undefined, notificationListRevision: () => 0,
   fetchMyNotifications: calls.list, markNotificationRead: calls.read,
   deleteMyNotification: calls.remove, markAllNotificationsRead: calls.all,
   clearMyNotifications: calls.clear, subscribeToMyNotifications: (fn: () => void) => { calls.callbacks.push(fn); return () => {}; },

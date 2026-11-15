@@ -65,7 +65,7 @@ function emit() {
  * Fetch the user's notification list. Falls back to the offline cache if
  * the network is unreachable or the user is not signed in.
  */
-// In-flight sharing only: no result cache, paging normalization or cross-limit reuse.
+// Exact-limit in-flight sharing; Center-only warm display snapshot below does not skip RPCs.
 export const NOTIFICATION_LIST_WAIT_MS = 10_000;
 let listGeneration = 0;
 const listFlights = new Map<string, Map<number, Promise<ServerNotification[]>>>();
@@ -73,7 +73,23 @@ function identityScope() {
   const owner = getActiveOwner(), epoch = getIdentityEpoch();
   return { owner, current: () => getActiveOwner() === owner && getIdentityEpoch() === epoch };
 }
-function invalidateLists() { listGeneration += 1; }
+// One short-lived in-memory preview, never populated from persisted/offline cache.
+// It is display-only: every mount still authenticates and refreshes remotely.
+export const NOTIFICATION_WARM_MS = 30_000;
+let pendingListMutations = 0;
+let warmCenter: { key: string; at: number; rows: ServerNotification[] } | undefined;
+export function notificationListRevision() {
+  return JSON.stringify([getActiveOwner(), getIdentityEpoch(), listGeneration]);
+}
+export function peekWarmNotificationCenter(): ServerNotification[] | undefined {
+  if (!warmCenter || warmCenter.key !== notificationListRevision()
+      || Date.now() - warmCenter.at >= NOTIFICATION_WARM_MS || Date.now() < warmCenter.at) {
+    warmCenter = undefined;
+    return undefined;
+  }
+  return warmCenter.rows.map(row => ({ ...row }));
+}
+function invalidateLists() { listGeneration += 1; warmCenter = undefined; }
 export function fetchMyNotifications(limit = 100): Promise<ServerNotification[]> {
   const scope = identityScope(), generation = listGeneration;
   const key = JSON.stringify([scope.owner, getIdentityEpoch(), generation]);
@@ -112,6 +128,9 @@ export function fetchMyNotifications(limit = 100): Promise<ServerNotification[]>
       const rows = (data as ServerNotification[] | null) ?? [];
       if (!current()) return [];
       writeCache(rows, current);
+      if (limit === 150 && current() && pendingListMutations === 0) {
+        warmCenter = { key: notificationListRevision(), at: Date.now(), rows: rows.map(row => ({ ...row })) };
+      }
       return current() ? rows : [];
     } catch {
       return fallback();
@@ -145,85 +164,105 @@ export async function fetchMyUnreadCount(): Promise<number> {
 
 
 export async function markNotificationRead(notificationId: string): Promise<void> {
-  const scope = identityScope();
-  invalidateLists();
-  // NOTE: `mark_notification_read` belongs to the *personal* inbox
-  // (personal_notifications). The Notification Center is backed by
-  // notification_deliveries — it must use the delivery-scoped RPCs, or the
-  // write silently lands on the wrong table and the badge never clears.
+  pendingListMutations += 1;
   try {
-    const { error } = await supabase.rpc("mark_my_notification_read" as never, {
-      p_notification_id: notificationId,
-    } as never);
-    if (error) throw error;
-  } catch (err) {
-    console.warn("[notifications] mark read failed", err);
-  }
-  if (!scope.current()) return;
-  invalidateLists();
-  const next = readCache().map((n) => (n.id === notificationId ? { ...n, read_at: n.read_at ?? new Date().toISOString() } : n));
-  writeCache(next, scope.current);
-  if (scope.current()) emit();
+    const scope = identityScope();
+    invalidateLists();
+    // NOTE: `mark_notification_read` belongs to the *personal* inbox
+    // (personal_notifications). The Notification Center is backed by
+    // notification_deliveries — it must use the delivery-scoped RPCs, or the
+    // write silently lands on the wrong table and the badge never clears.
+    try {
+      const { error } = await supabase.rpc("mark_my_notification_read" as never, {
+        p_notification_id: notificationId,
+      } as never);
+      if (error) throw error;
+    } catch (err) {
+      console.warn("[notifications] mark read failed", err);
+    }
+    if (!scope.current()) return;
+    invalidateLists();
+    const next = readCache().map((n) => (n.id === notificationId ? { ...n, read_at: n.read_at ?? new Date().toISOString() } : n));
+    writeCache(next, scope.current);
+    if (scope.current()) emit();
+
+  } finally { pendingListMutations -= 1; }
 }
 
 export async function markAllNotificationsRead(): Promise<void> {
-  const scope = identityScope();
-  invalidateLists();
-  const now = new Date().toISOString();
-  // Write cache first so the badge clears instantly, then persist.
-  writeCache(readCache().map((n) => ({ ...n, read_at: n.read_at ?? now })), scope.current);
-  if (!scope.current()) return;
-  emit();
-  if (!scope.current()) return;
+  pendingListMutations += 1;
   try {
-    const { error } = await supabase.rpc("mark_all_my_notifications_read" as never);
-    if (error) throw error;
-  } catch (err) {
-    console.warn("[notifications] mark all read failed", err);
-  }
-  if (!scope.current()) return;
-  invalidateLists();
-  // Re-sync from the server so the cache reflects the durable truth.
-  await fetchMyNotifications(200);
-  if (scope.current()) emit();
+    const scope = identityScope();
+    invalidateLists();
+    const now = new Date().toISOString();
+    // Write cache first so the badge clears instantly, then persist.
+    writeCache(readCache().map((n) => ({ ...n, read_at: n.read_at ?? now })), scope.current);
+    if (!scope.current()) return;
+    emit();
+    if (!scope.current()) return;
+    try {
+      const { error } = await supabase.rpc("mark_all_my_notifications_read" as never);
+      if (error) throw error;
+    } catch (err) {
+      console.warn("[notifications] mark all read failed", err);
+    }
+    if (!scope.current()) return;
+    invalidateLists();
+    // Re-sync from the server so the cache reflects the durable truth.
+    await fetchMyNotifications(200);
+    if (scope.current()) emit();
+
+  } finally { pendingListMutations -= 1; }
 }
 
 
 export async function deleteMyNotification(notificationId: string): Promise<void> {
-  const scope = identityScope();
-  invalidateLists();
+  pendingListMutations += 1;
   try {
-    await supabase.rpc("delete_my_notification" as never, { p_notification_id: notificationId } as never);
-  } catch (err) {
-    console.warn("[notifications] delete failed", err);
-  }
-  if (!scope.current()) return;
-  invalidateLists();
-  writeCache(readCache().filter((n) => n.id !== notificationId), scope.current);
-  if (scope.current()) emit();
+    const scope = identityScope();
+    invalidateLists();
+    try {
+      await supabase.rpc("delete_my_notification" as never, { p_notification_id: notificationId } as never);
+    } catch (err) {
+      console.warn("[notifications] delete failed", err);
+    }
+    if (!scope.current()) return;
+    invalidateLists();
+    writeCache(readCache().filter((n) => n.id !== notificationId), scope.current);
+    if (scope.current()) emit();
+
+  } finally { pendingListMutations -= 1; }
 }
 
 export async function clearMyNotifications(): Promise<void> {
-  const scope = identityScope();
-  invalidateLists();
+  pendingListMutations += 1;
   try {
-    await supabase.rpc("clear_my_notifications" as never);
-  } catch (err) {
-    console.warn("[notifications] clear failed", err);
-  }
-  if (!scope.current()) return;
-  invalidateLists();
-  writeCache([], scope.current);
-  if (scope.current()) emit();
+    const scope = identityScope();
+    invalidateLists();
+    try {
+      await supabase.rpc("clear_my_notifications" as never);
+    } catch (err) {
+      console.warn("[notifications] clear failed", err);
+    }
+    if (!scope.current()) return;
+    invalidateLists();
+    writeCache([], scope.current);
+    if (scope.current()) emit();
+
+  } finally { pendingListMutations -= 1; }
 }
 
 export async function recordDismissed(notificationId: string): Promise<void> {
-  const scope = identityScope();
-  invalidateLists();
+  pendingListMutations += 1;
   try {
-    await supabase.rpc("record_notification_dismissed" as never, { p_notification_id: notificationId } as never);
-  } catch { /* analytics only — non-fatal */ }
-  if (scope.current()) invalidateLists();
+    const scope = identityScope();
+    invalidateLists();
+    try {
+      await supabase.rpc("record_notification_dismissed" as never, { p_notification_id: notificationId } as never);
+    } catch { /* analytics only — non-fatal */ }
+    if (scope.current()) invalidateLists();
+
+  } finally { pendingListMutations -= 1; }
 }
 
 export interface NotificationPreferences {

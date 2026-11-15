@@ -8,6 +8,8 @@ import { resolveNotificationAction, openExternalUrl } from "@/lib/notifications/
 import { isInformationalNotification, type NotificationPayload } from "@/lib/notifications/deepLink";
 import {
   fetchMyNotifications,
+  peekWarmNotificationCenter,
+  notificationListRevision,
   markNotificationRead,
   markAllNotificationsRead,
   deleteMyNotification,
@@ -60,8 +62,9 @@ function NotificationsCenter() {
 function ScopedNotificationsCenter({ scope }: { scope: string }) {
   const router = useRouter();
   const stashOrigin = useStashCurrentAsOrigin();
-  const [rows, setRows] = useState<ServerNotification[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [initialRows] = useState(() => peekWarmNotificationCenter());
+  const [rows, setRows] = useState<ServerNotification[]>(initialRows ?? []);
+  const [loading, setLoading] = useState(initialRows === undefined);
   const [feedback, setFeedback] = useState<string | null>(null);
 
 
@@ -72,10 +75,19 @@ function ScopedNotificationsCenter({ scope }: { scope: string }) {
   useEffect(() => {
     mounted.current = true;
     let alive = true;
+    let refreshSequence = 0;
     const refresh = async () => {
       if (!alive || notificationScope() !== scope) return;
+      const sequence = ++refreshSequence;
+      const revision = notificationListRevision();
       const list = await fetchMyNotifications(150);
-      if (!alive || notificationScope() !== scope) return;
+      if (!alive || notificationScope() !== scope || sequence !== refreshSequence) return;
+      if (revision !== notificationListRevision()) {
+        // A mutation can retire this read without emitting an update (dismiss analytics).
+        // Only the newest mounted refresh catches up; never apply its retired empty result.
+        void refresh();
+        return;
+      }
       setRows(list);
       setLoading(false);
     };
