@@ -138,10 +138,25 @@ def remove_generated_vite_manifest(root):
  target.unlink()
  STATE['generated_vite_manifest_removed']=True
 
-def build(root,mode='debug'):
+PAIR_BRANCH='refs/heads/v18-home-pair-56bd4402'
+PAIR_SOURCE='56bd440232ca1a7b426b1b7dcf928f36f0aa76ce'
+def bind_pair_source(source_root):
+ # A narrowly named, build-only branch may consume one immutable app checkout.
+ # Never rewrite GITHUB_REF or weaken the original preparation-branch path.
+ p.require(isinstance(source_root,Path) and source_root.is_absolute() and source_root.resolve()==source_root and not source_root.is_symlink(),'invalid pinned source')
+ p.require(subprocess.check_output(['git','rev-parse','HEAD'],cwd=source_root,text=True).strip()==PAIR_SOURCE,'pair source mismatch')
+ p.require(not subprocess.check_output(['git','status','--porcelain','--untracked-files=no'],cwd=source_root,text=True).strip(),'pair source dirty')
+ p.ROOT=source_root
+
+def build(root,mode='debug',source_root=None):
  variant=variant_for(mode)
  p.require(os.environ.get('GITHUB_ACTIONS')=='true','build requires disposable CI')
- p.require(os.environ.get('GITHUB_REF')=='refs/heads/v18-01a-outbox-recovery','isolated branch only')
+ ref=os.environ.get('GITHUB_REF')
+ if ref==PAIR_BRANCH:
+  p.require(mode=='debug','pair branch debug only')
+  bind_pair_source(source_root)
+ else:
+  p.require(ref=='refs/heads/v18-01a-outbox-recovery' and source_root is None,'isolated branch only')
  receipt=p.prepare(root);home=root/'private-home';home.mkdir(mode=0o700);env=build_env(home,receipt['source_sha'],mode)
  release_evidence=None
  if mode=='release_config':

@@ -1,0 +1,77 @@
+name: V18 synthetic Firebase Home APK pair (review-gated draft)
+on:
+  push:
+    branches: [v18-home-pair-56bd4402]
+    paths: ['.github/workflows/v18-firebase-home-build.yml']
+permissions:
+  contents: read
+jobs:
+  build-pair:
+    # One exact isolated build branch; never production or V18 preparation.
+    if: github.ref == 'refs/heads/v18-home-pair-56bd4402' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      APP_SOURCE_SHA: 56bd440232ca1a7b426b1b7dcf928f36f0aa76ce
+      REVIEWED_TEST_SHA256: 8dfed6f7a5cb19a67ee072dc086b522d799db572d1e547e950729d7b177b3820
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: harness
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 56bd440232ca1a7b426b1b7dcf928f36f0aa76ce
+          path: app-source
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: app-source/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+        with:
+          accept-android-sdk-licenses: false
+          log-accepted-android-sdk-licenses: false
+          packages: ''
+      - name: Require reviewed inputs and existing SDK acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF" == refs/heads/v18-home-pair-56bd4402 ]]
+          [[ "$(git -C app-source rev-parse HEAD)" == "$APP_SOURCE_SHA" ]]
+          [[ "$REVIEWED_TEST_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          echo "$REVIEWED_TEST_SHA256  harness/tests/firebase-home/IrthHomeTest.java" | sha256sum -c -
+          test -f "$ANDROID_SDK_ROOT/licenses/android-sdk-license"
+          sdkmanager 'platforms;android-36' 'build-tools;35.0.0' 'platform-tools' </dev/null
+      - name: Source and branch guard negative tests (no build)
+        run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s harness/tests/firebase-home -p 'test_*.py' -v
+      - name: Locked dependencies; no application or live-data generation
+        working-directory: app-source
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      # build-pair verifies all 3 pinned Java hashes and runs SafeCleanupTest with
+      # the setup-java JDK before producer.build or any Android Gradle task.
+      - name: Build and verify pair in disposable tree only
+        run: >-
+          python3 harness/tests/firebase-home/build-pair.py
+          --source "$GITHUB_WORKSPACE/app-source"
+          --java "$GITHUB_WORKSPACE/harness/tests/firebase-home/IrthHomeTest.java"
+          --root "$RUNNER_TEMP/irth-home-pair"
+          --output "$RUNNER_TEMP/irth-home-export"
+      - name: Export exact verified public artifacts (no key, environment, cache or raw logs)
+        uses: actions/upload-artifact@v4
+        with:
+          name: synthetic-home-pair-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/irth-home-export/acceptance.apk
+            ${{ runner.temp }}/irth-home-export/instrumentation.apk
+            ${{ runner.temp }}/irth-home-export/apk-receipt.json
+            ${{ runner.temp }}/irth-home-export/pair-receipt.json
+          if-no-files-found: error
+          retention-days: 1
+# Deliberately no Firebase upload, device run, credentials, deployment or live DB actions.
