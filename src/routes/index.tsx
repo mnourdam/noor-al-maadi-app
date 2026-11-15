@@ -28,7 +28,7 @@ import { runDailyNotifications, DEFAULT_NOTIFICATION_PREFS, formatBadgeCount } f
 import { fetchMyUnreadCount, subscribeToMyNotifications } from "@/lib/notifications/server";
 import { useAccount } from "@/lib/account";
 import { useTodayInHistoryEvent, type TodayInHistoryEvent } from "@/lib/today-in-history";
-import { useRealCollectionStats, type UnifiedUnlock } from "@/lib/real-collection-stats";
+import type { UnifiedUnlock } from "@/lib/real-collection-stats";
 import { useUnifiedDiscoveryFeed, type DiscoveryItem } from "@/lib/playerDiscoveries";
 import { useHomeSummary } from "@/lib/stats/homeSummary";
 import { useStoryCollections } from "@/lib/stories/collections";
@@ -98,7 +98,6 @@ function HomeFull() {
     () => (todayEvent ? [todayEvent, ...todayOthers] : []),
     [todayEvent, todayOthers],
   );
-  const stats = useRealCollectionStats();
   const homeSummary = useHomeSummary();
   // Unified discovery feed — encyclopedia reads + museum acquisitions,
   // canonically deduplicated. Single source for Hero + Home carousel.
