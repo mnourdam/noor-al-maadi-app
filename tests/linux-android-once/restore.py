@@ -8,7 +8,7 @@ def restore():
     result={'owned_process_cleanup':False,'adb_cleanup':False,'acl_restored':False}
     try:owned_process.cleanup();result['owned_process_cleanup']=True
     except Exception:pass
-    env={**os.environ,'ANDROID_ADB_SERVER_PORT':'5038','ADB_SERVER_SOCKET':'tcp:127.0.0.1:5038'}
+    env={**os.environ,'ANDROID_ADB_SERVER_PORT':'5038','ADB_SERVER_SOCKET':'tcp:localhost:5038'}
     try:
         marker=Path(os.environ['RUNNER_TEMP'])/'irth-linux-adb-owned'
         if marker.exists():

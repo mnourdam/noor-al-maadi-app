@@ -78,7 +78,7 @@ def execute(apk, receipt, evidence):
     if out != root/'irth-linux-evidence' or out.exists(): raise ValueError('fresh_evidence_required')
     out.mkdir(mode=0o700)
     os.environ['ANDROID_ADB_SERVER_PORT'] = '5038'
-    os.environ['ADB_SERVER_SOCKET'] = 'tcp:127.0.0.1:5038'
+    os.environ['ADB_SERVER_SOCKET'] = 'tcp:localhost:5038'
     report = {'result':'BLOCKED','release_ready':False,'scope':'ONE_LINUX_SYNTHETIC_APP_ATTEMPT',
               'six_feature_journeys':'NOT_EXECUTED','stage':'preflight','reached':{},'cleanup_complete':False}
     device = None; page = None; lease = None

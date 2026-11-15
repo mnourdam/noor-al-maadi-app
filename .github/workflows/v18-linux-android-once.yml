@@ -126,7 +126,7 @@ jobs:
         run: '"$RUNNER_TEMP/irth-native-python/bin/python" tests/native-app/transfer.py verify --root "$RUNNER_TEMP/irth-apk-download"'
       - name: Offline Linux adapter and ACL controls
         run: PYTHONDONTWRITEBYTECODE=1 "$RUNNER_TEMP/irth-native-python/bin/python" -m unittest discover -s tests/linux-android-once -p 'test_*.py' -v
-      - name: One launch, screen, and existing readiness attempt
+      - name: One authorized ADB-localhost correction trial
         run: |
           "$RUNNER_TEMP/irth-native-python/bin/python" tests/linux-android-once/experiment.py --apk "$RUNNER_TEMP/irth-apk-download/acceptance.apk" --receipt "$RUNNER_TEMP/irth-apk-download/apk-receipt.json" --evidence "$RUNNER_TEMP/irth-linux-evidence"
       - name: Independently restore exact original KVM ACL if a snapshot exists
