@@ -1,50 +1,36 @@
-# Production Hotfix Plan — Two Surgical Fixes
+# خطة: إغلاق ثغرة social_reactions + تجديد حزمة القصص
 
-## Problem 1: Locked Story Return
-Navigating from a locked story to a required encyclopedia entry loses the story context on "Back", returning the user to the generic encyclopedia list instead of the story.
+## الحالة الفعلية (تم التحقق قراءةً فقط)
+- سياسة `reactions_select_authenticated`: SELECT لـ authenticated بشرط `true` — مؤكد، أي مستخدم يقرأ كل التفاعلات.
+- صلاحيات authenticated على الجدول: SELECT + TRUNCATE (لا INSERT/UPDATE/DELETE). anon: لا شيء.
+- الدوال `toggle_reaction_v2` و`list_comments_v2` و`social_reactions_sync_counter` كلها SECURITY DEFINER، فلا تتأثر بتضييق السياسة → العدّ و"قلبي" يستمران.
+- الـ migrations من نوع Supabase SQL بمعرّفات زمنية (`supabase/migrations/`, 278 ملفاً، آخرها 20260905143448). أداة التطبيق تطبّق migration واحدة فقط ولا تعيد تشغيل القديمة.
+- bucket `story-media` خاص (public=false) — مؤكد.
 
-## Problem 2: Home Hero Reload Regression
-Navigating away from Home and back causes the Hero to show "جاري تحميل..." for up to 15s, even when trusted local progress exists, due to React Query re-validation and reconciliation state resets during remount.
+## الجزء 1: إصلاح الصلاحيات
+Migration واحدة صغيرة فقط، لا تلمس أي صف:
+```sql
+REVOKE TRUNCATE ON public.social_reactions FROM authenticated;
+DROP POLICY IF EXISTS reactions_select_authenticated ON public.social_reactions;
+CREATE POLICY reactions_select_own ON public.social_reactions
+  FOR SELECT TO authenticated USING (auth.uid() = user_id);
+```
+- قبل التطبيق: فحص أن الواجهة لا تقرأ الجدول مباشرة لصفوف الآخرين (البحث في الكود)، وحفظ تعريف السياسة الحالية كخط رجوع.
+- الرجوع (عند الحاجة فقط، migration منفصلة):
+  `DROP POLICY reactions_select_own ...; CREATE POLICY reactions_select_authenticated ... USING (true); GRANT TRUNCATE ... TO authenticated;`
+- التحقق بعده: `has_table_privilege` (TRUNCATE=false)، `pg_policies`، عدد الصفوف قبل/بعد مطابق، تجربة قلب/إلغاء قلب وعرض العدد على تعليق كمستخدم مسجّل، والـ linter.
 
----
+## الجزء 2: تجديد حزمة القصص
+الآلية الموجودة: `npm run release:android:prepare` → `scripts/build-story-media-pack.mjs` + توليد المحتوى، تقرأ `SUPABASE_SERVICE_ROLE_KEY` من البيئة فقط، تنزّل الصور من الـ bucket الخاص بالطلب الإداري (لا روابط عامة)، تحوّلها WebP في `public/story-media/` وتكتب `manifest.json` بالبصمات، ثم تختم `release/story-artifact-approval.json` آخراً.
+- التنفيذ: تشغيل نفس السكربت في البيئة التي يتوفر فيها المفتاح كسرّ بناء (لا يُطبع ولا يُكتب في ملف). لن يتغير الـ bucket ولا يصبح عاماً.
+- إثبات الاكتمال: عدد القصص/المشاهد/الصور، صفر صور مفقودة، تطابق sha256 لكل ملف مع manifest، تطابق بصمة manifest مع ختم الموافقة، اختبار رفض عند العبث، وعمر الحزمة 0 يوم.
+- لا تعديل لمنطق التطبيق أو الحزم أو أرقام الإصدار.
 
-## Proposed Changes
+## ما أنفذه مباشرة بعد الموافقة
+- كتابة وتطبيق migration الجزء 1 والتحقق منها.
+- تشغيل سكربت الحزمة إن كان المفتاح متاحاً كسرّ في بيئة التنفيذ، والتحقق من البصمات.
 
-### Fix 1: Locked Story Navigation Origin
-1.  **`src/routes/story.$id.tsx`**: Add `useStashCurrentAsOrigin` to the `StoryRoute` component.
-2.  **`src/components/stories/LockedStoryDialog.tsx`**:
-    *   Inject the `stash` helper from `useStashCurrentAsOrigin`.
-    *   Update `go(to)` to call `stash(to)` before navigating, establishing the current story as the origin for the encyclopedia destination.
-3.  **`src/routes/encyclopedia.entity.$id.tsx`**: Ensure the back action uses the navigation engine's `useBack()` (which prioritizes origins) instead of a blind parent link.
-
-### Fix 2: Home Hero Fast Path
-1.  **`src/lib/campaignRecommendationService.ts`**:
-    *   Update `useCampaignRecommendation` to track the identity epoch (`getIdentityEpoch`).
-    *   Introduce a `isFastPathReady` state that becomes true once reconciliation is terminal for the *current* identity epoch.
-    *   Allow `ready: true` if `isFastPathReady` is true AND `campaigns` are already available (even if `isSuccess` is false due to a background refetch).
-    *   Reset `isFastPathReady` immediately if the identity epoch changes.
-
----
-
-## Technical Details
-
-### Navigation Engine Integration
-*   Use `useStashCurrentAsOrigin` to capture `{ route: "/story/$id", params: { id } }`.
-*   The `useBack()` hook in the engine already handles `Priority 3 — navigation origin` for player routes.
-
-### Identity Epoch Guard
-*   The `IdentityEpoch` (from `src/lib/identity/owner.ts`) is a monotonic counter bumped by `setActiveOwnerInternal`.
-*   By keying the "fast path" to this epoch, we guarantee that cached data from a previous user never leaks into a new session.
-
-## Verification Plan
-
-### Automated Tests
-*   `npm run typecheck`
-*   `npm run build:android:web`
-
-### Manual Verification Scenarios
-1.  **Locked Story → Entity → Back**: Should land back in the Story Player/Dialog.
-2.  **Encyclopedia List → Entity → Back**: Should return to Encyclopedia List (normal behavior).
-3.  **Home (Ready) → Encyclopedia → Home**: Hero should show content immediately (no "Loading..." flash).
-4.  **Sign Out → Sign In (User B) → Home**: Should show "Loading..." until User B's reconciliation finishes (isolation check).
-5.  **Offline Home Return**: Should show cached content immediately if owner matches.
+## ما يحتاج موافقتك/قرارك
+- الموافقة على هذه الخطة (تغيير صلاحيات قاعدة الإنتاج — البيئة نفسها تخدم المعاينة والنشر).
+- إن لم يكن المفتاح متاحاً لي، يجب تشغيل الأمر على جهاز الإصدار عندك؛ لا أستطيع ولن أطلب قيمته.
+- لا نشر في أي خطوة.
