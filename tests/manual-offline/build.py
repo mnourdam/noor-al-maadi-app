@@ -1,0 +1,235 @@
+"""CI-only manual offline producer. Distinct test APK, disposable copy/key; no device execution."""
+import argparse,hashlib,importlib.util,json,os,re,shutil,subprocess,zipfile
+from pathlib import Path
+spec=importlib.util.spec_from_file_location('prepare',Path(__file__).with_name('prepare.py'));p=importlib.util.module_from_spec(spec);spec.loader.exec_module(p)
+def variant_for(mode):
+ p.require(mode in ('debug','release_config'),'unsupported build mode')
+ return 'release' if mode=='release_config' else 'debug'
+
+def build_env(home,sha,mode='debug'):
+ variant=variant_for(mode)
+ env={key:os.environ[key] for key in ('PATH','JAVA_HOME','ANDROID_HOME','ANDROID_SDK_ROOT','TMPDIR','SYSTEMROOT') if key in os.environ}
+ env.update(HOME=str(home),LANG='C.UTF-8',NODE_OPTIONS='--max-old-space-size=1536',GITHUB_SHA=sha,ANDROID_BUILD_TYPE=variant)
+ return env
+
+def verify_manifest(text,mode='debug'):
+ variant_for(mode)
+ # aapt xmltree: inspect element-local attributes rather than unrelated substrings.
+ nodes=[];stack=[]
+ for line in text.splitlines():
+  stripped=line.lstrip();indent=len(line)-len(stripped)
+  if stripped.startswith('E: '):
+   while stack and stack[-1][0]>=indent:stack.pop()
+   node={'kind':stripped.split()[1],'attrs':{},'parent':stack[-1][1] if stack else None};nodes.append(node);stack.append((indent,node))
+  elif stripped.startswith('A: ') and stack:
+   match=re.match(r'A: android:([a-zA-Z]+)(?:\([^)]*\))?=(.*)',stripped)
+   if match:stack[-1][1]['attrs'][match.group(1)]=match.group(2)
+ def quoted(value,expected):return value.startswith('"'+expected+'"')
+ app=next((n for n in nodes if n['kind']=='application'),None)
+ p.require(app is not None,'application missing')
+ p.require('android:sharedUserId' not in text,'shared user forbidden')
+ for key in ('allowBackup','fullBackupContent'):
+  p.require(re.fullmatch(r'\(type 0x12\)0x0+',app['attrs'].get(key,'')) is not None,'backup enabled')
+ p.require(app['attrs'].get('label','').startswith('"'+p.LABEL+'"'),'manual label missing')
+ p.require('dataExtractionRules' in app['attrs'],'extraction rules missing')
+ debug=app['attrs'].get('debuggable')
+ if mode=='debug':p.require(debug is not None and debug.endswith('0xffffffff'),'APK is not debuggable')
+ else:p.require(debug is None or re.fullmatch(r'\(type 0x12\)0x0+',debug) is not None,'release APK is debuggable or malformed')
+ p.require(any(n['kind']=='activity' and quoted(n['attrs'].get('name',''),'app.lovable.irth.MainActivity') for n in nodes),'actual activity missing')
+ p.require(any(n['kind']=='provider' and quoted(n['attrs'].get('authorities',''),p.APP_ID+'.fileprovider') for n in nodes),'provider authority not isolated')
+ schemes=[n['attrs']['scheme'] for n in nodes if n['kind']=='data' and 'scheme' in n['attrs']]
+ p.require(len(schemes)==1 and quoted(schemes[0],p.APP_ID),'OAuth scheme not isolated')
+ for key in ('firebase_messaging_auto_init_enabled','firebase_analytics_collection_enabled','firebase_data_collection_default_enabled'):
+  found=[n for n in nodes if n['kind']=='meta-data' and n['parent'] is app and quoted(n['attrs'].get('name',''),key)]
+  p.require(len(found)==1 and re.fullmatch(r'\(type 0x12\)0x0+',found[0]['attrs'].get('value','')) is not None,'Firebase metadata not disabled')
+
+STATE={'result':'FAIL','stage':'producer_preflight','release_ready':False}
+# These are bounded text indicators, not diagnoses. No matched text is retained.
+GRADLE_INDICATORS={
+ 'dependency_resolution': ('could not resolve all files', 'could not resolve all dependencies', 'could not find '),
+ 'network_resolution': ('unknownhostexception', 'connect timed out', 'connection timed out', 'could not get resource'),
+ 'sdk_license': ('license for package', 'licenses have not been accepted'),
+ 'sdk_location': ('sdk location not found', 'failed to find platform sdk'),
+ 'java_compatibility': ('unsupported class file major version', 'invalid source release', 'requires java'),
+ 'compilation': ('compilation failed', 'compiledebugjavawithjavac failed'),
+ 'task_failure': ('execution failed for task',),
+ 'daemon_disappeared': ('gradle build daemon disappeared unexpectedly',),
+ 'memory': ('outofmemoryerror', 'java heap space', 'gc overhead limit exceeded'),
+ 'disk_space': ('no space left on device',),
+}
+def gradle_indicators(*outputs):
+ # Inspect only a bounded head/tail of each captured stream, including timeout bytes.
+ parts=[]
+ for value in outputs:
+  if isinstance(value,bytes):value=value[:65536].decode('utf-8','replace')+' '+value[-65536:].decode('utf-8','replace')
+  elif isinstance(value,str):value=value[:65536]+' '+value[-65536:]
+  else:value=''
+  parts.append(value.lower())
+ text=' '.join(parts)
+ return {key:any(token in text for token in tokens) for key,tokens in GRADLE_INDICATORS.items()}
+POST_BUILD_REASONS=frozenset({'apk_missing','apk_zip_invalid','apk_asset_duplicates','apk_asset_membership','apk_asset_hash','pinned_build_tools_missing'})
+class PostBuildValidation(ValueError):
+ def __init__(self,reason):
+  if reason not in POST_BUILD_REASONS:raise ValueError('invalid diagnostic reason')
+  self.reason=reason
+  super().__init__(reason)
+def post_build_require(condition,reason):
+ if not condition:raise PostBuildValidation(reason)
+def verify_built_assets(apk,assets):
+ STATE.pop('asset_membership_diagnostics',None)
+ STATE['stage']='apk_output_presence'
+ post_build_require(apk.is_file(),'apk_missing')
+ STATE['stage']='apk_zip_open'
+ try:
+  with zipfile.ZipFile(apk) as archive:
+   names=[n for n in archive.namelist() if n.startswith('assets/public/') and not n.endswith('/') or n in ('assets/capacitor.config.json','assets/capacitor.plugins.json')]
+   STATE['stage']='apk_asset_membership'
+   post_build_require(len(names)==len(set(names)),'apk_asset_duplicates')
+   if set(names)!=set(assets):
+    missing=set(assets)-set(names);unexpected=set(names)-set(assets)
+    STATE['asset_membership_diagnostics']={'expected_count':min(len(assets),1000000),'actual_count':min(len(names),1000000),'missing_count':min(len(missing),1000000),'unexpected_count':min(len(unexpected),1000000),'missing_vite_manifest':'assets/public/.vite/manifest.json' in missing}
+    raise PostBuildValidation('apk_asset_membership')
+   STATE['stage']='apk_asset_hashes'
+   post_build_require(all(hashlib.sha256(archive.read(n)).hexdigest()==assets[n] for n in names),'apk_asset_hash')
+ except zipfile.BadZipFile:
+  raise PostBuildValidation('apk_zip_invalid') from None
+
+def require_build_tools(sdk):
+ STATE['stage']='pinned_build_tools_presence'
+ tools=sdk/'build-tools/35.0.0'
+ post_build_require(tools.is_dir(),'pinned_build_tools_missing')
+ return tools
+
+def failure_evidence(error):
+ if isinstance(error,subprocess.TimeoutExpired):category='command_timeout'
+ elif isinstance(error,subprocess.CalledProcessError):category='command_exit'
+ elif isinstance(error,ValueError):category='configuration_or_validation'
+ elif isinstance(error,OSError):category='operating_system_error'
+ else:category='unexpected_exception'
+ evidence={'category':category}
+ if isinstance(error,PostBuildValidation):evidence['validation_reason']=error.reason
+ source=os.environ.get('GITHUB_SHA','')
+ if re.fullmatch(r'[0-9a-f]{40}',source):evidence['source_sha']=source
+ if isinstance(error,subprocess.CalledProcessError):
+  value=error.returncode
+  evidence['returncode']=value if type(value) is int and -255<=value<=255 else None
+ if STATE.get('stage') in ('gradle_debug','gradle_release') and isinstance(error,(subprocess.TimeoutExpired,subprocess.CalledProcessError)):
+  evidence['gradle_indicators']=gradle_indicators(error.stdout,error.stderr)
+ return evidence
+
+def run_command(args,root,env,timeout=900):
+ labels={'vite.js':'web_build','finalize-android.mjs':'web_finalize','capacitor':'native_sync','keytool':'ephemeral_signing','bash':'gradle_debug','aapt':'apk_manifest_inspection','apksigner':'apk_signer_inspection'}
+ STATE['stage']=labels.get(Path(args[1] if args[0]=='node' else args[0]).name,'producer_command')
+ if args[0]=='bash' and 'assembleRelease' in args:STATE['stage']='gradle_release'
+ # Capture only. Neither raw output nor command arguments enter retained evidence.
+ result=subprocess.run(args,cwd=root,env=env,capture_output=True,text=True,timeout=timeout)
+ if result.returncode!=0:
+  raise subprocess.CalledProcessError(result.returncode,args,output=result.stdout,stderr=result.stderr)
+ return result.stdout
+
+def remove_generated_vite_manifest(root):
+ # Only disposable build metadata, before Capacitor copy and expected inventory.
+ STATE['stage']='generated_build_metadata'
+ p.require(root.is_absolute() and root.resolve()==root and not root.is_symlink(),'noncanonical build root')
+ current=root
+ for part in ('dist','android','.vite'):
+  current=current/part
+  p.require(not current.is_symlink() and current.is_dir(),'unsafe build metadata directory')
+ target=current/'manifest.json'
+ p.require(not target.is_symlink() and target.is_file(),'unsafe or missing build metadata file')
+ p.require(target.stat().st_size<=4*1024*1024,'unexpected build metadata size')
+ metadata=json.loads(target.read_text())
+ p.require(isinstance(metadata,dict) and len(metadata)>0 and all(isinstance(entry,dict) and isinstance(entry.get('file'),str) for entry in metadata.values()),'unexpected Vite manifest shape')
+ target.unlink()
+ STATE['generated_vite_manifest_removed']=True
+
+def build(root,mode='debug'):
+ variant=variant_for(mode)
+ p.require(os.environ.get('GITHUB_ACTIONS')=='true','build requires disposable CI')
+ p.require(os.environ.get('GITHUB_REF')=='refs/heads/v18-manual-offline-56bd4402','isolated branch only')
+ p.require(subprocess.check_output(['git','rev-parse','HEAD'],cwd=p.ROOT,text=True).strip()=='56bd440232ca1a7b426b1b7dcf928f36f0aa76ce','source pin mismatch')
+ p.require(not subprocess.check_output(['git','status','--porcelain','--untracked-files=no'],cwd=p.ROOT,text=True).strip(),'source dirty')
+ receipt=p.prepare(root);home=root/'private-home';home.mkdir(mode=0o700);env=build_env(home,receipt['source_sha'],mode)
+ release_evidence=None
+ if mode=='release_config':
+  spec=importlib.util.spec_from_file_location('release_evidence',p.ROOT/'tests/release-config/evidence.py');release_evidence=importlib.util.module_from_spec(spec);spec.loader.exec_module(release_evidence)
+  original_rules=release_evidence.source_hashes(p.ROOT)
+  for name in release_evidence.SOURCE_FILES:
+   expected=(p.ROOT/name).read_bytes()
+   if name=='android/app/build.gradle':expected=expected.replace(b'applicationId "app.lovable.irth"',b'applicationId "app.lovable.irth.acceptance"')
+   p.require((root/name).read_bytes()==expected,'release source rules changed')
+ def run(args,timeout=900):
+  return run_command(args,root,env,timeout)
+ p.require((p.ROOT/'node_modules/.bin/vite').is_file(),'locked source dependencies missing')
+ (root/'node_modules').symlink_to(p.ROOT/'node_modules',target_is_directory=True)
+ (root/'scripts').mkdir();shutil.copy2(p.ROOT/'scripts/finalize-android.mjs',root/'scripts/finalize-android.mjs')
+ run(['node',str(p.ROOT/'node_modules/vite/bin/vite.js'),'build','--config',str(root/'vite.manual.config.ts')])
+ run(['node','scripts/finalize-android.mjs'])
+ remove_generated_vite_manifest(root)
+ run(['node',str(p.ROOT/'node_modules/@capacitor/cli/bin/capacitor'),'sync','android'])
+ # Capacitor plugin inventory must exclude network/auth/intent-facing optional plugins.
+ plugin_file=root/'android/app/src/main/assets/capacitor.plugins.json'
+ plugins=json.loads(plugin_file.read_text())
+ p.require(all(entry.get('pkg') in ('@capacitor/app','@capacitor/preferences','@capacitor/filesystem') for entry in plugins),'unexpected optional native plugin')
+ # Per-run debug certificate only, never an owner/release signing key.
+ key=root/'acceptance-debug.keystore'
+ run(['keytool','-genkeypair','-keystore',str(key),'-storepass','android','-keypass','android','-alias','acceptance','-dname','CN=Disposable Irth Acceptance','-keyalg','RSA','-keysize','2048','-validity','2','-noprompt'])
+ certificate=run(['keytool','-exportcert','-rfc','-keystore',str(key),'-storepass','android','-alias','acceptance'])
+ import base64
+ match=re.search(r'-----BEGIN CERTIFICATE-----\s*(.*?)\s*-----END CERTIFICATE-----',certificate,re.S);p.require(match is not None,'certificate unavailable')
+ signer=hashlib.sha256(base64.b64decode(match.group(1))).hexdigest()
+ gradle=root/'android/app/build.gradle'
+ with gradle.open('a') as f:f.write("\nandroid { signingConfigs { acceptance { storeFile file('../../acceptance-debug.keystore'); storePassword 'android'; keyAlias 'acceptance'; keyPassword 'android' } }; buildTypes { "+variant+" { signingConfig signingConfigs.acceptance } } }\n")
+ if release_evidence:
+  before_build_rules=release_evidence.source_hashes(root)
+  evidence_script=release_evidence.prepare(root)
+ # Bind expected assets BEFORE packaging, not by accepting arbitrary APK contents.
+ asset_root=root/'android/app/src/main/assets';assets={}
+ for relative in ('public','capacitor.config.json','capacitor.plugins.json'):
+  target=asset_root/relative
+  files=target.rglob('*') if target.is_dir() else [target]
+  for file in files:
+   if file.is_file():assets['assets/'+str(file.relative_to(asset_root))]=hashlib.sha256(file.read_bytes()).hexdigest()
+ p.require(not any('native-fixture' in n or 'fixture-loader' in n for n in assets),'synthetic fixture asset forbidden')
+ p.require('assets/public/index.html' in assets and 'assets/capacitor.config.json' in assets,'missing actual packaged assets')
+ cfg=json.loads((asset_root/'capacitor.config.json').read_text())
+ p.require(cfg.get('appId')==p.APP_ID and cfg.get('server',{}).get('androidScheme')=='https' and not cfg.get('server',{}).get('url') and not cfg.get('server',{}).get('allowNavigation') and cfg.get('android',{}).get('allowMixedContent') is False,'unsafe native server configuration')
+ if mode=='debug':run(['bash','android/gradlew','-p','android','--no-daemon','assembleDebug'],timeout=1200)
+ else:
+  run(['bash','android/gradlew','-p','android','--no-daemon','--no-build-cache','--console=plain','-I',str(evidence_script),'assembleRelease'],timeout=1200)
+  STATE['stage']='release_task_and_report_evidence'
+  p.require(release_evidence.source_hashes(p.ROOT)==original_rules and release_evidence.source_hashes(root)==before_build_rules,'release rules mutated during build')
+  release_result=release_evidence.collect(root)
+  release_result['source_rule_hashes']=original_rules
+ apk=root/f'android/app/build/outputs/apk/{variant}/app-{variant}.apk'
+ verify_built_assets(apk,assets)
+ sdk=Path(env.get('ANDROID_SDK_ROOT') or env.get('ANDROID_HOME',''))
+ tools=require_build_tools(sdk);badging=run([str(tools/'aapt'),'dump','badging',str(apk)]);permissions=run([str(tools/'aapt'),'dump','permissions',str(apk)])
+ p.require("package: name='"+p.APP_ID+"'" in badging,'package isolation failed')
+ p.require('android.permission.INTERNET' not in permissions,'INTERNET merged into APK')
+ manifest=run([str(tools/'aapt'),'dump','xmltree',str(apk),'AndroidManifest.xml'])
+ verify_manifest(manifest,mode)
+ extraction=run([str(tools/'aapt'),'dump','xmltree',str(apk),'res/xml/manual_offline_extraction_rules.xml'])
+ p.require('E: cloud-backup' in extraction and 'E: device-transfer' in extraction and extraction.count('E: exclude')==18,'backup exclusion rules mismatch')
+ resources=run([str(tools/'aapt'),'dump','resources',str(apk)])
+ p.require(not any(x in resources for x in ('google_app_id','default_web_client_id','google_api_key')),'production Firebase resources present')
+ signatures=run([str(tools/'apksigner'),'verify','--print-certs',str(apk)])
+ found=re.findall(r'Signer #\d+ certificate SHA-256 digest: ([0-9a-fA-F]+)',signatures)
+ p.require(found==[signer],'unexpected APK signer')
+ output={'apk_sha256':hashlib.sha256(apk.read_bytes()).hexdigest(),'signer_sha256':signer,'assets_sha256':assets,'application_id':p.APP_ID,'source_sha':receipt['source_sha'],'scope':'MANUAL OFFLINE TEST ONLY; NOT PRODUCTION; HOME AND JOURNEYS NOT ACCEPTED','offline_boundaries':receipt['offline_boundaries'],'content_notice':receipt['content_notice'],'snapshot_sha256':receipt['snapshot_sha256'],'actual_modules':receipt['actual_modules'],'label':p.LABEL}
+ if release_evidence:output['release_config']=release_result
+ (root/'apk-receipt.json').write_text(json.dumps(output,indent=2)+'\n')
+ STATE.update(result='BUILT_NOT_ACCEPTED',stage='apk_receipt_verified')
+ return output
+if __name__=='__main__':
+ parser=argparse.ArgumentParser();parser.add_argument('destination',type=Path);parser.add_argument('--source',required=True,type=Path);parser.add_argument('--result',required=True,type=Path);args=parser.parse_args()
+ code=0
+ try:
+  p.require(args.source.is_absolute() and args.source.resolve()==args.source and not args.source.is_symlink(),'invalid source')
+  p.ROOT=args.source
+  build(args.destination.resolve())
+ except Exception as error:
+  STATE['result']='FAIL';STATE.update(failure_evidence(error));code=1
+ finally:
+  args.result.write_text(json.dumps(STATE,sort_keys=True)+'\n');print(json.dumps(STATE,sort_keys=True))
+ raise SystemExit(code)

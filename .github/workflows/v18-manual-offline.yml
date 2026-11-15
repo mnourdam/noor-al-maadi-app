@@ -1,0 +1,84 @@
+name: V18 manual offline side-by-side test APK
+on:
+  push:
+    branches: [v18-manual-offline-56bd4402]
+    paths: ['.github/workflows/v18-manual-offline.yml']
+permissions:
+  contents: read
+jobs:
+  build:
+    if: github.ref == 'refs/heads/v18-manual-offline-56bd4402' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: harness
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 56bd440232ca1a7b426b1b7dcf928f36f0aa76ce
+          path: app-source
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: app-source/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+        with:
+          accept-android-sdk-licenses: false
+          log-accepted-android-sdk-licenses: false
+          packages: ''
+      - name: Pinned source and existing official SDK acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C app-source rev-parse HEAD)" = 56bd440232ca1a7b426b1b7dcf928f36f0aa76ce
+          test -f "$ANDROID_SDK_ROOT/licenses/android-sdk-license"
+          sdkmanager 'platforms;android-36' 'build-tools;35.0.0' 'platform-tools' </dev/null
+      - name: Negative safety tests only
+        run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s harness/tests/manual-offline -p 'test_*.py' -v
+      - name: Locked dependencies without install scripts
+        working-directory: app-source
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Build manual offline APK; no fixture, live generation or device execution
+        run: >-
+          python3 harness/tests/manual-offline/build.py
+          "$RUNNER_TEMP/irth-manual-offline"
+          --source "$GITHUB_WORKSPACE/app-source"
+          --result "$RUNNER_TEMP/irth-manual-result.json"
+      - name: Stage only APK, public receipt and manual instructions
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir "$RUNNER_TEMP/irth-manual-export"
+          cp "$RUNNER_TEMP/irth-manual-offline/android/app/build/outputs/apk/debug/app-debug.apk" "$RUNNER_TEMP/irth-manual-export/irth-manual-offline.apk"
+          cp "$RUNNER_TEMP/irth-manual-offline/apk-receipt.json" "$RUNNER_TEMP/irth-manual-export/apk-receipt.json"
+          cp harness/tests/manual-offline/TEST-INSTRUCTIONS-ar.txt "$RUNNER_TEMP/irth-manual-export/TEST-INSTRUCTIONS-ar.txt"
+          cd "$RUNNER_TEMP/irth-manual-export"
+          sha256sum irth-manual-offline.apk apk-receipt.json TEST-INSTRUCTIONS-ar.txt > SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: irth-manual-offline-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/irth-manual-export/irth-manual-offline.apk
+            ${{ runner.temp }}/irth-manual-export/apk-receipt.json
+            ${{ runner.temp }}/irth-manual-export/TEST-INSTRUCTIONS-ar.txt
+            ${{ runner.temp }}/irth-manual-export/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 2
+      - name: Sanitized build outcome only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: manual-offline-build-result
+          path: ${{ runner.temp }}/irth-manual-result.json
+          if-no-files-found: warn
+          retention-days: 7
+# No Firebase, emulator, install, deploy, database or production branch action.
