@@ -31,6 +31,43 @@ def require_ci():
         raise Failure('ci_context')
 
 HOME_READY = """(()=>{const visible=e=>!!e&&e.getClientRects().length>0;return location.pathname==='/' && visible(document.querySelector("#root a[href='/profile'][aria-label='بطاقة هويتك — الذهاب إلى حسابي']")) && visible(document.querySelector("#root [data-testid='home-stat-investigations'][href='/investigations']")) && !document.querySelector('#irth-boot-splash,.splash-root') && ![...document.querySelectorAll('[role=dialog]')].some(visible)})()"""
+# Same poll, fixed booleans only. This is not a screenshot-time observation.
+HOME_OBSERVATION = """(()=>{
+const visible=e=>!!e&&e.getClientRects().length>0;
+const observeHome=()=>("""+HOME_READY+""");
+let home_ready;let unexpected_observed=false,native_blocked_observed=false,bridge_guards_observed=false;
+let unexpected_zero=false,native_blocked_zero=false,bridge_guards_intact=false;
+const observer_available=typeof window.__IRTH_NATIVE_OBSERVATIONS__==='function';
+const ready=observer_available && (unexpected_observed=true,unexpected_zero=window.__IRTH_NATIVE_OBSERVATIONS__().unexpected===0) && (native_blocked_observed=true,native_blocked_zero=window.__IRTH_NATIVE_OBSERVATIONS__().nativeBlocked===0) && (bridge_guards_observed=true,bridge_guards_intact=window.__IRTH_NATIVE_OBSERVATIONS__().bridgeGuardsIntact===true) && (home_ready=observeHome());
+// Only if the original gate short-circuited, observe Home for diagnostics; never promote ready.
+if(home_ready===undefined)home_ready=observeHome();
+const cinematic=document.querySelector('[data-irth-cinematic-opening][role=dialog]');
+const auth=document.querySelector('[data-irth-first-launch][role=dialog]');
+const dialogs=[...document.querySelectorAll('[role=dialog]')].filter(visible);
+return {ready,home_ready,route_root:location.pathname==='/',
+profile_visible:visible(document.querySelector("#root a[href='/profile'][aria-label='بطاقة هويتك — الذهاب إلى حسابي']")),
+investigations_visible:visible(document.querySelector("#root [data-testid='home-stat-investigations'][href='/investigations']")),
+boot_splash_present:!!document.querySelector('#irth-boot-splash,.splash-root'),
+visible_dialog:dialogs.length>0,cinematic_visible:visible(cinematic),auth_choice_visible:visible(auth),
+other_dialog_visible:dialogs.some(e=>e!==cinematic&&e!==auth),observer_available,
+unexpected_observed,native_blocked_observed,bridge_guards_observed,unexpected_zero,native_blocked_zero,bridge_guards_intact};})()"""
+HOME_OBSERVATION_KEYS=set('ready home_ready route_root profile_visible investigations_visible boot_splash_present visible_dialog cinematic_visible auth_choice_visible other_dialog_visible observer_available unexpected_observed native_blocked_observed bridge_guards_observed unexpected_zero native_blocked_zero bridge_guards_intact'.split())
+def validate_home_observation(value):
+    if type(value) is not dict or set(value)!=HOME_OBSERVATION_KEYS or any(type(v) is not bool for v in value.values()):
+        raise Failure('check_schema')
+    # Diagnostics may never substitute for the original predicate.
+    if value['home_ready'] and not (value['route_root'] and value['profile_visible'] and value['investigations_visible'] and not value['boot_splash_present'] and not value['visible_dialog']):
+        raise Failure('check_schema')
+    if value['ready'] and not (value['home_ready'] and value['observer_available'] and value['unexpected_observed'] and value['native_blocked_observed'] and value['bridge_guards_observed'] and value['unexpected_zero'] and value['native_blocked_zero'] and value['bridge_guards_intact']):
+        raise Failure('check_schema')
+    return dict(value)
+
+def home_diagnostics(page):
+    status=getattr(page,'home_observation_status','not_observed')
+    if status!='last_validated':return {'status':'unavailable' if status=='unavailable' else 'not_observed'}
+    try:return {'status':'last_validated','sample':validate_home_observation(page.last_home_observation)}
+    except Exception:return {'status':'unavailable'}
+
 FAILURE_CODES=set('installed_digest_output install_package_present_or_unknown exploratory_deadline exploratory_admission exploratory_snapshot exploratory_prerequisites exploratory_package_present_or_unknown exploratory_identity unplanned_reconnect ci_context source_identity tool_revision debug_redirect firebase_config capacitor_config cleanup_path api_property apk_hash package internet_permission signer duplicate_zip assets_set asset_hash intel_macos_required existing_license_required image_missing hvf_unverified fresh_avd_required existing_devices emulator_exited boot_deadline installed_path installed_hash force_stop_not_observed target_response_limit target_schema foreign_page socket_readiness ambiguous_page target_readiness debug_origin target_detached target_crashed evaluation_error evaluation_deadline javascript_control native_platform native_bridge full_app_readiness check_schema command_failed'.split())
 def category(error):
     if isinstance(error,Failure):return str(error) if str(error) in FAILURE_CODES else 'assertion_failure'
@@ -431,6 +468,7 @@ class Page:
             self.evaluation_phase='complete';return value
         raise Failure('evaluation_deadline')
     def readiness(self):
+        self.last_home_observation=None;self.home_observation_status='not_observed'
         self.readiness_checks={key:False for key in ('javascript_control','native_platform','native_bridge','home')}
         self.readiness_phase='javascript_control'
         if self.evaluate('1+1')!=2:raise Failure('javascript_control')
@@ -441,7 +479,13 @@ class Page:
         self.readiness_checks['native_bridge']=True;self.readiness_phase='home'
         end=time.monotonic()+remaining(getattr(self,"deadline",None),30)
         while time.monotonic()<end:
-            if self.evaluate("typeof window.__IRTH_NATIVE_OBSERVATIONS__==='function' && window.__IRTH_NATIVE_OBSERVATIONS__().unexpected===0 && window.__IRTH_NATIVE_OBSERVATIONS__().nativeBlocked===0 && window.__IRTH_NATIVE_OBSERVATIONS__().bridgeGuardsIntact===true && ("+HOME_READY+")") is True:
+            observed=self.evaluate(HOME_OBSERVATION)
+            try:self.last_home_observation=validate_home_observation(observed)
+            except Exception:
+                self.last_home_observation=None;self.home_observation_status='unavailable'
+                raise
+            self.home_observation_status='last_validated'
+            if self.last_home_observation['ready'] is True:
                 self.readiness_checks['home']=True;self.readiness_phase='complete';return
             time.sleep(.2)
         raise Failure('full_app_readiness')
@@ -464,6 +508,7 @@ class Page:
         result=dict(self.flags)
         result['readiness_phase']=getattr(self,'readiness_phase','not_started') if getattr(self,'readiness_phase','not_started') in READINESS_PHASES else 'not_started'
         result['readiness_checks']={key:getattr(self,'readiness_checks',{}).get(key) is True for key in ('javascript_control','native_platform','native_bridge','home')}
+        result['home_observation']=home_diagnostics(self)
         result['evaluation_phase']=getattr(self,'evaluation_phase','not_started') if getattr(self,'evaluation_phase','not_started') in EVALUATION_PHASES else 'not_started'
         value=getattr(self,'evaluation_error_category','none');result['evaluation_error_category']=value if value in DIAGNOSTIC_CATEGORIES else 'unknown'
         count=getattr(self,'evaluation_response_count',0);result['evaluation_response_count']=min(1000,max(0,count)) if type(count) is int else 0

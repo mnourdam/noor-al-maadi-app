@@ -40,7 +40,7 @@ class Tests(unittest.TestCase):
    p=self.page();error=RuntimeError('private details');p.evaluate=Mock(side_effect=[2,True,True,True][:index]+[error])
    with self.assertRaises(RuntimeError) as caught:p.readiness()
    self.assertIs(caught.exception,error);self.assertEqual(p.readiness_phase,names[index]);self.assertEqual(p.readiness_checks,{key:i<index for i,key in enumerate(names)});self.assertEqual(p.evaluate.call_count,index+1)
-  p=self.page();p.evaluate=Mock(side_effect=[2,True,True,True]);p.readiness();self.assertEqual(p.readiness_phase,'complete');self.assertTrue(all(p.readiness_checks.values()));self.assertEqual(p.evaluate.call_count,4)
+  p=self.page();good={k:True for k in r.HOME_OBSERVATION_KEYS};good.update(boot_splash_present=False,visible_dialog=False,cinematic_visible=False,auth_choice_visible=False,other_dialog_visible=False);p.evaluate=Mock(side_effect=[2,True,True,good]);p.readiness();self.assertEqual(p.readiness_phase,'complete');self.assertTrue(all(p.readiness_checks.values()));self.assertEqual(p.evaluate.call_count,4)
  def test_failed_assertion_does_not_mark_completed(self):
   for index,bad in ((0,3),(1,False),(2,None)):
    p=self.page();p.evaluate=Mock(side_effect=[2,True,True][:index]+[bad])

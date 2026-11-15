@@ -128,6 +128,7 @@ def execute(apk, receipt, evidence):
     finally:
         clean = not report.get('visual', {}).get('probe_cleanup_failed', False)
         if page:
+            report['home_observation'] = r.home_diagnostics(page)
             report['readiness_checks'] = getattr(page, 'readiness_checks', {})
             report['readiness_phase'] = getattr(page, 'readiness_phase', 'not_started')
             try: page.close()
