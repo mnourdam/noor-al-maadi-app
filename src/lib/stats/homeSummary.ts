@@ -11,16 +11,18 @@
 // missionsCompleted) are NEVER consulted here.
 // ============================================================
 
-import { useEffect, useState } from "react";
+import { useEffect, useReducer, useSyncExternalStore } from "react";
+import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { useAccount } from "@/lib/account";
 import { useProfile } from "@/lib/profile";
 import { useRealCollectionStats } from "@/lib/real-collection-stats";
 import { useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
-import {
-  fetchServerCompletedIds as fetchServerCampaignCompletedIds,
-  localCompletedIds as localCampaignCompletedIds,
-} from "@/lib/campaigns/completions";
-import { supabase } from "@/integrations/supabase/client";
+import { localCompletedIds as localCampaignCompletedIds } from "@/lib/campaigns/completions";
 import { guestCompletionsSnapshot } from "@/lib/stories/guestCompletions";
+import { readMirror } from "@/lib/stories/progress-mirror";
+import { getActiveOwner, getIdentityEpoch, onOwnerChange } from "@/lib/identity/owner";
+import { isReconciliationTerminal, subscribeReconciliation } from "@/lib/boot/reconciliation";
+import { readHomeCompletionIds } from "./home-completion-read";
 
 export interface HomeSummary {
   dinars: number;
@@ -32,137 +34,106 @@ export interface HomeSummary {
   error: string | null;
 }
 
-async function fetchServerStoryCompletedIds(uid: string): Promise<Set<string>> {
-  try {
-    const { data, error } = await supabase
-      .from("user_story_completions" as never)
-      .select("story_id")
-      .eq("user_id", uid);
-    if (error || !Array.isArray(data)) return new Set();
-    const ids = new Set<string>();
-    for (const row of data as Array<{ story_id?: string | null }>) {
-      if (row?.story_id) ids.add(String(row.story_id));
-    }
-    return ids;
-  } catch {
-    return new Set();
-  }
-}
 
-/**
- * Canonical Home summary hook. Never returns fabricated zeros while a
- * signed-in user's data is still loading — callers should render a
- * skeleton or placeholder while `loading` is true.
- */
+const PREFIX = "home-completions";
+// Multiple mounted consumers / outbox event bursts share one trailing refresh.
+const refreshTimers = new WeakMap<QueryClient, Map<string, ReturnType<typeof setTimeout>>>();
+function scheduleRefresh(client: QueryClient, owner: string, epoch: number) {
+  const key = [PREFIX, owner, epoch];
+  void client.cancelQueries({ queryKey: key });
+  let timers = refreshTimers.get(client);
+  if (!timers) { timers = new Map(); refreshTimers.set(client, timers); }
+  const id = JSON.stringify(key);
+  clearTimeout(timers.get(id));
+  timers.set(id, setTimeout(() => {
+    timers.delete(id);
+    if (getActiveOwner() === owner && getIdentityEpoch() === epoch && isReconciliationTerminal()) {
+      void client.invalidateQueries({ queryKey: key });
+    }
+  }, 75));
+}
+const subscribeOwner = (notify: () => void) => onOwnerChange(notify);
+const identitySnapshot = () => JSON.stringify([getActiveOwner(), getIdentityEpoch()]);
+const serverIdentity = () => '["pending",-1]';
+const subscribeReady = (notify: () => void) => subscribeReconciliation(notify);
+const serverReady = () => false;
+
+/** Display cache only. Never writes progress, profile, rewards or localStorage. */
 export function useHomeSummary(): HomeSummary {
   const { profile } = useProfile();
+  const { user, loadingSession } = useAccount();
   const stats = useRealCollectionStats();
   const canonicalInv = useCanonicalInvestigationProgress();
+  const identity = useSyncExternalStore(subscribeOwner, identitySnapshot, serverIdentity);
+  const [owner, epoch] = JSON.parse(identity) as [string, number];
+  const reconciled = useSyncExternalStore(subscribeReady, isReconciliationTerminal, serverReady);
+  const uid = user?.id ?? null;
+  const ready = !loadingSession && reconciled && (uid ? owner === `user:${uid}` : owner.startsWith("guest:"));
+  const queryClient = useQueryClient();
+  const [, refreshLocal] = useReducer((n: number) => n + 1, 0);
+  const campaigns = useQuery({
+    queryKey: [PREFIX, owner, epoch, "campaigns"],
+    queryFn: ({ signal }) => readHomeCompletionIds("campaigns", uid!, owner, epoch, signal),
+    enabled: ready && !!uid,
+    staleTime: 0, // Always revalidate on return, without clearing verified display data.
+    refetchOnMount: true, // Also revalidate when Android stable-mode defaults disable it.
+    refetchOnReconnect: true,
+    gcTime: 5 * 60_000,
+    retry: false,
+  });
+  const stories = useQuery({
+    queryKey: [PREFIX, owner, epoch, "stories"],
+    queryFn: ({ signal }) => readHomeCompletionIds("stories", uid!, owner, epoch, signal),
+    enabled: ready && !!uid,
+    staleTime: 0,
+    refetchOnMount: true, // Also revalidate when Android stable-mode defaults disable it.
+    refetchOnReconnect: true,
+    gcTime: 5 * 60_000,
+    retry: false,
+  });
 
-  const [uid, setUid] = useState<string | null>(null);
-  const [uidReady, setUidReady] = useState(false);
-  const [campaignsCompleted, setCampaignsCompleted] = useState<number | null>(null);
-  const [storiesCompleted, setStoriesCompleted] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  // Track signed-in uid — hard reset on sign-out so Account A counts
-  // never bleed into Account B.
   useEffect(() => {
-    let alive = true;
-    supabase.auth.getSession().then(({ data }) => {
-      if (!alive) return;
-      setUid(data.session?.user?.id ?? null);
-      setUidReady(true);
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      const next = session?.user?.id ?? null;
-      setUid(next);
-      setUidReady(true);
-      if (event === "SIGNED_OUT") {
-        setCampaignsCompleted(null);
-        setStoriesCompleted(null);
-      }
-    });
-    return () => {
-      alive = false;
-      sub.subscription.unsubscribe();
+    if (!ready) return;
+    const changed = () => {
+      refreshLocal(); // Accepted local progress is visible before the network returns.
+      // Invalidate/cancel even an INITIAL read so an old response cannot win over
+      // a completion. Signal-consuming reads and React Query fence stale replies.
+      scheduleRefresh(queryClient, owner, epoch);
     };
-  }, []);
+    const events = ["irth:campaign-completions:changed", "irth:story-completions:changed", "irth:outbox:flushed"];
+    for (const event of events) window.addEventListener(event, changed);
+    return () => { for (const event of events) window.removeEventListener(event, changed); };
+  }, [queryClient, owner, epoch, ready]);
 
-  // Campaigns — union of local sticky + server ledger (deduped by id).
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      try {
-        const local = localCampaignCompletedIds();
-        const server = uid ? (await fetchServerCampaignCompletedIds()).ids : new Set<string>();
-        if (cancelled) return;
-        const unioned = new Set<string>();
-        for (const id of local) unioned.add(id);
-        for (const id of server) unioned.add(id);
-        setCampaignsCompleted(unioned.size);
-      } catch (e: any) {
-        if (!cancelled) setError((prev) => prev ?? String(e?.message ?? e));
+  // Re-read local accepted facts on every render/return. Do not seed a signed-in
+  // account from the guest ledger or treat an incomplete mirror as a full count.
+  let campaignCount: number | null = null;
+  let storyCount: number | null = null;
+  let localError: string | null = null;
+  if (ready) {
+    try {
+      if (!uid || campaigns.data !== undefined) {
+        campaignCount = new Set([...localCampaignCompletedIds(), ...(campaigns.data ?? [])]).size;
       }
-    };
-    void load();
-    const onChange = () => { void load(); };
-    if (typeof window !== "undefined") {
-      window.addEventListener("irth:campaign-completions:changed", onChange);
-      window.addEventListener("irth:outbox:flushed", onChange);
-    }
-    return () => {
-      cancelled = true;
-      if (typeof window !== "undefined") {
-        window.removeEventListener("irth:campaign-completions:changed", onChange);
-        window.removeEventListener("irth:outbox:flushed", onChange);
+      if (!uid) storyCount = guestCompletionsSnapshot().size;
+      else if (stories.data !== undefined) {
+        const entries: unknown = readMirror(uid).entries;
+        const accepted = entries && typeof entries === "object" && !Array.isArray(entries)
+          ? Object.entries(entries).filter(([, row]) =>
+            row !== null && typeof row === "object" && !Array.isArray(row) && row.completed === true,
+          ).map(([id]) => id)
+          : [];
+        storyCount = new Set([...stories.data, ...accepted]).size;
       }
-    };
-  }, [uid]);
-
-  // Stories — server for signed-in, guest local snapshot otherwise.
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      try {
-        if (uid) {
-          const server = await fetchServerStoryCompletedIds(uid);
-          if (cancelled) return;
-          setStoriesCompleted(server.size);
-        } else {
-          setStoriesCompleted(guestCompletionsSnapshot().size);
-        }
-      } catch (e: any) {
-        if (!cancelled) setError((prev) => prev ?? String(e?.message ?? e));
-      }
-    };
-    void load();
-    const onChange = () => { void load(); };
-    if (typeof window !== "undefined") {
-      window.addEventListener("irth:story-completions:changed", onChange);
-      window.addEventListener("irth:outbox:flushed", onChange);
-    }
-    return () => {
-      cancelled = true;
-      if (typeof window !== "undefined") {
-        window.removeEventListener("irth:story-completions:changed", onChange);
-        window.removeEventListener("irth:outbox:flushed", onChange);
-      }
-    };
-  }, [uid]);
-
-  const loading =
-    !uidReady ||
-    campaignsCompleted === null ||
-    storiesCompleted === null;
-
+    } catch { localError = "تعذر قراءة إحصاءات الإنجاز المحلية"; }
+  }
   return {
     dinars: profile.dinars ?? 0,
     museumCount: stats.totalCollection,
-    campaignsCompleted: campaignsCompleted ?? 0,
+    campaignsCompleted: campaignCount ?? 0,
     investigationsCompleted: canonicalInv.count,
-    storiesCompleted: storiesCompleted ?? 0,
-    loading,
-    error,
+    storiesCompleted: storyCount ?? 0,
+    loading: !ready || campaignCount === null || storyCount === null,
+    error: localError ?? (campaigns.error || stories.error ? "تعذر تحديث إحصاءات الإنجاز" : null),
   };
 }
