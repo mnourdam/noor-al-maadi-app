@@ -1,0 +1,51 @@
+{
+  "result": "PASS_LOCAL_CANDIDATE",
+  "scope": "fresh-grant atomicity only; synthetic dependencies and SQL identity shim; no historical repair or production authorization",
+  "checks": [
+    "fixed newly initialized local data directory",
+    "fixed PostgreSQL17.6 loopback target",
+    "fresh database required",
+    "baseline reproduces stamped completion without wallet grant",
+    "fresh grant exact once",
+    "replay different delta id leaves all state unchanged",
+    "mismatched conflict rejected without adopting evidence",
+    "mismatched conflict rolls back completion/snapshot/collection and preserves wallets/ledger",
+    "mismatched repeated conflict remains no-op",
+    "exact-looking conflict rejected without adopting evidence",
+    "exact-looking conflict rolls back completion/snapshot/collection and preserves wallets/ledger",
+    "exact-looking repeated conflict remains no-op",
+    "cross-owner conflict rejected without adopting evidence",
+    "cross-owner conflict rolls back completion/snapshot/collection and preserves wallets/ledger",
+    "cross-owner repeated conflict remains no-op",
+    "missing wallet rolls back progress delta collectible",
+    "catalog caps and wallet heart ceiling preserved",
+    "late artifact failure rolls back completion ledger wallet and collection",
+    "concurrency True observed competing backend blocked",
+    "concurrency True both transactions resolved",
+    "concurrency True exactly one wallet reward",
+    "concurrency True exactly one completion",
+    "concurrency True loser safely replays or rejects",
+    "concurrency False observed competing backend blocked",
+    "concurrency False both transactions resolved",
+    "concurrency False exactly one wallet reward",
+    "concurrency False exactly one completion",
+    "concurrency False loser safely replays or rejects"
+  ],
+  "source_evidence": {
+    "completion": {
+      "file": "20260718134245_94f5a894-96f3-4133-816c-ef8e1c63cf5e.sql",
+      "sha256": "31033184795f34553cac103823f5cc7d49b7192bd9e39cec836c246b2d5efcbc"
+    },
+    "progress": {
+      "file": "20260718124131_67ca98ae-8f01-486b-8c4b-c5175ed80e42.sql",
+      "sha256": "699c0c62ea1ef9642010e07f876c71bf71b92385c1f31015bad5b90b293afbf6"
+    },
+    "delta": {
+      "file": "20260711073913_7b89dce5-3fe2-4a7a-b135-4ad9b7855c64.sql",
+      "sha256": "717712c7e947ace5a581337c2cac827518b215bd09c9f2c3ea8f46f4dff4c5c9"
+    },
+    "extracted_completion_sha256": "13b8f2b6bcf530267be7bdecdc867f458e3cad565b25fec84fc259ea4fd34320",
+    "fixture_sha256": "10410f12ea83cabf6c2ea2a0452e405924325032858a75614187ab35bdcedd08"
+  },
+  "candidate_sha256": "c323dbf204799c6551d6f3aa0146ea971561e2075f98af361b907844434f9a14"
+}

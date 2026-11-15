@@ -191,7 +191,7 @@ vi.mock("@/lib/offline/outbox", () => ({
 }));
 vi.mock("@/lib/offline/flush", () => ({ flushOutbox: vi.fn() }));
 vi.mock("@/lib/offline/dead-letter", () => ({
-  isPermanentReason: (reason: string) => reason === "investigation_not_found",
+  isPermanentReason: (reason: string) => ["investigation_not_found", "investigation_delta_conflict"].includes(reason),
   archiveRejected: (...args: unknown[]) => state.archive(...args),
 }));
 import { Route } from "@/routes/investigation.$id";
@@ -657,5 +657,28 @@ it("rejecting a queued retry removes pending and still grants nothing", async ()
   await act(async () => {});
   expect(screen.getByRole("alert")).toBeTruthy();
   expect(screen.queryByText("بانتظار تأكيد الخادم")).toBeNull();
+  noEffects();
+});
+
+it("delta conflict archives the intent without success or automatic retry", async () => {
+  state.rpc.mockResolvedValue({ data: {
+    ok: false, applied: false, reward_granted: false,
+    reason: "investigation_delta_conflict",
+  }, error: null });
+  mount();
+  await finish();
+  expect(screen.getByText("المكافأة تحتاج مراجعة")).toBeTruthy();
+  expect(screen.getByRole("alert")).toBeTruthy();
+  noEffects();
+  expect(state.archive).toHaveBeenCalled();
+  const retry = screen.getByRole("button", { name: "إعادة التحقق" }) as HTMLButtonElement;
+  const finishButton = screen.getByRole("button", { name: "إنهاء التحقيق" }) as HTMLButtonElement;
+  expect(retry.disabled).toBe(true);
+  expect(finishButton.disabled).toBe(true);
+  const calls = state.rpc.mock.calls.length;
+  fireEvent.click(retry);
+  fireEvent.click(finishButton);
+  await act(async () => {});
+  expect(state.rpc).toHaveBeenCalledTimes(calls);
   noEffects();
 });

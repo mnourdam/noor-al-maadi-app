@@ -1,0 +1,268 @@
+{
+  "catalog_sha256": "abab82d0032b7f63a8be385f6a711a6437656a42b2eee9e3e074dac654f782a0",
+  "function_body_equal": true,
+  "function_body_sha256": "390cef090cbf737c18bad1398e30cee9f4c33c84ab035f309899d5d0901fc1e7",
+  "function_metadata": {
+    "owner": "postgres",
+    "proacl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+    "proconfig": [
+      "search_path=public"
+    ],
+    "prosecdef": true,
+    "rolbypassrls": true,
+    "rolsuper": false,
+    "signature": "complete_investigation_v2(uuid,uuid,integer,integer)"
+  },
+  "table_metadata": [
+    {
+      "owner": "postgres",
+      "relacl": "{postgres=arwdDxtm/postgres,authenticated=arwdDxtm/postgres,service_role=arwdDxtm/postgres,sandbox_exec=ar/postgres}",
+      "relforcerowsecurity": false,
+      "relname": "applied_profile_deltas",
+      "relrowsecurity": true
+    },
+    {
+      "owner": "postgres",
+      "relacl": "{postgres=arwdDxtm/postgres,service_role=arwdDxtm/postgres,sandbox_exec=ar/postgres,authenticated=arwd/postgres}",
+      "relforcerowsecurity": false,
+      "relname": "investigations",
+      "relrowsecurity": true
+    },
+    {
+      "owner": "postgres",
+      "relacl": "{postgres=arwdDxtm/postgres,authenticated=arwdDxtm/postgres,service_role=arwdDxtm/postgres,sandbox_exec=ar/postgres}",
+      "relforcerowsecurity": false,
+      "relname": "profiles",
+      "relrowsecurity": true
+    },
+    {
+      "owner": "postgres",
+      "relacl": "{postgres=arwdDxtm/postgres,authenticated=arwdDxtm/postgres,service_role=arwdDxtm/postgres,sandbox_exec=ar/postgres}",
+      "relforcerowsecurity": false,
+      "relname": "user_collection",
+      "relrowsecurity": true
+    },
+    {
+      "owner": "postgres",
+      "relacl": "{postgres=arwdDxtm/postgres,authenticated=arwdDxtm/postgres,service_role=arwdDxtm/postgres,sandbox_exec=ar/postgres}",
+      "relforcerowsecurity": false,
+      "relname": "user_investigation_progress",
+      "relrowsecurity": true
+    }
+  ],
+  "policies": [
+    {
+      "cmd": "INSERT",
+      "permissive": "PERMISSIVE",
+      "policyname": "own_deltas_insert",
+      "qual": null,
+      "roles": "{authenticated}",
+      "schemaname": "public",
+      "tablename": "applied_profile_deltas",
+      "with_check": "(auth.uid() = user_id)"
+    },
+    {
+      "cmd": "SELECT",
+      "permissive": "PERMISSIVE",
+      "policyname": "own_deltas_select",
+      "qual": "(auth.uid() = user_id)",
+      "roles": "{authenticated}",
+      "schemaname": "public",
+      "tablename": "applied_profile_deltas",
+      "with_check": null
+    },
+    {
+      "cmd": "DELETE",
+      "permissive": "PERMISSIVE",
+      "policyname": "editors delete investigations",
+      "qual": "is_content_editor()",
+      "roles": "{authenticated}",
+      "schemaname": "public",
+      "tablename": "investigations",
+      "with_check": null
+    },
+    {
+      "cmd": "INSERT",
+      "permissive": "PERMISSIVE",
+      "policyname": "editors insert investigations",
+      "qual": null,
+      "roles": "{authenticated}",
+      "schemaname": "public",
+      "tablename": "investigations",
+      "with_check": "is_content_editor()"
+    },
+    {
+      "cmd": "UPDATE",
+      "permissive": "PERMISSIVE",
+      "policyname": "editors update investigations",
+      "qual": "is_content_editor()",
+      "roles": "{authenticated}",
+      "schemaname": "public",
+      "tablename": "investigations",
+      "with_check": "is_content_editor()"
+    },
+    {
+      "cmd": "SELECT",
+      "permissive": "PERMISSIVE",
+      "policyname": "public read enabled investigations",
+      "qual": "((enabled = true) OR is_content_editor())",
+      "roles": "{public}",
+      "schemaname": "public",
+      "tablename": "investigations",
+      "with_check": null
+    },
+    {
+      "cmd": "INSERT",
+      "permissive": "PERMISSIVE",
+      "policyname": "Users can insert their own profile",
+      "qual": null,
+      "roles": "{authenticated}",
+      "schemaname": "public",
+      "tablename": "profiles",
+      "with_check": "(auth.uid() = id)"
+    },
+    {
+      "cmd": "UPDATE",
+      "permissive": "PERMISSIVE",
+      "policyname": "Users can update their own profile",
+      "qual": "(auth.uid() = id)",
+      "roles": "{authenticated}",
+      "schemaname": "public",
+      "tablename": "profiles",
+      "with_check": "(auth.uid() = id)"
+    },
+    {
+      "cmd": "SELECT",
+      "permissive": "PERMISSIVE",
+      "policyname": "Users can view their own profile",
+      "qual": "(auth.uid() = id)",
+      "roles": "{authenticated}",
+      "schemaname": "public",
+      "tablename": "profiles",
+      "with_check": null
+    },
+    {
+      "cmd": "DELETE",
+      "permissive": "PERMISSIVE",
+      "policyname": "uc_delete_own",
+      "qual": "(auth.uid() = user_id)",
+      "roles": "{authenticated}",
+      "schemaname": "public",
+      "tablename": "user_collection",
+      "with_check": null
+    },
+    {
+      "cmd": "INSERT",
+      "permissive": "PERMISSIVE",
+      "policyname": "uc_insert_own",
+      "qual": null,
+      "roles": "{authenticated}",
+      "schemaname": "public",
+      "tablename": "user_collection",
+      "with_check": "(auth.uid() = user_id)"
+    },
+    {
+      "cmd": "SELECT",
+      "permissive": "PERMISSIVE",
+      "policyname": "uc_select_own",
+      "qual": "(auth.uid() = user_id)",
+      "roles": "{authenticated}",
+      "schemaname": "public",
+      "tablename": "user_collection",
+      "with_check": null
+    },
+    {
+      "cmd": "UPDATE",
+      "permissive": "PERMISSIVE",
+      "policyname": "uc_update_own",
+      "qual": "(auth.uid() = user_id)",
+      "roles": "{authenticated}",
+      "schemaname": "public",
+      "tablename": "user_collection",
+      "with_check": "(auth.uid() = user_id)"
+    },
+    {
+      "cmd": "DELETE",
+      "permissive": "PERMISSIVE",
+      "policyname": "uip_delete_own",
+      "qual": "(auth.uid() = user_id)",
+      "roles": "{authenticated}",
+      "schemaname": "public",
+      "tablename": "user_investigation_progress",
+      "with_check": null
+    },
+    {
+      "cmd": "INSERT",
+      "permissive": "PERMISSIVE",
+      "policyname": "uip_insert_own",
+      "qual": null,
+      "roles": "{authenticated}",
+      "schemaname": "public",
+      "tablename": "user_investigation_progress",
+      "with_check": "(auth.uid() = user_id)"
+    },
+    {
+      "cmd": "SELECT",
+      "permissive": "PERMISSIVE",
+      "policyname": "uip_select_own",
+      "qual": "(auth.uid() = user_id)",
+      "roles": "{authenticated}",
+      "schemaname": "public",
+      "tablename": "user_investigation_progress",
+      "with_check": null
+    },
+    {
+      "cmd": "UPDATE",
+      "permissive": "PERMISSIVE",
+      "policyname": "uip_update_own",
+      "qual": "(auth.uid() = user_id)",
+      "roles": "{authenticated}",
+      "schemaname": "public",
+      "tablename": "user_investigation_progress",
+      "with_check": "(auth.uid() = user_id)"
+    }
+  ],
+  "trigger_definitions": [
+    {
+      "table": "investigations",
+      "trigger": "CREATE TRIGGER investigations_autoversion_trg AFTER INSERT OR UPDATE ON public.investigations FOR EACH ROW EXECUTE FUNCTION investigations_autoversion()",
+      "function_sha256": "0fffdfebf67b28f8e51556c6da8bc511235f6e659695fd8cae36e6bb8e028c8b"
+    },
+    {
+      "table": "investigations",
+      "trigger": "CREATE TRIGGER investigations_touch_updated_at BEFORE UPDATE ON public.investigations FOR EACH ROW EXECUTE FUNCTION touch_updated_at()",
+      "function_sha256": "1c0abeb63ead80a1bdfb61c5116b73daca9e105429b5c7189cd7c52d6756babd"
+    },
+    {
+      "table": "profiles",
+      "trigger": "CREATE TRIGGER profiles_level5_reward_trg BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION profiles_level5_reward_trigger()",
+      "function_sha256": "2dd460b91c8fa88ec9f4a5d3c30443ce90a43051441556fe2af6591b7ab99441"
+    },
+    {
+      "table": "profiles",
+      "trigger": "CREATE TRIGGER profiles_touch_updated_at BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION touch_updated_at()",
+      "function_sha256": "1c0abeb63ead80a1bdfb61c5116b73daca9e105429b5c7189cd7c52d6756babd"
+    },
+    {
+      "table": "profiles",
+      "trigger": "CREATE TRIGGER trg_profiles_hearts_anchor BEFORE INSERT OR UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION profiles_hearts_anchor()",
+      "function_sha256": "579ef455856db4ab6f34d15fccc55e6f2e5627db3fcf01174ccef27dbec11287"
+    },
+    {
+      "table": "user_investigation_progress",
+      "trigger": "CREATE TRIGGER trg_sync_investigations_completed AFTER INSERT OR DELETE OR UPDATE OF status ON public.user_investigation_progress FOR EACH ROW EXECUTE FUNCTION sync_investigations_completed_count()",
+      "function_sha256": "2b35ec04d3b281bcdc8b9d89693bf494e245344d79b8b66961a9be275c5c343d"
+    },
+    {
+      "table": "user_investigation_progress",
+      "trigger": "CREATE TRIGGER uip_updated_at BEFORE UPDATE ON public.user_investigation_progress FOR EACH ROW EXECUTE FUNCTION uip_touch_updated_at()",
+      "function_sha256": "67d44431013d964fd5fbf50a5558b9934a3827a1e99c5959c947734b5306a453"
+    }
+  ],
+  "limitations": [
+    "No player rows read. Metadata supplied by parent read-only catalog query.",
+    "Fixture postgres is superuser; deployed owner is nonsuperuser BYPASSRLS.",
+    "Seven live triggers are not faithfully represented in fixture. Progress insert updates profiles count and invokes profile triggers.",
+    "Column/constraint/index definitions and transitive trigger dependencies not captured. No live execution or apply approval."
+  ]
+}

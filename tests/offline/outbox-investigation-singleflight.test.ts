@@ -245,3 +245,23 @@ it("clears a published slot when the underlying recorder rejects", async () => {
   expect((await run(input)).acknowledged).toBe(true);
   expect(state.rpc).toHaveBeenCalledTimes(1);
 });
+it("archives delta conflict durably, grants nothing and retains the stable identity", async () => {
+  state.rpc.mockResolvedValue({ data: { ok: false, applied: false, reward_granted: false,
+    reason: "investigation_delta_conflict" }, error: null });
+  const run = await recorder();
+  const first = await run(input);
+  expect(first).toMatchObject({ acknowledged: false, applied: false, queued: false,
+    reason: "investigation_delta_conflict", xpEarned: 0, dinarsEarned: 0, heartsEarned: 0 });
+  const { countAll } = await import("@/lib/offline/outbox");
+  const { listDeadLetters, isPermanentReason } = await import("@/lib/offline/dead-letter");
+  expect(await countAll("alice")).toBe(0);
+  const id = state.rpc.mock.calls[0][1].p_delta_id;
+  expect(listDeadLetters("alice")).toEqual(expect.arrayContaining([expect.objectContaining({
+    id, userId: "alice", reason: "investigation_delta_conflict", payload: expect.objectContaining(input),
+  })]));
+  expect(isPermanentReason("investigation_delta_conflict")).toBe(true);
+  expect(isPermanentReason("investigation_profile_missing")).toBe(false);
+  await run(input);
+  expect(state.rpc.mock.calls[1][1].p_delta_id).toBe(id);
+  expect(await countAll("alice")).toBe(0);
+});

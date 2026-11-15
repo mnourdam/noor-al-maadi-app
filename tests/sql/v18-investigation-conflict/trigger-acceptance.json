@@ -1,0 +1,23 @@
+{
+  "result": "PASS_LOCAL_TRIGGER_SUPPLEMENT",
+  "checks": [
+    "exact disposable loopback cluster",
+    "fixture marker",
+    "five exact catalog triggers on written tables installed",
+    "successful reward with copied live triggers",
+    "count, timestamps, hearts anchor and wallet updated",
+    "progress-trigger profile update precedes wallet profile update",
+    "replay no trigger side effects",
+    "conflict rolls back nested profile counter/time/observer changes",
+    "late wallet trigger failure rolls back earlier completion counter and ledger"
+  ],
+  "catalog_sha256": "abab82d0032b7f63a8be385f6a711a6437656a42b2eee9e3e074dac654f782a0",
+  "candidate_sha256": "c323dbf204799c6551d6f3aa0146ea971561e2075f98af361b907844434f9a14",
+  "limits": [
+    "Only five triggers on written tables copied exactly; investigation-only write triggers cannot fire in completion read path.",
+    "Fixture owner remains local superuser, not deployed nonsuperuser BYPASSRLS. No live acceptance.",
+    "Level remains zero. grant_level5_reward dependency is fail-closed stub; level crossing NOT tested.",
+    "Synthetic schemas/SQL identity shim. Existing historical repair out of scope.",
+    "Observer sequence numbers intentionally excluded from state equivalence; sequences are nontransactional."
+  ]
+}

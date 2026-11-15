@@ -266,6 +266,8 @@ export const PERMANENT_REASONS = new Set<string>([
   "invalid_tutorial_id",
   "invalid_version",
   "investigation_not_found",
+  // A conflicting reward identity needs investigation, not endless retries or a new ID.
+  "investigation_delta_conflict",
   "invalid_story_id",
   "invalid_scene_index",
   "story_not_found",

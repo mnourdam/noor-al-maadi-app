@@ -171,7 +171,7 @@ function ScopedSupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
   const current = () => activeRef.current && getActiveOwner() === scope.owner &&
     getIdentityEpoch() === scope.epoch;
   const completedRef = useRef(alreadyDone);
-  const [completionState, setCompletionState] = useState<"pending" | "unresolved" | "failed" | null>(null);
+  const [completionState, setCompletionState] = useState<"pending" | "unresolved" | "failed" | "conflict" | null>(null);
 
   const step = steps[idx];
   const isLast = idx >= steps.length - 1;
@@ -258,12 +258,14 @@ function ScopedSupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
 
     if (!current()) return false;
     if (!outcome.acknowledged) {
-      setCompletionState(outcome.storageState === "unresolved" || outcome.reason === "storage_pending"
+      setCompletionState(outcome.reason === "investigation_delta_conflict" ? "conflict" : outcome.storageState === "unresolved" || outcome.reason === "storage_pending"
         ? "unresolved" : outcome.queued && (!outcome.reason || outcome.reason === "queued")
           ? "pending" : "failed");
       if (!(outcome.storageState === "unresolved" || outcome.reason === "storage_pending") &&
           !(outcome.queued && (!outcome.reason || outcome.reason === "queued"))) {
-        toast.error("تعذر حفظ التحقيق. أعد المحاولة؛ لم تُمنح مكافآت جديدة.");
+        toast.error(outcome.reason === "investigation_delta_conflict"
+          ? "تعارض في سجل المكافأة. لم يتأكد إكمال التحقيق أو إضافة المكافأة؛ تحتاج العملية مراجعة."
+          : "تعذر حفظ التحقيق. أعد المحاولة؛ لم تُمنح مكافآت جديدة.");
       }
       return false;
     }
@@ -329,7 +331,7 @@ function ScopedSupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
 
 
   const onNext = async () => {
-    if (!current() || advancing || savingRef.current || completedRef.current) return;
+    if (!current() || advancing || savingRef.current || completedRef.current || completionState === "conflict") return;
     savingRef.current = true;
     setAdvancing(true);
     try {
@@ -415,19 +417,21 @@ function ScopedSupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
         )}
 
         {!finished && completionState && (
-          <section role={completionState === "failed" ? "alert" : "status"} className="mt-6 rounded-3xl border border-gold/30 bg-surface p-5 text-center">
+          <section role={completionState === "failed" || completionState === "conflict" ? "alert" : "status"} className="mt-6 rounded-3xl border border-gold/30 bg-surface p-5 text-center">
             <h2 className="font-display text-lg text-gold">
-              {completionState === "pending" ? "بانتظار تأكيد الخادم" :
+              {completionState === "conflict" ? "المكافأة تحتاج مراجعة" : completionState === "pending" ? "بانتظار تأكيد الخادم" :
                 completionState === "unresolved" ? "نتيجة الحفظ غير محسومة" : "لم يتأكد إكمال التحقيق"}
             </h2>
             <p className="mt-3 text-sm text-muted-foreground">
-              {completionState === "pending"
+              {completionState === "conflict"
+                ? "لم نؤكد إكمال التحقيق أو إضافة المكافأة بسبب تعارض في سجل العملية. لا تحذف بيانات التطبيق؛ تحتاج هذه المحاولة مراجعة."
+                : completionState === "pending"
                 ? "حُفظت محاولة إنهاء التحقيق على جهازك، وهي بانتظار تأكيد الخادم. لم تُعتمد المكافآت بعد."
                 : completionState === "unresolved"
                   ? "نتيجة حفظ التحقيق غير محسومة. سنحتفظ بالمحاولة القائمة ونتحقق من حالتها دون احتساب إنجاز جديد."
                   : "تعذر تأكيد حفظ التحقيق. يمكنك إعادة المحاولة دون فقد إجاباتك."}
             </p>
-            <button type="button" disabled={advancing} onClick={() => { void onNext(); }}
+            <button type="button" disabled={advancing || completionState === "conflict"} onClick={() => { void onNext(); }}
               className="mt-4 rounded-full border border-gold/40 px-5 py-2 text-gold">إعادة التحقق</button>
             <Link to="/investigations" className="ms-4 text-sm text-gold">العودة للتحقيقات</Link>
           </section>
@@ -499,6 +503,7 @@ function ScopedSupabaseInvestigationGame({ row }: { row: InvestigationRow }) {
               {(!stepNeedsAnswer || answerState === "correct") && (
                 <button
                   onClick={onNext}
+                  disabled={advancing || completionState === "conflict"}
                   className="flex w-full items-center justify-center rounded-2xl bg-gradient-gold py-3 text-sm font-bold text-primary-foreground"
                 >
                   {isLast ? "إنهاء التحقيق" : "التالي"}
