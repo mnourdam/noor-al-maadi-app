@@ -4115,10 +4115,11 @@
       "limit": "lexical literal calls only; wrapper/dynamic/local writers require manual coverage"
     },
     {
-      "path": "src/lib/stats/homeSummary.ts",
-      "sha256": "a29e4412e36ed99f2929ccff6d1da114bd318aa00f4f8ed73fe5392a4fdd7f57",
+      "path": "src/lib/stats/home-completion-read.ts",
+      "sha256": "535bad77a35972ea5187c32b072d9449e3af54a83675e2a0dc0260a7f4ac3385",
       "rpc_candidates": [],
       "table_candidates": [
+        "user_campaign_completions",
         "user_story_completions"
       ],
       "limit": "lexical literal calls only; wrapper/dynamic/local writers require manual coverage"

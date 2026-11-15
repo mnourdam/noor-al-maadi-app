@@ -99,3 +99,12 @@ unresolved instead of silently interpreted. In particular the two July 30 story
 import function renames require manual resolution; the candidate list is not a
 complete name/overload resolver. These limits are reasons admission remains HOLD,
 not reasons to treat an unchanged pin as comprehensive coverage.
+
+## Reviewed Home completion display refactor
+
+Literal reads moved to `home-completion-read.ts`. Both select only completion
+identifiers for the current uid; owner/epoch/abort checks fence results. No
+economic write, RPC, privilege, or migration was introduced. This reviewed-source
+update does not establish live RLS/authority coverage; **HOLD remains**. The
+reviewed client-entry file count stays 27. All migration, function, privilege and
+other client pins are unchanged.
