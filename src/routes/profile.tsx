@@ -1,3 +1,4 @@
+import { achievementRewardUnit } from '@/lib/ui-language/achievement-control-messages';
 import { useUiLanguage } from "@/lib/ui-language/store";
 import { achievementCategoryLabel, achievementRarityLabel, achievementReceiptDate } from "@/lib/achievements/v2/chrome";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
@@ -1125,12 +1126,12 @@ function AchievementDialog({
             <div className="flex flex-wrap gap-1.5">
               {rewards.xp ? (
                 <span className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-gold/5 px-2.5 py-1 text-[11px] text-gold">
-                  <Sparkles className="size-3" /> +{rewards.xp} {messages.achPointsUnit}
+                  <Sparkles className="size-3" /> +{rewards.xp} {achievementRewardUnit(language, 'xp', rewards.xp)}
                 </span>
               ) : null}
               {rewards.dinars ? (
                 <span className="inline-flex items-center gap-1 rounded-full border border-gold/30 bg-gold/5 px-2.5 py-1 text-[11px] text-gold">
-                  <Coins className="size-3" /> +{rewards.dinars} {messages.achDinarsUnit}
+                  <Coins className="size-3" /> +{rewards.dinars} {achievementRewardUnit(language, 'dinars', rewards.dinars)}
                 </span>
               ) : null}
               {rewards.titleId ? (
