@@ -1,3 +1,5 @@
+import { useUiLanguage } from "@/lib/ui-language/store";
+import { CROSSWORD_HELP_MESSAGES, crosswordHelpText } from "@/lib/ui-language/crossword-help-messages";
 import { useState } from "react";
 import { Coins, HelpCircle, Hourglass, Lightbulb, X } from "lucide-react";
 import {
@@ -32,6 +34,8 @@ const TIME_BONUS_SECONDS = 120;
 export function CrosswordHelpDialog({
   open, onOpenChange, dinars, spendDinars, hasTimer, addSeconds, disabled,
 }: Props) {
+  const { language, direction } = useUiLanguage();
+  const messages = CROSSWORD_HELP_MESSAGES[language];
   const [insufficientOpen, setInsufficientOpen] = useState(false);
 
   // Read bridge availability fresh each render. Never throws.
@@ -46,7 +50,7 @@ export function CrosswordHelpDialog({
     if (!ok) return;
     if (!spendDinars(REVEAL_COST)) return;
     sfx("correct");
-    toast.success(`تم كشف حرف مقابل ${REVEAL_COST} دنانير.`);
+    toast.success(crosswordHelpText(language, "revealed", { cost: REVEAL_COST }));
     onOpenChange(false);
   };
 
@@ -56,7 +60,7 @@ export function CrosswordHelpDialog({
     if (!spendDinars(TIME_COST)) return;
     try { addSeconds(TIME_BONUS_SECONDS); } catch { /* noop */ }
     sfx("gold_unlock", "help-add-time");
-    toast.success(`تمت إضافة دقيقتين مقابل ${TIME_COST} دنانير.`);
+    toast.success(crosswordHelpText(language, "timeAdded", { cost: TIME_COST }));
     onOpenChange(false);
   };
 
@@ -64,33 +68,33 @@ export function CrosswordHelpDialog({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
-          dir="rtl"
+          dir={direction}
           className="max-w-sm border-amber-500/30 bg-gradient-to-b from-slate-950 to-slate-900 text-amber-50"
         >
-          <DialogHeader>
+          <DialogHeader className="sm:text-start">
             <DialogTitle className="flex items-center gap-2 text-amber-200">
               <HelpCircle className="h-5 w-5 text-amber-300" />
-              المساعدة
+              {messages.help}
             </DialogTitle>
             <DialogDescription className="text-amber-100/80 leading-7">
-              اختر إحدى المساعدات لمواصلة المخطوط.
+              {messages.description}
             </DialogDescription>
           </DialogHeader>
 
           <div className="mt-1 flex items-center justify-between rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs text-amber-200/90">
             <span className="inline-flex items-center gap-1.5">
               <Coins className="h-3.5 w-3.5 text-amber-300" />
-              رصيدك
+              {messages.balance}
             </span>
-            <span className="font-bold">{dinars} دينار</span>
+            <span className="font-bold">{crosswordHelpText(language, "dinars", { count: dinars })}</span>
           </div>
 
           <ul className="space-y-2">
             <li>
               <HelpRow
                 icon={<Lightbulb className="h-4 w-4" />}
-                title="كشف حرف"
-                description={canReveal ? "كشف حرف واحد من كلمة لم تُحلَّ بعد." : "لا توجد حروف مخفية"}
+                title={messages.reveal}
+                description={canReveal ? messages.revealDescription : messages.none}
                 cost={REVEAL_COST}
                 disabled={disabled || !canReveal}
                 onClick={handleReveal}
@@ -100,8 +104,8 @@ export function CrosswordHelpDialog({
               <li>
                 <HelpRow
                   icon={<Hourglass className="h-4 w-4" />}
-                  title="إضافة دقيقتين"
-                  description="أضف دقيقتين إلى الوقت المتبقي."
+                  title={messages.addTime}
+                  description={messages.timeDescription}
                   cost={TIME_COST}
                   disabled={!!disabled}
                   onClick={handleAddTime}
@@ -117,7 +121,7 @@ export function CrosswordHelpDialog({
               className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-amber-500/30 bg-transparent px-4 py-2.5 text-sm font-semibold text-amber-100 transition hover:bg-amber-500/10"
             >
               <X className="h-4 w-4" />
-              إغلاق
+              {messages.close}
             </button>
           </DialogFooter>
         </DialogContent>
@@ -125,16 +129,16 @@ export function CrosswordHelpDialog({
 
       <Dialog open={insufficientOpen} onOpenChange={setInsufficientOpen}>
         <DialogContent
-          dir="rtl"
+          dir={direction}
           className="max-w-sm border-amber-500/30 bg-gradient-to-b from-slate-950 to-slate-900 text-amber-50"
         >
-          <DialogHeader>
+          <DialogHeader className="sm:text-start">
             <DialogTitle className="flex items-center gap-2 text-amber-200">
               <Coins className="h-5 w-5 text-amber-300" />
-              ليس لديك دنانير كافية
+              {messages.insufficient}
             </DialogTitle>
             <DialogDescription className="text-amber-100/80 leading-7">
-              اجمع المزيد من الدنانير من الحملات والتحديات ثم حاول مرة أخرى.
+              {messages.earnMore}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-3">
@@ -143,7 +147,7 @@ export function CrosswordHelpDialog({
               onClick={() => setInsufficientOpen(false)}
               className="inline-flex w-full items-center justify-center rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-amber-400"
             >
-              حسنًا
+              {messages.ok}
             </button>
           </DialogFooter>
         </DialogContent>
@@ -163,7 +167,7 @@ function HelpRow({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className="group flex w-full items-center justify-between gap-3 rounded-lg border border-amber-500/25 bg-gradient-to-b from-amber-500/10 to-amber-600/5 px-3 py-3 text-right transition hover:from-amber-500/20 hover:to-amber-600/10 disabled:cursor-not-allowed disabled:opacity-40"
+      className="group flex w-full items-center justify-between gap-3 rounded-lg border border-amber-500/25 bg-gradient-to-b from-amber-500/10 to-amber-600/5 px-3 py-3 text-start transition hover:from-amber-500/20 hover:to-amber-600/10 disabled:cursor-not-allowed disabled:opacity-40"
     >
       <span className="flex min-w-0 items-start gap-3">
         <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full border border-amber-400/40 bg-amber-500/10 text-amber-200">
