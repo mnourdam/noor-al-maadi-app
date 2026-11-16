@@ -1,3 +1,4 @@
+import { HOME_NAVIGATION_MESSAGES } from "./home-navigation-messages";
 import { HEART_CONTROL_MESSAGES } from "./heart-control-messages";
 import { ACHIEVEMENT_TAXONOMY_MESSAGES } from "./achievement-taxonomy-messages";
 import { COLLECTION_CONTROL_MESSAGES } from "./collection-control-messages";
@@ -11,8 +12,8 @@ export const arabic = {
   encyclopediaUnavailable: "تعذّر فتح المكتبة الآن. تحقّق من الاتصال ثم أعد المحاولة.",
   encyclopediaRetry: "إعادة المحاولة",
   encyclopediaRetrying: "جارٍ إعادة المحاولة…",
-  home: 'الرئيسية', campaigns: 'الحملات', encyclopedia: 'الموسوعة', atlas: 'الأطلس', museum: 'المتحف', profile: 'حسابي',
-  navigation: 'التنقل الرئيسي', language: 'لغة الواجهة', arabic: 'العربية', english: 'English — preview',
+  ...HOME_NAVIGATION_MESSAGES.ar,
+  language: 'لغة الواجهة', arabic: 'العربية', english: 'English — preview',
   scope: 'المعاينة تشمل التنقل وتسميات الحالة ونوافذ إحصاءات الرصيد وأزرار إعادة القراءة ونصوص الإنجازات وتبويبها وتفاصيلها وعناوين بطاقات القصص ومجموعاتها وملخصاتها المتاحة بالإنكليزية وإحصاءات المجموعة وأزرار قراءتها وأدوات بحث المكتبة وتصفيتها وتسميات بطاقات القصص والنصوص العامة لشروط فتحها؛ بقية تبويبات الحساب والواجهات والمحتوى ما زالت بالعربية.',
   ...READING_REVIEW_MESSAGES.ar,
   hearts: 'القلوب', nextHeart: 'القلب التالي خلال', dinars: 'الدنانير', experience: 'الخبرة', streak: 'الحماسة', notifications: 'الإشعارات',
@@ -46,8 +47,8 @@ const english = {
   encyclopediaUnavailable: "The library couldn’t be opened. Check your connection and try again.",
   encyclopediaRetry: "Retry",
   encyclopediaRetrying: "Retrying…",
-  home: 'Home', campaigns: 'Campaigns', encyclopedia: 'Encyclopedia', atlas: 'Atlas', museum: 'Museum', profile: 'My account',
-  navigation: 'Main navigation', language: 'Interface language', arabic: 'العربية', english: 'English — preview',
+  ...HOME_NAVIGATION_MESSAGES.en,
+  language: 'Interface language', arabic: 'العربية', english: 'English — preview',
   scope: 'Preview: navigation, status labels and stat popovers, reread controls and achievement text, tab and detail controls, plus available authored English story-card and collection titles and summaries, with selected-collection statistics, reading controls and library search/filter controls, story-card labels and generated unlock labels. Other Profile tabs, interfaces and story content remain in Arabic.',
   ...READING_REVIEW_MESSAGES.en,
   hearts: 'Hearts', nextHeart: 'Next heart in', dinars: 'Dinars', experience: 'Experience', streak: 'Streak', notifications: 'Notifications',

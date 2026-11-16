@@ -1,3 +1,4 @@
+import { useUiLanguage } from "@/lib/ui-language/store";
 import { recordTrace } from "@/lib/diag-trace";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { markBootHealthy } from "@/lib/diagnostics/safe-boot";
@@ -81,6 +82,7 @@ type HeroSlide =
 
 
 function HomeFull() {
+  const { language, direction, messages } = useUiLanguage();
   const { profile } = useProfile();
   const { user, lastSyncAt, displayName: resolvedDisplayName } = useAccount();
   const stashOrigin = useStashCurrentAsOrigin();
@@ -91,7 +93,7 @@ function HomeFull() {
   // `useAccount()` already resolves this chain from account row +
   // user_metadata; only fall back to the profile name for pure-offline
   // (never-signed-in) sessions.
-  const displayName = user ? resolvedDisplayName : (profile.name || "ضيف");
+  const displayName = user ? resolvedDisplayName : (profile.name || messages.homeGuest);
   const [mounted, setMounted] = useState(false);
   const { selected: todayEvent, others: todayOthers } = useTodayInHistoryEvent();
   const todayEvents = useMemo<TodayInHistoryEvent[]>(
@@ -737,7 +739,7 @@ function HomeFull() {
           <div className="relative z-10 flex items-start justify-between px-5 pt-8">
             <Link
               to="/profile"
-              aria-label="بطاقة هويتك — الذهاب إلى حسابي"
+              aria-label={messages.homeProfileLink}
               className="animate-curtain flex max-w-[15rem] items-center gap-3 rounded-2xl bg-gradient-to-l from-black/60 via-black/40 to-transparent px-3 py-2 ring-1 ring-white/10 backdrop-blur-sm transition-colors hover:ring-gold/40"
             >
               <Avatar avatarId={profile.avatarId ?? DEFAULT_AVATAR_ID} size="md" />
@@ -1017,10 +1019,10 @@ function HomeFull() {
           <div className="parchment-dark relative overflow-hidden rounded-2xl border border-gold/20 px-3 py-3 shadow-elegant">
             <div className="arabesque-layer opacity-40" />
             <div className="relative -mx-1 flex items-stretch gap-1 overflow-x-auto no-scrollbar">
-              <Stat icon={<Package className="size-3.5" />} label="المتحف" value={homeSummary.loading ? "—" : homeSummary.museumCount} tone="emerald" />
-              <Stat icon={<Trophy className="size-3.5" />} label="الحملات المكتملة" value={homeSummary.loading ? "—" : homeSummary.campaignsCompleted} tone="gold" />
-              <Stat icon={<Search className="size-3.5" />} label="التحقيقات المنجزة" value={homeSummary.loading ? "—" : homeSummary.investigationsCompleted} tone="indigo" to="/investigations" />
-              <Stat icon={<BookOpen className="size-3.5" />} label="القصص المقروءة" value={homeSummary.loading ? "—" : homeSummary.storiesCompleted} tone="ruby" />
+              <Stat icon={<Package className="size-3.5" />} label={messages.museum} language={language} direction={direction} value={homeSummary.loading ? "—" : homeSummary.museumCount} tone="emerald" />
+              <Stat icon={<Trophy className="size-3.5" />} label={messages.homeCompletedCampaigns} language={language} direction={direction} value={homeSummary.loading ? "—" : homeSummary.campaignsCompleted} tone="gold" />
+              <Stat icon={<Search className="size-3.5" />} label={messages.homeCompletedInvestigations} language={language} direction={direction} value={homeSummary.loading ? "—" : homeSummary.investigationsCompleted} tone="indigo" to="/investigations" />
+              <Stat icon={<BookOpen className="size-3.5" />} label={messages.homeReadStories} language={language} direction={direction} value={homeSummary.loading ? "—" : homeSummary.storiesCompleted} tone="ruby" />
             </div>
           </div>
         </section>
@@ -1087,7 +1089,7 @@ function Reveal({ children }: { children: ReactNode }) {
 // Re-export Stagger so it can be imported elsewhere if needed.
 export { _Stagger as HomeStagger };
 
-function Stat({ icon, label, value, tone, to }: { icon: React.ReactNode; label: string; value: string | number; tone: "gold" | "rose" | "emerald" | "indigo" | "ruby"; to?: "/investigations" }) {
+function Stat({ icon, label, value, tone, to, language, direction }: { language: string; direction: "rtl" | "ltr"; icon: React.ReactNode; label: string; value: string | number; tone: "gold" | "rose" | "emerald" | "indigo" | "ruby"; to?: "/investigations" }) {
   const toneClass: Record<string, string> = {
     gold: "text-gold bg-gold/10",
     rose: "text-rose-300 bg-rose-500/10",
@@ -1099,7 +1101,7 @@ function Stat({ icon, label, value, tone, to }: { icon: React.ReactNode; label: 
     <>
       <span className={`grid size-8 place-items-center rounded-full ${toneClass[tone]}`}>{icon}</span>
       <span className="font-display text-sm font-bold leading-none text-white">{value}</span>
-      <span className="text-[9px] tracking-[0.15em] text-white/55">{label}</span>
+      <span lang={language} dir={direction} className="text-[9px] tracking-[0.15em] text-white/55">{label}</span>
     </>
   );
   const cls = "flex min-w-[78px] flex-1 flex-col items-center justify-center gap-1 rounded-xl px-2 py-2";
