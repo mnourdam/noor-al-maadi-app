@@ -60,6 +60,11 @@ export function createServerFn(options?: MiddlewareOptions, inherited?: Middlewa
     inputValidator(inputValidator: unknown) {
       return createServerFn(undefined, { ...resolvedOptions, inputValidator });
     },
+    // Keep the current server-function builder API available during module
+    // evaluation. This stores metadata only; handler remains fail-closed.
+    validator(validator: unknown) {
+      return createServerFn(undefined, { ...resolvedOptions, validator });
+    },
     handler() {
       return Object.assign(
         async () => {
