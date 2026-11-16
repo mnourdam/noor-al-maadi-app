@@ -1,3 +1,4 @@
+import { LOCALE_META } from './locale-policy';
 /** UI chrome only. Never use these keys to identify content, answers or routes. */
 export const arabic = {
   encyclopediaUnavailable: "تعذّر فتح المكتبة الآن. تحقّق من الاتصال ثم أعد المحاولة.",
@@ -290,4 +291,4 @@ const english = {
   storyOK: "OK",
 } satisfies Record<MessageKey, string>;
 export const UI_MESSAGES: Readonly<Record<UiLanguage, Readonly<Record<MessageKey, string>>>> = { ar: arabic, en: english };
-export const uiDirection = (language: UiLanguage) => language === 'ar' ? 'rtl' : 'ltr';
+export const uiDirection = (language: UiLanguage) => LOCALE_META[language].direction;

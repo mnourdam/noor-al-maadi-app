@@ -1,60 +1,38 @@
 import { useSyncExternalStore } from 'react';
 import { UI_MESSAGES, uiDirection, type UiLanguage } from './messages';
-/** Already covered by the identity partition's device-wide preference namespace. */
-export const UI_LANGUAGE_KEY = 'irth.device.uiLanguage.v1';
-const listeners = new Set<() => void>();
-let language: UiLanguage = 'ar';
-let initialized = false;
-let memoryOnly = false;
-const valid = (value: unknown): value is UiLanguage => value === 'ar' || value === 'en';
-function storedLanguage(): UiLanguage {
-  const stored = window.localStorage.getItem(UI_LANGUAGE_KEY);
-  return valid(stored) ? stored : 'ar';
-}
+import { createLanguagePreference, UI_LANGUAGE_KEY } from './preference';
+
+export { UI_LANGUAGE_KEY } from './preference';
+// English remains an explicitly selected partial preview. Expand automatic
+// only after full reviewed UI/content coverage, not by adding target locales.
+const preference = createLanguagePreference<UiLanguage>({
+  selectable: ['ar', 'en'],
+  automatic: ['ar'],
+  storage: () => window.localStorage,
+  deviceLanguages: () => window.navigator.languages?.length
+    ? window.navigator.languages : [window.navigator.language],
+});
+let subscriptions = 0;
 export function getUiLanguage(): UiLanguage {
-  if (typeof window === 'undefined') return 'ar';
-  if (!initialized) {
-    initialized = true;
-    try { language = storedLanguage(); } catch { /* unavailable storage: Arabic default */ }
-  }
-  return language;
+  return typeof window === 'undefined' ? 'ar' : preference.get();
 }
-function publish(next: UiLanguage) {
-  if (next === language) return;
-  language = next;
-  for (const listener of Array.from(listeners)) listener();
-}
-/** Local preference only; no profile writes, authentication or content migration. */
 export function setUiLanguage(next: UiLanguage): void {
-  if (!valid(next) || typeof window === 'undefined') return;
-  initialized = true;
-  // Retain a usable in-memory choice if private mode/quota blocks persistence.
-  try {
-    window.localStorage.setItem(UI_LANGUAGE_KEY, next);
-    memoryOnly = window.localStorage.getItem(UI_LANGUAGE_KEY) !== next;
-  } catch { memoryOnly = true; }
-  publish(next);
+  if (typeof window !== 'undefined') preference.set(next);
 }
 function storageChanged(event: StorageEvent) {
   if (event.key !== UI_LANGUAGE_KEY && event.key !== null) return;
   try {
     if (event.storageArea && event.storageArea !== window.localStorage) return;
-    initialized = true;
-    const next = storedLanguage();
-    memoryOnly = false;
-    publish(next);
-  } catch { /* unreadable storage must not reset the current in-memory choice */ }
+    preference.externalChange();
+  } catch { /* denied storage preserves the session */ }
 }
 function subscribe(listener: () => void) {
-  listeners.add(listener);
-  if (listeners.size === 1) window.addEventListener('storage', storageChanged);
-  // Reconcile changes made in another tab while no UI subscriber was mounted.
-  if (!memoryOnly) {
-    try { const next = storedLanguage(); initialized = true; publish(next); } catch { /* session choice */ }
-  }
+  const unsubscribe = preference.subscribe(listener);
+  if (++subscriptions === 1) window.addEventListener('storage', storageChanged);
+  preference.reconcile();
   return () => {
-    listeners.delete(listener);
-    if (!listeners.size) window.removeEventListener('storage', storageChanged);
+    unsubscribe();
+    if (--subscriptions === 0) window.removeEventListener('storage', storageChanged);
   };
 }
 export function useUiLanguage() {
