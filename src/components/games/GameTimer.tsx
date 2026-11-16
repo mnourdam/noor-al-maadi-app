@@ -1,3 +1,5 @@
+import { useUiLanguage } from "@/lib/ui-language/store";
+import { GAME_CONTROL_MESSAGES } from "@/lib/ui-language/game-control-messages";
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Timer } from "lucide-react";
 import { androidMark, isAndroidUltraStableMode } from "@/lib/androidFreezeDiagnostics";
@@ -32,6 +34,8 @@ type Tone = "green" | "gold" | "red";
 export const GameTimer = forwardRef<GameTimerHandle, Props>(function GameTimer(
   { seconds, paused, onExpire }, ref,
 ) {
+  const { language } = useUiLanguage();
+  const copy = GAME_CONTROL_MESSAGES[language];
   androidMark("render:GameTimer");
   const androidStable = isAndroidUltraStableMode();
   const [remaining, setRemaining] = useState(seconds);
@@ -96,7 +100,7 @@ export const GameTimer = forwardRef<GameTimerHandle, Props>(function GameTimer(
       : "linear-gradient(90deg,#10b981,#6ee7b7,#10b981)";
 
   return (
-    <div className="irth-timer" dir="ltr" aria-live="polite" aria-label="عدّاد الوقت">
+    <div className="irth-timer" dir="ltr" aria-live="polite" aria-label={copy.timer}>
       <div className="flex items-center gap-3">
         <span className={`grid h-9 w-9 place-items-center rounded-full border ${ring}`}>
           <Timer className="h-4 w-4" />

@@ -1,3 +1,5 @@
+import { useUiLanguage } from "@/lib/ui-language/store";
+import { GAME_CONTROL_MESSAGES, gameControlText } from "@/lib/ui-language/game-control-messages";
 import { useState } from "react";
 import { Hourglass, Coins, X, AlertTriangle } from "lucide-react";
 import {
@@ -25,6 +27,8 @@ const COST = 10;
  * the parent grace dialog mounted until the player explicitly picks an action.
  */
 export function TimeExpiredDialog({ open, dinars, onBuyTime, onEndChallenge }: Props) {
+  const { language, direction } = useUiLanguage();
+  const copy = GAME_CONTROL_MESSAGES[language];
   const [warnOpen, setWarnOpen] = useState(false);
   const canAfford = dinars >= COST;
 
@@ -38,11 +42,11 @@ export function TimeExpiredDialog({ open, dinars, onBuyTime, onEndChallenge }: P
       {/* Primary grace dialog — non-dismissible: the player must choose. */}
       <Dialog open={open}>
         <DialogContent
-          dir="rtl"
+          dir={direction}
           onEscapeKeyDown={(e) => e.preventDefault()}
           onPointerDownOutside={(e) => e.preventDefault()}
           onInteractOutside={(e) => e.preventDefault()}
-          className="max-w-md overflow-hidden border-amber-400/40 bg-gradient-to-b from-slate-950 via-slate-950 to-amber-950/30 p-0 text-right shadow-[0_30px_80px_-20px_rgba(251,191,36,0.35)] [&>button]:hidden"
+          className="max-w-md overflow-hidden border-amber-400/40 bg-gradient-to-b from-slate-950 via-slate-950 to-amber-950/30 p-0 text-start shadow-[0_30px_80px_-20px_rgba(251,191,36,0.35)] [&>button]:hidden"
         >
           <div className="relative px-6 pt-8 pb-6">
             <div className="pointer-events-none absolute inset-x-0 -top-16 mx-auto h-32 w-32 rounded-full bg-amber-400/20 blur-3xl" />
@@ -51,10 +55,10 @@ export function TimeExpiredDialog({ open, dinars, onBuyTime, onEndChallenge }: P
             </div>
             <DialogHeader className="items-center text-center">
               <DialogTitle className="text-xl font-bold text-amber-100">
-                انتهى الوقت
+                {copy.expired}
               </DialogTitle>
               <DialogDescription className="mt-2 text-sm leading-7 text-slate-300">
-                يمكنك إضافة دقيقتين ومتابعة التحدي مقابل {COST} دنانير.
+                {gameControlText(language, 'offer', { cost: COST })}
               </DialogDescription>
             </DialogHeader>
 
@@ -65,10 +69,10 @@ export function TimeExpiredDialog({ open, dinars, onBuyTime, onEndChallenge }: P
                 className="group inline-flex items-center justify-center gap-2 rounded-xl border border-amber-400/60 bg-gradient-to-b from-amber-400 to-amber-500 px-4 py-3 text-sm font-bold text-slate-950 shadow-[0_8px_20px_-8px_rgba(251,191,36,0.7)] transition hover:from-amber-300 hover:to-amber-400"
               >
                 <Hourglass className="h-4 w-4" />
-                إضافة دقيقتين
+                {copy.addTime}
                 <span className="mx-1 opacity-60">—</span>
                 <Coins className="h-4 w-4" />
-                {COST} دنانير
+                {gameControlText(language, 'price', { cost: COST })}
               </button>
               <button
                 type="button"
@@ -76,13 +80,13 @@ export function TimeExpiredDialog({ open, dinars, onBuyTime, onEndChallenge }: P
                 className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-3 text-sm font-semibold text-slate-300 transition hover:border-rose-400/50 hover:text-rose-200"
               >
                 <X className="h-4 w-4" />
-                إنهاء التحدي
+                {copy.end}
               </button>
             </div>
 
             <div className="mt-4 flex items-center justify-center gap-1.5 text-[11px] text-slate-500">
               <Coins className="h-3 w-3 text-amber-400/70" />
-              <span>رصيدك الحالي: {dinars} دينار</span>
+              <span>{gameControlText(language, 'balance', { balance: dinars })}</span>
             </div>
           </div>
         </DialogContent>
@@ -91,8 +95,8 @@ export function TimeExpiredDialog({ open, dinars, onBuyTime, onEndChallenge }: P
       {/* Insufficient funds — nested; closing returns to the grace dialog. */}
       <Dialog open={warnOpen} onOpenChange={setWarnOpen}>
         <DialogContent
-          dir="rtl"
-          className="max-w-sm border-rose-400/40 bg-slate-950 p-0 text-right"
+          dir={direction}
+          className="max-w-sm border-rose-400/40 bg-slate-950 p-0 text-start"
         >
           <div className="px-6 pt-7 pb-5">
             <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-full border border-rose-400/40 bg-rose-500/10">
@@ -100,10 +104,10 @@ export function TimeExpiredDialog({ open, dinars, onBuyTime, onEndChallenge }: P
             </div>
             <DialogHeader className="items-center text-center">
               <DialogTitle className="text-base font-bold text-rose-100">
-                لا توجد دنانير كافية
+                {copy.insufficient}
               </DialogTitle>
               <DialogDescription className="mt-2 text-sm leading-7 text-slate-300">
-                تحتاج إلى {COST} دنانير لإضافة دقيقتين إلى الوقت.
+                {gameControlText(language, 'required', { cost: COST })}
               </DialogDescription>
             </DialogHeader>
             <button
@@ -111,7 +115,7 @@ export function TimeExpiredDialog({ open, dinars, onBuyTime, onEndChallenge }: P
               onClick={() => setWarnOpen(false)}
               className="mt-5 w-full rounded-xl border border-amber-400/50 bg-amber-500/10 px-4 py-2.5 text-sm font-bold text-amber-100 hover:bg-amber-500/20"
             >
-              حسنًا
+              {copy.okay}
             </button>
           </div>
         </DialogContent>
