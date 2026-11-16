@@ -51,7 +51,9 @@ describe('crossword help presentation only', () => {
   it('does not expand production language activation', async () => {
     const real = await vi.importActual<typeof import('@/lib/ui-language/store')>('@/lib/ui-language/store');
     real.setUiLanguage('ar');
-    for (const locale of ['ur','id','tr','fr'] as AppLocale[]) {
+    for (const locale of ['ur','id','tr','fr'] as const) {
+      // Deliberately pass inactive input to verify the runtime gate, not only its type.
+      // @ts-expect-error Inactive target locales are intentionally outside UiLanguage.
       real.setUiLanguage(locale);
       expect(real.getUiLanguage()).toBe('ar');
     }
