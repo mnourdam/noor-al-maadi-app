@@ -1,3 +1,4 @@
+import { collectionCountLabel } from "@/lib/ui-language/collection-control-messages";
 // ============================================================
 // /stories — the Stories library (Redesign: Series-first).
 // ------------------------------------------------------------
@@ -427,11 +428,12 @@ function Stat({ label, value, icon: Icon }: { label: string; value: string | num
   );
 }
 
-function Counter({ label, value }: { label: MessageKey; value: number }) {
+function Counter({ label, value }: { label: "catalogCollections" | "catalogStories"; value: number }) {
+  const { language, direction } = useUiLanguage();
   return (
     <div className="flex items-center gap-1.5 rounded-full bg-black/40 px-3 py-1 text-xs border border-white/5">
       <span className="font-bold text-gold">{value}</span>
-      <span className="text-muted-foreground"><CatalogText message={label} /></span>
+      <span className="text-muted-foreground" lang={language} dir={direction}>{collectionCountLabel(language, label, value)}</span>
     </div>
   );
 }
