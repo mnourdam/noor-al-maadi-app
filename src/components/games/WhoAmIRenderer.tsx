@@ -1,3 +1,5 @@
+import { useUiLanguage } from "@/lib/ui-language/store";
+import { WHO_AM_I_MESSAGES, whoAmIText } from "@/lib/ui-language/who-am-i-control-messages";
 import { useEffect, useRef, useState, useMemo } from "react";
 import { Lightbulb, Check, Sparkles, ScrollText, UserCircle2, ShieldQuestion, HelpCircle, Coins } from "lucide-react";
 import type { WhoAmIStage } from "@/lib/games/types";
@@ -30,6 +32,8 @@ function normalize(s: string): string {
 const POTENTIAL_BY_REVEAL = [100, 70, 50] as const;
 
 export function WhoAmIRenderer({ gameId, retryNonce = 0, stage, onComplete, onWrong, attemptsLeft, maxAttempts }: Props) {
+  const { language, direction } = useUiLanguage();
+  const copy = WHO_AM_I_MESSAGES[language];
   const [revealed, setRevealed] = useState(1);
   const [guess, setGuess] = useState("");
   const guessRef = useRef<HTMLInputElement | null>(null);
@@ -94,8 +98,8 @@ export function WhoAmIRenderer({ gameId, retryNonce = 0, stage, onComplete, onWr
     if (!gameId || done) return null;
     return {
       icon: words.length > 1 ? <ScrollText className="h-4 w-4" /> : <HelpCircle className="h-4 w-4" />,
-      label: words.length > 1 ? "كشف كلمة" : "كشف حروف",
-      description: words.length > 1 ? "اكشف إحدى كلمات الاسم مقابل 20 دينار." : "اكشف بعض حروف الاسم مقابل 20 دينار.",
+      label: words.length > 1 ? copy.revealWord : copy.revealLetters,
+      description: words.length > 1 ? copy.wordDescription : copy.lettersDescription,
       cost: 20,
       getAvailable: () => {
         const hs = helpStateRef.current;
@@ -121,7 +125,7 @@ export function WhoAmIRenderer({ gameId, retryNonce = 0, stage, onComplete, onWr
         return ok;
       }
     };
-  }, [gameId, done, words.length]);
+  }, [gameId, done, words.length, copy]);
 
   useRegisterHelpOption("whoami_reveal", revealSpec);
 
@@ -163,19 +167,19 @@ export function WhoAmIRenderer({ gameId, retryNonce = 0, stage, onComplete, onWr
 
 
   return (
-    <div className="relative overflow-hidden irth-title-card p-5 sm:p-6">
+    <div dir={direction} className="relative overflow-hidden irth-title-card p-5 sm:p-6">
       {/* Dossier header */}
       <div className="mb-5 flex items-center justify-between">
         <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.3em] text-amber-300/80">
           <ScrollText className="h-3.5 w-3.5" />
-          ملف تاريخي
+          {copy.dossier}
         </div>
         <div className="flex items-center gap-2">
           {typeof attemptsLeft === "number" && typeof maxAttempts === "number" && (
             <AttemptsChip attemptsLeft={attemptsLeft} total={maxAttempts} />
           )}
           <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold text-amber-200">
-            الإجابة الآن تمنحك {potential} خبرة
+            {whoAmIText(language, 'potential', { xp: potential })}
           </span>
         </div>
       </div>
@@ -197,7 +201,7 @@ export function WhoAmIRenderer({ gameId, retryNonce = 0, stage, onComplete, onWr
 
 
       {/* Hints — revealed one by one */}
-      <ul className="space-y-3">
+      <ul dir="rtl" className="space-y-3">
         {stage.hints.slice(0, revealed).map((h, i) => (
           <li key={i} className="irth-reveal flex items-start gap-3 rounded-xl border border-amber-500/25 bg-amber-500/[0.05] p-4"
               style={{ animationDelay: `${i * 60}ms` }}>
@@ -213,11 +217,11 @@ export function WhoAmIRenderer({ gameId, retryNonce = 0, stage, onComplete, onWr
           {revealed < stage.hints.length && (
             <button onClick={revealMore}
               className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 px-3 py-2 text-xs text-amber-200 transition hover:bg-amber-500/10">
-              <Lightbulb className="h-3.5 w-3.5" /> اكشف تلميحًا آخر
+              <Lightbulb className="h-3.5 w-3.5" /> {copy.moreHint}
               <span className="text-amber-400/70">({revealed + 1}/{stage.hints.length})</span>
             </button>
           )}
-          <span className="ms-auto text-[11px] text-slate-500">تلميح {revealed} من {stage.hints.length}</span>
+          <span className="ms-auto text-[11px] text-slate-500">{whoAmIText(language, 'hintCount', { current: revealed, total: stage.hints.length })}</span>
         </div>
       )}
 
@@ -233,7 +237,7 @@ export function WhoAmIRenderer({ gameId, retryNonce = 0, stage, onComplete, onWr
             autoComplete="off"
             autoCorrect="off"
             spellCheck={false}
-            placeholder="اكتب اسم الشخصية…"
+            placeholder={copy.placeholder}
             className={`flex-1 rounded-xl border bg-slate-950/80 px-4 py-3.5 text-base text-slate-100 placeholder:text-slate-500 focus:outline-none ${
               wrong ? "border-red-500/60 irth-shake" : "border-slate-700 focus:border-amber-400"
             } ${done ? "border-emerald-500/40" : ""}`}
@@ -252,9 +256,9 @@ export function WhoAmIRenderer({ gameId, retryNonce = 0, stage, onComplete, onWr
             autoComplete="off"
             autoCorrect="off"
             spellCheck={false}
-            placeholder="اكتب اسم الشخصية…"
-            modalTitle="من أنا؟"
-            modalLabel="اكتب اسم الشخصية التاريخية ثم اضغط حفظ"
+            placeholder={copy.placeholder}
+            modalTitle={copy.title}
+            modalLabel={copy.inputHelp}
             androidEntryKey={`game.whoAmI.${stage.answer}`}
             className={`flex-1 rounded-xl border bg-slate-950/80 px-4 py-3.5 text-base text-slate-100 placeholder:text-slate-500 focus:outline-none ${
               wrong ? "border-red-500/60 irth-shake" : "border-slate-700 focus:border-amber-400"
@@ -267,18 +271,18 @@ export function WhoAmIRenderer({ gameId, retryNonce = 0, stage, onComplete, onWr
           disabled={done}
           className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-500 px-6 py-3.5 text-sm font-bold text-slate-950 transition hover:bg-amber-400 disabled:opacity-50 sm:min-w-[140px]"
         >
-          {done ? <><Sparkles className="h-4 w-4" /> صحيح</> : <><Check className="h-4 w-4" /> تحقق</>}
+          {done ? <><Sparkles className="h-4 w-4" /> {copy.correct}</> : <><Check className="h-4 w-4" /> {copy.check}</>}
         </button>
       </div>
       {!done && guess.trim().length === 0 && (
-        <p className="mt-2 text-[11px] text-slate-500">اكتب تخمينك ثم اضغط تحقق.</p>
+        <p className="mt-2 text-[11px] text-slate-500">{copy.guessHelp}</p>
       )}
 
 
       {done && (
         <div className="irth-reveal mt-5 rounded-xl border border-amber-500/40 bg-gradient-to-br from-amber-500/15 to-amber-500/5 p-4">
-          <p className="text-xs uppercase tracking-[0.25em] text-amber-300/80">الكشف الذهبي</p>
-          <p className="mt-1 text-xl font-bold text-amber-100">{stage.answer}</p>
+          <p className="text-xs uppercase tracking-[0.25em] text-amber-300/80">{copy.goldenReveal}</p>
+          <p dir="rtl" className="mt-1 text-xl font-bold text-amber-100">{stage.answer}</p>
         </div>
       )}
     </div>

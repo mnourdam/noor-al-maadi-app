@@ -1,0 +1,111 @@
+import type { AppLocale } from './locale-policy';
+
+/** UI only. Never translate the canonical answer, accepted aliases, hint content or persistence keys here. */
+const ar = {
+  "revealWord": "كشف كلمة",
+  "revealLetters": "كشف حروف",
+  "wordDescription": "اكشف إحدى كلمات الاسم مقابل 20 دينار.",
+  "lettersDescription": "اكشف بعض حروف الاسم مقابل 20 دينار.",
+  "dossier": "ملف تاريخي",
+  "potential": "الإجابة الآن تمنحك {xp} خبرة",
+  "moreHint": "اكشف تلميحًا آخر",
+  "hintCount": "تلميح {current} من {total}",
+  "placeholder": "اكتب اسم الشخصية…",
+  "title": "من أنا؟",
+  "inputHelp": "اكتب اسم الشخصية التاريخية ثم اضغط حفظ",
+  "correct": "صحيح",
+  "check": "تحقق",
+  "guessHelp": "اكتب تخمينك ثم اضغط تحقق.",
+  "goldenReveal": "الكشف الذهبي"
+} as const;
+export type WhoAmIControlKey = keyof typeof ar;
+export const WHO_AM_I_MESSAGES: Readonly<Record<AppLocale, Readonly<Record<WhoAmIControlKey, string>>>> = { ar,
+en: {
+  "revealWord": "Reveal a word",
+  "revealLetters": "Reveal letters",
+  "wordDescription": "Reveal one word of the name for 20 dinars.",
+  "lettersDescription": "Reveal some letters of the name for 20 dinars.",
+  "dossier": "Historical dossier",
+  "potential": "Answer now to earn {xp} XP",
+  "moreHint": "Reveal another hint",
+  "hintCount": "Hint {current} of {total}",
+  "placeholder": "Enter the person’s name…",
+  "title": "Who am I?",
+  "inputHelp": "Enter the historical person’s name, then press Save",
+  "correct": "Correct",
+  "check": "Check",
+  "guessHelp": "Enter your guess, then press Check.",
+  "goldenReveal": "Golden reveal"
+},
+ur: {
+  "revealWord": "ایک لفظ ظاہر کریں",
+  "revealLetters": "حروف ظاہر کریں",
+  "wordDescription": "20 دینار کے عوض نام کا ایک لفظ ظاہر کریں۔",
+  "lettersDescription": "20 دینار کے عوض نام کے کچھ حروف ظاہر کریں۔",
+  "dossier": "تاریخی تعارف",
+  "potential": "اب جواب دینے پر {xp} تجربہ پوائنٹس ملیں گے",
+  "moreHint": "ایک اور اشارہ ظاہر کریں",
+  "hintCount": "کل {total} اشاروں میں سے اشارہ {current}",
+  "placeholder": "شخصیت کا نام لکھیں…",
+  "title": "میں کون ہوں؟",
+  "inputHelp": "تاریخی شخصیت کا نام لکھیں، پھر محفوظ کریں دبائیں",
+  "correct": "درست",
+  "check": "جانچیں",
+  "guessHelp": "اپنا اندازہ لکھیں، پھر جانچیں دبائیں۔",
+  "goldenReveal": "سنہری انکشاف"
+},
+id: {
+  "revealWord": "Tampilkan satu kata",
+  "revealLetters": "Tampilkan huruf",
+  "wordDescription": "Tampilkan satu kata dari nama dengan 20 dinar.",
+  "lettersDescription": "Tampilkan beberapa huruf dari nama dengan 20 dinar.",
+  "dossier": "Berkas sejarah",
+  "potential": "Jawab sekarang untuk mendapatkan {xp} XP",
+  "moreHint": "Tampilkan petunjuk lain",
+  "hintCount": "Petunjuk {current} dari {total}",
+  "placeholder": "Masukkan nama tokoh…",
+  "title": "Siapakah aku?",
+  "inputHelp": "Masukkan nama tokoh sejarah, lalu tekan Simpan",
+  "correct": "Benar",
+  "check": "Periksa",
+  "guessHelp": "Masukkan tebakan Anda, lalu tekan Periksa.",
+  "goldenReveal": "Pengungkapan emas"
+},
+tr: {
+  "revealWord": "Bir kelimeyi göster",
+  "revealLetters": "Harfleri göster",
+  "wordDescription": "20 dinar karşılığında ismin bir kelimesini gösterin.",
+  "lettersDescription": "20 dinar karşılığında ismin bazı harflerini gösterin.",
+  "dossier": "Tarihî dosya",
+  "potential": "Şimdi yanıtlayarak {xp} deneyim puanı kazanın",
+  "moreHint": "Başka bir ipucu göster",
+  "hintCount": "İpucu: {current} / {total}",
+  "placeholder": "Kişinin adını yazın…",
+  "title": "Ben kimim?",
+  "inputHelp": "Tarihî kişinin adını yazın, ardından Kaydet düğmesine basın",
+  "correct": "Doğru",
+  "check": "Kontrol et",
+  "guessHelp": "Tahmininizi yazın, ardından Kontrol et düğmesine basın.",
+  "goldenReveal": "Altın keşif"
+},
+fr: {
+  "revealWord": "Révéler un mot",
+  "revealLetters": "Révéler des lettres",
+  "wordDescription": "Révélez un mot du nom pour 20 dinars.",
+  "lettersDescription": "Révélez quelques lettres du nom pour 20 dinars.",
+  "dossier": "Dossier historique",
+  "potential": "Répondez maintenant pour gagner {xp} points d’expérience",
+  "moreHint": "Révéler un autre indice",
+  "hintCount": "Indice {current} sur {total}",
+  "placeholder": "Saisissez le nom du personnage…",
+  "title": "Qui suis-je ?",
+  "inputHelp": "Saisissez le nom du personnage historique, puis appuyez sur Enregistrer",
+  "correct": "Correct",
+  "check": "Vérifier",
+  "guessHelp": "Saisissez votre réponse, puis appuyez sur Vérifier.",
+  "goldenReveal": "Révélation dorée"
+},
+};
+export function whoAmIText(locale: AppLocale, key: WhoAmIControlKey, values: Record<string, number>) {
+  return WHO_AM_I_MESSAGES[locale][key].replace(/\{(\w+)\}/g, (token, name: string) => name in values ? String(values[name]) : token);
+}
