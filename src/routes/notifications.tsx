@@ -1,3 +1,5 @@
+import { useUiLanguage } from "@/lib/ui-language/store";
+import { NOTIFICATION_CONTROL_MESSAGES, notificationRelativeTime } from "@/lib/ui-language/notification-control-messages";
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useEffect, useState, useRef, useSyncExternalStore } from "react";
 import { Trash2, ChevronLeft, MailOpen, CheckCheck, Image as ImageIcon } from "lucide-react";
@@ -39,18 +41,6 @@ function bucketOf(iso: string): Bucket {
   return "earlier";
 }
 
-function relativeTime(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const min = Math.floor(diff / 60_000);
-  if (min < 1) return "الآن";
-  if (min < 60) return `قبل ${min} د`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `قبل ${hr} س`;
-  const day = Math.floor(hr / 24);
-  if (day < 7) return `قبل ${day} ي`;
-  return new Date(iso).toLocaleDateString("ar", { month: "short", day: "numeric" });
-}
-
 const notificationScope = () => JSON.stringify([getActiveOwner(), getIdentityEpoch()]);
 const serverNotificationScope = () => "server";
 
@@ -60,6 +50,8 @@ function NotificationsCenter() {
 }
 
 function ScopedNotificationsCenter({ scope }: { scope: string }) {
+  const { language } = useUiLanguage();
+  const text = NOTIFICATION_CONTROL_MESSAGES[language];
   const router = useRouter();
   const stashOrigin = useStashCurrentAsOrigin();
   const [initialRows] = useState(() => peekWarmNotificationCenter());
@@ -154,14 +146,14 @@ function ScopedNotificationsCenter({ scope }: { scope: string }) {
     setRows((cur) => cur.map((r) => ({ ...r, read_at: r.read_at ?? now })));
     await markAllNotificationsRead();
     if (!current()) return;
-    setFeedback("تم تحديد كل الإشعارات كمقروءة.");
+    setFeedback(text.markedAll);
     if (feedbackTimer.current !== null) clearTimeout(feedbackTimer.current);
     feedbackTimer.current = setTimeout(() => { if (current()) setFeedback(null); }, 2500);
   };
 
   const clearAll = async () => {
     if (!current()) return;
-    if (!window.confirm("مسح كل الإشعارات من المركز؟")) return;
+    if (!window.confirm(text.confirmClear)) return;
     if (!current()) return;
     setRows([]);
     await clearMyNotifications();
@@ -173,7 +165,7 @@ function ScopedNotificationsCenter({ scope }: { scope: string }) {
 
   return (
     <AppShell>
-      <Screen title="مركز الإشعارات" subtitle="كل تنبيهاتك في مكان واحد، تبقى محفوظة حتى تحذفها">
+      <Screen title={text.title} subtitle={text.subtitle}>
         {feedback && (
           <div className="mb-3 rounded-2xl border border-gold/30 bg-gold/10 px-3 py-2 text-[12px] text-gold">
             {feedback}
@@ -182,17 +174,17 @@ function ScopedNotificationsCenter({ scope }: { scope: string }) {
 
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <Link to="/profile" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-            <ChevronLeft className="size-4" /> الحساب
+            <ChevronLeft className="size-4" /> {text.account}
           </Link>
           <div className="flex items-center gap-2">
             {unreadTotal > 0 && (
               <button onClick={markAll} className="inline-flex items-center gap-1 rounded-full border border-gold/40 bg-gold/5 px-3 py-1.5 text-[11px] text-gold transition hover:bg-gold/10">
-                <CheckCheck className="size-3.5" /> تحديد الكل كمقروء
+                <CheckCheck className="size-3.5" /> {text.markAll}
               </button>
             )}
             {rows.length > 0 && (
               <button onClick={clearAll} className="inline-flex items-center gap-1 rounded-full border border-white/10 px-3 py-1.5 text-[11px] text-muted-foreground transition hover:border-rose-400/40 hover:text-rose-300">
-                <Trash2 className="size-3.5" /> مسح الكل
+                <Trash2 className="size-3.5" /> {text.clearAll}
               </button>
             )}
           </div>
@@ -209,16 +201,16 @@ function ScopedNotificationsCenter({ scope }: { scope: string }) {
             <div className="mx-auto grid size-16 place-items-center rounded-full bg-gold/10 text-gold ring-1 ring-gold/30">
               <MailOpen className="size-7" />
             </div>
-            <p className="font-display mt-4 text-base font-bold">لا توجد إشعارات</p>
+            <p className="font-display mt-4 text-base font-bold">{text.empty}</p>
             <p className="mt-2 text-[12px] leading-relaxed text-muted-foreground">
-              ستظهر هنا كل التنبيهات: الحملات الجديدة، الموسوعة، التحقيقات، المكافآت، وما يحدث في مثل هذا اليوم.
+              {text.emptyDescription}
             </p>
           </div>
         ) : (
           <div className="space-y-6">
-            <Group label="اليوم"     items={groups.today}     onOpen={open} onRemove={remove} />
-            <Group label="الأمس"    items={groups.yesterday} onOpen={open} onRemove={remove} />
-            <Group label="سابقاً"    items={groups.earlier}   onOpen={open} onRemove={remove} />
+            <Group label={text.today}     items={groups.today}     onOpen={open} onRemove={remove} />
+            <Group label={text.yesterday}    items={groups.yesterday} onOpen={open} onRemove={remove} />
+            <Group label={text.earlier}    items={groups.earlier}   onOpen={open} onRemove={remove} />
           </div>
         )}
       </Screen>
@@ -257,6 +249,8 @@ function Row({
   onOpen: (n: ServerNotification) => void;
   onRemove: (id: string) => void;
 }) {
+  const { language } = useUiLanguage();
+  const text = NOTIFICATION_CONTROL_MESSAGES[language];
   const cat = resolveCategory(n.category ?? n.type);
   const Icon = cat.icon;
   const unread = !n.read_at;
@@ -272,8 +266,8 @@ function Row({
             : "border-white/10 bg-surface/60 hover:border-white/20",
         ].join(" ")}
       >
-        {isHigh && <span className="absolute inset-y-0 right-0 w-[3px] bg-gradient-to-b from-gold via-amber-300 to-gold" />}
-        <button onClick={() => onOpen(n)} className="flex flex-1 items-start gap-3 text-right">
+        {isHigh && <span className="absolute inset-y-0 start-0 w-[3px] bg-gradient-to-b from-gold via-amber-300 to-gold" />}
+        <button onClick={() => onOpen(n)} className="flex flex-1 items-start gap-3 text-start">
           {n.image_url ? (
             <NotificationThumbnail src={n.image_url} notificationId={n.id} />
           ) : (
@@ -284,23 +278,23 @@ function Row({
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
               <p className="min-w-0 flex-1 font-display text-sm font-bold leading-relaxed text-foreground">{n.title}</p>
-              {unread && <span className="mt-1.5 size-2 shrink-0 rounded-full bg-gradient-gold" aria-label="غير مقروء" />}
+              {unread && <span className="mt-1.5 size-2 shrink-0 rounded-full bg-gradient-gold" aria-label={text.unread} />}
             </div>
             {/* Full body — never clamped/truncated. Long Arabic text wraps
                 naturally and the card grows with it. */}
             <p className="mt-1 whitespace-pre-wrap break-words text-[12px] leading-relaxed text-muted-foreground">{n.body}</p>
             <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-[10px] text-muted-foreground">
               <span className={`inline-flex items-center gap-1 ${cat.accent}`}>
-                <Icon className="size-3" /> {cat.label}
+                <Icon className="size-3" /> {text[cat.key]}
               </span>
-              <span className="shrink-0">{relativeTime(n.created_at)}</span>
+              <span className="shrink-0">{notificationRelativeTime(n.created_at, language)}</span>
             </div>
           </div>
 
         </button>
         <button
           onClick={() => onRemove(n.id)}
-          aria-label="حذف"
+          aria-label={text.delete}
           className="grid size-7 shrink-0 place-items-center self-start rounded-full text-muted-foreground opacity-0 transition group-hover:opacity-100 hover:bg-rose-500/10 hover:text-rose-300"
         >
           <Trash2 className="size-3.5" />

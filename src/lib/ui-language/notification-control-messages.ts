@@ -1,0 +1,216 @@
+import type { AppLocale } from "./locale-policy";
+
+// Display text only. Does not translate notification payloads or enable locales.
+const ar = {
+  title: "مركز الإشعارات",
+  subtitle: "كل تنبيهاتك في مكان واحد، تبقى محفوظة حتى تحذفها",
+  account: "الحساب",
+  markAll: "تحديد الكل كمقروء",
+  markedAll: "تم تحديد كل الإشعارات كمقروءة.",
+  clearAll: "مسح الكل",
+  confirmClear: "مسح كل الإشعارات من المركز؟",
+  empty: "لا توجد إشعارات",
+  emptyDescription:
+    "ستظهر هنا كل التنبيهات: الحملات الجديدة، الموسوعة، التحقيقات، المكافآت، وما يحدث في مثل هذا اليوم.",
+  today: "اليوم",
+  yesterday: "الأمس",
+  earlier: "سابقاً",
+  unread: "غير مقروء",
+  delete: "حذف",
+  now: "الآن",
+  minutesAgo: "قبل {count} د",
+  hoursAgo: "قبل {count} س",
+  daysAgo: "قبل {count} ي",
+  daily_reminder: "تذكير يومي",
+  today_in_history: "في مثل هذا اليوم",
+  campaign: "حملة",
+  encyclopedia: "الموسوعة",
+  investigation: "تحقيق",
+  achievement: "إنجاز",
+  reward: "مكافأة",
+  museum: "المتحف",
+  admin: "إعلان",
+  system: "النظام",
+  friend: "الأصدقاء",
+} as const;
+export type NotificationControlKey = keyof typeof ar;
+export type NotificationControlMessages = Readonly<Record<NotificationControlKey, string>>;
+const en = {
+  title: "Notification center",
+  subtitle: "All your notifications in one place, saved until you delete them",
+  account: "Account",
+  markAll: "Mark all as read",
+  markedAll: "All notifications marked as read.",
+  clearAll: "Clear all",
+  confirmClear: "Clear all notifications from the center?",
+  empty: "No notifications",
+  emptyDescription:
+    "All your alerts will appear here: new campaigns, the encyclopedia, investigations, rewards, and events on this day in history.",
+  today: "Today",
+  yesterday: "Yesterday",
+  earlier: "Earlier",
+  unread: "Unread",
+  delete: "Delete",
+  now: "Now",
+  minutesAgo: "{count} min ago",
+  hoursAgo: "{count} hr ago",
+  daysAgo: "{count} d ago",
+  daily_reminder: "Daily reminder",
+  today_in_history: "On this day",
+  campaign: "Campaign",
+  encyclopedia: "Encyclopedia",
+  investigation: "Investigation",
+  achievement: "Achievement",
+  reward: "Reward",
+  museum: "Museum",
+  admin: "Announcement",
+  system: "System",
+  friend: "Friends",
+} satisfies NotificationControlMessages;
+const ur = {
+  title: "اطلاعات کا مرکز",
+  subtitle: "آپ کی تمام اطلاعات ایک جگہ، حذف کرنے تک محفوظ رہیں گی",
+  account: "اکاؤنٹ",
+  markAll: "سب کو پڑھا ہوا نشان لگائیں",
+  markedAll: "تمام اطلاعات کو پڑھا ہوا نشان لگا دیا گیا۔",
+  clearAll: "سب صاف کریں",
+  confirmClear: "مرکز سے تمام اطلاعات صاف کر دیں؟",
+  empty: "کوئی اطلاع نہیں",
+  emptyDescription:
+    "تمام اطلاعات یہاں نظر آئیں گی: نئی مہمات، دائرۃ المعارف، تحقیقات، انعامات اور تاریخ میں آج کے دن کے واقعات۔",
+  today: "آج",
+  yesterday: "کل",
+  earlier: "اس سے پہلے",
+  unread: "بغیر پڑھی ہوئی",
+  delete: "حذف کریں",
+  now: "ابھی",
+  minutesAgo: "{count} منٹ پہلے",
+  hoursAgo: "{count} گھنٹے پہلے",
+  daysAgo: "{count} دن پہلے",
+  daily_reminder: "روزانہ یاد دہانی",
+  today_in_history: "تاریخ میں آج کا دن",
+  campaign: "مہم",
+  encyclopedia: "دائرۃ المعارف",
+  investigation: "تحقیق",
+  achievement: "کامیابی",
+  reward: "انعام",
+  museum: "عجائب گھر",
+  admin: "اعلان",
+  system: "نظام",
+  friend: "دوست",
+} satisfies NotificationControlMessages;
+const id = {
+  title: "Pusat notifikasi",
+  subtitle: "Semua notifikasi di satu tempat, tersimpan sampai Anda menghapusnya",
+  account: "Akun",
+  markAll: "Tandai semua sudah dibaca",
+  markedAll: "Semua notifikasi ditandai sudah dibaca.",
+  clearAll: "Hapus semua",
+  confirmClear: "Hapus semua notifikasi dari pusat notifikasi?",
+  empty: "Tidak ada notifikasi",
+  emptyDescription:
+    "Semua pemberitahuan akan muncul di sini: kampanye baru, ensiklopedia, investigasi, hadiah, dan peristiwa pada hari ini dalam sejarah.",
+  today: "Hari ini",
+  yesterday: "Kemarin",
+  earlier: "Sebelumnya",
+  unread: "Belum dibaca",
+  delete: "Hapus",
+  now: "Sekarang",
+  minutesAgo: "{count} menit lalu",
+  hoursAgo: "{count} jam lalu",
+  daysAgo: "{count} hari lalu",
+  daily_reminder: "Pengingat harian",
+  today_in_history: "Hari ini dalam sejarah",
+  campaign: "Kampanye",
+  encyclopedia: "Ensiklopedia",
+  investigation: "Investigasi",
+  achievement: "Pencapaian",
+  reward: "Hadiah",
+  museum: "Museum",
+  admin: "Pengumuman",
+  system: "Sistem",
+  friend: "Teman",
+} satisfies NotificationControlMessages;
+const tr = {
+  title: "Bildirim merkezi",
+  subtitle: "Tüm bildirimleriniz tek yerde; siz silene kadar saklanır",
+  account: "Hesap",
+  markAll: "Tümünü okundu olarak işaretle",
+  markedAll: "Tüm bildirimler okundu olarak işaretlendi.",
+  clearAll: "Tümünü temizle",
+  confirmClear: "Bildirim merkezindeki tüm bildirimler temizlensin mi?",
+  empty: "Bildirim yok",
+  emptyDescription:
+    "Tüm bildirimler burada görünür: yeni kampanyalar, ansiklopedi, tarih araştırmaları, ödüller ve tarihte bugün yaşananlar.",
+  today: "Bugün",
+  yesterday: "Dün",
+  earlier: "Daha önce",
+  unread: "Okunmadı",
+  delete: "Sil",
+  now: "Şimdi",
+  minutesAgo: "{count} dk önce",
+  hoursAgo: "{count} sa önce",
+  daysAgo: "{count} gün önce",
+  daily_reminder: "Günlük hatırlatma",
+  today_in_history: "Tarihte bugün",
+  campaign: "Kampanya",
+  encyclopedia: "Ansiklopedi",
+  investigation: "Tarih araştırması",
+  achievement: "Başarım",
+  reward: "Ödül",
+  museum: "Müze",
+  admin: "Duyuru",
+  system: "Sistem",
+  friend: "Arkadaşlar",
+} satisfies NotificationControlMessages;
+const fr = {
+  title: "Centre de notifications",
+  subtitle: "Toutes vos notifications au même endroit, conservées jusqu’à leur suppression",
+  account: "Compte",
+  markAll: "Tout marquer comme lu",
+  markedAll: "Toutes les notifications ont été marquées comme lues.",
+  clearAll: "Tout effacer",
+  confirmClear: "Effacer toutes les notifications du centre ?",
+  empty: "Aucune notification",
+  emptyDescription:
+    "Toutes vos alertes apparaîtront ici : nouvelles campagnes, encyclopédie, enquêtes, récompenses et événements survenus à cette date dans l’histoire.",
+  today: "Aujourd’hui",
+  yesterday: "Hier",
+  earlier: "Plus anciennes",
+  unread: "Non lue",
+  delete: "Supprimer",
+  now: "Maintenant",
+  minutesAgo: "Il y a {count} min",
+  hoursAgo: "Il y a {count} h",
+  daysAgo: "Il y a {count} j",
+  daily_reminder: "Rappel quotidien",
+  today_in_history: "Ce jour dans l’histoire",
+  campaign: "Campagne",
+  encyclopedia: "Encyclopédie",
+  investigation: "Enquête",
+  achievement: "Succès",
+  reward: "Récompense",
+  museum: "Musée",
+  admin: "Annonce",
+  system: "Système",
+  friend: "Amis",
+} satisfies NotificationControlMessages;
+export const NOTIFICATION_CONTROL_MESSAGES: Readonly<
+  Record<AppLocale, NotificationControlMessages>
+> = { ar, en, ur, id, tr, fr };
+
+/** Preserve existing relative-time thresholds; only format the display for the locale. */
+export function notificationRelativeTime(iso: string, locale: AppLocale, now = Date.now()): string {
+  const messages = NOTIFICATION_CONTROL_MESSAGES[locale];
+  const min = Math.floor((now - new Date(iso).getTime()) / 60_000);
+  if (min < 1) return messages.now;
+  if (min < 60) return messages.minutesAgo.replace("{count}", String(min));
+  const hr = Math.floor(min / 60);
+  if (hr < 24) {
+    if (locale === "ur" && hr === 1) return "1 گھنٹہ پہلے";
+    return messages.hoursAgo.replace("{count}", String(hr));
+  }
+  const day = Math.floor(hr / 24);
+  if (day < 7) return messages.daysAgo.replace("{count}", String(day));
+  return new Date(iso).toLocaleDateString(locale, { month: "short", day: "numeric" });
+}
