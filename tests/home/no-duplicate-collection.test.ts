@@ -20,3 +20,15 @@ describe('Home collection query ownership', () => {
     expect(calls('src/lib/stats/homeSummary.ts', 'useRealCollectionStats')).toBe(1);
   });
 });
+
+describe('Home avoids discarded progress subscriptions', () => {
+  it('does not mount an unused investigation-progress observer beside the canonical summary', () => {
+    expect(calls('src/routes/index.tsx', 'useCanonicalInvestigationProgress')).toBe(0);
+    expect(calls('src/lib/stats/homeSummary.ts', 'useCanonicalInvestigationProgress')).toBe(1);
+  });
+  it('does not project an unused full achievement list while retaining both visible selectors', () => {
+    expect(calls('src/routes/index.tsx', 'useAchievementViews')).toBe(0);
+    expect(calls('src/routes/index.tsx', 'useNearestAchievement')).toBe(1);
+    expect(calls('src/routes/index.tsx', 'useLatestUnlockedAchievement')).toBe(1);
+  });
+});

@@ -19,7 +19,6 @@ import {
   levelFor,
 } from "@/lib/app-constants";
 
-import { useAchievementViews } from "@/lib/achievements/v2/driver";
 import { useNearestAchievement, useLatestUnlockedAchievement } from "@/lib/achievements/v2/selectors";
 import { useProfile } from "@/lib/profile";
 import { useStashCurrentAsOrigin } from "@/lib/navigation";
@@ -40,7 +39,6 @@ import { useStoryCoverSrc } from "@/lib/stories/covers";
 import { useCampaignRecommendation } from "@/lib/campaignRecommendationService";
 import { useCampaignArtworkUrl, sanitizedCoverImage } from "@/lib/campaignArtwork";
 import { KeyArtDissolve } from "@/components/KeyArtDissolve";
-import { useCanonicalInvestigationProgress } from "@/lib/investigations/progress";
 import { InvestigationsSpotlight } from "@/components/home/InvestigationsSpotlight";
 import { getCampaignProgress } from "@/lib/importedCampaignProgress";
 import type { Campaign as ImportedCampaign, CampaignActivity, CampaignChapter } from "@/types/campaign";
@@ -241,8 +239,6 @@ function HomeFull() {
 
 
   const lvl = levelFor(profile.points);
-  const canonicalInvHome = useCanonicalInvestigationProgress();
-  const achViews = useAchievementViews();
   const nearestAchievement = useNearestAchievement();
   const latestUnlockedAchievement = useLatestUnlockedAchievement();
 
