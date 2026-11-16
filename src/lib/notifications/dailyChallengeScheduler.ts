@@ -277,13 +277,15 @@ function isNativeAndroid(): boolean {
 }
 
 async function loadPlugin(): Promise<
-  | typeof import("@capacitor/local-notifications").LocalNotifications
+  | { plugin: typeof import("@capacitor/local-notifications").LocalNotifications }
   | null
 > {
   if (!isNativeAndroid()) return null;
   try {
     const mod = await import("@capacitor/local-notifications");
-    return mod.LocalNotifications;
+    // Capacitor plugins are proxies: returning one from async would invoke
+    // a synthetic native `then` method during Promise assimilation.
+    return { plugin: mod.LocalNotifications };
   } catch { return null; }
 }
 
@@ -293,7 +295,8 @@ async function loadPlugin(): Promise<
  * new permission prompt just for this reminder.
  */
 async function checkPermissionSilently(): Promise<boolean> {
-  const LN = await loadPlugin();
+  const loaded = await loadPlugin();
+  const LN = loaded?.plugin;
   if (!LN) return false;
   try {
     const res = await LN.checkPermissions();
@@ -316,7 +319,8 @@ async function resolveUserKey(): Promise<string> {
  * Safe to call on web / SSR (no-op). Idempotent.
  */
 export async function cancelDailyChallenge(reason: string): Promise<void> {
-  const LN = await loadPlugin();
+  const loaded = await loadPlugin();
+  const LN = loaded?.plugin;
   if (!LN) return;
   try {
     await LN.cancel({ notifications: [{ id: DAILY_CHALLENGE_NOTIF_ID }] });
@@ -339,7 +343,8 @@ export async function rescheduleDailyChallenge(reason: string): Promise<
   | { status: "cancelled"; reason: SuppressionReason }
   | { status: "noop"; reason: string }
 > {
-  const LN = await loadPlugin();
+  const loaded = await loadPlugin();
+  const LN = loaded?.plugin;
   if (!LN) return { status: "noop", reason: "not_native_android" };
 
   const permissionGranted = await checkPermissionSilently();
