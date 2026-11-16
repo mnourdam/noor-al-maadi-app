@@ -67,9 +67,10 @@ export async function listMyNotifications(opts: { cursor?: string | null; limit?
 }
 
 
-export async function unreadNotificationCount(): Promise<number> {
+export async function unreadNotificationCount(signal?: AbortSignal): Promise<number> {
   try {
-    const { data, error } = await supabase.rpc("unread_notification_count" as never);
+    const query = supabase.rpc("unread_notification_count" as never);
+    const { data, error } = await (signal ? query.abortSignal(signal) : query);
     if (error) return 0;
     return typeof data === "number" ? data : 0;
   } catch {

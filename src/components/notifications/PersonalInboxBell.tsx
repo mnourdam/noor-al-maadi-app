@@ -28,16 +28,38 @@ interface Props {
 
 export function PersonalInboxBell({ className }: Props) {
   const { user } = useAccount();
+  if (!user) return null;
+  return <ScopedPersonalInboxBell key={user.id} className={className} />;
+}
+
+// Keep unread state local to one account, including while the next count loads.
+function ScopedPersonalInboxBell({ className }: Props) {
   const online = useOnline();
   const [count, setCount] = useState<number>(0);
 
   useEffect(() => {
-    if (!user || !online) return;
+    if (!online) return;
     let alive = true;
-    const load = () => {
-      void unreadNotificationCount().then((n) => {
-        if (alive) setCount(n);
-      });
+    let pending = false;
+    let releaseDeadline: (() => void) | undefined;
+    const load = async () => {
+      if (!alive || pending) return;
+      pending = true;
+      const controller = new AbortController();
+      try {
+        const deadline = new Promise<undefined>((resolve) => {
+          const timer = setTimeout(() => { controller.abort(); resolve(undefined); }, 15_000);
+          releaseDeadline = () => { clearTimeout(timer); controller.abort(); resolve(undefined); };
+        });
+        const n = await Promise.race([unreadNotificationCount(controller.signal), deadline]);
+        if (alive && !controller.signal.aborted && typeof n === "number") setCount(n);
+      } catch {
+        // Preserve the last known indicator on a transient failure.
+      } finally {
+        releaseDeadline?.();
+        releaseDeadline = undefined;
+        pending = false;
+      }
     };
     load();
     const t = setInterval(load, 60_000);
@@ -45,12 +67,11 @@ export function PersonalInboxBell({ className }: Props) {
     window.addEventListener("focus", onFocus);
     return () => {
       alive = false;
+      releaseDeadline?.();
       clearInterval(t);
       window.removeEventListener("focus", onFocus);
     };
-  }, [user, online]);
-
-  if (!user) return null;
+  }, [online]);
 
   const hasUnread = count > 0;
   const label = hasUnread ? `الصندوق الشخصي: يوجد جديد` : "الصندوق الشخصي";
