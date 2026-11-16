@@ -1,3 +1,4 @@
+import { STORY_UNLOCK_MESSAGES } from "./story-unlock-messages";
 import { CATALOG_CONTROL_MESSAGES } from "./catalog-control-messages";
 import { ACHIEVEMENT_CONTROL_MESSAGES } from './achievement-control-messages';
 import { READING_REVIEW_MESSAGES } from './reading-review-messages';
@@ -91,28 +92,7 @@ export const arabic = {
   storySecondsUnit: "ث",
   storyOneMinute: "دقيقة",
   storyMinutesUnit: "د",
-  storyLockedRequirements: "هذه القصة مقفلة. أكمل المتطلبات التالية لفتحها:",
-  storyLockedJourney: "هذه القصة مقفلة حاليًا. تابع رحلتك في إرث لفتحها.",
-  storyRequireCampaign: "أكمل الحملة",
-  storyRequireChapter: "أكمل فصل الحملة",
-  storyRequireInvestigation: "أكمل التحقيق",
-  storyRequireEntity: "اكتشف في الموسوعة",
-  storyRequireEntities: "اكتشف عناصر الموسوعة",
-  storyRequireArtifact: "امتلك المقتنى",
-  storyRequireAtlas: "زر الموقع في الأطلس",
-  storyRequireAchievement: "افتح الإنجاز",
-  storyRequireLevel: "ابلغ المستوى",
-  storyRequireStory: "أكمل القصة",
-  storyRequireDate: "متاح في فترة محددة",
-  storyRequirement: "متطلب",
-  storyGoTo: "الانتقال إلى",
-  storyGoEncyclopedia: "الانتقال إلى الموسوعة",
-  storyGoCampaign: "الانتقال إلى الحملة",
-  storyGoInvestigation: "الانتقال إلى التحقيق",
-  storyGoStory: "الانتقال إلى القصة",
-  storyGoNow: "اذهب الآن",
-  storyLater: "لاحقًا",
-  storyOK: "حسنًا",
+  ...STORY_UNLOCK_MESSAGES.ar,
 } as const;
 export type MessageKey = keyof typeof arabic;
 export type UiLanguage = 'ar' | 'en';
@@ -204,28 +184,7 @@ const english = {
   storySecondsUnit: "s",
   storyOneMinute: "1 min",
   storyMinutesUnit: "min",
-  storyLockedRequirements: "This story is locked. Complete these requirements to unlock it:",
-  storyLockedJourney: "This story is currently locked. Continue your journey in Irth to unlock it.",
-  storyRequireCampaign: "Complete the campaign",
-  storyRequireChapter: "Complete the campaign chapter",
-  storyRequireInvestigation: "Complete the investigation",
-  storyRequireEntity: "Discover in the encyclopedia",
-  storyRequireEntities: "Discover encyclopedia entries",
-  storyRequireArtifact: "Own the artifact",
-  storyRequireAtlas: "Visit the atlas location",
-  storyRequireAchievement: "Unlock the achievement",
-  storyRequireLevel: "Reach the level",
-  storyRequireStory: "Complete the story",
-  storyRequireDate: "Available during a limited period",
-  storyRequirement: "Requirement",
-  storyGoTo: "Go to",
-  storyGoEncyclopedia: "Go to the encyclopedia",
-  storyGoCampaign: "Go to the campaign",
-  storyGoInvestigation: "Go to the investigation",
-  storyGoStory: "Go to the story",
-  storyGoNow: "Go now",
-  storyLater: "Later",
-  storyOK: "OK",
+  ...STORY_UNLOCK_MESSAGES.en,
 } satisfies Record<MessageKey, string>;
 export const UI_MESSAGES: Readonly<Record<UiLanguage, Readonly<Record<MessageKey, string>>>> = { ar: arabic, en: english };
 export const uiDirection = (language: UiLanguage) => LOCALE_META[language].direction;
