@@ -1,3 +1,5 @@
+import { useUiLanguage } from "@/lib/ui-language/store";
+import { COMMUNITY_CONTROL_MESSAGES, communityCount } from "@/lib/ui-language/community-control-messages";
 // ============================================================
 // <PublicContributionsNotice /> — anonymous transparency note.
 // ------------------------------------------------------------
@@ -11,7 +13,6 @@ import { Sprout } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   listPublicContributions,
-  categoryLabelAr,
   type PublicContributionNotice,
 } from "@/lib/social/contributions";
 import type { SocialAnchorType } from "@/lib/social/reactions";
@@ -22,9 +23,9 @@ interface Props {
   className?: string;
 }
 
-function fmt(iso: string): string {
+function fmt(iso: string, locale: string): string {
   try {
-    return new Intl.DateTimeFormat("ar", {
+    return new Intl.DateTimeFormat(locale, {
       day: "numeric",
       month: "short",
       year: "numeric",
@@ -35,6 +36,8 @@ function fmt(iso: string): string {
 }
 
 export function PublicContributionsNotice({ anchorType, anchorId, className }: Props) {
+  const { language } = useUiLanguage();
+  const text = COMMUNITY_CONTROL_MESSAGES[language];
   const [items, setItems] = useState<PublicContributionNotice[] | null>(null);
   const [expanded, setExpanded] = useState(false);
 
@@ -60,12 +63,12 @@ export function PublicContributionsNotice({ anchorType, anchorId, className }: P
         "rounded-lg border border-gold/25 bg-gold/[0.04] p-3 text-[12px] leading-relaxed text-foreground/85",
         className,
       )}
-      aria-label="إسهامات القرّاء في تحسين إرث"
+      aria-label={text.noticeAria}
     >
       <header className="mb-2 flex items-center gap-2 text-gold">
         <Sprout className="size-4" aria-hidden="true" />
         <span className="text-[12px] font-semibold tracking-wide">
-          ساهم قرّاء في تحسين هذا المحتوى
+          {text.noticeTitle}
         </span>
       </header>
       <ul className="space-y-1.5">
@@ -78,7 +81,7 @@ export function PublicContributionsNotice({ anchorType, anchorId, className }: P
             <div className="min-w-0 flex-1">
               <p className="whitespace-pre-wrap break-words">{n.public_notice_text}</p>
               <p className="mt-0.5 text-[10.5px] text-muted-foreground">
-                {categoryLabelAr(n.category)} · {fmt(n.applied_at)}
+                {text[n.category] ?? n.category} · {fmt(n.applied_at, language)}
               </p>
             </div>
           </li>
@@ -90,11 +93,11 @@ export function PublicContributionsNotice({ anchorType, anchorId, className }: P
           onClick={() => setExpanded(true)}
           className="mt-2 text-[11px] text-gold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
         >
-          عرض {remaining} إضافيّة
+          {communityCount(language, "more", remaining)}
         </button>
       )}
       <p className="mt-2 text-[10.5px] text-muted-foreground">
-        المساهمات مجهولة الهوية — الاعتراف تحريري لا اجتماعي.
+        {text.anonymousNote}
       </p>
     </aside>
   );

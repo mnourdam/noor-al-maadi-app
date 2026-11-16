@@ -1,3 +1,5 @@
+import { useUiLanguage } from "@/lib/ui-language/store";
+import { COMMUNITY_CONTROL_MESSAGES } from "@/lib/ui-language/community-control-messages";
 // ============================================================
 // <ContributionBadge /> — personal, subtle badge on the user's
 // OWN comment when it has been marked/applied as a contribution.
@@ -6,7 +8,7 @@
 
 import { Sprout } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { categoryLabelAr, type MyContributionFlag } from "@/lib/social/contributions";
+import { type MyContributionFlag } from "@/lib/social/contributions";
 
 interface Props {
   flag: MyContributionFlag | null;
@@ -14,11 +16,13 @@ interface Props {
 }
 
 export function ContributionBadge({ flag, className }: Props) {
+  const { language } = useUiLanguage();
+  const text = COMMUNITY_CONTROL_MESSAGES[language];
   if (!flag) return null;
   const applied = flag.status === "applied";
   const label = applied
-    ? "ساهمت في تحسين إرث"
-    : "قيد المراجعة التحريرية";
+    ? text.applied
+    : text.underReview;
   return (
     <span
       className={cn(
@@ -28,7 +32,7 @@ export function ContributionBadge({ flag, className }: Props) {
           : "border border-white/15 bg-white/5 text-muted-foreground",
         className,
       )}
-      title={categoryLabelAr(flag.category)}
+      title={text[flag.category] ?? flag.category}
       aria-label={label}
     >
       <Sprout className="size-3" aria-hidden="true" />
