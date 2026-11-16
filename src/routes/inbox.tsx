@@ -85,7 +85,8 @@ function InboxScreen() {
         title="الصندوق الشخصي"
         subtitle="تنبيهات هادئة تخصّك أنت — مساهماتك، وما فُتح لك من قصص."
       >
-        <div className="mx-auto max-w-2xl space-y-4">
+        {/* Reset every private tab when the account changes, before effects run. */}
+        <div key={user.id} className="mx-auto max-w-2xl space-y-4">
           <div role="tablist" aria-label="أقسام الصندوق" className="flex items-center gap-2">
             <TabButton active={tab === "notifications"} onClick={() => setTab("notifications")}>
               <MailOpen className="size-3.5" aria-hidden="true" />
@@ -163,7 +164,7 @@ function NotificationsTab() {
       setError("تعذّر تحميل الصندوق.");
     }
     setLoading(false);
-  }, [user]);
+  }, [user?.id]);
 
   useEffect(() => { void load(); }, [load]);
 
