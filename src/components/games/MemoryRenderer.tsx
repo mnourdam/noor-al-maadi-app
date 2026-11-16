@@ -1,3 +1,5 @@
+import { useUiLanguage } from "@/lib/ui-language/store";
+import { GAME_RENDERER_MESSAGES, gameRendererText } from "@/lib/ui-language/game-renderer-messages";
 import { useEffect, useMemo, useState } from "react";
 import {
   Sparkles, Archive, Crown, Scroll, Sword, Landmark, BookOpen,
@@ -30,6 +32,8 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 export function MemoryRenderer({ stage, onComplete, onWrong, attemptsLeft, maxAttempts }: Props) {
+  const { language, direction } = useUiLanguage();
+  const copy = GAME_RENDERER_MESSAGES[language];
   const deck = useMemo<Card[]>(() => {
     const cards: Card[] = [];
     stage.pairs.forEach((p, i) => {
@@ -87,25 +91,25 @@ export function MemoryRenderer({ stage, onComplete, onWrong, attemptsLeft, maxAt
   };
 
   return (
-    <div className="relative irth-title-card overflow-hidden p-5">
+    <div dir={direction} className="relative irth-title-card overflow-hidden p-5">
       <div className="mb-4 flex items-center justify-between text-[11px] uppercase tracking-[0.3em]">
         <span className="inline-flex items-center gap-2 text-amber-300/80">
           <Archive className="h-3.5 w-3.5" />
-          خزانة الذاكرة
+          {copy.memory}
         </span>
         <span className="inline-flex items-center gap-3">
           {typeof attemptsLeft === "number" && typeof maxAttempts === "number" && (
             <AttemptsChip attemptsLeft={attemptsLeft} total={maxAttempts} />
           )}
           <span className="text-slate-400 normal-case tracking-normal">
-            المطابقات: {solved.size / 2}/{stage.pairs.length}
+            {copy.matches} {solved.size / 2}/{stage.pairs.length}
           </span>
         </span>
       </div>
 
 
       <p className="mb-3 text-[11px] text-slate-500">
-        كل بطاقة دُرج في خزانة المتحف. افتح اثنين متشابهين ليندمجا في قطعة واحدة.
+        {copy.memoryInstructions}
       </p>
 
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
@@ -119,7 +123,7 @@ export function MemoryRenderer({ stage, onComplete, onWrong, attemptsLeft, maxAt
               key={c.id}
               onClick={() => flip(c.id)}
               disabled={isSolved}
-              aria-label={isOpen ? c.label : `درج رقم ${idx + 1}`}
+              aria-label={isOpen ? c.label : gameRendererText(language, 'drawer', { number: idx + 1 })}
               className={`irth-drawer aspect-[3/4] w-full ${isOpen ? "is-open" : ""} ${isMerging ? "irth-merge" : ""}`}
             >
               <div className="irth-drawer-inner">
@@ -127,7 +131,7 @@ export function MemoryRenderer({ stage, onComplete, onWrong, attemptsLeft, maxAt
                 <div className="irth-face irth-drawer-back">
                   <div className="irth-drawer-handle" aria-hidden />
                   <span className="irth-drawer-num">{idx + 1}</span>
-                  <span className="irth-drawer-label">إرث</span>
+                  <span className="irth-drawer-label">{copy.brand}</span>
                 </div>
                 {/* Front — artifact tile */}
                 <div className={`irth-face irth-drawer-front ${isSolved ? "is-solved" : ""}`}>
@@ -145,7 +149,7 @@ export function MemoryRenderer({ stage, onComplete, onWrong, attemptsLeft, maxAt
       {done && (
         <div className="irth-reveal mt-4 flex items-center gap-2 rounded-lg border border-amber-500/40 bg-gradient-to-br from-amber-500/15 to-amber-500/5 p-3 text-sm text-amber-100">
           <Sparkles className="h-4 w-4 text-amber-300" />
-          اكتملت الخزانة في {moves} محاولة — كل القطع استقرّت في مكانها.
+          {gameRendererText(language, 'memoryComplete', { moves })}
         </div>
       )}
     </div>

@@ -1,3 +1,5 @@
+import { useUiLanguage } from "@/lib/ui-language/store";
+import { GAME_RENDERER_MESSAGES } from "@/lib/ui-language/game-renderer-messages";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Sparkles, Link2 } from "lucide-react";
 import type { ConnectionsStage } from "@/lib/games/types";
@@ -25,6 +27,8 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 export function ConnectionsRenderer({ stage, onComplete, onWrong, attemptsLeft, maxAttempts }: Props) {
+  const { language, direction } = useUiLanguage();
+  const copy = GAME_RENDERER_MESSAGES[language];
   const androidStable = isAndroidUltraStableMode();
   const disableKeyboardViewportResize = isAndroidFocusABDisabled("disableKeyboardViewportResize");
   // pairIndex (i) is the source of truth for matching. Visual order on each side may differ.
@@ -103,9 +107,9 @@ export function ConnectionsRenderer({ stage, onComplete, onWrong, attemptsLeft, 
       out.push({
         key: `m-${l}-${r}`,
         // In RTL the left column is on the right side. Use the inner edges.
-        x1: ar.left - wrapBox.left,
+        x1: (direction === "rtl" ? ar.left : ar.right) - wrapBox.left,
         y1: ar.top + ar.height / 2 - wrapBox.top,
-        x2: br.right - wrapBox.left,
+        x2: (direction === "rtl" ? br.right : br.left) - wrapBox.left,
         y2: br.top + br.height / 2 - wrapBox.top,
         kind: "locked",
       });
@@ -118,9 +122,9 @@ export function ConnectionsRenderer({ stage, onComplete, onWrong, attemptsLeft, 
         const br = b.getBoundingClientRect();
         out.push({
           key: `w-${wrongFlash.l}-${wrongFlash.r}`,
-          x1: ar.left - wrapBox.left,
+          x1: (direction === "rtl" ? ar.left : ar.right) - wrapBox.left,
           y1: ar.top + ar.height / 2 - wrapBox.top,
-          x2: br.right - wrapBox.left,
+          x2: (direction === "rtl" ? br.right : br.left) - wrapBox.left,
           y2: br.top + br.height / 2 - wrapBox.top,
           kind: "wrong",
         });
@@ -135,14 +139,14 @@ export function ConnectionsRenderer({ stage, onComplete, onWrong, attemptsLeft, 
     const onResize = () => recomputeLines();
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
-  }, [matched, wrongFlash, lefts, rights, androidStable, disableKeyboardViewportResize]); // eslint-disable-line
+  }, [matched, wrongFlash, lefts, rights, androidStable, disableKeyboardViewportResize, direction]); // eslint-disable-line
 
   return (
-    <div className="relative irth-title-card overflow-hidden p-5">
+    <div dir={direction} className="relative irth-title-card overflow-hidden p-5">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.3em] text-amber-300/80">
           <Link2 className="h-3.5 w-3.5" />
-          الخيوط التاريخية
+          {copy.connections}
         </div>
         <div className="flex items-center gap-2">
           {typeof attemptsLeft === "number" && typeof maxAttempts === "number" && (
@@ -154,7 +158,7 @@ export function ConnectionsRenderer({ stage, onComplete, onWrong, attemptsLeft, 
       </div>
 
       <p className="mb-3 text-[11px] text-slate-500">
-        اختر بطاقة من أي جانب، ثم اختر ما يقابلها من الجانب الآخر. الاتجاه حر.
+        {copy.connectionInstructions}
       </p>
 
       <div ref={containerRef} className="relative grid grid-cols-2 items-start gap-6 sm:gap-10">
@@ -200,7 +204,7 @@ export function ConnectionsRenderer({ stage, onComplete, onWrong, attemptsLeft, 
                   ref={(el) => { leftRefs.current[l.i] = el; }}
                   onClick={() => onPickLeft(l.i)}
                   disabled={isMatched}
-                  className={`w-full min-h-12 rounded-lg border p-3 text-right text-sm leading-7 transition ${
+                  className={`w-full min-h-12 rounded-lg border p-3 text-start text-sm leading-7 transition ${
                     isMatched ? "border-amber-500/50 bg-amber-500/10 text-amber-100"
                       : isPicked ? "border-amber-400 bg-amber-500/20 text-amber-100"
                       : isWrong ? "border-red-500/60 bg-red-500/10 irth-shake"
@@ -226,7 +230,7 @@ export function ConnectionsRenderer({ stage, onComplete, onWrong, attemptsLeft, 
                   ref={(el) => { rightRefs.current[r.i] = el; }}
                   onClick={() => onPickRight(r.i)}
                   disabled={isMatched}
-                  className={`w-full min-h-12 rounded-lg border p-3 text-right text-sm leading-7 transition ${
+                  className={`w-full min-h-12 rounded-lg border p-3 text-start text-sm leading-7 transition ${
                     isMatched ? "border-amber-500/50 bg-amber-500/10 text-amber-100"
                       : isPicked ? "border-amber-400 bg-amber-500/20 text-amber-100"
                       : isWrong ? "border-red-500/60 bg-red-500/10 irth-shake"
@@ -244,7 +248,7 @@ export function ConnectionsRenderer({ stage, onComplete, onWrong, attemptsLeft, 
       {done && (
         <div className="irth-reveal mt-4 flex items-center gap-2 rounded-lg border border-amber-500/40 bg-gradient-to-br from-amber-500/15 to-amber-500/5 p-3 text-sm text-amber-100">
           <Sparkles className="h-4 w-4 text-amber-300" />
-          اكتملت جميع الروابط — تتوهج خيوط التاريخ.
+          {copy.connectionsComplete}
         </div>
       )}
     </div>

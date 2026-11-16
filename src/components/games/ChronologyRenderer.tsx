@@ -1,3 +1,5 @@
+import { useUiLanguage } from "@/lib/ui-language/store";
+import { GAME_RENDERER_MESSAGES } from "@/lib/ui-language/game-renderer-messages";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, X, Sparkles, Hourglass, GripVertical, AlertTriangle } from "lucide-react";
 import type { ChronologyStage } from "@/lib/games/types";
@@ -58,6 +60,8 @@ export function reshuffleDistinct(prev: number[], correct: number[]): number[] {
 }
 
 export function ChronologyRenderer({ stage, onComplete, onWrong, attemptsLeft, maxAttempts }: Props) {
+  const { language, direction } = useUiLanguage();
+  const copy = GAME_RENDERER_MESSAGES[language];
   const initial = useMemo(() => shuffle(stage.events.map((_, i) => i)), [stage]);
   const correctOrder = useMemo(
     () =>
@@ -132,11 +136,11 @@ export function ChronologyRenderer({ stage, onComplete, onWrong, attemptsLeft, m
 
 
   return (
-    <div className="relative irth-title-card overflow-hidden p-5">
+    <div dir={direction} className="relative irth-title-card overflow-hidden p-5">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.3em] text-amber-300/80">
           <Hourglass className="h-3.5 w-3.5" />
-          الخط الزمني
+          {copy.timeline}
         </div>
         <div className="flex items-center gap-2">
           {stage.prompt && <span className="text-[11px] text-slate-400">{stage.prompt}</span>}
@@ -148,16 +152,17 @@ export function ChronologyRenderer({ stage, onComplete, onWrong, attemptsLeft, m
       </div>
 
       <p className="mb-3 text-[11px] text-slate-500">
-        اسحب البطاقة بإصبعك (أو امسكها للحظة) ورتّبها من الأقدم إلى الأحدث.
+        {copy.dragInstructions}
       </p>
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         <SortableContext items={order} strategy={verticalListSortingStrategy}>
           <ol className="relative space-y-2 ps-8">
-            <span className="absolute right-3 top-2 bottom-2 w-px bg-gradient-to-b from-amber-500/60 via-amber-500/25 to-amber-500/60" aria-hidden />
+            <span className="absolute start-3 top-2 bottom-2 w-px bg-gradient-to-b from-amber-500/60 via-amber-500/25 to-amber-500/60" aria-hidden />
             {order.map((id, idx) => (
               <SortableRow
                 key={id}
+                dragLabel={copy.dragLabel}
                 id={id}
                 index={idx}
                 status={checked?.[idx]}
@@ -176,7 +181,7 @@ export function ChronologyRenderer({ stage, onComplete, onWrong, attemptsLeft, m
             disabled={done}
             className="inline-flex min-h-12 items-center gap-1.5 rounded-xl border border-amber-400/60 bg-slate-900 px-6 py-3 text-sm font-bold text-amber-200 transition hover:bg-slate-800 disabled:opacity-50"
           >
-            <Hourglass className="h-4 w-4" /> أعد المحاولة
+            <Hourglass className="h-4 w-4" /> {copy.retry}
           </button>
         ) : (
           <button
@@ -184,17 +189,17 @@ export function ChronologyRenderer({ stage, onComplete, onWrong, attemptsLeft, m
             disabled={done}
             className="inline-flex min-h-12 items-center gap-1.5 rounded-xl bg-amber-500 px-6 py-3 text-sm font-bold text-slate-950 transition hover:bg-amber-400 disabled:opacity-50"
           >
-            {done ? <><Sparkles className="h-4 w-4" /> اكتمل التسلسل</> : <><Check className="h-4 w-4" /> تحقق</>}
+            {done ? <><Sparkles className="h-4 w-4" /> {copy.sequenceComplete}</> : <><Check className="h-4 w-4" /> {copy.check}</>}
           </button>
         )}
         {awaitingRetry && (
           <span className="inline-flex items-center gap-1.5 text-xs text-red-300">
-            <X className="h-3 w-3" /> ترتيب غير صحيح — أعد المحاولة للحصول على ترتيب جديد.
+            <X className="h-3 w-3" /> {copy.wrongOrder}
           </span>
         )}
         {!checked && !done && !awaitingRetry && (
           <span className="inline-flex items-center gap-1.5 text-[11px] text-slate-500">
-            <AlertTriangle className="h-3 w-3 text-amber-300/70" /> رتّب جميع البطاقات ثم اضغط تحقق.
+            <AlertTriangle className="h-3 w-3 text-amber-300/70" /> {copy.orderInstructions}
           </span>
         )}
       </div>
@@ -208,7 +213,8 @@ function formatYear(year: number, era?: string) {
   return era ? `${base} · ${era}` : base;
 }
 
-function SortableRow({ id, index, status, label, year }: {
+function SortableRow({ dragLabel, id, index, status, label, year }: {
+  dragLabel: string;
   id: number;
   index: number;
   status: boolean | undefined;
@@ -232,14 +238,14 @@ function SortableRow({ id, index, status, label, year }: {
           : "border-red-500/40 bg-red-500/10 irth-shake"
       } ${isDragging ? "cursor-grabbing" : ""}`}
     >
-      <span className="absolute -right-[26px] grid h-5 w-5 place-items-center rounded-full border border-amber-500/60 bg-slate-950 text-[10px] font-bold text-amber-200 shadow-[0_0_0_3px_rgba(2,6,23,1)]">
+      <span className="absolute -start-[26px] grid h-5 w-5 place-items-center rounded-full border border-amber-500/60 bg-slate-950 text-[10px] font-bold text-amber-200 shadow-[0_0_0_3px_rgba(2,6,23,1)]">
         {index + 1}
       </span>
       <button
         type="button"
         {...attributes}
         {...listeners}
-        aria-label="اسحب لإعادة الترتيب"
+        aria-label={dragLabel}
         className="grid h-9 w-9 shrink-0 cursor-grab touch-none place-items-center rounded-md border border-amber-500/30 bg-slate-950/60 text-amber-300/80 hover:border-amber-400"
       >
         <GripVertical className="h-4 w-4" />
