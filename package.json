@@ -1,7 +1,7 @@
 {
   "name": "irth",
   "private": true,
-  "sideEffects": false,
+  "sideEffects": ["./src/lib/identity/install.ts"],
   "type": "module",
   "scripts": {
     "dev": "vite dev",
