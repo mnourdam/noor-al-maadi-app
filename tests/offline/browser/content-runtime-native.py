@@ -60,6 +60,8 @@ async def finish_launch(context,origin,offline,route,deny_socket,errors):
         await context.route('**/*',route)
         await context.route_web_socket('**/*',deny_socket)
         page=await context.new_page();page.on('pageerror',lambda e:errors.append(str(e)))
+        # Apply emulation to the newly attached page before any application boot.
+        if offline:await context.set_offline(True)
         await page.goto(origin+('/offline-reopen.html' if offline else ''))
         await page.wait_for_function('window.ready===true')
         return context,page
@@ -178,6 +180,7 @@ async def run(directory,origin,counterfactual=False):
                 except Exception as diagnostic_error:
                     print(json.dumps({'freshOfflineDiagnosticError':type(diagnostic_error).__name__}),file=__import__('sys').stderr)
                 raise
+            offline_connectivity=await page.evaluate('({navigatorOnline:navigator.onLine,observedOnline:window.observedOnline})')
             boot=await page.evaluate('runtime.boot()')
             assert boot['nonce']!=previous_boot and boot['offlineBoot'] is True
             assert boot['seedCalls']==0 and boot['applyCalls']==0
@@ -194,7 +197,7 @@ async def run(directory,origin,counterfactual=False):
             assert not any(path.startswith('/api/') for path in offline_attempts)
             checks.append('fresh offline JS context hydrates exact persisted updated snapshot without seed/apply; only static test boot fulfilled')
             assert not external and not errors
-            print(json.dumps({'result':'PASS_BROWSER_ONLY','browser':(await (await context.new_cdp_session(page)).send('Browser.getVersion'))['product'],'checks':checks,'offlineStaticBootRequests':len(static_boot),'offlineDeniedRequests':len(offline_attempts),'offlineBundledDenied':offline_attempts.count('/offline-snapshot.json'),'offlineServerContentRequests':Service.requests-server_requests,'offlineServerAllRequests':Service.transport_requests-server_transport,'externalRequests':len(external),'pageErrors':len(errors),'android':'NOT_TESTED','forceStop':'NOT_TESTED'}))
+            print(json.dumps({'result':'PASS_BROWSER_ONLY','browser':(await (await context.new_cdp_session(page)).send('Browser.getVersion'))['product'],'checks':checks,'freshOfflineConnectivity':offline_connectivity,'offlineStaticBootRequests':len(static_boot),'offlineDeniedRequests':len(offline_attempts),'offlineBundledDenied':offline_attempts.count('/offline-snapshot.json'),'offlineServerContentRequests':Service.requests-server_requests,'offlineServerAllRequests':Service.transport_requests-server_transport,'externalRequests':len(external),'pageErrors':len(errors),'android':'NOT_TESTED','forceStop':'NOT_TESTED'}))
         finally:Service.release.set();await context.close()
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('--counterfactual-no-query-abort',action='store_true');args=parser.parse_args()
