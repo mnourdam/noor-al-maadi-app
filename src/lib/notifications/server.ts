@@ -98,6 +98,7 @@ export function fetchMyNotifications(limit = 100): Promise<ServerNotification[]>
   const existing = flights.get(limit);
   if (existing) return existing;
   let retired = false;
+  const controller = new AbortController();
   const current = () => !retired && scope.current() && listGeneration === generation;
   const fallback = () => {
     if (!current()) return [];
@@ -109,6 +110,8 @@ export function fetchMyNotifications(limit = 100): Promise<ServerNotification[]>
     timer = setTimeout(() => {
       const rows = fallback();
       retired = true;
+      // Release the transport too, rather than only unblocking the UI.
+      controller.abort();
       resolve(rows);
     }, NOTIFICATION_LIST_WAIT_MS);
   });
@@ -122,7 +125,7 @@ export function fetchMyNotifications(limit = 100): Promise<ServerNotification[]>
       if (sess.session.user.id !== ownerUserId(scope.owner)) return [];
       const { data, error } = await supabase.rpc("list_my_notifications" as never, {
         p_limit: limit, p_before: null,
-      } as never);
+      } as never).abortSignal(controller.signal);
       if (!current()) return [];
       if (error) throw error;
       const rows = (data as ServerNotification[] | null) ?? [];

@@ -1,13 +1,13 @@
 // Synthetic SDK; actual notification bridge, identity owner and storage partition.
 import {it,expect,vi,beforeEach,afterEach} from 'vitest';
-const sdk=vi.hoisted(()=>({auth:{getSession:vi.fn()},rpc:vi.fn()}));
-vi.mock('../../src/integrations/supabase/client.ts',()=>({supabase:sdk}));
+const sdk=vi.hoisted(()=>({auth:{getSession:vi.fn()},rpc:vi.fn(),signals:[] as AbortSignal[]}));
+vi.mock('../../src/integrations/supabase/client.ts',()=>({supabase:{...sdk,rpc:(...args:any[])=>{const result=sdk.rpc(...args);if(args[0]==='list_my_notifications')result.abortSignal=(signal:AbortSignal)=>{sdk.signals.push(signal);return result;};return result;}}}));
 let api:any, identity:any, partition:any;
 function deferred(){let resolve:any;const promise=new Promise(r=>resolve=r);return {promise,resolve};}
 const cache='irth.notifications.serverCache.v1';
 const rows=(id:string)=>[{id,read_at:null,dismissed_at:null}];
 beforeEach(async()=>{
- partition?.__uninstallPartitionForTests();localStorage.clear();vi.resetModules();vi.clearAllMocks();
+ partition?.__uninstallPartitionForTests();localStorage.clear();vi.resetModules();vi.clearAllMocks();sdk.signals=[];
  identity=await import('../../src/lib/identity/owner');
  partition=await import('../../src/lib/identity/partition');partition.installIdentityPartition();
  identity.setActiveOwnerInternal('user:alice');
@@ -92,4 +92,25 @@ it('late old flight cleanup cannot remove a pending successor generation flight'
  old.resolve({data:rows('old'),error:null});expect(await first).toEqual([]);
  const third=api.fetchMyNotifications(20);expect(third).toBe(second);expect(lists).toBe(2);
  next.resolve({data:rows('new'),error:null});expect(await second).toEqual(rows('new'));
+});
+
+it('aborts the underlying list RPC at the display deadline before allowing retry',async()=>{
+ vi.useFakeTimers();localStorage.setItem(cache,JSON.stringify(rows('offline')));
+ const held=deferred();sdk.rpc.mockReturnValueOnce(held.promise).mockResolvedValue({data:rows('fresh'),error:null});
+ const pending=api.fetchMyNotifications(150);await vi.advanceTimersByTimeAsync(0);
+ expect(sdk.signals).toHaveLength(1);expect(sdk.signals[0].aborted).toBe(false);
+ await vi.advanceTimersByTimeAsync(api.NOTIFICATION_LIST_WAIT_MS);
+ expect(sdk.signals[0].aborted).toBe(true);expect(await pending).toEqual(rows('offline'));
+ expect(await api.fetchMyNotifications(150)).toEqual(rows('fresh'));
+ expect(sdk.signals[1].aborted).toBe(false);
+ held.resolve({data:rows('late'),error:null});await vi.advanceTimersByTimeAsync(0);
+ expect(api.peekWarmNotificationCenter()).toEqual(rows('fresh'));
+});
+it('keeps offline fallback when the aborted transport rejects immediately',async()=>{
+ vi.useFakeTimers();localStorage.setItem(cache,JSON.stringify(rows('offline')));
+ let reject!:(e:Error)=>void;const promise=new Promise((_,r)=>{reject=r;});sdk.rpc.mockReturnValueOnce(promise);
+ const task=api.fetchMyNotifications(150);await vi.advanceTimersByTimeAsync(0);
+ sdk.signals[0].addEventListener('abort',()=>reject(new DOMException('Aborted','AbortError')),{once:true});
+ await vi.advanceTimersByTimeAsync(api.NOTIFICATION_LIST_WAIT_MS);
+ expect(await task).toEqual(rows('offline'));expect(api.peekWarmNotificationCenter()).toBeUndefined();
 });

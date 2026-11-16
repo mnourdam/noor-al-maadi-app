@@ -2,7 +2,7 @@ import React from 'react';
 import { render, act, cleanup } from '@testing-library/react';
 import { it, expect, vi, beforeEach, afterEach } from 'vitest';
 const sdk = vi.hoisted(() => ({auth:{getSession:vi.fn(),getUser:vi.fn()},rpc:vi.fn()}));
-vi.mock('@/integrations/supabase/client', () => ({supabase:sdk}));
+vi.mock('@/integrations/supabase/client', () => ({supabase:{...sdk,rpc:(...args:any[])=>{const result=sdk.rpc(...args);if(args[0]==='list_my_notifications')result.abortSignal=()=>result;return result;}}}));
 vi.mock('@tanstack/react-router', () => ({
  createFileRoute: () => (options: unknown) => ({options}),
  useRouter: () => ({navigate:vi.fn()}),
