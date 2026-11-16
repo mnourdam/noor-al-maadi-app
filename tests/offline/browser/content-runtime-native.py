@@ -2,7 +2,7 @@
 import asyncio,functools,http.server,json,os,subprocess,tempfile,threading,argparse,hashlib,re
 from pathlib import Path
 from urllib.parse import urlparse,parse_qs
-from playwright.async_api import async_playwright
+from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
 ROOT=Path(__file__).resolve().parents[3]
 class Service(http.server.SimpleHTTPRequestHandler):
     protocol_version='HTTP/1.1'
@@ -169,7 +169,15 @@ async def run(directory,origin,counterfactual=False):
             await context.close()
             server_requests=Service.requests;server_transport=Service.transport_requests
             context,page=await launch(offline=True)
-            await page.wait_for_function('navigator.onLine===false && window.observedOnline===false')
+            try:
+                await page.wait_for_function('navigator.onLine===false && window.observedOnline===false')
+            except PlaywrightTimeoutError:
+                try:
+                    diagnostic=await asyncio.wait_for(page.evaluate("({navigatorOnline:navigator.onLine,observedOnline:window.observedOnline??null,ready:window.ready,visibility:document.visibilityState,boot:window.runtime?.boot()})"),timeout=5)
+                    print(json.dumps({'freshOfflineDiagnostic':diagnostic,'pageErrors':errors,'staticBoot':static_boot,'offlineAttempts':offline_attempts}),file=__import__('sys').stderr)
+                except Exception as diagnostic_error:
+                    print(json.dumps({'freshOfflineDiagnosticError':type(diagnostic_error).__name__}),file=__import__('sys').stderr)
+                raise
             boot=await page.evaluate('runtime.boot()')
             assert boot['nonce']!=previous_boot and boot['offlineBoot'] is True
             assert boot['seedCalls']==0 and boot['applyCalls']==0
