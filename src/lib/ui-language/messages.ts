@@ -1,3 +1,4 @@
+import { READING_REVIEW_MESSAGES } from './reading-review-messages';
 import { LOCALE_META } from './locale-policy';
 /** UI chrome only. Never use these keys to identify content, answers or routes. */
 export const arabic = {
@@ -7,11 +8,7 @@ export const arabic = {
   home: 'الرئيسية', campaigns: 'الحملات', encyclopedia: 'الموسوعة', atlas: 'الأطلس', museum: 'المتحف', profile: 'حسابي',
   navigation: 'التنقل الرئيسي', language: 'لغة الواجهة', arabic: 'العربية', english: 'English — preview',
   scope: 'المعاينة تشمل التنقل وتسميات الحالة ونوافذ إحصاءات الرصيد وأزرار إعادة القراءة ونصوص الإنجازات وتبويبها وتفاصيلها وعناوين بطاقات القصص ومجموعاتها وملخصاتها المتاحة بالإنكليزية وإحصاءات المجموعة وأزرار قراءتها وأدوات بحث المكتبة وتصفيتها وتسميات بطاقات القصص والنصوص العامة لشروط فتحها؛ بقية تبويبات الحساب والواجهات والمحتوى ما زالت بالعربية.',
-  reread: 'إعادة قراءة نص الفصل', rereadTitle: 'نص الفصل:', rereadDescription: 'راجع ما قرأته ثم عد إلى نشاطك كما تركته، دون تغيير تقدمك أو مكافآتك.', rereadReturn: 'العودة إلى النشاط', rereadIntro: 'مقدمة الفصل', rereadHistory: 'قراءة تاريخية', rereadText: 'نص القراءة', rereadContinuation: 'متابعة القراءة', close: 'إغلاق',
-  completedReviewChapter: 'أنهيتَ هذا الفصل — راجع الأنشطة المكتملة دون أثر على تقدمك.',
-  completedReviewCampaign: 'أنهيتَ هذه الحملة — أنت الآن في وضع المراجعة. تصفّح المحتوى دون أثر على تقدمك.',
-  completedReviewEmpty: 'لا تتوفر أنشطة مكتملة موثقة للمراجعة في هذا الفصل.',
-  completedReviewNext: 'الفصل التالي', completedReviewBack: 'عودة لقائمة الفصول',
+  ...READING_REVIEW_MESSAGES.ar,
   hearts: 'القلوب', nextHeart: 'القلب التالي خلال', dinars: 'الدنانير', experience: 'الخبرة', streak: 'الحماسة', notifications: 'الإشعارات',
   heartPurchased: "تمت استعادة قلب",
   heartUnresolved: "قد تكون العملية تمت. تحقّق من الرصيد قبل شراء قلب آخر.",
@@ -153,11 +150,7 @@ const english = {
   home: 'Home', campaigns: 'Campaigns', encyclopedia: 'Encyclopedia', atlas: 'Atlas', museum: 'Museum', profile: 'My account',
   navigation: 'Main navigation', language: 'Interface language', arabic: 'العربية', english: 'English — preview',
   scope: 'Preview: navigation, status labels and stat popovers, reread controls and achievement text, tab and detail controls, plus available authored English story-card and collection titles and summaries, with selected-collection statistics, reading controls and library search/filter controls, story-card labels and generated unlock labels. Other Profile tabs, interfaces and story content remain in Arabic.',
-  reread: 'Reread chapter text', rereadTitle: 'Chapter text:', rereadDescription: 'Review what you have read, then return to your activity as you left it, without changing progress or rewards.', rereadReturn: 'Return to activity', rereadIntro: 'Chapter introduction', rereadHistory: 'Historical reading', rereadText: 'Reading text', rereadContinuation: 'Continue reading', close: 'Close',
-  completedReviewChapter: 'You completed this chapter. Review completed activities without changing your progress.',
-  completedReviewCampaign: 'You completed this campaign. Browse the review without changing your progress.',
-  completedReviewEmpty: 'No recorded completed activities are available to review in this chapter.',
-  completedReviewNext: 'Next chapter', completedReviewBack: 'Back to chapter list',
+  ...READING_REVIEW_MESSAGES.en,
   hearts: 'Hearts', nextHeart: 'Next heart in', dinars: 'Dinars', experience: 'Experience', streak: 'Streak', notifications: 'Notifications',
   heartPurchased: "A heart has been restored",
   heartUnresolved: "The purchase may have completed. Check your balance before buying another heart.",
